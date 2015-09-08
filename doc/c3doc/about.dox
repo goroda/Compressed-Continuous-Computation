@@ -1,0 +1,100 @@
+\page about
+
+## C3 Overview
+
+<table>
+<tr>
+    <td> One dimensional function </td>
+    <td> Vector-valued function </td>
+</tr>
+</table>
+
+
+### Core elements
+Four primary elements are used to accomplish the above tasks: 
+    * \ref GenericFunction "One-dimensional functions"
+    * Vector-valued function or Quasimatrix
+    * Matrix-valued function or \ref Qmarray "Quasimatrix arrays"
+    * \ref FunctionTrain "Function-train"
+    
+### Core capabilities
+
+The following computational capabilities exist for these elements.
+
+#### One-dimensional functions
+ 
+We work with one-dimensional function by first generating an "interface" to them through some approximation schemes.
+The interface is described by the \ref GenericFunction structure. Once in this interface form, a wide variety of computional routines are available.
+
+* Converts a one dimensional-function (as a function pointer) into a \ref GenericFunction "generic function" using
+    + Legendre or Chebyshev polynomial expansions
+    + Piecewise polynomials with automatic edge detection
+* Adding, subtracting, multiplying, integrating  \ref GenericFunction "generic functions"
+* Find the minimum and maximum of a \ref GenericFunction "generic function"
+
+#### Vector-valued functions
+
+Vector-valued functions may be thought of as matrices with a finite number of columns and an "infinite" number of rows (Quasimatrices). Alternatively, they may be considered as an array of functions. A subset of capabilities for working with vector-valued functions consisting of *one* dimensional functions is given below
+
+Linear algebra operations
+* \ref qmv "Quasimatrix-vector" multiplication
+* \ref qmm "Quasimatrix-matrix" multiplication
+* \ref quasimatrix_daxpby "Quasimatrix-Quasimatrix" addition
+* \ref quasimatrix_inner "Inner product" between Quasimatrices
+* Computing the \ref quasimatrix_rank "rank" of a Quasimatrix
+* Computing the \ref quasimatrix_norm "norm" of a Quasimatrix
+
+Linear algebra decompositions
+* \ref quasimatrix_householder_simple "QR and LQ" decomposition of a Quasimatrix
+* \ref quasimatrix_lu1d "LU" decomposition of a Quasimatrix
+* \ref quasimatrix_maxvol1d "Maxvol" for a Quasimatrix
+
+#### Matrix-valued functions
+
+Matrix-valued functions (denoted by the Qmarray struct) can be thought of as an array of Quasimatrices. A subset of capabilities which exist for working with matrix-valued functions are now given
+
+Linear algebra operations:
+* \ref qmav "Qmarray-vector" multiplication
+* \ref qmam "Qmarray-matrix" multiplication
+* \ref mqma "matrix-Qmarray" multiplication
+* \ref qmaqma "Qmarray-Qmarray" multiplication
+* \ref qmarray_kron "Kronecker" product between Qmarrays
+* Fast \ref qmarray_vec_kron "vector times kronecker" product
+* \ref qmarray_integrate "Integration" of each function in a Qmarray
+* \ref qmarray_norm2diff "2-norm" difference between two Qmarrays
+
+Linear algebra decompositions:
+* \ref qmarray_householder_simple "QR and LQ" decomposition of a Qmarray
+* \ref qmarray_lu1d "LU" decomposition of a Qmarray
+* \ref qmarray_maxvol1d "Maxvol" for a Qmarray
+* \ref qmarray_svd "Singular Value Decomposition (SVD)" of a Qmarray
+
+Extra:
+* \ref qmarray_deriv "Derivative" of each function in the Qmarray
+
+#### Function-trains
+
+Function-trains are the workhorse representation of multidimensional functions. Once in function-train format a wide variety of computations may be performed in high dimensions
+
+Converting functions to function-train format
+* Convert a generic \ref function_train_cross "black-box" function into function-train format
+* Convert a \ref function_train_initsum2 "Sum of one-dimensional" functions to function-train format
+* Convert a \ref function_train_rankone "Product of one-dimensional" functions to function-train format
+* Convert a \ref function_train_constant "Constant" function to function-train format
+* Convert a \ref function_train_linear2 "Sum of linear one-dimensional" functions to function-train format
+* Convert a \ref function_train_quadratic "Quadratic" function to function-train format
+
+Operations:
+* \ref function_train_eval "Evaluate" a function-trains
+* \ref function_train_sum  "Add" two function-trains
+* \ref function_train_product "Multiply" two function-trains
+* \ref function_train_scale "Scale" a function-train
+* \ref function_train_afpb "Scale and translate" a function-train
+* \ref function_train_integrate "Integrate" a function-train
+* \ref function_train_inner "Inner product" between two function-trains
+* \ref function_train_norm2 "2-norm" of a function-train
+* \ref function_train_norm2diff "2-norm difference" between two function-trains
+* \ref function_train_round "Round" a function-train
+* Compute the \ref function_train_gradient "gradient" of a function-train
+* Compute the \ref function_train_hessian "hessian" of a function-train
+

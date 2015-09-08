@@ -1,0 +1,5 @@
+To profile a code first run
+
+valgrind --tool=callgrind ./(binary)
+
+python gprof2dot.py -f callgrind callgrind.out.x | dot -Tsvg -o output.svg

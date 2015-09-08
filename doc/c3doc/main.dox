@@ -1,0 +1,35 @@
+<!---
+A collection of libraries for performing continuous computation with high dimensional functions
+-->
+
+## What is Compressed Continuous Computation?
+
+The Compressed Continuous Computation (C3) package is intended to make it easy to perform continuous linear and multilinear algebra with multidimensional functions. 
+Common tasks include taking "matrix" decompositions of vector- or matrix-valued functions, adding or multiplying functions together,
+integrating multidimensional functions, and much much more.
+
+### What is compressed?
+
+When we refer to **compression** of an object we refer to the task of finding a representation of an object which takes up *less* space. Usually, we are able to reduce the amount of space representing an object by taking advantage of any structure present in the object. The purpose of this package is to compress *functions* into a form which both allows for efficient storage and efficient computation. We provide ways for converting a function (often represented using a function pointer) into the Function-Train format so that we may easily be able to perform computation with the functions in compressed format.
+
+### What is continuous computation?
+
+Continuous computation refers to the philosophy of designing algorithms which work on **continuous** spaces instead of discrete arrays. Essentially, they relegate the "discretization" of functions to lower-levels of computation. Several benefits arise from such an approache: 
+    * Discretization adaptation can be performed more easily
+    * Manipulation of functions is easier than manipulation of arrays of different sizes
+    * Computation of continuous quantities such as derivatives or integrals can be obtained
+
+To create this package we have been inspired by the work of Trefethen, Battels (2004), Townsend (2015) and others by the development of the [Matlab Chebfun package](www.chebfun.org) which performs computation with functions represented as Chebyshev polynomials.
+
+
+## Additional Info
+
+Author: Alex A. Gorodetsky
+
+Contact: goroda@mit.edu
+
+Copyright: Massachusetts Institute of Technology 2014-2015
+
+License: BSD
+
+
