@@ -266,52 +266,51 @@ void gauss_legendre(size_t N, double * pts, double * weights){
         pts[0] = 0.0;
         weights[0] = 1.0;
     }
-    else{
+    else if (N < 65){
         getPtsWts(N,pts,weights);
         size_t ii;
         for (ii = 0; ii < N; ii++){
             weights[ii] /= 2.0;
         }
     }
-    //*/
-    /*
-    size_t ii;
-    double temp; 
-    double * offdiag = calloc_double(N);
-    double * evec = calloc_double(N*N);
-    double * work = calloc_double(2*N-2);
-    int info;
-    for (ii = 0; ii < N; ii++){
-        pts[ii] = 0.0;
-        temp = (double)ii + 1.0;
-        //temp = (double)ii;
-        offdiag[ii] = temp / sqrt( (2.0 * temp + 1.0) * (2.0 * temp -1.0) );
-        //offdiag[ii] = 0.5  / sqrt( 1.0 - pow(2.0 * temp, -2.0));
-        //offdiag[ii] = temp / sqrt((2.0 * temp +1.0));
-    }
+    else{
+        size_t ii;
+        double temp; 
+        double * offdiag = calloc_double(N);
+        double * evec = calloc_double(N*N);
+        double * work = calloc_double(2*N-2);
+        int info;
+        for (ii = 0; ii < N; ii++){
+            pts[ii] = 0.0;
+            temp = (double)ii + 1.0;
+            //temp = (double)ii;
+            offdiag[ii] = temp / sqrt( (2.0 * temp + 1.0) * (2.0 * temp -1.0) );
+            //offdiag[ii] = 0.5  / sqrt( 1.0 - pow(2.0 * temp, -2.0));
+            //offdiag[ii] = temp / sqrt((2.0 * temp +1.0));
+        }
 
-    int M = N;
-    int M2 = N;
-    dstev_("V", &M, pts, offdiag, evec, &M2, work, &info);
+        int M = N;
+        int M2 = N;
+        dstev_("V", &M, pts, offdiag, evec, &M2, work, &info);
 
-    if ( info > 0) {
-        fprintf(stderr, "Gauss-Hermite quadrature failed because eigenvalues did not converge \n");
-        exit(1);
+        if ( info > 0) {
+            fprintf(stderr, "Gauss-Hermite quadrature failed because eigenvalues did not converge \n");
+            exit(1);
+        }
+        else if ( info < 0) {
+            fprintf(stderr, "The %d-th argument of dstev_ has an illegal value",info);
+            exit(1);
+        }
+        
+        for (ii = 0; ii < N; ii++){
+            //weights[ii] = evec[N*N-2 + ii] * evec[N*N-2 + ii];
+            //weights[ii] = evec[N*N-2 + ii] * evec[N*N-2 + ii];
+            //weights[ii] = 2.0* evec[ii] * evec[ii];
+            weights[ii] =  evec[ii*N] * evec[ii*N];
+        }
+        free(offdiag);
+        free(evec);
+        free(work);
     }
-    else if ( info < 0) {
-        fprintf(stderr, "The %d-th argument of dstev_ has an illegal value",info);
-        exit(1);
-    }
-    
-    for (ii = 0; ii < N; ii++){
-        //weights[ii] = evec[N*N-2 + ii] * evec[N*N-2 + ii];
-        //weights[ii] = evec[N*N-2 + ii] * evec[N*N-2 + ii];
-        //weights[ii] = 2.0* evec[ii] * evec[ii];
-        weights[ii] =  evec[ii*N] * evec[ii*N];
-    }
-    free(offdiag);
-    free(evec);
-    free(work);
-    */
 }
 

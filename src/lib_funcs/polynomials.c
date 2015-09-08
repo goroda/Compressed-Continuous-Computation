@@ -1335,7 +1335,7 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
                 break;
             }
         }
-        if (N > 40){
+        if (N > 100){
             //printf("Warning: num of poly is %zu: last coeff = %G \n",N,poly->coeff[N-1]);
             //printf("tolerance is %3.15G\n", aopts->tol * sum_coeff_squared);
             //printf("Considering using piecewise polynomials\n");
@@ -1452,33 +1452,26 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     comb[0] = a;
     comb[1] = b;
    
-    struct OrthPolyExpansion * d;
-    d = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
-    orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,d);
-
+    c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+    orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+    orth_poly_expansion_round(&c);
+    /*
     printf("\n");
     printf(" num polys d = %zu \n", d->num_poly);
     dprint(d->num_poly,d->coeff);
-    orth_poly_expansion_round(&d);
-
-
-    //*
+    */
+    
+    /*
     struct OpeAdaptOpts ao;
     ao.start_num = 7;
     ao.coeffs_check = 2;
-    ao.tol = 1e-10;
+    ao.tol = 1e-13;
     c = orth_poly_expansion_approx_adapt(&orth_poly_expansion_eval3,comb, 
                         p, lb, ub, &ao);
     
-    printf(" num polys c = %zu \n", c->num_poly);
-    dprint(c->num_poly,c->coeff);
     orth_poly_expansion_round(&c);
-
-    assert (c->num_poly == d->num_poly);
-    orth_poly_expansion_free(c);
-    //*/                  
-    
-    return d;
+    */
+    return c;
 }
 
 /********************************************************//**
