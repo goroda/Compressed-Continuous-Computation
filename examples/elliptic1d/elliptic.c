@@ -257,7 +257,7 @@ void proc_inputs(int argc, char * argv[], struct RunArgs * rargs)
     }
 
     if (nfield == 0){
-       printf("Correct function call = ./elliptic1d dim=<number of dims> size=<number of pts> filein=<filein> fileout=<fileout> sqrtcov=<filename>\n");
+       printf("Correct func call = ./elliptic1d dim=<number of dims> size=<number of pts> filein=<filein> fileout=<fileout> sqrtcov=<filename>\n");
        exit(1);
     }
 
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
     enum poly_type ptype = LEGENDRE;
     struct OpeAdaptOpts ope;
     ope.start_num = 7;
-    ope.coeffs_check = 0;
+    ope.coeffs_check = 2;
     ope.tol=1e-3;
     struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,&ope);
 
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
     fca.ranks[dim] = 1;
     fca.epsilon = 1e-3;
     fca.maxiter = 5;
-    fca.epsround = 1e-5;
+    fca.epsround = 1e-10;
     fca.kickrank = 10;
     fca.maxiteradapt = 2;
     fca.verbose = 2;

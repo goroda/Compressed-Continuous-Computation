@@ -1452,19 +1452,19 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     comb[0] = a;
     comb[1] = b;
    
-   //*
+   /*
     c = orth_poly_expansion_init(p, a->num_poly + b->num_poly, lb, ub);
     orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
-   //*/ 
+   */ 
 
-    /*
+    //*
     struct OpeAdaptOpts ao;
-    ao.start_num = 8;
+    ao.start_num = 7;
     ao.coeffs_check = 2;
     ao.tol = 1e-10;
     c = orth_poly_expansion_approx_adapt(&orth_poly_expansion_eval3,comb, 
                         p, lb, ub, &ao);
-    */                  
+    //*/                  
     
     orth_poly_expansion_round(&c);
     return c;

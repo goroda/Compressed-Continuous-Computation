@@ -9,6 +9,9 @@ build*
 
 doc/html/*
 doc/latex/*
+doc/c3doc/*
+doc/*
+
 bin/*
 
 fileheaders.txt

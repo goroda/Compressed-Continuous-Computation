@@ -1,10 +1,7 @@
-<!---
-A collection of libraries for performing continuous computation with high dimensional functions
--->
 
-## What is Compressed Continuous Computation?
+## Compressed Continuous Computation
 
-The Compressed Continuous Computation (C3) package is intended to make it easy to perform continuous linear and multilinear algebra with multidimensional functions. 
+The Compressed Continuous Computation (C<sup>3</sup>) package is intended to make it easy to perform continuous linear and multilinear algebra with multidimensional functions. 
 Common tasks include taking "matrix" decompositions of vector- or matrix-valued functions, adding or multiplying functions together,
 integrating multidimensional functions, and much much more.
 
@@ -24,12 +21,16 @@ To create this package we have been inspired by the work of Trefethen, Battels (
 
 ## Additional Info
 
+<p>
 Author: Alex A. Gorodetsky
-
+</p>
+<p>
 Contact: goroda@mit.edu
-
+</p>
+<p>
 Copyright: Massachusetts Institute of Technology 2014-2015
-
+</p>
+<p>
 License: BSD
-
+</p>
 
