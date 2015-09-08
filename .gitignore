@@ -1,6 +1,6 @@
 *.DS_Store
 *.pyc
-build*
+build/*
 *.dat
 *.swp
 *.swo
