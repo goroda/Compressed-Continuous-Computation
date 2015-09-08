@@ -1,10 +1,11 @@
 Compressed Continuous Computation (c3)
 -------------------------------------
 
-This is a package containing routines for computing with multidimensional functions in function train format (cite soon).
+This is a package containing routines for computing with multidimensional functions in function train format.
 With this package one can systematically perform multilinear algebra such as function addition, multiplication, integration, differentiation etc.
 It works by representing each function in a format which allows computation to be performed with linear complexity in dimension. In addition to working with
 functions, it provides utilities for continuous linear algebra such as continuous QR, continuous LU, continuous CUR, and many more decompositions. For further details, see the webpage at (webpage)
+
 
 Author: Alex A. Gorodetsky
 Contact: goroda@mit.edu
