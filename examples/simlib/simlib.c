@@ -263,7 +263,7 @@ int main( int argc, char *argv[])
     enum poly_type ptype = LEGENDRE;
     struct OpeAdaptOpts ao;
     ao.start_num = 7;
-    ao.coeffs_check = 0;
+    ao.coeffs_check = 2;
     ao.tol = 1e-7;
     struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,&ao);
 

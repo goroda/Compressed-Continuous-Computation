@@ -1191,7 +1191,7 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     double * pt = NULL;
     double * wt = NULL; 
 
-    size_t nquad = poly->num_poly;
+    size_t nquad = poly->num_poly+1;
 
     switch (poly->p->ptype) {
         case CHEBYSHEV:
@@ -1452,10 +1452,15 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     comb[0] = a;
     comb[1] = b;
    
-   /*
-    c = orth_poly_expansion_init(p, a->num_poly + b->num_poly, lb, ub);
-    orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
-   */ 
+    struct OrthPolyExpansion * d;
+    d = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+    orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,d);
+
+    printf("\n");
+    printf(" num polys d = %zu \n", d->num_poly);
+    dprint(d->num_poly,d->coeff);
+    orth_poly_expansion_round(&d);
+
 
     //*
     struct OpeAdaptOpts ao;
@@ -1464,10 +1469,16 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     ao.tol = 1e-10;
     c = orth_poly_expansion_approx_adapt(&orth_poly_expansion_eval3,comb, 
                         p, lb, ub, &ao);
+    
+    printf(" num polys c = %zu \n", c->num_poly);
+    dprint(c->num_poly,c->coeff);
+    orth_poly_expansion_round(&c);
+
+    assert (c->num_poly == d->num_poly);
+    orth_poly_expansion_free(c);
     //*/                  
     
-    orth_poly_expansion_round(&c);
-    return c;
+    return d;
 }
 
 /********************************************************//**
