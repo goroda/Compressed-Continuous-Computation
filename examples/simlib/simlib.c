@@ -293,7 +293,7 @@ int main( int argc, char *argv[])
     fca.ranks[dim] = 1;
     fca.epsilon = 1e-3;
     fca.maxiter = 5;
-    fca.epsround = 1e-5;
+    fca.epsround = 1e-10;
     fca.kickrank = 4;
     fca.maxiteradapt = 5;
     fca.verbose = 2;
