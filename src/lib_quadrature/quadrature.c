@@ -266,12 +266,12 @@ void gauss_legendre(size_t N, double * pts, double * weights){
         pts[0] = 0.0;
         weights[0] = 1.0;
     }
-    else if (N < 65){
+    else if (N < 200){
         getPtsWts(N,pts,weights);
-        size_t ii;
-        for (ii = 0; ii < N; ii++){
-            weights[ii] /= 2.0;
-        }
+        //size_t ii;
+        //for (ii = 0; ii < N; ii++){
+        //    weights[ii] /= 2.0;
+        //}
     }
     else{
         size_t ii;

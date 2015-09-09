@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
+add_subdirectory(genquadtable)
 add_subdirectory(gauss)
 add_subdirectory(sinrank2)
 add_subdirectory(genzdisc2d)

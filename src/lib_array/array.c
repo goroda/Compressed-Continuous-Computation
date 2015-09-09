@@ -553,7 +553,7 @@ darray_save(size_t rows, size_t cols, double * arr, char * filename, int type)
         fprintf(fp,"\n");
         for (ii = 0; ii < rows; ii++){
             for (jj = 0; jj < cols; jj++){
-                fprintf(fp,"%3.15f ",arr[jj*rows+ii]);
+                fprintf(fp,"%3.16f ",arr[jj*rows+ii]);
             }
             fprintf(fp,"\n");
         }

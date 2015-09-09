@@ -2437,11 +2437,11 @@ void Test_ftapprox_hess(CuTest * tc)
     free(xtest); xtest = NULL;
 
     struct FT1DArray * fth = function_train_hessian(ft);
-    double pt[3] = {2.0, -3.0, 1.0};//, 0.5};
+    double pt[3] = {1.8, -1.0, 1.0};//, 0.5};
     double * hess = ft1d_array_eval(fth,pt);
     
     //dprint2d_col(3,3,hess);
-    CuAssertDblEquals(tc, 2.0*pt[2], hess[0],1e-8);
+    CuAssertDblEquals(tc, 2.0*pt[2], hess[0],1e-6);
     CuAssertDblEquals(tc, 0.0, hess[1],1e-6);
     CuAssertDblEquals(tc, 2.0*pt[0], hess[2],1e-6);
     CuAssertDblEquals(tc, hess[1], hess[3],1e-8);
