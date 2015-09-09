@@ -1074,17 +1074,16 @@ piecewise_poly_match(struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
     }
 
     
-    //printf("Number of matched nodes are %zu \n", cind);
-    //dprint(cind,nodes);
+    printf("Number of matched nodes are %zu \n", cind);
+    dprint(cind,nodes);
 
     *aout = piecewise_poly_finer_grid(ain, cind, nodes);
     *bout = piecewise_poly_finer_grid(bin, cind, nodes);
+    printf("done with finer grid\n");
     free(nodesa); nodesa = NULL;
     free(nodesb); nodesb = NULL;
     free(nodes); nodes = NULL;
 }
-
-
 
 /********************************************************//**
 *   Remove left-most piece of pw Poly

@@ -1627,6 +1627,82 @@ void Test_pw_serialize(CuTest * tc){
 
 }
 
+void Test_poly_match(CuTest * tc){
+
+    printf("Testing functions: piecewise_poly_match \n");
+
+    double lb = -2.0;
+    double ub = 0.7;
+
+    size_t Na, Nb;
+    double * nodesa = NULL;
+    double * nodesb = NULL;
+
+    struct PiecewisePoly * a = 
+            piecewise_poly_approx1(pw_disc2, NULL, lb, ub, NULL);
+
+    size_t npa = 0;
+    piecewise_poly_nregions(&npa,a);
+    piecewise_poly_boundaries(a,&Na, &nodesa, NULL);
+    CuAssertIntEquals(tc, npa, Na-1);
+    CuAssertDblEquals(tc,-2.0,nodesa[0],1e-15);
+    CuAssertDblEquals(tc,0.7,nodesa[Na-1],1e-15);
+
+    struct PiecewisePoly * b = 
+            piecewise_poly_approx1(pw_disc, NULL, lb, ub, NULL);
+    
+    printf("got both\n");
+    size_t npb = 0;
+    piecewise_poly_nregions(&npb, b);
+    piecewise_poly_boundaries(b,&Nb, &nodesb, NULL);
+    printf("got boundaries\n");
+    CuAssertIntEquals(tc, npb, Nb-1);
+    CuAssertDblEquals(tc,-2.0,nodesb[0],1e-15);
+    CuAssertDblEquals(tc,0.7,nodesb[Nb-1],1e-15);
+
+    struct PiecewisePoly * aa = NULL;
+    struct PiecewisePoly * bb = NULL;
+    printf("matching\n");
+    piecewise_poly_match(a,&aa,b,&bb);
+    printf("matched\n");
+
+    size_t npaa = 0;
+    piecewise_poly_nregions(&npaa,aa);
+    size_t npbb = 0;
+    piecewise_poly_nregions(&npbb,bb);
+    CuAssertIntEquals(tc,npaa,npbb);
+
+    size_t Naa, Nbb;
+    double * nodesaa = NULL;
+    double * nodesbb = NULL;
+    
+    piecewise_poly_boundaries(aa,&Naa, &nodesaa, NULL);
+    CuAssertDblEquals(tc,-2.0,nodesaa[0],1e-15);
+    CuAssertDblEquals(tc,0.7,nodesaa[Naa-1],1e-15);
+
+    piecewise_poly_boundaries(bb,&Nbb, &nodesbb, NULL);
+    CuAssertDblEquals(tc,-2.0,nodesbb[0],1e-15);
+    CuAssertDblEquals(tc,0.7,nodesbb[Nbb-1],1e-15);
+    
+    CuAssertIntEquals(tc,Naa,Nbb);
+    size_t ii; 
+    for (ii = 0; ii < Naa; ii++){
+        CuAssertDblEquals(tc,nodesaa[ii],nodesbb[ii],1e-15);
+    }
+
+    free(nodesa);
+    free(nodesb);
+    free(nodesaa);
+    free(nodesbb);
+    piecewise_poly_free(a);
+    piecewise_poly_free(b);
+    piecewise_poly_free(aa);
+    piecewise_poly_free(bb);
+    //dprint(Naa, nodesa);
+    //dprint(Nbb, nodesb);
+
+}
+
 
 CuSuite * PiecewisePolyGetSuite(){
     CuSuite * suite = CuSuiteNew();
@@ -1638,7 +1714,6 @@ CuSuite * PiecewisePolyGetSuite(){
     SUITE_ADD_TEST(suite,Test_pw_approx1_adapt);
     SUITE_ADD_TEST(suite,Test_pw_approx_adapt_weird);
     SUITE_ADD_TEST(suite, Test_pw_approx1);
-    SUITE_ADD_TEST(suite, Test_pw_serialize);
     SUITE_ADD_TEST(suite, Test_pw_integrate);
     SUITE_ADD_TEST(suite, Test_pw_integrate2);
     SUITE_ADD_TEST(suite, Test_pw_inner);
@@ -1649,6 +1724,8 @@ CuSuite * PiecewisePolyGetSuite(){
     SUITE_ADD_TEST(suite, Test_pw_derivative);
     SUITE_ADD_TEST(suite, Test_pw_real_roots);
     SUITE_ADD_TEST(suite, Test_maxmin_pw);
+    SUITE_ADD_TEST(suite, Test_pw_serialize);
+    //SUITE_ADD_TEST(suite, Test_poly_match);
 
     //SUITE_ADD_TEST(suite, Test_minmod_disc_exists);
     //SUITE_ADD_TEST(suite, Test_locate_jumps);
@@ -1657,7 +1734,6 @@ CuSuite * PiecewisePolyGetSuite(){
     //SUITE_ADD_TEST(suite, Test_pw_approx12);
     //SUITE_ADD_TEST(suite, Test_pw_approx12pa);
     //SUITE_ADD_TEST(suite, Test_pw_trim);
-    //SUITE_ADD_TEST(suite, Test_poly_match);
     return suite;
 }
 
@@ -1768,81 +1844,6 @@ int main(void) {
 
 //old stuff
 /*
-void Test_poly_match(CuTest * tc){
-
-    printf("Testing functions: piecewise_poly_match \n");
-
-    double lb = -2.0;
-    double ub = 0.7;
-
-    size_t Na, Nb;
-    double * nodesa = NULL;
-    double * nodesb = NULL;
-
-    struct PiecewisePoly * a = 
-            piecewise_poly_approx1(pw_disc2, NULL, lb, ub, NULL);
-
-    size_t npa = 0;
-    piecewise_poly_nregions(&npa,a);
-    piecewise_poly_boundaries(a,&Na, &nodesa, NULL);
-    CuAssertIntEquals(tc, npa, Na-1);
-    CuAssertDblEquals(tc,-2.0,nodesa[0],1e-15);
-    CuAssertDblEquals(tc,0.7,nodesa[Na-1],1e-15);
-
-    struct PiecewisePoly * b = 
-            piecewise_poly_approx1(pw_disc, NULL, lb, ub, NULL);
-    
-    printf("got both\n");
-    size_t npb = 0;
-    piecewise_poly_nregions(&npb, b);
-    piecewise_poly_boundaries(b,&Nb, &nodesb, NULL);
-    printf("got boundaries\n");
-    CuAssertIntEquals(tc, npb, Nb-1);
-    CuAssertDblEquals(tc,-2.0,nodesb[0],1e-15);
-    CuAssertDblEquals(tc,0.7,nodesb[Nb-1],1e-15);
-
-    struct PiecewisePoly * aa = NULL;
-    struct PiecewisePoly * bb = NULL;
-    printf("matching\n");
-    piecewise_poly_match(a,&aa,b,&bb);
-    printf("matched\n");
-
-    size_t npaa = 0;
-    piecewise_poly_nregions(&npaa,aa);
-    size_t npbb = 0;
-    piecewise_poly_nregions(&npbb,bb);
-    CuAssertIntEquals(tc,npaa,npbb);
-
-    size_t Naa, Nbb;
-    double * nodesaa = NULL;
-    double * nodesbb = NULL;
-    
-    piecewise_poly_boundaries(aa,&Naa, &nodesaa, NULL);
-    CuAssertDblEquals(tc,-2.0,nodesaa[0],1e-15);
-    CuAssertDblEquals(tc,0.7,nodesaa[Naa-1],1e-15);
-
-    piecewise_poly_boundaries(bb,&Nbb, &nodesbb, NULL);
-    CuAssertDblEquals(tc,-2.0,nodesbb[0],1e-15);
-    CuAssertDblEquals(tc,0.7,nodesbb[Nbb-1],1e-15);
-    
-    CuAssertIntEquals(tc,Naa,Nbb);
-    size_t ii; 
-    for (ii = 0; ii < Naa; ii++){
-        CuAssertDblEquals(tc,nodesaa[ii],nodesbb[ii],1e-15);
-    }
-
-    free(nodesa);
-    free(nodesb);
-    free(nodesaa);
-    free(nodesbb);
-    piecewise_poly_free(a);
-    piecewise_poly_free(b);
-    piecewise_poly_free(aa);
-    piecewise_poly_free(bb);
-    //dprint(Naa, nodesa);
-    //dprint(Nbb, nodesb);
-
-}
 
 
 void Test_minmod_disc_exists(CuTest * tc)
