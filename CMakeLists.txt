@@ -36,7 +36,7 @@ include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/libs)
 
 include_directories(src/lib_stringmanip)
 include_directories(src/lib_array)
