@@ -216,7 +216,6 @@ void proc_inputs(int argc, char * argv[], struct RunArgs * rargs)
 {
 
     size_t nfield = 0;
-    size_t output = 190;
     int fin_exists = 0;
     int fout_exists = 0;
     char filename[255];
@@ -261,6 +260,7 @@ void proc_inputs(int argc, char * argv[], struct RunArgs * rargs)
        exit(1);
     }
 
+    size_t output = (size_t) floor( 0.7 * nfield) ;
     double * xsol = linspace(0.0,1.0,nfield);
     if (sqrt_cov == NULL){
         printf("........Building sqrt\n");
@@ -366,104 +366,123 @@ int main(int argc, char *argv[])
 {
     
     struct RunArgs rargs;
-    
     proc_inputs(argc, argv,&rargs);
-    printf("done prcessing\n");
-        
-    size_t dim = rargs.dim;
-
-    enum poly_type ptype = LEGENDRE;
-    struct OpeAdaptOpts ope;
-    ope.start_num = 7;
-    ope.coeffs_check = 0;
-    ope.tol=1e-3;
-    struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,&ope);
-
-    size_t init_ranks = 5;
-    struct FtCrossArgs fca;
-    fca.dim = dim;
-    fca.ranks = calloc_size_t(dim+1);
-    size_t ii;
-    fca.ranks[0] = 1;
-    for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
-    fca.ranks[dim] = 1;
-    fca.epsilon = 1e-3;
-    fca.maxiter = 3;
-    fca.epsround = 1e-8;
-    fca.kickrank = 5;
-    fca.maxiteradapt = 2;
-    fca.verbose = 2;
-
-    struct BoundingBox * bds = bounding_box_init(rargs.dim,0.05,0.95);
     
+    size_t iii,jjj;
+    double roundtol[1] = {1e-8};
+    //double roundtol[3] = {1e-2,1e-5,1e-8};
+    //double approxtol[3] = {1e-1,1e-3,1e-5};
+    double approxtol[1] = {1e-1};//,1e-3,1e-5};
+    for (iii = 0; iii < 1; iii++){
+        for (jjj = 0; jjj < 1; jjj++){
+            printf("done prcessing\n");
 
-    struct FunctionMonitor * fm = NULL;
-    fm = function_monitor_initnd(solveBlackBoxUni,&rargs,dim,1000*dim);
+            size_t dim = rargs.dim;
 
-    char ftsave[255] = "ftrain.ft";
-    struct FunctionTrain * ft = NULL;
+            enum poly_type ptype = LEGENDRE;
+            struct OpeAdaptOpts ope;
+            ope.start_num = 7;
+            ope.coeffs_check = 2;
+            ope.tol=approxtol[jjj];
+            struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,&ope);
 
-    //ft = function_train_cross(solveBlackBoxUni, &rargs,bds,NULL,&fca,app);
-    ft = function_train_cross(function_monitor_eval, fm,bds,NULL,&fca,app);
-    int success = function_train_save(ft,ftsave);
-    assert (success == 1);
+            size_t init_ranks = 5;
+            struct FtCrossArgs fca;
+            fca.dim = dim;
+            fca.ranks = calloc_size_t(dim+1);
+            size_t ii;
+            fca.ranks[0] = 1;
+            for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
+            fca.ranks[dim] = 1;
+            fca.epsilon = 1e-3;
+            fca.maxiter = 3;
+            fca.epsround = roundtol[iii];
+            fca.kickrank = 5;
+            fca.maxiteradapt = 2;
+            fca.verbose = 2;
 
-    //ft = function_train_load(ftsave);
-    //double * pt = darray_val(rargs.dim,0.5); // this is the mean
-    //double valft = function_train_eval(ft,pt);
-    //double valtrue = solveBlackBoxUni(pt,&rargs);
-    //free(pt); pt = NULL;
-    //printf("valtrue=%G, valft=%G\n",valtrue,valft);
-    
-    if (rargs.dim == 2){
-        size_t N = 20;
-        double * x = linspace(0.05,0.95,N);
-        size_t kk,ll;
-        double pt[2];
-        double val[400*4];
-        size_t index = 0;
-        for (kk = 0; kk < N; kk++){
-            pt[0] = x[kk];
-            for (ll = 0; ll < N; ll++){
-                pt[1] = x[ll];
-                val[index] = pt[0];
-                val[index+400] = pt[1];
-                val[800+kk*N+ll] = solveBlackBoxUni(pt,&rargs);;
-                val[1200+kk*N+ll] = function_train_eval(ft,pt);;
-                index++;
+            struct BoundingBox * bds = bounding_box_init(rargs.dim,0.05,0.95);
+            
+
+            struct FunctionMonitor * fm = NULL;
+            fm = function_monitor_initnd(solveBlackBoxUni,&rargs,dim,1000*dim);
+
+            char ftsave[255] = "ftrain.ft";
+            struct FunctionTrain * ft = NULL;
+
+            //ft = function_train_cross(solveBlackBoxUni, &rargs,bds,NULL,&fca,app);
+            ft = function_train_cross(function_monitor_eval, fm,bds,NULL,&fca,app);
+            int success = function_train_save(ft,ftsave);
+            assert (success == 1);
+
+            //ft = function_train_load(ftsave);
+            //double * pt = darray_val(rargs.dim,0.5); // this is the mean
+            //double valft = function_train_eval(ft,pt);
+            //double valtrue = solveBlackBoxUni(pt,&rargs);
+            //free(pt); pt = NULL;
+            //printf("valtrue=%G, valft=%G\n",valtrue,valft);
+            
+            if (rargs.dim == 2){
+                size_t N = 20;
+                double * x = linspace(0.05,0.95,N);
+                size_t kk,ll;
+                double pt[2];
+                double val[400*4];
+                size_t index = 0;
+                for (kk = 0; kk < N; kk++){
+                    pt[0] = x[kk];
+                    for (ll = 0; ll < N; ll++){
+                        pt[1] = x[ll];
+                        val[index] = pt[0];
+                        val[index+400] = pt[1];
+                        val[800+kk*N+ll] = solveBlackBoxUni(pt,&rargs);;
+                        val[1200+kk*N+ll] = function_train_eval(ft,pt);;
+                        index++;
+                    }
+                }
+                darray_save(N*N,4,val,"2dcontour.dat",1);
+                free(x); x = NULL;
             }
-        }
-        darray_save(N*N,4,val,"2dcontour.dat",1);
-        free(x); x = NULL;
-    }
-    else{
-        size_t N = 100;
-        size_t kk,ll;
-        double errnum = 0.0;
-        double errden = 0.0;
-        double * x = calloc_double(rargs.dim);
-        for (kk = 0; kk < N; kk++){
-            for (ll = 0; ll < rargs.dim; ll++){
-                x[ll] = randu() * (0.95-0.05) + 0.05;
+            else{
+                size_t N = 100;
+                size_t kk,ll;
+                double errnum = 0.0;
+                double errden = 0.0;
+                double * x = calloc_double(rargs.dim);
+                for (kk = 0; kk < N; kk++){
+                    for (ll = 0; ll < rargs.dim; ll++){
+                        x[ll] = randu() * (0.95-0.05) + 0.05;
+                    }
+                    double diff =  solveBlackBoxUni(x,&rargs) - function_train_eval(ft,x);
+                    //printf("\n");
+                    //dprint(rargs.dim,x);
+                    //printf("diff = %G\n",pow(diff,2) / pow(solveBlackBoxUni(x,&rargs),2));
+                    errden += pow(solveBlackBoxUni(x,&rargs),2);
+                    errnum += pow(diff,2);
+                }
+                double err = errnum/errden;
+                printf("err = %G\n",err);
+                size_t nvals = nstored_hashtable_cp(fm->evals);
+                printf("number of evaluations = %zu \n", nvals);
+                printf("ranks are "); iprint_sz(dim+1,ft->ranks);
+
+                double * data = calloc_double((rargs.dim+1)*2.0);
+                for (kk = 0; kk < rargs.dim+1; kk++){
+                    data[kk] = (double) ft->ranks[kk];
+                }
+                data[rargs.dim+1] = sqrt(err);
+                data[rargs.dim+2] = (double) nvals;
+                char fff[256];
+                sprintf(fff,"rtol=%G_apptol=%G",roundtol[iii],approxtol[jjj]);
+                darray_save(rargs.dim+1,2,data,fff,1);
             }
-            double diff =  solveBlackBoxUni(x,&rargs) - function_train_eval(ft,x);
-            printf("\n");
-            dprint(rargs.dim,x);
-            printf("diff = %G\n",pow(diff,2) / pow(solveBlackBoxUni(x,&rargs),2));
-            errden += pow(solveBlackBoxUni(x,&rargs),2);
-            errnum += pow(diff,2);
+            
+            function_monitor_free(fm); fm = NULL;
+            ft_approx_args_free(app); app = NULL;
+            function_train_free(ft); ft = NULL;
+            bounding_box_free(bds); bds = NULL;
         }
-        double err = errnum/errden;
-        printf("err = %G\n",err);
-        size_t nvals = nstored_hashtable_cp(fm->evals);
-        printf("number of evaluations = %zu \n", nvals);
-        printf("ranks are "); iprint_sz(dim+1,ft->ranks);
     }
-    
-    function_monitor_free(fm); fm = NULL;
-    ft_approx_args_free(app); app = NULL;
-    function_train_free(ft); ft = NULL;
-    bounding_box_free(bds); bds = NULL;
     free(rargs.sqrt_cov); rargs.sqrt_cov = NULL;
     return 0;
 }
