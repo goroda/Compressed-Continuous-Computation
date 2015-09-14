@@ -1395,6 +1395,8 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     if (VQMAMAXVOL){
         printf("maxrow=%zu maxcol=%zu maxval=%G\n",maxrow, maxcol, maxval);
     }
+    size_t maxiter = 10;
+    size_t iter =0;
     while (maxval > (1.0 + delta)){
         pivi[maxcol] = maxrow;
         pivx[maxcol] = maxx;
@@ -1423,10 +1425,14 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){
             break;
         }
+        if (iter > maxiter){
+            break;
+        }
         maxval = maxval2;
         //printf("maxval=%G\n",maxval);
+        iter++;
     }
-
+    //printf("done\n");
     //if ( r < 0){
     if ( r > 1){
         double lb = generic_function_get_lower_bound(A->funcs[0]);

@@ -372,17 +372,17 @@ int main(int argc, char *argv[])
     double roundtol[1] = {1e-8};
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
-    double approxtol[1] = {1e-1};//,1e-3,1e-5};
+    double approxtol[3] = {1e-8,1e-5,1e-3};
     for (iii = 0; iii < 1; iii++){
-        for (jjj = 0; jjj < 1; jjj++){
+        for (jjj = 0; jjj < 3; jjj++){
             printf("done prcessing\n");
 
             size_t dim = rargs.dim;
 
             enum poly_type ptype = LEGENDRE;
             struct OpeAdaptOpts ope;
-            ope.start_num = 7;
-            ope.coeffs_check = 2;
+            ope.start_num = 3;
+            ope.coeffs_check = 1;
             ope.tol=approxtol[jjj];
             struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,&ope);
 
@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
                 printf("number of evaluations = %zu \n", nvals);
                 printf("ranks are "); iprint_sz(dim+1,ft->ranks);
 
-                double * data = calloc_double((rargs.dim+1)*2.0);
+                double * data = calloc_double((rargs.dim+1)*2);
                 for (kk = 0; kk < rargs.dim+1; kk++){
                     data[kk] = (double) ft->ranks[kk];
                 }
