@@ -369,11 +369,12 @@ int main(int argc, char *argv[])
     proc_inputs(argc, argv,&rargs);
     
     size_t iii,jjj;
-    double roundtol[3] = {1e-6,1e-7,1e-8};
+    double roundtol[8] = {1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8};
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
-    double approxtol[3] = {1e-1,1e-2,1e-3};
-    for (iii = 0; iii < 3; iii++){
+    double approxtol[3] = {1e-4,1e-5,1e-6};
+    //double approxtol[3] = {1e-1,1e-2,1e-3};
+    for (iii = 0; iii < 8; iii++){
         for (jjj = 0; jjj < 3; jjj++){
             printf("done prcessing\n");
 
