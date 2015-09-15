@@ -1324,7 +1324,7 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         for (ii = 0; ii < N; ii++){ 
             sum_coeff_squared += pow(poly->coeff[ii],2); 
         }
-        sum_coeff_squared = fmax(sum_coeff_squared,1.0);
+        //sum_coeff_squared = fmax(sum_coeff_squared,1.0);
         //sum_coeff_squared = 1.0;
         for (ii = 0; ii < aopts->coeffs_check; ii++){
             //printf("aopts->tol=%3.15G last coefficients %3.15G\n",

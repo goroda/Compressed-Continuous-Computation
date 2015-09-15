@@ -13,9 +13,9 @@
 //
 //
 
-#define offset 0.5
-#define sigsize 1.0
-#define corrlength 0.15
+#define offset 0.0
+#define sigsize 0.1
+#define corrlength 0.25
 
 void read_data(char * filename, size_t nrows, size_t ncols, double * data)
 {
@@ -370,12 +370,15 @@ int main(int argc, char *argv[])
     
     size_t iii,jjj;
     double roundtol[8] = {1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8};
+    //double roundtol[2] = {1e-9,1e-10};
+    //double roundtol[2] = {1e-4,1e-6};
+    //double approxtol[1] = {1e0};
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
-    double approxtol[3] = {1e-4,1e-5,1e-6};
+    double approxtol[8] = {1e-0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7};
     //double approxtol[3] = {1e-1,1e-2,1e-3};
     for (iii = 0; iii < 8; iii++){
-        for (jjj = 0; jjj < 3; jjj++){
+        for (jjj = 0; jjj < 8; jjj++){
             printf("done prcessing\n");
 
             size_t dim = rargs.dim;
@@ -399,7 +402,7 @@ int main(int argc, char *argv[])
             fca.maxiter = 3;
             fca.epsround = roundtol[iii];
             fca.kickrank = 5;
-            fca.maxiteradapt = 2;
+            fca.maxiteradapt = 3;
             fca.verbose = 2;
 
             struct BoundingBox * bds = bounding_box_init(rargs.dim,0.05,0.95);
