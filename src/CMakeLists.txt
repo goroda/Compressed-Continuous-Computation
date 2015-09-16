@@ -10,3 +10,14 @@ add_subdirectory(lib_tensor)
 add_subdirectory(lib_tensdecomp)
 add_subdirectory(lib_optimization)
 add_subdirectory(lib_probability)
+
+
+#create a libray containing everything!
+file(GLOB SRC_FILES */*.c)
+if (${static_libs} )
+    add_library(c3 ${SRC_FILES})
+else ()
+    add_library(c3 SHARED ${SRC_FILES})
+    #target_link_libraries(array -fPIC stringmanip)
+endif()
+
