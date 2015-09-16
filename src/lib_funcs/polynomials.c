@@ -1336,8 +1336,8 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
             }
         }
         if (N > 100){
-            //printf("Warning: num of poly is %zu: last coeff = %G \n",N,poly->coeff[N-1]);
-            //printf("tolerance is %3.15G\n", aopts->tol * sum_coeff_squared);
+            printf("Warning: num of poly is %zu: last coeff = %G \n",N,poly->coeff[N-1]);
+            printf("tolerance is %3.15G\n", aopts->tol * sum_coeff_squared);
             //printf("Considering using piecewise polynomials\n");
             /*
             printf("first 5 coeffs\n");

@@ -369,16 +369,18 @@ int main(int argc, char *argv[])
     proc_inputs(argc, argv,&rargs);
     
     size_t iii,jjj;
-    double roundtol[8] = {1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8};
+    //double roundtol[8] = {1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8};
+    double roundtol[1] = {1e-7};
     //double roundtol[2] = {1e-9,1e-10};
     //double roundtol[2] = {1e-4,1e-6};
     //double approxtol[1] = {1e0};
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
-    double approxtol[8] = {1e-0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7};
+    //double approxtol[8] = {1e-0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7};
+    double approxtol[1] = {1e-6};
     //double approxtol[3] = {1e-1,1e-2,1e-3};
-    for (iii = 0; iii < 8; iii++){
-        for (jjj = 0; jjj < 8; jjj++){
+    for (iii = 0; iii < 1; iii++){
+        for (jjj = 0; jjj < 1; jjj++){
             printf("done prcessing\n");
 
             size_t dim = rargs.dim;
@@ -398,7 +400,7 @@ int main(int argc, char *argv[])
             fca.ranks[0] = 1;
             for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
             fca.ranks[dim] = 1;
-            fca.epsilon = 1e-3;
+            fca.epsilon = roundtol[iii];
             fca.maxiter = 3;
             fca.epsround = roundtol[iii];
             fca.kickrank = 5;
@@ -448,7 +450,7 @@ int main(int argc, char *argv[])
                 free(x); x = NULL;
             }
             else{
-                size_t N = 100;
+                size_t N = 10000;
                 size_t kk,ll;
                 double errnum = 0.0;
                 double errden = 0.0;
