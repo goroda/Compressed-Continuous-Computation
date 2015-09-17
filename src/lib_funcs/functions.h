@@ -79,6 +79,7 @@ struct BoundingBox
 
 struct BoundingBox * bounding_box_init_std(size_t);
 struct BoundingBox * bounding_box_init(size_t,double, double);
+struct BoundingBox * bounding_box_vec(size_t, double *, double *);
 void bounding_box_free(struct BoundingBox *);
 
 /** \struct GenericFunction

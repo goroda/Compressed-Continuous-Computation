@@ -41,7 +41,7 @@
 #define ELEMENTS_H
 
 #include <stdlib.h>
-#include "lib_funcs.h"
+#include "../lib_funcs/lib_funcs.h"
 
 //////////////////////////////////////////////////////////////
 // Quasimatrices

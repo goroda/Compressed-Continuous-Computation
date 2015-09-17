@@ -104,6 +104,34 @@ struct BoundingBox * bounding_box_init(size_t dim, double lb, double ub)
     return b;
 }
 
+/*******************************************************//**
+    Initialize a bound structure with each dimension bounded by [lb[i],ub[i]]
+
+    \param dim [in] - dimension
+    \param lb [in] - lower bounds
+    \param ub [in] - upper bounds
+        
+    \return b - bounds
+***********************************************************/
+struct BoundingBox * bounding_box_vec(size_t dim, double * lb, double *ub)
+{
+    struct BoundingBox * b;
+    if (NULL == ( b = malloc(sizeof(struct BoundingBox)))){
+        fprintf(stderr, "failed to allocate bounds.\n");
+        exit(1);
+    }
+    
+    b->dim = dim;
+    b->lb = calloc_double(dim);
+    b->ub = calloc_double(dim);
+    size_t ii;
+    for (ii = 0; ii <dim; ii++){
+        b->lb[ii] = lb[ii];
+        b->ub[ii] = ub[ii];
+    }
+    return b;
+}
+
 /********************************************************//**
     Free memory allocated for bounding box
 
