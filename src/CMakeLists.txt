@@ -18,6 +18,10 @@ if (${static_libs} )
     add_library(c3 ${SRC_FILES})
 else ()
     add_library(c3 SHARED ${SRC_FILES})
-    #target_link_libraries(array -fPIC stringmanip)
+    target_link_libraries(c3
+        ${blas_lapack}
+        -lm
+        )
+        
 endif()
 
