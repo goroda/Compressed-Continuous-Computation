@@ -267,6 +267,9 @@ struct FunctionTrain * function_train_linear(size_t, struct BoundingBox *,
 
 struct FunctionTrain * function_train_quadratic(size_t, struct BoundingBox *,
                     double *, double *, struct FtApproxArgs * ); 
+struct FunctionTrain * 
+function_train_quadratic_aligned(struct BoundingBox *, double *, 
+                                 double *, struct FtApproxArgs *);
 
 unsigned char * 
 function_train_serialize(unsigned char *, struct FunctionTrain *, size_t *);

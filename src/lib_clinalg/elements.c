@@ -1793,6 +1793,106 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
     return ft;
 }
 
+/***********************************************************//**
+    Compute a tensor train representation of \f$ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f$
+
+    \param dim [in] - dimension of function train
+    \param bds [in] - boundarys of each dimension
+    \param coeffs [in] - coefficients for each dimension
+    \param m [in] - offset in each dimension
+    \param ftargs [in] - parameters for computation
+
+    \return ft - function train
+***************************************************************/
+struct FunctionTrain * 
+function_train_quadratic_aligned(struct BoundingBox * bds, 
+            double * coeffs, double * m,
+            struct FtApproxArgs * ftargs)
+{
+    size_t dim = bds->dim;
+
+    struct FtApproxArgs * ftargs_use;
+    if (ftargs == NULL){
+        enum poly_type ptype = LEGENDRE;
+        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
+    }
+    else{
+        ftargs_use = ftargs;
+    }
+    enum function_class fc;
+    void * sub_type = NULL;
+    void * approx_opts = NULL;
+    
+    struct FunctionTrain * ft = function_train_alloc(dim);
+
+    size_t onDim = 0;
+    fc = ft_approx_args_getfc(ftargs_use, onDim);
+    sub_type = ft_approx_args_getst(ftargs_use, onDim);
+    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
+    ft->ranks[onDim] = 1;
+
+    if (dim == 1){
+        ft->cores[onDim] = qmarray_alloc(1,1);
+    }
+    else{
+        ft->cores[onDim] = qmarray_alloc(1,2);
+    }
+    
+    ft->cores[onDim]->funcs[0] = generic_function_quadratic(
+                                coeffs[onDim], m[onDim],
+                                fc, sub_type, bds->lb[onDim], 
+                                bds->ub[onDim], approx_opts);
+    ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
+                                 bds->lb[onDim], bds->ub[onDim], approx_opts);
+    
+    if (dim > 1){
+        for (onDim = 1; onDim < dim-1; onDim++){
+            fc = ft_approx_args_getfc(ftargs_use, onDim);
+            sub_type = ft_approx_args_getst(ftargs_use, onDim);
+            approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
+
+            ft->ranks[onDim] = 2;
+            ft->cores[onDim] = qmarray_alloc(2,2);
+
+            ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
+                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+
+            ft->cores[onDim]->funcs[1] = generic_function_quadratic(
+                                coeffs[onDim], m[onDim],
+                                fc, sub_type, bds->lb[onDim], 
+                                bds->ub[onDim], approx_opts);
+
+            ft->cores[onDim]->funcs[2] = generic_function_constant(0.0, fc, 
+                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+            ft->cores[onDim]->funcs[3] = generic_function_constant(1.0, fc, 
+                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+        }
+
+        onDim = dim-1;
+
+        fc = ft_approx_args_getfc(ftargs_use, onDim);
+        sub_type = ft_approx_args_getst(ftargs_use, onDim);
+        approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
+
+        ft->ranks[onDim] = 2;
+        ft->ranks[onDim+1] = 1;
+        ft->cores[onDim] = qmarray_alloc(2,1);
+
+        ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
+                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+        ft->cores[onDim]->funcs[1] = generic_function_quadratic(
+                            coeffs[onDim], m[onDim],
+                            fc, sub_type, bds->lb[onDim], 
+                            bds->ub[onDim], approx_opts);
+
+    }
+
+    if (ftargs == NULL){
+        ft_approx_args_free(ftargs_use);
+    }
+    return ft;
+}
+
 
 /***********************************************************//**
     Serialize a function_train
