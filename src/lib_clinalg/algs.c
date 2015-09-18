@@ -2612,6 +2612,7 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
     \param ft [in] - Function train 
 
     \return ftg - gradient
+
 ***********************************************************/
 struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 {
@@ -2636,6 +2637,7 @@ struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
     \param fta [in] - Function train array
 
     \return jac - jacobian
+
 ***********************************************************/
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 {
@@ -2657,19 +2659,36 @@ struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 /********************************************************//**
     Compute the hessian of a function train 
 
-    \param ft [in] - Function train 
+    \param fta [in] - Function train 
 
     \return fth - hessian of a function train
+
 ***********************************************************/
-struct FT1DArray * 
-function_train_hessian(struct FunctionTrain * ft)
+struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 {
-    struct FT1DArray * ftg = function_train_gradient(ft);
+    struct FT1DArray * ftg = function_train_gradient(fta);
 
     struct FT1DArray * fth = ft1d_array_jacobian(ftg);
         
     ft1d_array_free(ftg); ftg = NULL;
     return fth;
+}
+
+/********************************************************//**
+    Scale a function train array
+
+    \param fta [inout] - Function train Array
+    \param n [in] - number of elements in the array to scale
+    \param inc [in] - increment between function trains to scale in the array
+    \param scale [in] - value by which to scale
+
+***********************************************************/
+void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale)
+{
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        function_train_scale(fta->ft[ii*inc],scale);
+    }
 }
 
 /********************************************************//**
@@ -2692,7 +2711,9 @@ double * ft1d_array_eval(struct FT1DArray * fta, double * x)
 
 /********************************************************//**
     Multiply together and sum the elements of two function train arrays
-    \f$ out(x) = \\sum_{i=1}^{N} coeff_i f_i(x) * g_i(x) \f$
+    \f[ 
+        out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x) 
+    \f]
     
     \param N [in] - number of function trains in each array
     \param coeff [in] - coefficients to multiply each element
@@ -3310,4 +3331,227 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     free(ranks_found);
     return ftr;
 }
+
+//////////////////////////////////////////////////////////////////////
+// Blas type interface 1
+//
+
+/***********************************************************//**
+    Computes 
+    \f[
+        y \leftarrow \texttt{round}(a x + y, epsilon)
+    \f]
+
+    \param a [in] - scaling factor
+    \param x [in] - first function train
+    \param y [inout] - second function train
+    \param epsilon - rounding accuracy (0 for exact)
+***************************************************************/
+void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain * y, 
+            double epsilon)
+{
+    
+    function_train_scale(x,a);
+    struct FunctionTrain * z = function_train_sum(x,y);
+    function_train_free(y); y = NULL;
+    if (epsilon > 0){
+        y = function_train_round(z,epsilon);
+    }
+    else{
+        y = z;
+    }
+}
+
+/***********************************************************//**
+    Computes 
+    \f$
+        \langle x,y \rangle
+    \f$
+
+    \param x [in] - first function train
+    \param y [in] - second function train
+
+    \return out - inner product between two function trains
+***************************************************************/
+double c3dot(struct FunctionTrain * x, struct FunctionTrain * y)
+{
+    double out = function_train_inner(x,y);
+    return out;
+}
+
+//////////////////////////////////////////////////////////////////////
+// Blas type interface 2
+/***********************************************************//**
+    Computes 
+    \f[
+        y \leftarrow alpha \sum_{i=1}^n \texttt{round}(\texttt{product}(A[i*inca],x),epsilon) +
+         beta y 
+    \f]
+    \f[
+        y \leftarrow \texttt{round}(y,epsilon)
+    \f]
+    
+    \note
+    Also rounds after every summation
+***************************************************************/
+void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
+        struct FunctionTrain * x,double beta, struct FunctionTrain * y,
+        double epsilon)
+{
+
+    size_t ii;
+    if (y == NULL){
+        struct BoundingBox * bds = function_train_bds(x);
+        y = function_train_constant(x->dim,0.0, bds,NULL);
+        bounding_box_free(bds);
+    }
+    else{
+        function_train_scale(y,beta);
+    }
+
+    if (epsilon > 0){
+        struct FunctionTrain * runinit = function_train_product(A->ft[0],x);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp = 
+                function_train_product(A->ft[ii*inca],x);
+            struct FunctionTrain * tempround = function_train_round(temp,epsilon);
+            c3axpy(1.0,tempround,run,epsilon);
+            function_train_free(temp); temp = NULL;
+            function_train_free(tempround); tempround = NULL;
+        }
+        c3axpy(alpha,run,y,epsilon);
+        function_train_free(run); run = NULL;
+        function_train_free(runinit); runinit = NULL;
+    }
+    else{
+        struct FunctionTrain * run = function_train_product(A->ft[0],x);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp = 
+                function_train_product(A->ft[ii*inca],x);
+            c3axpy(1.0,temp,run,epsilon);
+            function_train_free(temp); temp = NULL;
+        }
+        c3axpy(alpha,run,y,epsilon);
+        function_train_free(run); run = NULL;
+    }
+       
+}
+
+//////////////////////////////////////////////////////////////////////
+// Blas type interface 1 (for ft arrays
+
+/***********************************************************//**
+    Computes for \f$ i=1 \ldots n\f$
+    \f[
+        y[i*incy] \leftarrow \texttt{round}(a * x[i*incx] + y[i*incy],epsilon)
+    \f]
+
+***************************************************************/
+void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx, 
+            struct FT1DArray* y, size_t incy, double epsilon)
+{
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        c3axpy(a,x->ft[ii*incx],y->ft[ii*incy],epsilon);
+    }
+}
+
+/***********************************************************//**
+    Computes 
+    \f[
+        z \leftarrow \texttt{round}(a\sum_{i=1}^n \texttt{round}(x[i*incx]*y[i*incy],epsilon) + beta * z,epsilon)
+        
+    \f]
+    
+    \note
+    Also rounds after every summation.
+
+***************************************************************/
+void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
+                struct FT1DArray * y, size_t incy, double beta,
+                struct FunctionTrain * z, double epsilon)
+{
+    if (z == NULL)
+    {
+        struct BoundingBox * bds = function_train_bds(x->ft[0]);
+        z = function_train_constant(x->ft[0]->dim,0.0, bds,NULL);
+        bounding_box_free(bds); bds = NULL;
+    }
+    else{
+        function_train_scale(z,beta);
+    }
+    
+    size_t ii;
+
+    if (epsilon > 0){
+        struct FunctionTrain * runinit = 
+            function_train_product(x->ft[0],y->ft[0]);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * tempinit = 
+                function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
+            struct FunctionTrain * temp = function_train_round(tempinit,epsilon);
+            c3axpy(1.0,temp,run,epsilon);
+            function_train_free(temp); temp = NULL;
+            function_train_free(tempinit); tempinit = NULL;
+        }
+        c3axpy(a,run,z,epsilon);
+        function_train_free(run); run = NULL;
+        function_train_free(runinit); runinit = NULL;
+    }
+    else{
+        struct FunctionTrain * run = 
+            function_train_product(x->ft[0],y->ft[0]);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp = 
+                function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
+            c3axpy(1.0,temp,run,epsilon);
+            function_train_free(temp); temp = NULL;
+        }
+        c3axpy(a,run,z,epsilon);
+        function_train_free(run); run = NULL;
+    }
+}
+
+/***********************************************************//**
+    Computes for \f$ i = 1 \ldots m \f$
+    \f[
+        y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j*lda],x[j*incx]) + beta * y[i*incy]
+    \f]
+    
+    \note
+    Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter.
+
+***************************************************************/
+void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
+        struct FT1DArray * x, size_t incx, double beta, struct FT1DArray * y,
+        size_t incy, double epsilon)
+{
+
+    size_t ii;
+    if (y == NULL){
+        y = ft1d_array_alloc(m);
+        struct BoundingBox * bds = function_train_bds(x->ft[0]);
+        for (ii = 0; ii < m; ii++){
+            y->ft[ii] = function_train_constant(bds->dim,0.0, bds,NULL);
+        }
+        bounding_box_free(bds);
+    }
+    else{
+        ft1d_array_scale(y,m,incy,beta);
+    }
+
+    struct FT1DArray * run = ft1d_array_alloc(m); 
+    for (ii = 0; ii < m; ii++){
+        struct FT1DArray ftatemp;
+        ftatemp.ft = A->ft+ii;
+        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,run->ft[ii],epsilon);
+
+    }
+    c3vaxpy(m,alpha,run,1,y,incy,epsilon);
+
+    ft1d_array_free(run); run = NULL;
+}
+
 
