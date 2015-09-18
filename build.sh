@@ -44,6 +44,8 @@ cmake ..
 make
 cd .. 
 
+rm /usr/lib/libc3.*
+ln -t /usr/lib lib/libc3.*
 
 # add command line options to do this in the future
 
