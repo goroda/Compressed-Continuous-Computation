@@ -1594,13 +1594,13 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
         ft->cores[onDim] = qmarray_alloc(1,2);
     }
     
-    ft->cores[onDim]->funcs[0] = generic_function_linear(coeffs[onDim], 0.0, 
-                                    fc, sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
-    ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
-                                 bds->lb[onDim], bds->ub[onDim], approx_opts);
-    
     if (dim > 1){
+        ft->cores[onDim]->funcs[0] = generic_function_linear(coeffs[onDim], 0.0, 
+                                        fc, sub_type, bds->lb[onDim], 
+                                        bds->ub[onDim], approx_opts);
+        ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
+                                     bds->lb[onDim], bds->ub[onDim], approx_opts);
+        
         for (onDim = 1; onDim < dim-1; onDim++){
             fc = ft_approx_args_getfc(ftargs_use, onDim);
             sub_type = ft_approx_args_getst(ftargs_use, onDim);
@@ -1638,6 +1638,11 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
                                     fc, sub_type, bds->lb[onDim], 
                                     bds->ub[onDim], approx_opts);
 
+    }
+    else{
+        ft->cores[onDim]->funcs[0] = generic_function_linear(coeffs[onDim], 0.0, 
+                                        fc, sub_type, bds->lb[onDim], 
+                                        bds->ub[onDim], approx_opts);
     }
 
     if (ftargs == NULL){
@@ -1796,7 +1801,6 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a tensor train representation of \f$ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f$
 
-    \param dim [in] - dimension of function train
     \param bds [in] - boundarys of each dimension
     \param coeffs [in] - coefficients for each dimension
     \param m [in] - offset in each dimension
@@ -1838,14 +1842,14 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
         ft->cores[onDim] = qmarray_alloc(1,2);
     }
     
-    ft->cores[onDim]->funcs[0] = generic_function_quadratic(
-                                coeffs[onDim], m[onDim],
-                                fc, sub_type, bds->lb[onDim], 
-                                bds->ub[onDim], approx_opts);
-    ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
-                                 bds->lb[onDim], bds->ub[onDim], approx_opts);
     
     if (dim > 1){
+        ft->cores[onDim]->funcs[0] = generic_function_quadratic(
+                                    coeffs[onDim], m[onDim],
+                                    fc, sub_type, bds->lb[onDim], 
+                                    bds->ub[onDim], approx_opts);
+        ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
+                                     bds->lb[onDim], bds->ub[onDim], approx_opts);
         for (onDim = 1; onDim < dim-1; onDim++){
             fc = ft_approx_args_getfc(ftargs_use, onDim);
             sub_type = ft_approx_args_getst(ftargs_use, onDim);
@@ -1885,6 +1889,12 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
                             fc, sub_type, bds->lb[onDim], 
                             bds->ub[onDim], approx_opts);
 
+    }
+    else{
+        ft->cores[onDim]->funcs[0] = generic_function_quadratic(
+                                    coeffs[onDim], m[onDim],
+                                    fc, sub_type, bds->lb[onDim], 
+                                    bds->ub[onDim], approx_opts);
     }
 
     if (ftargs == NULL){
@@ -2054,8 +2064,7 @@ struct FunctionTrain * function_train_load(char * filename)
     \note 
         Each ft of the array is set to NULL;
 ***************************************************************/
-struct FT1DArray *
-ft1d_array_alloc(size_t dimout)
+struct FT1DArray * ft1d_array_alloc(size_t dimout)
 {
     struct FT1DArray * fta = malloc(sizeof(struct FT1DArray));
     if (fta == NULL){
@@ -2077,6 +2086,22 @@ ft1d_array_alloc(size_t dimout)
     }
     
     return fta;
+}
+/***********************************************************//**
+    Copy an array of function trains
+
+    \param fta [in] - array to coppy
+
+    \return ftb - copied array
+***************************************************************/
+struct FT1DArray * ft1d_array_copy(struct FT1DArray * fta)
+{
+    struct FT1DArray * ftb = ft1d_array_alloc(fta->size);
+    size_t ii;
+    for (ii = 0; ii < fta->size; ii++){
+        ftb->ft[ii] = function_train_copy(fta->ft[ii]);
+    }
+    return ftb;
 }
 
 /***********************************************************//**

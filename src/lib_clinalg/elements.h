@@ -292,6 +292,7 @@ struct FT1DArray{
 };
 
 struct FT1DArray * ft1d_array_alloc(size_t); 
+struct FT1DArray * ft1d_array_copy(struct FT1DArray *);
 void ft1d_array_free(struct FT1DArray *);
 
 

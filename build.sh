@@ -45,7 +45,8 @@ make
 cd .. 
 
 rm /usr/lib/libc3.*
-ln -t /usr/lib lib/libc3.*
+#ln -t /usr/lib lib/libc3.*
+ln -F lib/libc3.dylib /usr/lib/libc3.dylib # for mac
 
 # add command line options to do this in the future
 
