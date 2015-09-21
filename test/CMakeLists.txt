@@ -15,6 +15,7 @@ add_subdirectory(lib_array_test)
 
 add_subdirectory(lib_linalg_test)
 add_subdirectory(lib_clinalg_test)
+add_subdirectory(lib_clinalg_test2)
 
 add_subdirectory(lib_quadrature_test)
 add_subdirectory(lib_funcs_test)
