@@ -13,7 +13,7 @@
 //
 //
 
-#define offset 0.0
+#define offset 0.5
 #define sigsize 1.0
 #define corrlength 0.15
 
