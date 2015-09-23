@@ -139,9 +139,11 @@ struct BoundingBox * bounding_box_vec(size_t dim, double * lb, double *ub)
 ************************************************************/
 void bounding_box_free(struct BoundingBox * b)
 {
-    free(b->lb);
-    free(b->ub);
-    free(b);
+    if (b != NULL){
+        free(b->lb);
+        free(b->ub);
+        free(b);
+    }
 }
 
 /********************************************************//**
