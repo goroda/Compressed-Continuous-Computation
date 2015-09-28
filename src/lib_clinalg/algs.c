@@ -3559,6 +3559,7 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
     size_t ii;
     if (*y == NULL){
         *y = ft1d_array_alloc(m);
+        assert (incy == 1);
         struct BoundingBox * bds = function_train_bds(x->ft[0]);
         for (ii = 0; ii < m; ii++){
             (*y)->ft[ii] = function_train_constant(bds->dim,0.0, bds,NULL);
@@ -3573,7 +3574,7 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
     for (ii = 0; ii < m; ii++){
         struct FT1DArray ftatemp;
         ftatemp.ft = A->ft+ii;
-        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii]),epsilon);
+        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii*incy]),epsilon);
     }
     c3vaxpy(m,alpha,run,1,y,incy,epsilon);
 
@@ -3591,11 +3592,13 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
     trans = 0 means not to transpose A
     trans = 1 means to transpose A
 ***************************************************************/
-void c3vgemv_arr(int trans, size_t m, size_t n, size_t alpha, double * A, size_t lda,
-    struct FT1DArray * B, size_t incb, double beta, struct FT1DArray ** y, size_t incy, double epsilon)
+void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A, 
+        size_t lda, struct FT1DArray * B, size_t incb, double beta,
+        struct FT1DArray ** y, size_t incy, double epsilon)
 {
     size_t ii;
     if (*y == NULL){
+        assert(incy == 1);
         *y = ft1d_array_alloc(m);
         struct BoundingBox * bds = function_train_bds(B->ft[0]);
         for (ii = 0; ii < m; ii++){
@@ -3609,12 +3612,12 @@ void c3vgemv_arr(int trans, size_t m, size_t n, size_t alpha, double * A, size_t
     
     if (trans == 0){
         for (ii = 0; ii < m; ii++){
-            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii]),epsilon);
+            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon);
         }
     }
     else if (trans == 1){
         for (ii = 0; ii < m; ii++){
-            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii]),epsilon);
+            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon);
         }
     }
 

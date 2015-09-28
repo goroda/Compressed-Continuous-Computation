@@ -241,7 +241,7 @@ void c3vprodsum(size_t, double, struct FT1DArray *, size_t,
 void c3vgemv(size_t, size_t, double, struct FT1DArray *, size_t,
         struct FT1DArray *, size_t, double, struct FT1DArray **,
         size_t, double );
-void c3vgemv_arr(int, size_t, size_t, size_t, double *, size_t,
+void c3vgemv_arr(int, size_t, size_t, double, double *, size_t,
         struct FT1DArray *, size_t, double, struct FT1DArray **, 
         size_t, double);
 
