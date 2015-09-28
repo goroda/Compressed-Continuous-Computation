@@ -225,6 +225,10 @@ ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
 //////////////////////////////////////////////////////////////////////
 // Blas type interface 1
 void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double);
+void c3vaxpy_arr(size_t, double, struct FT1DArray *, 
+                size_t, double *, size_t, double,
+                struct FunctionTrain **, double);
+
 double c3dot(struct FunctionTrain *, struct FunctionTrain *);
 void c3gemv(double, size_t, struct FT1DArray *, size_t, 
         struct FunctionTrain *,double, struct FunctionTrain *,double);
@@ -237,5 +241,8 @@ void c3vprodsum(size_t, double, struct FT1DArray *, size_t,
 void c3vgemv(size_t, size_t, double, struct FT1DArray *, size_t,
         struct FT1DArray *, size_t, double, struct FT1DArray **,
         size_t, double );
- 
+void c3vgemv_arr(int, size_t, size_t, size_t, double *, size_t,
+        struct FT1DArray *, size_t, double, struct FT1DArray **, 
+        size_t, double);
+
 #endif

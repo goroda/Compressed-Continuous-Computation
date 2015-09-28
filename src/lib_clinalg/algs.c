@@ -3459,6 +3459,32 @@ void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx,
 }
 
 /***********************************************************//**
+    Computes for \f$ i=1 \ldots n\f$
+    \f[
+        z \leftarrow alpha\sum_{i=1}^n y[incy*ii]*x[ii*incx] + beta * z
+    \f]
+
+***************************************************************/
+void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x, 
+                size_t incx, double * y, size_t incy, double beta,
+                struct FunctionTrain ** z, double epsilon)
+{
+    if (*z == NULL)
+    {
+        struct BoundingBox * bds = function_train_bds(x->ft[0]);
+        *z = function_train_constant(x->ft[0]->dim,0.0, bds,NULL);
+        bounding_box_free(bds); bds = NULL;
+    }
+    else{
+        function_train_scale(*z,beta);
+    }
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon);
+    }
+}
+
+/***********************************************************//**
     Computes 
     \f[
         z \leftarrow \texttt{round}(a\sum_{i=1}^n \texttt{round}(x[i*incx]*y[i*incy],epsilon) + beta * z,epsilon)
@@ -3554,4 +3580,43 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
     ft1d_array_free(run); run = NULL;
 }
 
+/***********************************************************//**
+    Computes for \f$ i = 1 \ldots m \f$
+    \f[
+        y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j],B[j*incb]) + beta * y[i*incy]
+    \f]
+    
+    \note
+    Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter.
+    trans = 0 means not to transpose A
+    trans = 1 means to transpose A
+***************************************************************/
+void c3vgemv_arr(int trans, size_t m, size_t n, size_t alpha, double * A, size_t lda,
+    struct FT1DArray * B, size_t incb, double beta, struct FT1DArray ** y, size_t incy, double epsilon)
+{
+    size_t ii;
+    if (*y == NULL){
+        *y = ft1d_array_alloc(m);
+        struct BoundingBox * bds = function_train_bds(B->ft[0]);
+        for (ii = 0; ii < m; ii++){
+            (*y)->ft[ii] = function_train_constant(bds->dim,0.0, bds,NULL);
+        }
+        bounding_box_free(bds);
+    }
+    else{
+        ft1d_array_scale(*y,m,incy,beta);
+    }
+    
+    if (trans == 0){
+        for (ii = 0; ii < m; ii++){
+            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii]),epsilon);
+        }
+    }
+    else if (trans == 1){
+        for (ii = 0; ii < m; ii++){
+            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii]),epsilon);
+        }
+    }
 
+    
+}
