@@ -2619,13 +2619,16 @@ struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
     struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
     size_t ii;
     for (ii = 0; ii < ft->dim; ii++){
+        //printf("**********\n\n\n**********\n");
         //printf("ii = %zu\n",ii);
         ftg->ft[ii] = function_train_copy(ft);
         qmarray_free(ftg->ft[ii]->cores[ii]);
         ftg->ft[ii]->cores[ii] = NULL;
         //printf("get deriv ii = %zu\n",ii);
+        //print_qmarray(ft->cores[ii],1,NULL);
         ftg->ft[ii]->cores[ii] = qmarray_deriv(ft->cores[ii]);
         //printf("got deriv ii = %zu\n",ii);
+        //print_qmarray(ftg->ft[ii]->cores[ii],1,NULL);
     }
 
     return ftg;
@@ -3351,8 +3354,9 @@ void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,
             double epsilon)
 {
     
-    function_train_scale(x,a);
-    struct FunctionTrain * z = function_train_sum(x,*y);
+    struct FunctionTrain * temp = function_train_copy(x);
+    function_train_scale(temp,a);
+    struct FunctionTrain * z = function_train_sum(temp,*y);
     function_train_free(*y); *y = NULL;
     if (epsilon > 0){
         *y = function_train_round(z,epsilon);
@@ -3361,6 +3365,7 @@ void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,
     else{
         *y = z;
     }
+    function_train_free(temp); temp = NULL;
 }
 
 /***********************************************************//**
@@ -3478,6 +3483,7 @@ void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,
     else{
         function_train_scale(*z,beta);
     }
+
     size_t ii;
     for (ii = 0; ii < n; ii++){
         c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon);
