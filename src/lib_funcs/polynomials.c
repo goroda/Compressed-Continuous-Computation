@@ -1158,6 +1158,38 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
     }
 }
 
+/********************************************************//**
+*  Round an orthogonal polynomial expansion to a threshold
+*
+*  \param p [inout] - orthogonal polynomial expansion
+*  \param thresh [in] - threshold (relative) to round to
+*
+*  \note
+*      (UNTESTED, use with care!!!! 
+*************************************************************/
+void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
+{   
+    size_t jj = 0;
+    double sum = 0.0;
+	for (jj = 0; jj < (*p)->num_poly;jj++){
+        sum += pow((*p)->coeff[jj],2);
+	}
+    size_t keep = 1;
+    size_t count = 0, numcheck=3;
+    for (jj = 1; jj < (*p)->num_poly; jj++){
+        if (fabs((*p)->coeff[ii]) < (thresh * sum)){
+            count++;
+        }
+        else{
+            count = 0;
+        }
+        if (count > numthresh){}
+    }
+    I AM HERE
+
+}
+
+
 
 /********************************************************//**
 *  Approximate a function with an orthogonal polynomial
