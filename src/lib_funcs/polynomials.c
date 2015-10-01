@@ -1188,7 +1188,7 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
             break;
         }
     }
-    dprint((*p)->num_poly, (*p)->coeff);
+    //dprint((*p)->num_poly, (*p)->coeff);
     //printf("number keep = %zu\n",keep);
     //printf("tolerance = %G\n",thresh);
     double * new_coeff = calloc_double(keep);
