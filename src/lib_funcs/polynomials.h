@@ -199,6 +199,7 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
 double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);
 
 void orth_poly_expansion_round(struct OrthPolyExpansion **);
+void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);
 
 void orth_poly_expansion_approx (double (*)(double,void *), void *, 
                        struct OrthPolyExpansion *);

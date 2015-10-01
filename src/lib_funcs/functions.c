@@ -190,6 +190,32 @@ generic_function_alloc(size_t dim, enum function_class fc, void * sub_type){
 }
 
 /********************************************************//**
+*  Round an generic function to some tolerance
+*
+*  \param gf [inout] - generic function
+*  \param thresh [in] - threshold (relative) to round to
+*
+*  \note
+*      (UNTESTED, use with care!!!! 
+*************************************************************/
+void generic_function_roundt(struct GenericFunction ** gf, double thresh)
+{
+    struct OrthPolyExpansion * ope = NULL;
+    switch ((*gf)->fc){
+        case PIECEWISE:
+            break;
+        case POLYNOMIAL:
+            ope = (*gf)->f;
+            orth_poly_expansion_roundt(&ope,thresh);
+            break;    
+        case RATIONAL:
+            break;
+        case KERNEL:
+            break;
+    }
+}
+
+/********************************************************//**
     Create a generic function by approximating a one dimensional function
 
     \param f [in] - function to approximate

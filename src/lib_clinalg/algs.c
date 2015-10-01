@@ -2200,6 +2200,23 @@ struct Qmarray * qmarray_deriv(struct Qmarray * a)
     return b;
 }
 
+
+/********************************************************//**
+    Rounding (thresholding) of quasimatrix array
+
+    \param qma [inout] - quasimatrix
+    \param epsilon [in] - threshold
+
+***********************************************************/
+void qmarray_roundt(struct Qmarray ** qma, double epsilon)
+{
+    size_t ii;
+    for (ii = 0; ii < (*qma)->nrows * (*qma)->ncols; ii++){
+        generic_function_roundt(&((*qma)->funcs[ii]),epsilon);
+    }
+}
+
+
 ////////////////////////////////////////////////////////////////////////////
 // function_train
 
@@ -2367,6 +2384,9 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     ft->ranks[a->dim] = 1;
     
     function_train_free(ftrl);
+    for (ii = 0; ii < ft->dim; ii++){
+        qmarray_roundt(&ft->cores[ii], epsilon);
+    }
     return ft;
 }
 

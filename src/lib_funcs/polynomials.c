@@ -1174,19 +1174,28 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 	for (jj = 0; jj < (*p)->num_poly;jj++){
         sum += pow((*p)->coeff[jj],2);
 	}
-    size_t keep = 1;
+    size_t keep = (*p)->num_poly;
     size_t count = 0, numcheck=3;
     for (jj = 1; jj < (*p)->num_poly; jj++){
-        if (fabs((*p)->coeff[ii]) < (thresh * sum)){
+        if (fabs((*p)->coeff[jj]) < (thresh * sum)){
             count++;
         }
         else{
             count = 0;
         }
-        if (count > numthresh){}
+        if (count > numcheck){
+            keep = jj - numcheck + 1;
+            break;
+        }
     }
-    I AM HERE
-
+    dprint((*p)->num_poly, (*p)->coeff);
+    //printf("number keep = %zu\n",keep);
+    //printf("tolerance = %G\n",thresh);
+    double * new_coeff = calloc_double(keep);
+    memmove(new_coeff,(*p)->coeff, keep * sizeof(double));
+    free((*p)->coeff);
+    (*p)->num_poly = keep;
+    (*p)->coeff = new_coeff;
 }
 
 

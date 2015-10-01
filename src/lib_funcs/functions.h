@@ -108,7 +108,8 @@ struct GenericFunction {
     void * fargs;
 };
 
-struct GenericFunction * generic_function_alloc(size_t dim, enum function_class, void *);
+struct GenericFunction * generic_function_alloc(size_t, enum function_class, void *);
+void generic_function_roundt(struct GenericFunction **, double);
 
 struct GenericFunction * generic_function_deriv(struct GenericFunction *);
 struct GenericFunction * generic_function_copy(struct GenericFunction *);
