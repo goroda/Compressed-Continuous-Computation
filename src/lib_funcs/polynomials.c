@@ -1177,7 +1177,7 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     size_t keep = (*p)->num_poly;
     size_t count = 0, numcheck=3;
     for (jj = 1; jj < (*p)->num_poly; jj++){
-        if (fabs((*p)->coeff[jj]) < (thresh * sum)){
+        if (pow((*p)->coeff[jj],2) < (thresh * sum)){
             count++;
         }
         else{
