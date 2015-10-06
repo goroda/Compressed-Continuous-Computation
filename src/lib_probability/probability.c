@@ -1663,8 +1663,8 @@ double bayes_rule_evaluate(double * x, void * arg)
     double * xtemp = linear_transform_apply(brt->lt->dimout,
                 brt->lt->dimin, brt->lt->A, x, brt->lt->b);
     
-    //printf("xtemp = \n");
-    //dprint(brt->lt->dimin, xtemp);
+    printf("xtemp = \n");
+    dprint(brt->lt->dimin, xtemp);
 
     double prior_val = probability_density_eval(brt->br->prior,xtemp);
     double like_val = function_train_eval(brt->br->like->like,xtemp);
@@ -1673,13 +1673,14 @@ double bayes_rule_evaluate(double * x, void * arg)
         like_val = exp(like_val + brt->br->like->logextra);
     }
 
-    //printf("priorval = %G\n",prior_val);
-    //printf("likeval = %G\n",like_val);
+    printf("priorval = %G\n",prior_val);
+    printf("likeval = %G\n",like_val);
+    printf("brt->mult = %G\n",brt->mult);
     
     free(xtemp); xtemp = NULL;
     double out = prior_val * like_val * brt->mult;
     
-    //printf("out = %G\n",out);
+    printf("out = %G\n",out);
 
     return out;
 }
@@ -1768,8 +1769,39 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     
     printf("BAYESRUL IS BROKE!!!\n");
     exit(1);
+    //
+    struct PwPolyAdaptOpts aopts;
+    aopts.ptype = LEGENDRE;
+    aopts.maxorder = 4;
+    aopts.coeff_check = 2;
+    aopts.epsilon = 1e-3;
+    aopts.minsize = 3e-1;
+    aopts.nregions = 5;
+    aopts.pts = NULL;
+
+    enum poly_type ptype = LEGENDRE;
+    struct FtApproxArgs * fapp = 
+       ft_approx_args_createpwpoly(dim,&ptype,&aopts);
+
+    size_t init_ranks = 2;
+    struct FtCrossArgs fca;
+    fca.dim = dim;
+    fca.ranks = calloc_size_t(dim+1);
+    size_t ii;
+    fca.ranks[0] = 1;
+    for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
+    fca.ranks[dim] = 1;
+    fca.epsilon = 1e-3;
+    fca.maxiter = 5;
+    fca.epsround = 1e-5;
+    fca.kickrank = 4;
+    fca.maxiteradapt = 5;
+    fca.verbose = 2;
+
+    double * center = darray_val(dim,0.0);
+
     struct FunctionTrain * roughpdf = 
-        function_train_cross(bayes_rule_log, &brt, bds,NULL,NULL,NULL);
+        function_train_cross(bayes_rule_log, &brt, bds,center,&fca,fapp);
     
 
     double * temp = calloc_double(dim);
@@ -1782,8 +1814,7 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     printf("normalizing constant is %G \n", normalize);
     printf("integral of log %G \n", normalize);
 
-    exit(1);
-    brt.mult = 1.0/normalize;
+    brt.mult = fabs(1.0/normalize);
     function_train_free(roughpdf); roughpdf = NULL;
 
     posterior->pdf = 
@@ -1793,6 +1824,7 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     printf("second normalizing constant is %G \n", normalize);
     function_train_scale(posterior->pdf,1.0/normalize);
 
+    exit(1);
     bounding_box_free(bds); bds = NULL;
     probability_density_free(lap); lap = NULL;
     return posterior;

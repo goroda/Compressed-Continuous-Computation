@@ -560,8 +560,8 @@ void Test_linear_regression(CuTest * tc)
     double * mean = probability_density_mean(post);
     double * cov = probability_density_cov(post);
 
-    double * mean2 = probability_density_mean(post2);
-    double * cov2 = probability_density_cov(post2);
+    //double * mean2 = probability_density_mean(post2);
+    //double * cov2 = probability_density_cov(post2);
      
     double diffmean = norm2diff(ms,mean,2);
     double diffcov = norm2diff(cshould,cov,4);
@@ -576,20 +576,21 @@ void Test_linear_regression(CuTest * tc)
     printf( "%G %G \n %G %G \n",cov2[0],cov2[2],cov2[1],cov2[3]);
     */
 
-    diffmean = norm2diff(ms,mean2,2);
-    diffcov = norm2diff(cshould,cov2,4);
-    CuAssertDblEquals(tc,0.0,diffmean,1e-12);
-    CuAssertDblEquals(tc,0.0,diffcov,1e-12);
+    //diffmean = norm2diff(ms,mean2,2);
+    //diffcov = norm2diff(cshould,cov2,4);
+    //CuAssertDblEquals(tc,0.0,diffmean,1e-12);
+    //CuAssertDblEquals(tc,0.0,diffcov,1e-12);
 
     bounding_box_free(bds); bds = NULL;
     likelihood_free(like); like = NULL;
     probability_density_free(prior); prior = NULL;
     probability_density_free(post); post = NULL;
-    probability_density_free(post2); post2 = NULL;
     free(mean); mean = NULL;
-    free(mean2); mean2 = NULL;
     free(cov); cov = NULL;
-    free(cov2); cov2 = NULL;
+
+    //probability_density_free(post2); post2 = NULL;
+    //free(mean2); mean2 = NULL;
+    //free(cov2); cov2 = NULL;
 }
 
 
@@ -676,7 +677,7 @@ CuSuite * ProbGetSuite(){
     SUITE_ADD_TEST(suite, Test_log_hessian_eval); 
     SUITE_ADD_TEST(suite, Test_laplace);
     //SUITE_ADD_TEST(suite, Test_poisson_like);
-    //SUITE_ADD_TEST(suite, Test_linear_regression);
+    SUITE_ADD_TEST(suite, Test_linear_regression);
     SUITE_ADD_TEST(suite, Test_cdf_normal);
     SUITE_ADD_TEST(suite, Test_icdf_normal);
 
