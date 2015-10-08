@@ -917,7 +917,7 @@ struct FtApproxArgs * ft_approx_args_createpoly(size_t dim,
     
     enum function_class fc = POLYNOMIAL;
     fargs->fc.fc0 = fc;    
-    printf("create poly type %d \n",*ptype);
+    //printf("create poly type %d \n",*ptype);
     fargs->sub_type.st0 = ptype;
     fargs->approx_opts.ao0 = aopts;
     
