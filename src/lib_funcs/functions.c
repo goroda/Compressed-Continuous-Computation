@@ -243,7 +243,9 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
             gf->fargs = NULL;
             break;
         case POLYNOMIAL:
-            //printf("approximate\n");
+            //printf("approximate with poyl type %d \n",gf->sub_type.ptype);
+            //enum poly_type * ptype = sub_type;
+            //printf("approximate with poyl type %d \n",*ptype);
             gf->f = orth_poly_expansion_approx_adapt(f,args, gf->sub_type.ptype, lb, ub, aopts);
             gf->fargs = NULL;
             //printf("done\n");

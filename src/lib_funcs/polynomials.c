@@ -1332,11 +1332,18 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     size_t ii;
     size_t N = aopts->start_num;
     
+    //printf("pre ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
+    if (ptype > 10){
+        printf("Warning: for some reason ptype is\n");
+        printf("specified to be %d, reverting to 0\n",ptype);
+        ptype = 0;
+    }
     struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
                                         N, lower, upper);
     
-    //printf("start\n");
+    //printf("start ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
     orth_poly_expansion_approx(A,args, poly);
+    //printf("got first one\n");
     
     size_t coeffs_too_big = 0;
     for (ii = 0; ii < aopts->coeffs_check; ii++){

@@ -917,6 +917,7 @@ struct FtApproxArgs * ft_approx_args_createpoly(size_t dim,
     
     enum function_class fc = POLYNOMIAL;
     fargs->fc.fc0 = fc;    
+    printf("create poly type %d \n",*ptype);
     fargs->sub_type.st0 = ptype;
     fargs->approx_opts.ao0 = aopts;
     
@@ -1012,6 +1013,7 @@ void * ft_approx_args_getst(struct FtApproxArgs * fargs, size_t dim)
 {
     
     if (fargs->targs == 0){
+
         return fargs->sub_type.st0;
     }
     else if (fargs->targs == 1){
@@ -1145,34 +1147,56 @@ function_train_rankone(size_t dim,  double (*f)(double, size_t, void *),
     struct FtApproxArgs * ftargs_use;
     if (ftargs == NULL){
         enum poly_type ptype = LEGENDRE;
+       // printf("the ptype is %d \n", ptype);
         ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
+    
+        //printf("check \n");
+        //enum poly_type * pptype = ftargs_use->sub_type.st0;
+        //printf("before anything type %d \n",*pptype);
     }
     else{
         ftargs_use = ftargs;
     }
+
+    //printf("check2 \n");
+    //enum poly_type * ppptype = ftargs_use->sub_type.st0;
+    //printf("before anything type check2 %d \n",*ppptype);
     enum function_class fc;
     void * sub_type = NULL;
     void * approx_opts = NULL;
+
+    //printf("check3 \n");
+   // enum poly_type * pppptype = ftargs_use->sub_type.st0;
+    //printf("before anything type check3 %d \n",*pppptype);
 
     struct wrap_spec_func spf;
     spf.f = f;
     spf.args = args;
 
+    //printf("check4 dim = %zu\n",dim);
+    //enum poly_type * ppppptype = ftargs_use->sub_type.st0;
+    //printf("before anything type check4 %d \n",*ppppptype);
+
     struct FunctionTrain * ft = function_train_alloc(dim);
     
     size_t onDim;
     for (onDim = 0; onDim < dim; onDim++){
+        //printf("ii = %zu\n",onDim);
+
         fc = ft_approx_args_getfc(ftargs_use, onDim);
         sub_type = ft_approx_args_getst(ftargs_use, onDim);
+        //enum poly_type * ptype = sub_type;
+        //printf("approximate with in ft type %d \n",*ptype);
         approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
         spf.which = onDim;
         ft->ranks[onDim] = 1;
         ft->cores[onDim] = qmarray_alloc(1,1);
-
+        
+        //printf("lets go lb=%G, ub = %G\n",bds->lb[onDim], bds->ub[onDim]);
         ft->cores[onDim]->funcs[0] = 
             generic_function_approximate1d(eval_spec_func, &spf,
             fc, sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+        //printf("got it \n");
     }
 
     ft->ranks[dim] = 1;
