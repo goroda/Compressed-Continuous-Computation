@@ -381,8 +381,18 @@ struct StandardPoly * orth_to_standard_poly(struct OrthPoly * p, size_t n)
 double 
 eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
                     size_t n, double x)
-{
-    double out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2;
+{   
+
+    double out;
+    if (rec->ptype == LEGENDRE){
+        double nt = (double) n;
+        double a = (2.0*nt-1.0) / nt;
+        double c = -(nt-1.0)/nt;
+        out = a * x * p1 + c * p2;
+    }
+    else{
+        out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2;
+    }
     return out;
 }
 
