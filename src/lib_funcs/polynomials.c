@@ -1506,12 +1506,15 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     comb[0] = a;
     comb[1] = b;
    
+    //printf("num poly = %zu\n",a->num_poly+b->num_poly);
     c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
     orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+    //orth_poly_expansion_roundt(&c,1e-3);
     orth_poly_expansion_round(&c);
+    //dprint(c->num_poly,c->coeff);
+    //printf(" num polys after = %zu \n", c->num_poly);
+    //printf("\n");
     /*
-    printf("\n");
-    printf(" num polys d = %zu \n", d->num_poly);
     dprint(d->num_poly,d->coeff);
     */
     

@@ -2291,6 +2291,10 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     delta = delta * epsilon / sqrt(a->dim-1);
     struct FunctionTrain * ftrl = function_train_alloc(a->dim);
     
+    size_t iii;
+    for (iii = 0; iii < a->dim; iii++){
+        qmarray_roundt(&a->cores[iii], epsilon);
+    }
 
     //right left sweep
     double * L = NULL; 
