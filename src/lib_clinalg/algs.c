@@ -2286,15 +2286,18 @@ double function_train_eval(struct FunctionTrain * ft, double * x)
 struct FunctionTrain * 
 function_train_round(struct FunctionTrain * a, double epsilon)
 {
-    
+    //size_t iii;
+    //for (iii = 0; iii < a->dim; iii++){
+   //     qmarray_roundt(&a->cores[iii], epsilon);
+    //} 
+    //printf("compute delta\n");
     double delta = function_train_norm2(a);
     delta = delta * epsilon / sqrt(a->dim-1);
+    //double delta = epsilon;
+   
     struct FunctionTrain * ftrl = function_train_alloc(a->dim);
     
-    size_t iii;
-    for (iii = 0; iii < a->dim; iii++){
-        qmarray_roundt(&a->cores[iii], epsilon);
-    }
+   
 
     //right left sweep
     double * L = NULL; 
@@ -2566,11 +2569,22 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
     struct Qmarray * c1 = qmarray_kron(b->cores[0],a->cores[0]);
     double * temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
     qmarray_free(c1); c1 = NULL;
+        
+    /*
+    printf("in function_train_inner\n");
+    printf(" a ranks = ");
+    iprint_sz(a->dim+1,a->ranks);
+    printf(" b ranks = ");
+    iprint_sz(b->dim+1,b->ranks);
+    */
 
     size_t ii;
     for (ii = 1; ii < a->dim; ii++){
-        //printf("ii=%zu\n",ii);
+        //printf("ii=%zu/%zu\n",ii,a->dim);
+        //print_qmarray(a->cores[ii],3,NULL);
+        //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
         c1 = qmarray_vec_kron(temp, a->cores[ii],b->cores[ii]);
+        //printf(" nrows = %zu, ncols=%zu\n",c1->nrows,c1->ncols);
         free(temp);temp=NULL;
         temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
         qmarray_free(c1);c1=NULL;

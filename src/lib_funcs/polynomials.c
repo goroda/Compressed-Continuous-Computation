@@ -1185,15 +1185,19 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
         sum += pow((*p)->coeff[jj],2);
 	}
     size_t keep = (*p)->num_poly;
-    double sumrun = 0.0;
-    for (jj = 0; jj < (*p)->num_poly; jj++){
-        sumrun += pow((*p)->coeff[jj],2);
-        if ( (sumrun / sum) > (1.0-thresh)){
-            keep = jj+1;
-            break;
+    if (sum <= thresh){
+        keep = 1;
+    }
+    else{
+        double sumrun = 0.0;
+        for (jj = 0; jj < (*p)->num_poly; jj++){
+            sumrun += pow((*p)->coeff[jj],2);
+            if ( (sumrun / sum) > (1.0-thresh)){
+                keep = jj+1;
+                break;
+            }
         }
     }
-
     //dprint((*p)->num_poly, (*p)->coeff);
     //printf("number keep = %zu\n",keep);
     //printf("tolerance = %G\n",thresh);
@@ -1507,10 +1511,35 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     comb[1] = b;
    
     //printf("num poly = %zu\n",a->num_poly+b->num_poly);
-    c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
-    orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
-    //orth_poly_expansion_roundt(&c,1e-3);
-    orth_poly_expansion_round(&c);
+    double norma = 0.0, normb = 0.0;
+    size_t ii;
+    for (ii = 0; ii < a->num_poly; ii++){
+        norma += pow(a->coeff[ii],2);
+    }
+    for (ii = 0; ii < b->num_poly; ii++){
+        normb += pow(b->coeff[ii],2);
+    }
+    
+    if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
+        c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+    }
+    else{
+        //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
+        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+        orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+        orth_poly_expansion_round(&c);
+    }
+
+    //orth_poly_expansion_roundt(&c,sqrt(norma*normb));
+
+    /*
+    size_t ii;
+    printf("coeffs after rounding \n");
+    for (ii = 0; ii < c->num_poly; ii++){
+        printf("%3.15G ",c->coeff[ii]);
+    }
+    printf("\n");
+    */
     //dprint(c->num_poly,c->coeff);
     //printf(" num polys after = %zu \n", c->num_poly);
     //printf("\n");
@@ -1518,16 +1547,18 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     dprint(d->num_poly,d->coeff);
     */
     
-    /*
-    struct OpeAdaptOpts ao;
-    ao.start_num = 7;
-    ao.coeffs_check = 2;
-    ao.tol = 1e-13;
-    c = orth_poly_expansion_approx_adapt(&orth_poly_expansion_eval3,comb, 
-                        p, lb, ub, &ao);
+    //*
+    //printf("compute product\n");
+    //struct OpeAdaptOpts ao;
+    //ao.start_num = 3;
+    //ao.coeffs_check = 2;
+    //ao.tol = 1e-13;
+    //c = orth_poly_expansion_approx_adapt(&orth_poly_expansion_eval3,comb, 
+    //                    p, lb, ub, &ao);
     
-    orth_poly_expansion_round(&c);
-    */
+    //orth_poly_expansion_round(&c);
+    //printf("done\n");
+    //*/
     return c;
 }
 
