@@ -144,6 +144,8 @@ generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
 struct GenericFunction *
 generic_function_sum_prod(size_t, size_t,  struct GenericFunction **, 
                 size_t, struct GenericFunction **);
+double generic_function_sum_prod_integrate(size_t, size_t,  
+                struct GenericFunction **, size_t, struct GenericFunction **);
 struct GenericFunction *
 generic_function_prod(struct GenericFunction *, struct GenericFunction *);
 double generic_function_inner(struct GenericFunction *, struct GenericFunction *);

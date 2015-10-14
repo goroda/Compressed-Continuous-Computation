@@ -1138,12 +1138,13 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
     if (0 == 0){
         double thresh = ZEROTHRESH;
         size_t jj = 0;
-	for (jj = 0; jj < (*p)->num_poly;jj++){
-	    if (fabs((*p)->coeff[jj]) < thresh){
-                (*p)->coeff[jj] = 0.0;
+        //
+	    for (jj = 0; jj < (*p)->num_poly;jj++){
+	       if (fabs((*p)->coeff[jj]) < thresh){
+               (*p)->coeff[jj] = 0.0;
             }
-	}
-	jj = 0;
+	    }
+	    jj = 0;
         size_t end = (*p)->num_poly;
         if ((*p)->num_poly > 2){
             while (fabs((*p)->coeff[end-1]) < thresh){
@@ -1156,12 +1157,13 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
             if (end > 0){
                 //printf("SHOULD NOT BE HERE\n");
                 size_t num_poly = end;
-                double * new_coeff = calloc_double(num_poly);
-                for (jj = 0; jj < num_poly; jj++){
-                    new_coeff[jj] = (*p)->coeff[jj];
-                }
-                free((*p)->coeff); (*p)->coeff=NULL;
-                (*p)->coeff = new_coeff;
+                //
+                //double * new_coeff = calloc_double(num_poly);
+                //for (jj = 0; jj < num_poly; jj++){
+                //    new_coeff[jj] = (*p)->coeff[jj];
+               // }
+                //free((*p)->coeff); (*p)->coeff=NULL;
+                //(*p)->coeff = new_coeff;
                 (*p)->num_poly = num_poly;
             }
         }

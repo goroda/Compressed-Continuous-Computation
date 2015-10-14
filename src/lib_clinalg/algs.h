@@ -140,8 +140,10 @@ struct Qmarray * qmatm(struct Qmarray *, double *, size_t);
 struct Qmarray * mqma(double *, struct Qmarray *, size_t);
 struct Qmarray * qmaqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqmat(struct Qmarray * a, struct Qmarray * b);
+double * qmatqmat_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_kron(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(double *, struct Qmarray *, struct Qmarray *);
+double * qmarray_vec_kron_integrate(double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_integrate(struct Qmarray *);
 double qmarray_norm2diff(struct Qmarray *, struct Qmarray *);
 

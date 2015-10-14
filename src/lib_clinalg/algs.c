@@ -972,6 +972,32 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
     return c;
 }
 
+/***********************************************************//**
+    Integral of Transpose qmarray - transpose qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - array of integrals
+***************************************************************/
+double *
+qmatqmat_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->ncols*b->nrows);
+    size_t ii,jj;
+    for (jj = 0; jj < b->nrows; jj++){
+        for (ii = 0; ii < a->ncols; ii++){
+            // c[jj*a->ncols+ii] = a[:,ii]^T b[jj,:]
+            //c[ii*b->nrows+jj] =  generic_function_sum_prod_integrate(b->ncols, 1, 
+            //        a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
+
+            c[ii*b->nrows+jj] =  generic_function_inner_sum(b->ncols, 1, 
+                    a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
+        }
+    }
+    return c;
+}
+
 
 /***********************************************************//**
     Kronecker product between two qmarrays
@@ -1026,6 +1052,30 @@ qmarray_vec_kron(double * a, struct Qmarray * b, struct Qmarray * c)
     qmarray_free(temp); temp = NULL;
     return d;
 }
+
+/***********************************************************//**
+    If a is vector, b and c are quasimatrices then computes
+            \f$ \int a^T kron(b(x),c(x)) dx  \f$
+
+    \param a [in] - vector,array (b->ncols * c->ncols);
+    \param b [in] - qmarray 1
+    \param c [in] - qmarray 2
+
+    \return d - qmarray  b->ncols x (c->ncols)
+***************************************************************/
+double *
+qmarray_vec_kron_integrate(double * a, struct Qmarray * b, struct Qmarray * c)
+{
+    double * d = NULL;
+
+    struct Qmarray * temp = qmatm(b,a,c->nrows); // b->ncols * c->ncols
+    //printf("got qmatm\n");
+    //d = qmaqma(temp,c);
+    d = qmatqmat_integrate(c,temp);
+    qmarray_free(temp); temp = NULL;
+    return d;
+}
+
 
 /***********************************************************//**
     Integrate all the elements of a qmarray
@@ -1734,11 +1784,14 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
     size_t ii, jj;
     struct Quasimatrix * e = NULL;
     struct Quasimatrix * x = NULL;
-    struct Quasimatrix * v = NULL;
+    struct Quasimatrix * v = NULL;//quasimatrix_alloc(A->ncols);
     struct Quasimatrix * v2 = NULL;
     struct Quasimatrix * atemp = NULL;
     double rho, sigma, alpha;
     double temp1;
+
+
+
     for (ii = 0; ii < A->nrows; ii++){
         if (VQMAHOUSEHOLDER)
             printf(" On iter %zu\n", ii);
@@ -2296,8 +2349,6 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     //double delta = epsilon;
    
     struct FunctionTrain * ftrl = function_train_alloc(a->dim);
-    
-   
 
     //right left sweep
     double * L = NULL; 
@@ -2577,17 +2628,25 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
     printf(" b ranks = ");
     iprint_sz(b->dim+1,b->ranks);
     */
-
+    double * temp2 = NULL;
     size_t ii;
     for (ii = 1; ii < a->dim; ii++){
         //printf("ii=%zu/%zu\n",ii,a->dim);
         //print_qmarray(a->cores[ii],3,NULL);
         //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
-        c1 = qmarray_vec_kron(temp, a->cores[ii],b->cores[ii]);
+        //c1 = qmarray_vec_kron(temp, a->cores[ii],b->cores[ii]);
         //printf(" nrows = %zu, ncols=%zu\n",c1->nrows,c1->ncols);
+        //free(temp);temp=NULL;
+        //temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
+        //qmarray_free(c1);c1=NULL;
+        
+        
+        temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
+        size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
-        temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
-        qmarray_free(c1);c1=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        free(temp2); temp2 = NULL;
     }
     
     out = temp[0];
