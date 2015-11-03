@@ -3386,8 +3386,8 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
         if (fca->verbose > 0){
             printf("adapting \n");
             printf("Increasing rank\n");
+            iprint_sz(ft->dim+1,fca->ranks);
         }
-        iprint_sz(ft->dim+1,fca->ranks);
         
         // need a better way to boost indices
         isrn = index_set_array_rnested(dim, fca->ranks, xhelp);
