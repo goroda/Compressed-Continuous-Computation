@@ -950,6 +950,29 @@ qmaqma(struct Qmarray * a, struct Qmarray * b)
 }
 
 /***********************************************************//**
+    Transpose qmarray - qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - qmarray : c = a^T b
+***************************************************************/
+struct Qmarray *
+qmatqma(struct Qmarray * a, struct Qmarray * b)
+{
+    struct Qmarray * c = qmarray_alloc(a->ncols, b->ncols);
+    size_t ii,jj;
+    for (jj = 0; jj < b->ncols; jj++){
+        for (ii = 0; ii < a->ncols; ii++){
+            // c[jj*a->ncols+ii] = a[:,ii]^T b[:,jj]
+            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(b->nrows, 1, 
+                    a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
     Transpose qmarray - transpose qmarray mutliplication
 
     \param a [in] - qmarray 1

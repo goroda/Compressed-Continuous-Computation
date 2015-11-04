@@ -33,16 +33,22 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file algs.c
+ * Provides routines for dmrg based algorithms for the FT
  */
+#include <stdlib>
+#include <assert>
+
+#include "lib_clinalg.h"
+
+void fast_kron(size_t n, double * C, struct Qmarray * A, struct Qmarray * B, struct Qmarray ** out)
+{
+    assert (*out == NULL);
+    struct Qmarray * temp = mqma(C,A,n);
+    *out = qmatqma(B,temp);
+    return out;
+}
 
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "elements.h"
-#include "algs.h"
-#include "dmrg.h"
-
-#endif
+void dmrg_core_mid_mult(double * leftmat, double * rightmat, 
+        size_t k, struct FT1DArray * 

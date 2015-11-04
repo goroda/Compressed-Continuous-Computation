@@ -2465,6 +2465,21 @@ CuSuite * CLinalgFuncTrainArrayGetSuite()
     return suite;
 }
 
+void Test_ftapprox_hess(CuTest * tc)
+{
+    printf("Testing Function: function_train_hessian\n");
+}
+
+
+CuSuite * CLinalgDMRGGetSuite()
+{
+    CuSuite * suite = CuSuiteNew();
+    //SUITE_ADD_TEST(suite, Test_ftapprox_grad);
+    //SUITE_ADD_TEST(suite, Test_ftapprox_hess);
+    return suite;
+}
+
+
 void RunAllTests(void) {
     
     printf("Running Test Suite: lib_clinalg\n");
@@ -2476,10 +2491,12 @@ void RunAllTests(void) {
     CuSuite * qma = CLinalgQmarrayGetSuite();
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
+    CuSuite * dmrg = CLinalgFuncTrainArrayGetSuite();
     CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
@@ -2489,6 +2506,7 @@ void RunAllTests(void) {
     CuSuiteDelete(qma);
     CuSuiteDelete(ftr);
     CuSuiteDelete(fta);
+    CuSuiteDelete(dmrg);
     CuStringDelete(output);
     free(suite);
 }
