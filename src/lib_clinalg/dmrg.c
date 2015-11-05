@@ -36,19 +36,20 @@
 /** \file algs.c
  * Provides routines for dmrg based algorithms for the FT
  */
-#include <stdlib>
-#include <assert>
+#include <stdlib.h>
+#include <assert.h>
 
 #include "lib_clinalg.h"
 
+/*
 void fast_kron(size_t n, double * C, struct Qmarray * A, struct Qmarray * B, struct Qmarray ** out)
 {
     assert (*out == NULL);
     struct Qmarray * temp = mqma(C,A,n);
-    *out = qmatqma(B,temp);
-    return out;
+    //return out;
 }
+*/
 
 
-void dmrg_core_mid_mult(double * leftmat, double * rightmat, 
-        size_t k, struct FT1DArray * 
+//void dmrg_core_mid_mult(double * leftmat, double * rightmat, 
+//        size_t k, struct FT1DArray * 

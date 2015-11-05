@@ -49,7 +49,7 @@
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e0*DBL_EPSILON
+#define ZEROTHRESH 1e3*DBL_EPSILON
 
 #ifndef VQMALU
     #define VQMALU 0
@@ -971,6 +971,30 @@ qmatqma(struct Qmarray * a, struct Qmarray * b)
     }
     return c;
 }
+
+/***********************************************************//**
+    qmarray - transpose qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - qmarray : c = a b^T
+***************************************************************/
+struct Qmarray *
+qmaqmat(struct Qmarray * a, struct Qmarray * b)
+{
+    struct Qmarray * c = qmarray_alloc(a->nrows, b->nrows);
+    size_t ii,jj;
+    for (jj = 0; jj < b->nrows; jj++){
+        for (ii = 0; ii < a->nrows; ii++){
+            // c[jj*c->ncols+ii] = a[ii,:]^T b[jj,:]^T
+            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(a->ncols, a->nrows, 
+                    a->funcs + ii, b->nrows, b->funcs + jj);
+        }
+    }
+    return c;
+}
+
 
 /***********************************************************//**
     Transpose qmarray - transpose qmarray mutliplication
@@ -2352,40 +2376,25 @@ double function_train_eval(struct FunctionTrain * ft, double * x)
 }
 
 /********************************************************//**
-    Rounding of a function train
+    Right orthogonalize the cores (except the first one) of the function train
 
     \param a [inout] - FT (overwritten)
-    \param epsilon [in] - threshold
-
-    \return ft - rounded function train
+    
+    \return ftrl - new ft with orthogonalized cores
 ***********************************************************/
-struct FunctionTrain * 
-function_train_round(struct FunctionTrain * a, double epsilon)
+struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 {
-    //size_t iii;
-    //for (iii = 0; iii < a->dim; iii++){
-   //     qmarray_roundt(&a->cores[iii], epsilon);
-    //} 
-    //printf("compute delta\n");
-    double delta = function_train_norm2(a);
-    delta = delta * epsilon / sqrt(a->dim-1);
-    //double delta = epsilon;
-   
-    struct FunctionTrain * ftrl = function_train_alloc(a->dim);
-
     //right left sweep
+    struct FunctionTrain * ftrl = function_train_alloc(a->dim);
     double * L = NULL; 
     struct Qmarray * temp = NULL;
-    size_t core; 
     size_t ii = 1;
-    core = a->dim-ii;  
+    size_t core = a->dim-ii;  
     L = calloc_double(a->cores[core]->nrows * a->cores[core]->nrows);
-    
     ftrl->ranks[0] = 1;
     ftrl->ranks[1] = a->ranks[1];
     // update last core
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L);
-
     for (ii = 2; ii < a->dim; ii++){
         ftrl->ranks[ii] = a->ranks[ii];
 
@@ -2403,14 +2412,30 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     ftrl->cores[core] = qmam(a->cores[core],L,a->ranks[core+1]);
     ftrl->ranks[a->dim] = a->ranks[a->dim];
 
-    //return ftrl;
     free(L); L=NULL;
+    return ftrl;
+}
 
-    //return ftrl;
-    
-    //printf("done with right to left sweep\n");
 
-    // left right sweep
+/********************************************************//**
+    Rounding of a function train
+
+    \param a [inout] - FT (overwritten)
+    \param epsilon [in] - threshold
+
+    \return ft - rounded function train
+***********************************************************/
+struct FunctionTrain * 
+function_train_round(struct FunctionTrain * a, double epsilon)
+{
+    size_t ii, core;
+    struct Qmarray * temp = NULL;
+
+    double delta = function_train_norm2(a);
+    delta = delta * epsilon / sqrt(a->dim-1);
+    //double delta = epsilon;
+   
+    struct FunctionTrain * ftrl = function_train_orthor(a);
 
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);

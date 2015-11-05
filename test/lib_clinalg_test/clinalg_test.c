@@ -2465,17 +2465,49 @@ CuSuite * CLinalgFuncTrainArrayGetSuite()
     return suite;
 }
 
-void Test_ftapprox_hess(CuTest * tc)
+void Test_rightorth(CuTest * tc)
 {
-    printf("Testing Function: function_train_hessian\n");
+    printf("Testing Function: function_train_orthor\n");
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+
+    struct FunctionTrain * ft = 
+        function_train_cross(funcGrad,NULL,bds,NULL,NULL,NULL);
+    
+    struct FunctionTrain * fcopy = function_train_copy(ft);
+    struct FunctionTrain * ao = function_train_orthor(ft);
+    size_t ii,jj,kk;
+    for (ii = 1; ii < dim; ii++){
+        struct Qmarray * temp = qmaqmat(ao->cores[ii],ao->cores[ii]);
+        double * intmat = qmarray_integrate(temp);
+        dprint2d_col(temp->nrows, temp->ncols,intmat);
+        //qmarray_free(temp); temp = NULL;
+        for (jj = 0; jj < temp->ncols; jj++){
+            for (kk = 0; kk < temp->nrows; kk++){
+                if (jj == kk){
+                    CuAssertDblEquals(tc,1.0,intmat[jj*temp->nrows+kk],1e-14);
+                }
+                else{
+                    CuAssertDblEquals(tc,0.0,intmat[jj*temp->nrows+kk],1e-14);
+                }
+            }
+        }
+        free(intmat); intmat = NULL;
+    }
+    double diff = function_train_norm2diff(ao,fcopy);
+    CuAssertDblEquals(tc,0.0,diff,1e-14);
+
+    function_train_free(ft); ft = NULL;
+    function_train_free(fcopy); fcopy = NULL;
+    function_train_free(ao); ao = NULL;
+    bounding_box_free(bds); bds = NULL;
 }
 
 
 CuSuite * CLinalgDMRGGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    //SUITE_ADD_TEST(suite, Test_ftapprox_grad);
-    //SUITE_ADD_TEST(suite, Test_ftapprox_hess);
+    SUITE_ADD_TEST(suite, Test_rightorth);
     return suite;
 }
 
@@ -2491,7 +2523,7 @@ void RunAllTests(void) {
     CuSuite * qma = CLinalgQmarrayGetSuite();
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
-    CuSuite * dmrg = CLinalgFuncTrainArrayGetSuite();
+    CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);

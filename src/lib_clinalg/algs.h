@@ -140,6 +140,7 @@ struct Qmarray * qmatm(struct Qmarray *, double *, size_t);
 struct Qmarray * mqma(double *, struct Qmarray *, size_t);
 struct Qmarray * qmaqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqma(struct Qmarray * a, struct Qmarray * b);
+struct Qmarray * qmaqmat(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqmat(struct Qmarray * a, struct Qmarray * b);
 double * qmatqmat_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_kron(struct Qmarray *, struct Qmarray *);
@@ -180,8 +181,8 @@ void qmarray_roundt(struct Qmarray **, double);
 
 double function_train_eval(struct FunctionTrain *, double *);
 struct FunctionTrain * function_train_sum(struct FunctionTrain *, struct FunctionTrain *);
-struct FunctionTrain * 
-function_train_afpb(double, double, struct FunctionTrain *, double);
+struct FunctionTrain * function_train_afpb(double, double, struct FunctionTrain *, double);
+struct FunctionTrain * function_train_orthor(struct FunctionTrain *);
 struct FunctionTrain * function_train_round(struct FunctionTrain *, double);
 void function_train_scale(struct FunctionTrain *, double);
 struct FunctionTrain * function_train_product(struct FunctionTrain *, struct FunctionTrain *);
