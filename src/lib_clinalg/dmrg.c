@@ -41,6 +41,84 @@
 
 #include "lib_clinalg.h"
 
+/***********************************************************//**
+    Update \f$ \Psi \f$ for the dmrg equations
+
+    \param psikp [in] - \f$ \Psi_{k+1} \f$
+    \param left [in] - left core for update
+    \param right [in] - right core for update
+
+    \return val -  \f$ \Psi_k \f$
+
+    \note
+       \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
+***************************************************************/
+double * dmrg_update_right(double * psikp, struct Qmarray * left, struct Qmarray * right)
+{
+    struct Qmarray * temp = qmam(left,psikp,right->ncols);
+    struct Qmarray * temp2 = qmaqmat(temp,right);
+    double * val = qmarray_integrate(temp2);
+
+    qmarray_free(temp); temp = NULL;
+    qmarray_free(temp2); temp2 = NULL;
+    return val;
+}
+
+/***********************************************************//**
+    Generate all \f$ \Psi_{i} \f$ for the dmrg for \f$ i = 0,\ldots,d-2\f$
+
+    \param a [in] - function train that is getting optimized
+    \param b [in] - right hand side
+    \param mats [inout] - allocated space for $d-2$ doubles representing the matrices
+
+    \note
+       \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
+***************************************************************/
+void dmrg_update_all_right(struct FunctionTrain * a, struct FunctionTrain * b, double ** mats)
+{
+    size_t ii;
+    mats[a->dim-2] = calloc_double(1);
+    mats[a->dim-2][0] = 1.0;
+    for (ii = a->dim-3; ii > 0; ii--){
+        mats[ii] = dmrg_update_right(mats[ii+1],a->cores[ii+2],b->cores[ii+2]);
+    }
+    mats[0] = dmrg_update_right(mats[1],a->cores[2],b->cores[2]);
+}
+
+/***********************************************************//**
+    Update \f$ \Phi \f$ for the dmrg equations
+
+    \param phik [in] - \f$ \Phi_{k} \f$
+    \param left [in] - left core for update
+    \param right [in] - right core for update
+
+    \return val -  \f$ \Phi_{k+1} \f$
+
+    \note
+       \f$ \Phi_{k+1} = \int left(x)^T \Psi_{k} right(x) dx \f$
+***************************************************************/
+double * dmrg_update_left(double * phik, struct Qmarray * left, struct Qmarray * right)
+{
+    struct Qmarray * temp = mqma(phik, right, left->nrows);
+    struct Qmarray * temp2 = qmatqma(left,temp);
+    double * val = qmarray_integrate(temp2);
+
+    qmarray_free(temp); temp = NULL;
+    qmarray_free(temp2); temp2 = NULL;
+    return val;
+}
+ 
+struct FunctionTrain * dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b, double ** phi, double ** psi)
+{
+    struct FunctionTrain * na = function_train_alloc(a->dim);
+    
+    phi[0] = calloc_double(1);
+    phi[0][0] = 1;
+
+    return na;
+}
+
+
 /*
 void fast_kron(size_t n, double * C, struct Qmarray * A, struct Qmarray * B, struct Qmarray ** out)
 {

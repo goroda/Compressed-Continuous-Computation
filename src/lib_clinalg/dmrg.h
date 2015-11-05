@@ -38,3 +38,7 @@
  */
 
 
+double * dmrg_update_right(double *, struct Qmarray *, struct Qmarray *);
+void 
+dmrg_update_all_right(struct FunctionTrain *, struct FunctionTrain *, double **);
+double * dmrg_update_left(double *, struct Qmarray *, struct Qmarray *);
