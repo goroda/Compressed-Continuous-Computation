@@ -114,6 +114,18 @@ struct FunctionTrain * dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTr
     
     phi[0] = calloc_double(1);
     phi[0][0] = 1;
+    size_t ii = 0;
+    for (ii = 0; ii < a->dim-1; ii++){
+        struct Qmarray * newcorer = qmam(b->core[ii+1],psi[ii],a->cores[ii+2]->nrows);
+        // take LQ of this
+        
+        struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],a->cores[ii-1]->ncols);
+        // take QR of this
+
+        // multiply RL
+        // svd of RL
+        // new left core and new right core
+    }
 
     return na;
 }
