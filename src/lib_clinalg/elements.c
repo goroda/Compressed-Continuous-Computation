@@ -1129,6 +1129,19 @@ void function_train_free(struct FunctionTrain * ft)
     }
 }
 
+//struct FunctionTrain *
+//function_train_random(struct BoundingBox * bds, size_t * ranks, size_t poly_order)
+//{
+    
+//    struct FunctionTrain * ft = function_train_alloc(bds->dim);
+//    memmove(ft->ranks,ranks,(bds->dim+1)*sizeof(size_t));
+    
+//    size_t ii;
+//    for (ii = 0; ii < bds->dim; ii++){
+        
+//    }
+//}
+
 /***********************************************************//**
     Compute a function train representation of \f$ f1(x1)*f2(x2)*...* fd(xd)\f$
 

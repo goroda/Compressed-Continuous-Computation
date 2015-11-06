@@ -45,7 +45,7 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
-#define ZEROTHRESH  2e0 * DBL_EPSILON
+#define ZEROTHRESH  3e0 * DBL_EPSILON
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
 

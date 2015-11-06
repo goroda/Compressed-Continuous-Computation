@@ -2480,7 +2480,7 @@ void Test_rightorth(CuTest * tc)
     for (ii = 1; ii < dim; ii++){
         struct Qmarray * temp = qmaqmat(ao->cores[ii],ao->cores[ii]);
         double * intmat = qmarray_integrate(temp);
-        dprint2d_col(temp->nrows, temp->ncols,intmat);
+        //dprint2d_col(temp->nrows, temp->ncols,intmat);
         //qmarray_free(temp); temp = NULL;
         for (jj = 0; jj < temp->ncols; jj++){
             for (kk = 0; kk < temp->nrows; kk++){
@@ -2493,6 +2493,7 @@ void Test_rightorth(CuTest * tc)
             }
         }
         free(intmat); intmat = NULL;
+        qmarray_free(temp); temp = NULL;
     }
     double diff = function_train_norm2diff(ao,fcopy);
     CuAssertDblEquals(tc,0.0,diff,1e-14);
@@ -2503,11 +2504,56 @@ void Test_rightorth(CuTest * tc)
     bounding_box_free(bds); bds = NULL;
 }
 
+void Test_dmrglr(CuTest * tc)
+{
+
+    printf("Testing Function: dmrg_sweep_lr\n");
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+
+    struct FunctionTrain * ft = 
+        function_train_cross(funcGrad,NULL,bds,NULL,NULL,NULL);
+    double normsize = function_train_norm2(ft);
+    struct FunctionTrain * fcopy = function_train_copy(ft);
+    
+    struct FunctionTrain * ao = function_train_orthor(ft);
+
+    double ** phi = malloc((dim-1)*sizeof(double));
+    double ** psi = malloc((dim-1)*sizeof(double));
+    size_t ii;
+    for (ii = 0; ii < dim-1; ii++){
+        phi[ii] = NULL;
+        psi[ii] = NULL;
+    }
+    dmrg_update_all_right(ao,fcopy,psi);
+    
+    struct FunctionTrain * out = dmrg_sweep_lr(ao,fcopy,phi,psi,0);
+    double diff = function_train_norm2diff(out,fcopy);
+    CuAssertDblEquals(tc,0.0,diff,1e-14);
+
+    struct FunctionTrain * out2 = dmrg_sweep_rl(out,fcopy,phi,psi,0);
+    diff = function_train_norm2diff(out2,fcopy)/normsize;
+    CuAssertDblEquals(tc,0.0,diff,1e-14);
+
+    for (ii = 0; ii < dim-1; ii++){
+        free(phi[ii]);
+        free(psi[ii]);
+    }
+    free(phi); 
+    free(psi);
+    function_train_free(ft); ft = NULL;
+    function_train_free(ao); ao = NULL;
+    function_train_free(fcopy); fcopy = NULL;
+    function_train_free(out); out = NULL;
+    function_train_free(out2); out2 = NULL;
+    bounding_box_free(bds); bds = NULL;
+}
 
 CuSuite * CLinalgDMRGGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_rightorth);
+    SUITE_ADD_TEST(suite, Test_dmrglr);
     return suite;
 }
 
@@ -2524,10 +2570,10 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, fta);
+    //CuSuiteAddSuite(suite, clin);
+    //CuSuiteAddSuite(suite, qma);
+    //CuSuiteAddSuite(suite, ftr);
+    //CuSuiteAddSuite(suite, fta);
     CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

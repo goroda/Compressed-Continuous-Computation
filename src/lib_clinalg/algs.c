@@ -49,7 +49,7 @@
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e3*DBL_EPSILON
+#define ZEROTHRESH 1e4*DBL_EPSILON
 
 #ifndef VQMALU
     #define VQMALU 0

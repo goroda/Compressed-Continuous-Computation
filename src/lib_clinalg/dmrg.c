@@ -39,6 +39,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "array.h"
+#include  "lib_linalg.h"
 #include "lib_clinalg.h"
 
 /***********************************************************//**
@@ -100,46 +102,246 @@ void dmrg_update_all_right(struct FunctionTrain * a, struct FunctionTrain * b, d
 double * dmrg_update_left(double * phik, struct Qmarray * left, struct Qmarray * right)
 {
     struct Qmarray * temp = mqma(phik, right, left->nrows);
+    //printf("pow\n");
     struct Qmarray * temp2 = qmatqma(left,temp);
+    //printf("powpow\n");
+    //print_qmarray(temp2,0,NULL);
     double * val = qmarray_integrate(temp2);
+    //printf("wow \n");
 
     qmarray_free(temp); temp = NULL;
     qmarray_free(temp2); temp2 = NULL;
     return val;
 }
- 
-struct FunctionTrain * dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b, double ** phi, double ** psi)
-{
-    struct FunctionTrain * na = function_train_alloc(a->dim);
-    
-    phi[0] = calloc_double(1);
-    phi[0][0] = 1;
-    size_t ii = 0;
-    for (ii = 0; ii < a->dim-1; ii++){
-        struct Qmarray * newcorer = qmam(b->core[ii+1],psi[ii],a->cores[ii+2]->nrows);
-        // take LQ of this
-        
-        struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],a->cores[ii-1]->ncols);
-        // take QR of this
 
-        // multiply RL
-        // svd of RL
-        // new left core and new right core
+/***********************************************************//**
+    Perform a left-right dmrg sweep
+
+    \param a [in] - initial guess
+    \param b [in] - desired ft
+    \param phi [inout] - left multipliers
+    \param psi [in] - right multiplies
+    \param epsilon [in] - splitting tolerance
+
+    \return na - a new approximation
+***************************************************************/
+struct FunctionTrain * 
+dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b, 
+                double ** phi, double ** psi, double epsilon)
+{
+    double * L = NULL;
+    double * R = NULL;
+    double * RL = NULL;
+    struct Qmarray * tempr = NULL;
+    struct Qmarray * templ = NULL;
+    struct FunctionTrain * na = function_train_alloc(a->dim);
+    na->ranks[0] = 1;
+    na->ranks[na->dim] = 1;
+    
+    if (phi[0] == NULL){
+        phi[0] = calloc_double(1);
+        phi[0][0] = 1;
+    }
+    size_t ii,jj,kk;
+    size_t dimtemp, lsize,rsize;
+    lsize = 1;
+    for (ii = 0; ii < a->dim-1; ii++){
+        //printf("lets sweep boys! %zu \n", ii);
+        dimtemp = b->cores[ii]->ncols;
+        if (ii == a->dim-2){
+            rsize = 1;
+        }
+        else{
+            rsize = a->cores[ii+2]->nrows;
+        }
+
+        // Deal with ii+1 first ... 
+        struct Qmarray * newcorer = qmam(b->cores[ii+1],psi[ii],rsize);
+        L = calloc_double(newcorer->nrows * newcorer->nrows);
+        templ = qmarray_householder_simple("LQ",newcorer,L);
+
+        // Deal with ii 
+        struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
+        R = calloc_double(newcorel->ncols * newcorel->ncols);
+        tempr = qmarray_householder_simple("QR",newcorel,R);
+
+        // do RL
+        RL = calloc_double(dimtemp*dimtemp);
+        cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
+                    dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
+        
+        // Take svd of RL to find new ranks and split the cores
+        double * u = NULL;
+        double * vt = NULL;
+        double * s = NULL;
+        size_t rank = truncated_svd(dimtemp,dimtemp,dimtemp,RL,&u,&s,&vt,epsilon);
+        na->ranks[ii+1] = rank;
+        na->cores[ii] = qmam(tempr,u,rank);
+        if ((ii+1) == a->dim-1){
+            for (kk = 0; kk < dimtemp; kk++){
+                for (jj = 0; jj < rank; jj++){
+                    vt[kk*rank+jj] = vt[kk*rank+jj]*s[jj];
+                }
+            }
+            na->cores[ii+1] = mqma(vt,templ,rank);
+        }
+        
+        //printf("roo! %zu \n", ii);
+        // now create new psi matrix
+        if (ii < a->dim-2){
+            free(phi[ii+1]); phi[ii+1] = NULL;
+            phi[ii+1] = dmrg_update_left(phi[ii],na->cores[ii],b->cores[ii]);
+        }
+
+        lsize = a->cores[ii]->ncols;
+        free(u); u = NULL;
+        free(s); s = NULL;
+        free(vt); vt = NULL;
+        free(L); L = NULL;
+        free(R); R = NULL;
+        free(RL); RL = NULL;
+        qmarray_free(newcorer); newcorer = NULL;
+        qmarray_free(newcorel); newcorel = NULL;
+        qmarray_free(templ); templ = NULL;
+        qmarray_free(tempr); tempr = NULL;
     }
 
     return na;
 }
 
+/***********************************************************//**
+    Perform a right-left dmrg sweep
 
-/*
-void fast_kron(size_t n, double * C, struct Qmarray * A, struct Qmarray * B, struct Qmarray ** out)
+    \param a [in] - initial guess
+    \param b [in] - desired ft
+    \param phi [in] - left multipliers
+    \param psi [inout] - right multiplies
+    \param epsilon [in] - splitting tolerance
+
+    \return na - a new approximation
+***************************************************************/
+struct FunctionTrain * 
+dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b, 
+                double ** phi, double ** psi, double epsilon)
 {
-    assert (*out == NULL);
-    struct Qmarray * temp = mqma(C,A,n);
-    //return out;
+    double * L = NULL;
+    double * R = NULL;
+    double * RL = NULL;
+    struct Qmarray * tempr = NULL;
+    struct Qmarray * templ = NULL;
+    struct FunctionTrain * na = function_train_alloc(a->dim);
+    na->ranks[0] = 1;
+    na->ranks[na->dim] = 1;
+    
+    if (psi[a->dim-2] == NULL){
+        psi[a->dim-2] = calloc_double(1);
+        psi[a->dim-2][0] = 1;
+    }
+    int ii;
+    size_t jj,kk;
+    size_t dimtemp, lsize,rsize;
+    rsize = 1;
+    for (ii = a->dim-2; ii > -1; ii--){
+       // printf("lets sweep boys! %d \n", ii);
+        dimtemp = b->cores[ii]->ncols;
+        if (ii == 0){
+            lsize = 1;
+        }
+        else{
+            lsize = a->cores[ii-1]->ncols;
+        }
+
+        // Deal with ii+1 first ... 
+        struct Qmarray * newcorer = qmam(b->cores[ii+1],psi[ii],rsize);
+        L = calloc_double(newcorer->nrows * newcorer->nrows);
+        templ = qmarray_householder_simple("LQ",newcorer,L);
+
+        // Deal with ii 
+        struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
+        R = calloc_double(newcorel->ncols * newcorel->ncols);
+        tempr = qmarray_householder_simple("QR",newcorel,R);
+
+        // do RL
+        RL = calloc_double(dimtemp*dimtemp);
+        cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
+                    dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
+        
+        // Take svd of RL to find new ranks and split the cores
+        double * u = NULL;
+        double * vt = NULL;
+        double * s = NULL;
+        size_t rank = truncated_svd(dimtemp,dimtemp,dimtemp,RL,&u,&s,&vt,epsilon);
+        na->ranks[ii+1] = rank;
+        na->cores[ii+1] = mqma(vt,templ,rank);
+       // printf("cores[%d] shape = (%zu,%zu)\n",ii+1,
+       //                     na->cores[ii+1]->nrows,na->cores[ii+1]->ncols);
+        if (ii == 0){
+            for (jj = 0; jj < rank; jj++){
+                for (kk = 0; kk < dimtemp; kk++){
+                    u[jj*dimtemp+kk] = u[jj*dimtemp+kk]*s[jj];
+                }
+            }
+            na->cores[ii] = qmam(tempr,u,rank);
+          //  printf("cores[%d] shape = (%zu,%zu)\n",ii,
+          //                  na->cores[ii]->nrows,na->cores[ii]->ncols);
+        }
+        
+        //printf("roo! %zu \n", ii);
+        // now create new psi matrix
+        if (ii > 0){
+            free(psi[ii-1]); psi[ii-1] = NULL;
+            psi[ii-1] = dmrg_update_right(psi[ii],b->cores[ii+1],na->cores[ii+1]);
+        }
+
+        rsize = a->cores[ii+1]->nrows;
+    
+        free(u); u = NULL;
+        free(s); s = NULL;
+        free(vt); vt = NULL;
+        free(L); L = NULL;
+        free(R); R = NULL;
+        free(RL); RL = NULL;
+        qmarray_free(newcorer); newcorer = NULL;
+        qmarray_free(newcorel); newcorel = NULL;
+        qmarray_free(templ); templ = NULL;
+        qmarray_free(tempr); tempr = NULL;
+    }
+    return na;
 }
-*/
+
+/***********************************************************//**
+    Find an approximation of an FT with another FT through dmrg sweeps
+
+    \param a [inout] - initial guess and final solution
+    \param b [in] - desired ft
+***************************************************************/
+void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
+            double delta, size_t max_sweeps, int verbose, double epsilon)
+{
+    size_t dim = (*a)->dim;
+    struct FunctionTrain * ao = function_train_orthor(*a);
+    double ** phi = malloc((dim-1)*sizeof(double));
+    double ** psi = malloc((dim-1)*sizeof(double));
+    size_t ii;
+    for (ii = 0; ii < dim-1; ii++){
+        phi[ii] = NULL;
+        psi[ii] = NULL;
+    }
+    dmrg_update_all_right(ao,b,psi);
+    
+    struct FunctionTrain * temp = NULL;
+    for (ii = 0; ii < max_sweeps; ii++){
+        function_train_free(*a); *a = NULL;
+        temp = dmrg_sweep_lr(ao,b,phi,psi,epsilon);
+    }
 
 
-//void dmrg_core_mid_mult(double * leftmat, double * rightmat, 
-//        size_t k, struct FT1DArray * 
+    for (ii = 0; ii < dim-1; ii++){
+        free(phi[ii]); phi[ii] = NULL;
+        free(psi[ii]); psi[ii] = NULL;
+    }
+    free(phi); phi = NULL;
+    free(psi); psi = NULL;
+
+
+}
