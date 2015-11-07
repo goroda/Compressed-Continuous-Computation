@@ -2548,11 +2548,13 @@ void Test_dmrglr(CuTest * tc)
         phi[ii] = NULL;
         psi[ii] = NULL;
     }
-    dmrg_update_all_right(fcopy,ao,psi);
+    //dmrg_update_all_right(fcopy,ao,psi);
+    dmrg_update_all_right(ao,fcopy,psi);
     
     struct FunctionTrain * out = dmrg_sweep_lr(ao,fcopy,phi,psi,0);
-    double diff = function_train_norm2diff(out,fcopy);
-    //CuAssertDblEquals(tc,0.0,diff,1e-14);
+    double diff = function_train_norm2diff(out,fcopy)/normsize;
+    printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-14);
 
     struct FunctionTrain * out2 = dmrg_sweep_rl(out,fcopy,phi,psi,0);
     diff = function_train_norm2diff(out2,fcopy)/normsize;
@@ -2577,12 +2579,14 @@ void Test_dmrg_approx(CuTest * tc)
 
     printf("Testing Function: dmrg_approx\n");
     size_t dim = 4;
-    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
     struct FunctionTrain * ft = 
         function_train_cross(funcGrad,NULL,bds,NULL,NULL,NULL);
     printf("lets go \n");
     //struct FunctionTrain * start = function_train_copy(ft);
-    struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+    double coeffs[4] = {0.5,0.5,0.5,0.5};
+    struct FunctionTrain * start = function_train_constant(dim,2.0,bds,NULL);
+    //struct FunctionTrain * start = function_train_linear(dim,bds,coeffs,NULL);
 
     dmrg_approx(&start,ft,1e-5,10,1,1e-10);
     double diff = function_train_norm2diff(start,ft);
