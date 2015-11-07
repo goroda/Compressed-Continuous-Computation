@@ -48,3 +48,7 @@ dmrg_sweep_lr(struct FunctionTrain *, struct FunctionTrain *, double **,
 struct FunctionTrain * 
 dmrg_sweep_rl(struct FunctionTrain *, struct FunctionTrain *, double **, 
                 double **, double);
+
+
+void dmrg_approx(struct FunctionTrain **, struct FunctionTrain *,
+            double, size_t, int, double);

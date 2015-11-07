@@ -49,7 +49,9 @@
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e4*DBL_EPSILON
+#define ZEROTHRESH 1e3*DBL_EPSILON
+//#define ZEROTHRESH  1e-14
+//#define ZEROTHRESH 0.0
 
 #ifndef VQMALU
     #define VQMALU 0
@@ -964,8 +966,9 @@ qmatqma(struct Qmarray * a, struct Qmarray * b)
     size_t ii,jj;
     for (jj = 0; jj < b->ncols; jj++){
         for (ii = 0; ii < a->ncols; ii++){
+            //printf("computing c[%zu,%zu] \n",ii,jj);
             // c[jj*a->ncols+ii] = a[:,ii]^T b[:,jj]
-            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(b->nrows, 1, 
+            c->funcs[jj*c->nrows+ii] =  generic_function_sum_prod(b->nrows, 1, 
                     a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
         }
     }
@@ -988,7 +991,7 @@ qmaqmat(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < b->nrows; jj++){
         for (ii = 0; ii < a->nrows; ii++){
             // c[jj*c->ncols+ii] = a[ii,:]^T b[jj,:]^T
-            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(a->ncols, a->nrows, 
+            c->funcs[jj*c->nrows+ii] =  generic_function_sum_prod(a->ncols, a->nrows, 
                     a->funcs + ii, b->nrows, b->funcs + jj);
         }
     }
@@ -1012,7 +1015,7 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < b->nrows; jj++){
         for (ii = 0; ii < a->ncols; ii++){
             // c[jj*a->ncols+ii] = a[:,ii]^T b[jj,:]
-            c->funcs[ii*c->ncols+jj] =  generic_function_sum_prod(b->ncols, 1, 
+            c->funcs[ii*c->nrows+jj] =  generic_function_sum_prod(b->ncols, 1, 
                     a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
         }
     }
@@ -1874,7 +1877,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
                     E->funcs+ii, -1.0, A->nrows, A->funcs+ii);
     
         // improve orthogonality
-        /*
+        //*
         if (ii > 1){
             struct Quasimatrix * tempv = NULL;
             for (jj = 0; jj < ii-1; jj++){
@@ -1887,7 +1890,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
                 quasimatrix_free(tempv);
             }
         }
-        */
+        //*/
         sigma = generic_function_array_norm(v->n, 1, v->funcs);
         if (sigma < ZEROTHRESH){
             sigma = 0.0;
@@ -2394,18 +2397,35 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
     ftrl->ranks[0] = 1;
     ftrl->ranks[1] = a->ranks[1];
     // update last core
+    //printf("\n\n\n\non core %zu\n",core);
+    //struct Qmarray * tcheck = qmarray_copy(a->cores[core]);
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L);
+    //struct Qmarray * temp2 = mqma(L,ftrl->cores[core],a->ranks[core]);
+    //double diff = qmarray_norm2diff(tcheck,temp2);
+    //printf("diff = %G\n",diff);
+    //qmarray_free(tcheck);
+    //qmarray_free(temp2);
     for (ii = 2; ii < a->dim; ii++){
         ftrl->ranks[ii] = a->ranks[ii];
-
         core = a->dim-ii;  
+        //printf("\n\n\n\non core %zu\n",core);
 
         temp = qmam(a->cores[core],L,a->cores[core+1]->nrows);  
         free(L); L = NULL;
         L = calloc_double(a->ranks[core] * a->ranks[core]);
+    
+        //struct Qmarray * tcheck = qmarray_copy(temp);
+        //print_qmarray(tcheck,0,NULL);
 
         ftrl->cores[core] = qmarray_householder_simple("LQ",temp,L);
+        //struct Qmarray * temp2 = mqma(L,ftrl->cores[core],a->ranks[core]);
+        //diff = qmarray_norm2diff(tcheck,temp2);
+        //printf("diff = %G\n",diff);
+        //qmarray_free(tcheck);
+        //qmarray_free(temp2);
+
         qmarray_free(temp); temp = NULL;
+        //break;
     }
     // ends with core = a->dim-(a->dim-1) = 1
     core = 0;

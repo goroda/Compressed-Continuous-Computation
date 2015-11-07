@@ -46,6 +46,7 @@
 
 //#define ZEROTHRESH 1e-20
 #define ZEROTHRESH  3e0 * DBL_EPSILON
+//#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
 
@@ -1181,6 +1182,7 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 *************************************************************/
 void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 {   
+    
     size_t jj = 0;
     double sum = 0.0;
 	for (jj = 0; jj < (*p)->num_poly;jj++){
@@ -1511,7 +1513,12 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     struct OrthPolyExpansion * comb[2];
     comb[0] = a;
     comb[1] = b;
-   
+    
+    //printf(" poly a = \n");
+    //print_orth_poly_expansion(a,0,NULL);
+    //printf(" poly b = \n");
+    //print_orth_poly_expansion(b,0,NULL);
+
     //printf("num poly = %zu\n",a->num_poly+b->num_poly);
     double norma = 0.0, normb = 0.0;
     size_t ii;
@@ -1523,6 +1530,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     }
     
     if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
+        //printf("in here \n");
         c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
     }
     else{
@@ -1531,7 +1539,8 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
         orth_poly_expansion_round(&c);
     }
-
+    //printf("poly c = \n");
+    //print_orth_poly_expansion(c,0,NULL);
     //orth_poly_expansion_roundt(&c,sqrt(norma*normb));
 
     /*
