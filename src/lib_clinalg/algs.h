@@ -142,6 +142,8 @@ struct Qmarray * qmaqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmaqmat(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqmat(struct Qmarray * a, struct Qmarray * b);
+double * qmatqma_integrate(struct Qmarray *, struct Qmarray *);
+double * qmaqmat_integrate(struct Qmarray *, struct Qmarray *);
 double * qmatqmat_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_kron(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(double *, struct Qmarray *, struct Qmarray *);

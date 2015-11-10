@@ -59,15 +59,24 @@ double *
 dmrg_update_right(double * psikp, struct Qmarray * left, struct Qmarray * right)
 {
     //printf("update right\n");
-    struct Qmarray * temp = qmam(left,psikp,right->ncols);
-    //printf("got temp \n");
-    struct Qmarray * temp2 = qmaqmat(temp,right);
-    //printf("got temp2 \n");
-    //print
-    double * val = qmarray_integrate(temp2);
+    
+    double * val = calloc_double(left->nrows * right->nrows);
+    size_t nrows = left->nrows;
+    size_t ncols = right->nrows;
+    size_t ii,jj,kk,ll;
+    for (ii = 0; ii < ncols; ii++){
+        for (jj = 0; jj < nrows; jj++){
+            for (kk = 0; kk < left->ncols; kk++){
+                for (ll = 0; ll < right->ncols; ll++){
+                    val[ii*nrows+jj] += psikp[ll*left->ncols+kk]*
+                            generic_function_inner(
+                                    left->funcs[kk*left->nrows+ jj],
+                                    right->funcs[ll*right->nrows+ ii]);
 
-    qmarray_free(temp); temp = NULL;
-    qmarray_free(temp2); temp2 = NULL;
+                }
+            }
+        }
+    }
     return val;
 }
 
@@ -88,15 +97,9 @@ void dmrg_update_all_right(struct FunctionTrain * a,
     size_t ii;
     mats[a->dim-2] = calloc_double(1);
     mats[a->dim-2][0] = 1.0;
-    //printf("ok\n");
     for (ii = a->dim-3; ii > 0; ii--){
-        //printf("update ii = %zu \n",ii);
-        //print_qmarray(a->cores[ii+2],0,NULL);
-        //print_qmarray(b->cores[ii+2],0,NULL);
-        //printf("go \n");
         mats[ii] = dmrg_update_right(mats[ii+1],a->cores[ii+2],b->cores[ii+2]);
     }
-    //printf("finish\n");
     mats[0] = dmrg_update_right(mats[1],a->cores[2],b->cores[2]);
 }
 
@@ -110,26 +113,34 @@ void dmrg_update_all_right(struct FunctionTrain * a,
     \return val -  \f$ \Phi_{k+1} \f$
 
     \note
-       \f$ \Phi_{k+1} = \int left(x)^T \Psi_{k} right(x) dx \f$
+       \f$ \Phi_{k+1} = \int left(x)^T \Phi_{k} right(x) dx \f$
 ***************************************************************/
 double * dmrg_update_left(double * phik, struct Qmarray * left, struct Qmarray * right)
 {
     //printf("start update left\n");
+    //
+    
+    size_t nrows = left->ncols;
+    size_t ncols = right->ncols;
+    double * val = calloc_double(nrows * ncols);
+    size_t ii,jj,kk,ll;
+    for (ii = 0; ii < ncols; ii++){
+        for (jj = 0; jj < nrows; jj++){
+            for (kk = 0; kk < left->nrows; kk++)
+                for (ll = 0; ll < right->nrows; ll++)
+                    val[ii*nrows+jj] += phik[ll*left->nrows+kk] * 
+                                    generic_function_inner(
+                                    left->funcs[jj*left->nrows+kk],
+                                    right->funcs[ii*right->nrows+ll]);
+        }
+    }
+    
+    /*
     struct Qmarray * temp = mqma(phik, right, left->nrows);
-    //printf("\t\t\t ttttttttttt\n");
-    //print_qmarray(temp,0,NULL);
-    //printf("pow\n\n\n\n\n\n\n");
-    //printf("left = \n");
-    //print_qmarray(left,0,NULL);
-    //printf("\n\n\n lasdkaldaskld \n\n\n");
-    struct Qmarray * temp2 = qmatqma(left,temp);
-    //print_qmarray(temp2,0,NULL);
-    //printf("\n\n\n\npowpow\n");
-    double * val = qmarray_integrate(temp2);
-    //printf("wow \n");
-
+    double * val = qmatqma_integrate(left,temp);
     qmarray_free(temp); temp = NULL;
-    qmarray_free(temp2); temp2 = NULL;
+    */
+
     return val;
 }
 
@@ -166,7 +177,7 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
     lsize = 1;
     for (ii = 0; ii < a->dim-1; ii++){
         dimtemp = b->cores[ii]->ncols;
-        printf("\n\n\n lets sweep right boys! %zu dimtemp=%zu \n", ii,dimtemp);
+        //printf("\n\n\n lets sweep right boys! %zu dimtemp=%zu \n", ii,dimtemp);
         if (ii == a->dim-2){
             rsize = 1;
         }
@@ -180,24 +191,24 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
         L = calloc_double(dimtemp*dimtemp);
         templ = qmarray_householder_simple("LQ",newcorer,L);
 
-        printf("L = \n");
-        dprint2d_col(dimtemp,dimtemp,L);
+        //printf("L = \n");
+        //dprint2d_col(dimtemp,dimtemp,L);
         // Deal with ii 
         //printf("ii\n");
         struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
         R = calloc_double(dimtemp*dimtemp);
         tempr = qmarray_householder_simple("QR",newcorel,R);
 
-        printf("R = \n");
-        dprint2d_col(dimtemp,dimtemp,R);
+        //printf("R = \n");
+        //dprint2d_col(dimtemp,dimtemp,R);
 
         // do RL
         RL = calloc_double(dimtemp*dimtemp);
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
                     dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
         
-        printf("RL = \n");
-        dprint2d_col(dimtemp,dimtemp,RL);
+        //printf("RL = \n");
+        //dprint2d_col(dimtemp,dimtemp,RL);
 
         // Take svd of RL to find new ranks and split the cores
         double * u = NULL;
@@ -212,24 +223,16 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
                     vt[kk*rank+jj] = vt[kk*rank+jj]*s[jj];
                 }
             }
+            //printf("last core updated \n");
             na->cores[ii+1] = mqma(vt,templ,rank);
         }
         
         //printf("new rank = %zu\n",rank);
         //printf("roo! %zu \n", ii);
-        // now create new psi matrix
+        // now create new phi matrix
         if (ii < a->dim-2){
             free(phi[ii+1]); phi[ii+1] = NULL;
-            //printf("phi=\n");
-            //dprint2d_col(na->cores[ii]->nrows,b->cores[ii]->nrows,phi[ii]);
-            //printf("new core\n");
-            //print_qmarray(na->cores[ii],0,NULL);
-            //printf("new core shape = (%zu,%zu)\n",na->cores[ii]->nrows, na->cores[ii]->ncols);
-            //printf("b core shape = (%zu,%zu)\n",b->cores[ii]->nrows, b->cores[ii]->ncols);
-            //printf("b core\n");
-            //print_qmarray(b->cores[ii],0,NULL);
-            //phi[ii+1] = dmrg_update_left(phi[ii],na->cores[ii],b->cores[ii]);
-            phi[ii+1] = dmrg_update_left(phi[ii],b->cores[ii],na->cores[ii]);
+            phi[ii+1] = dmrg_update_left(phi[ii],na->cores[ii],b->cores[ii]);
         }
 
         lsize = a->cores[ii]->ncols;
@@ -274,7 +277,7 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
     
     if (psi[a->dim-2] == NULL){
         psi[a->dim-2] = calloc_double(1);
-        psi[a->dim-2][0] = 1;
+        psi[a->dim-2][0] = 1.0;
     }
     int ii;
     size_t jj,kk;
@@ -284,7 +287,7 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
         //printf("lets sweep boys! %d \n", ii);
         dimtemp = b->cores[ii]->ncols;
 
-        printf("\n\n\nlets sweep boys! %d dimtemp=%zu \n", ii,dimtemp);
+        //printf("lets sweep boys! %d dimtemp=%zu \n", ii,dimtemp);
         if (ii == 0){
             lsize = 1;
         }
@@ -296,23 +299,23 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
         struct Qmarray * newcorer = qmam(b->cores[ii+1],psi[ii],rsize);
         L = calloc_double(dimtemp*dimtemp);
         templ = qmarray_householder_simple("LQ",newcorer,L);
-        printf("L = \n");
-        dprint2d_col(dimtemp,dimtemp,L);
+        //printf("L = \n");
+        //dprint2d_col(dimtemp,dimtemp,L);
 
         // Deal with ii 
         struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
         R = calloc_double(dimtemp*dimtemp);
         tempr = qmarray_householder_simple("QR",newcorel,R);
-        printf("R = \n");
-        dprint2d_col(dimtemp,dimtemp,R);
+        //printf("R = \n");
+        //dprint2d_col(dimtemp,dimtemp,R);
 
         // do RL
         RL = calloc_double(dimtemp*dimtemp);
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
                     dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
         
-        printf("RL = \n");
-        dprint2d_col(dimtemp,dimtemp,RL);
+        //printf("RL = \n");
+        //dprint2d_col(dimtemp,dimtemp,RL);
         // Take svd of RL to find new ranks and split the cores
         double * u = NULL;
         double * vt = NULL;
@@ -320,7 +323,7 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
         size_t rank = truncated_svd(dimtemp,dimtemp,dimtemp,RL,&u,&s,&vt,epsilon);
         na->ranks[ii+1] = rank;
         na->cores[ii+1] = mqma(vt,templ,rank);
-        printf("rank = %zu\n",rank);
+        //printf("rank = %zu\n",rank);
        // printf("cores[%d] shape = (%zu,%zu)\n",ii+1,
        //                     na->cores[ii+1]->nrows,na->cores[ii+1]->ncols);
         if (ii == 0){
@@ -329,6 +332,7 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
                     u[jj*dimtemp+kk] = u[jj*dimtemp+kk]*s[jj];
                 }
             }
+            //printf("first core updated\n");
             na->cores[ii] = qmam(tempr,u,rank);
           //  printf("cores[%d] shape = (%zu,%zu)\n",ii,
           //                  na->cores[ii]->nrows,na->cores[ii]->ncols);
@@ -376,40 +380,59 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
         phi[ii] = NULL;
         psi[ii] = NULL;
     }
-    printf("okydokie\n");
+   // printf("okydokie\n");
     dmrg_update_all_right(b,ao,psi);
-    //dmrg_update_all_right(ao,b,psi);
-    printf("radachokie\n");
+    //printf("radachokie\n");
     
+    printf("Starting ranks = ");
+    iprint_sz(dim+1,ao->ranks);
     struct FunctionTrain * temp = NULL;
     double diff;
     for (ii = 0; ii < max_sweeps; ii++){
         printf("On dmrg_approx iteration (%zu/%zu)\n",ii,max_sweeps-1);
         function_train_free(*a); *a = NULL;
         printf("left right\n");
+       // struct FunctionTrain * rhs = function_train_copy(b);
         temp = dmrg_sweep_lr(ao,b,phi,psi,epsilon);
-        //*a = function_train_copy(temp);
-        //break;
         printf("temp ranks = ");
         iprint_sz(dim+1,temp->ranks);
-        printf("right left \n");
-        *a = dmrg_sweep_rl(temp,b,phi,psi,epsilon);
-     
-        printf("new ranks = ");
+    
+        diff = function_train_norm2diff(temp,ao);
+        printf("Diff after left right = %G\n",diff);
+        
+        *a = function_train_orthor(temp);
+        printf("a ranks = ");
         iprint_sz(dim+1,(*a)->ranks);
-        diff = function_train_norm2diff(*a,ao);
-        if (verbose > 0){
-            printf("\t diff = %G\n",diff);
-        }
-        function_train_free(ao); ao = NULL;
+
+        function_train_free(ao);ao = NULL;
         function_train_free(temp); temp = NULL;
+
+        ao = function_train_copy(*a);
+        dmrg_update_all_right(b,ao,psi);
+        //function_train_free(rhs); rhs = NULL;
+
+
+
+        //*a = function_train_copy(temp);
+        //break;
+        //printf("right left \n");
+        //*a = dmrg_sweep_rl(temp,b,phi,psi,epsilon);
+     
+        //printf("new ranks = ");
+        //iprint_sz(dim+1,(*a)->ranks);
+        //diff = function_train_norm2diff(*a,ao);
+        //if (verbose > 0){
+        //    printf("\t diff = %G\n",diff);
+       // }
+       // function_train_free(ao); ao = NULL;
+       // function_train_free(temp); temp = NULL;
         //if (diff < delta){
-        if (1 == 2){
-            break;
-        }
-        else{
-            ao = function_train_copy(*a);
-        }
+       // if (1 == 2){
+       //     break;
+       // }
+       // else{
+       //     ao = function_train_copy(*a);
+       // }
     }
 
     function_train_free(ao); ao = NULL;

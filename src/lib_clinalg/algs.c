@@ -1023,6 +1023,58 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
 }
 
 /***********************************************************//**
+    Integral of Transpose qmarray - qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
+***************************************************************/
+double *
+qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->ncols*b->ncols);
+    size_t nrows = a->ncols;
+    size_t ncols = b->ncols;
+    size_t ii,jj;
+    for (jj = 0; jj < ncols; jj++){
+        for (ii = 0; ii < nrows; ii++){
+            // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
+            c[jj*nrows+ii] =  generic_function_inner_sum(b->nrows, 1, 
+                    a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
+    Integral of qmarray - transpose qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
+***************************************************************/
+double *
+qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->nrows*b->nrows);
+    size_t nrows = a->nrows;
+    size_t ncols = b->nrows;
+    size_t ii,jj;
+    for (jj = 0; jj < ncols; jj++){
+        for (ii = 0; ii < nrows; ii++){
+            // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
+            c[jj*nrows+ii] =  generic_function_inner_sum(a->ncols, a->nrows, 
+                    a->funcs + ii, b->nrows, b->funcs + jj);
+        }
+    }
+    return c;
+}
+
+
+
+/***********************************************************//**
     Integral of Transpose qmarray - transpose qmarray mutliplication
 
     \param a [in] - qmarray 1
@@ -2708,12 +2760,12 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
         //temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
         //qmarray_free(c1);c1=NULL;
         
-        
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);
         memmove(temp, temp2,stemp*sizeof(double));
+        
         free(temp2); temp2 = NULL;
     }
     
@@ -2733,11 +2785,11 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 double function_train_norm2(struct FunctionTrain * a)
 {
     double out = function_train_inner(a,a);
-    
+    //printf("out = %G\n",out);
     //*
-    if (out < 0.0){
-        out = 0.0;
-    }
+    //if (out < 0.0){
+    //    out = 0.0;
+    //}
     //*/
     //if (out < -1e-13){
     if (out <  -ZEROTHRESH){
