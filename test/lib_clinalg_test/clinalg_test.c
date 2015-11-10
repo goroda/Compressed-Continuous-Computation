@@ -2723,11 +2723,11 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    //CuSuiteAddSuite(suite, clin);
-    //CuSuiteAddSuite(suite, qma);
-    //CuSuiteAddSuite(suite, ftr);
-    //CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, qma);
+    CuSuiteAddSuite(suite, ftr);
+    CuSuiteAddSuite(suite, fta);
+    //CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);

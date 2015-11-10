@@ -1217,6 +1217,8 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
         out += generic_function_inner(temp[ii],temp[ii]);
     }
     if (out < 0){
+        fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
+        exit(1);
         return 0.0;
     }
     generic_function_array_free(a->ncols*a->nrows,temp);
