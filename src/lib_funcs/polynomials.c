@@ -45,7 +45,7 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
-#define ZEROTHRESH  3e0 * DBL_EPSILON
+#define ZEROTHRESH  1e1 * DBL_EPSILON
 //#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
@@ -2104,7 +2104,10 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         //*
         //Balance
         size_t ILO, IHI;
+        //printf("am I here? N=%zu \n",N);
+        //dprint(N*N,nscompanion);
         dgebal_("S", &N, nscompanion, &N,&ILO,&IHI,scale,&info);
+        //printf("yep\n");
         if (info < 0){
             fprintf(stderr, "Calling dgebl had error in %d-th input in the legendre_expansion_real_roots function\n",info);
             exit(1);

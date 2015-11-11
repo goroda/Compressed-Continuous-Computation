@@ -495,8 +495,11 @@ deserialize_generic_function(unsigned char * ser,
 ************************************************************/
 double generic_function_norm(struct GenericFunction * f){
     double out = generic_function_inner(f,f);
-    if (out < 0.0)
-        out = 0.0;
+
+    if (out < 0.0){
+        fprintf(stderr, "Norm of a function cannot be negative %G\n",out);
+        exit(1);
+    }
     //assert (out > -1e-15);
     return sqrt(out);
 }
