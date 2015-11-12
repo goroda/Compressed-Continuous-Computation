@@ -2493,19 +2493,21 @@ void Test_rightorth(CuTest * tc)
     printf("starting my procedure second time\n");
     struct FunctionTrain * ao2 = function_train_orthor(aoc);
 
-    double diffao = function_train_norm2diff(ao,ao2);
+    double diffao = function_train_relnorm2diff(ao,ao2);
     size_t ii;
     for (ii = 0; ii < ao->dim;ii++){
         double diffc = qmarray_norm2diff(ao->cores[ii],ao2->cores[ii]);
         printf("diffcore %zu is %G\n",ii,diffc);
     }
     printf("diffao = %G\n",diffao);
+    print_qmarray(ao->cores[0],3,NULL);
+    printf("the other one is \n");
+    print_qmarray(ao2->cores[0],3,NULL);
     
-    double diff2 = function_train_norm2diff(ao2,fcopy);
+    double diff2 = function_train_relnorm2diff(ao2,fcopy);
     printf("diff2 = %G\n",diff2);
 
-    double norm = function_train_norm2(fcopy);
-    double diff = function_train_norm2diff(ao,fcopy)/norm;
+    double diff = function_train_relnorm2diff(ao,fcopy);
     printf("\n\nfinal diff = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff,1e-14);
     /*

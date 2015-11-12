@@ -193,6 +193,7 @@ double function_train_integrate(struct FunctionTrain *);
 double function_train_inner(struct FunctionTrain *, struct FunctionTrain *);
 double function_train_norm2(struct FunctionTrain *);
 double function_train_norm2diff(struct FunctionTrain *, struct FunctionTrain *);
+double function_train_relnorm2diff(struct FunctionTrain *, struct FunctionTrain *);
 
 struct FT1DArray * function_train_gradient(struct FunctionTrain *);
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray *);

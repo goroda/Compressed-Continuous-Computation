@@ -2407,7 +2407,7 @@ void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec,
                 printf("%3.15f ", p->coeff[ii]);
             }
             else{
-                printf("%E ", p->coeff[ii]);
+                printf("%3.15E ", p->coeff[ii]);
             }
         }
         printf("\n");

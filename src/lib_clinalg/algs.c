@@ -49,9 +49,9 @@
 #include "array.h"
 #include "linalg.h"
 
-//#define ZEROTHRESH 1e0*DBL_EPSILON
+#define ZEROTHRESH 1e1*DBL_EPSILON
 //#define ZEROTHRESH  1e-14
-#define ZEROTHRESH 1e-20
+//#define ZEROTHRESH 1e-20
 
 #ifndef VQMALU
     #define VQMALU 0
@@ -2842,7 +2842,7 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 ***********************************************************/
 double function_train_norm2(struct FunctionTrain * a)
 {
-    printf("in norm2\n");
+    //printf("in norm2\n");
     double out = function_train_inner(a,a);
     if (out < 0.0){
         fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
@@ -2871,6 +2871,41 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
     function_train_free(d);
     return val;
 }
+
+/********************************************************//**
+    Compute the L2 norm of the difference between two functions
+
+    \param a [in] -Function train 
+    \param b [in] - function train 2
+
+    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / ||b(x)||\f$
+***********************************************************/
+double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
+{   
+    
+    struct FunctionTrain * c = function_train_copy(b);
+    function_train_scale(c,-1.0);
+
+    double den = function_train_inner(c,c);
+
+    struct FunctionTrain * d = function_train_sum(a,c);
+    double num = function_train_inner(d,d);
+    
+    double val = num;
+    if (fabs(den) > ZEROTHRESH){
+        val /= den;
+    }
+    if (val < -ZEROTHRESH){
+        fprintf(stderr, "relative error between two FT should not be neg %G<-%G \n",val,-ZEROTHRESH);
+        exit(1);
+    }
+    val = sqrt(fabs(val));
+
+    function_train_free(c); c = NULL;
+    function_train_free(d); d = NULL;
+    return val;
+}
+
 
 /********************************************************//**
     Compute the gradient of a function train 
@@ -3245,13 +3280,17 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             function_train_free(tprod);
 
         }
-        den = function_train_norm2(ft);
-        diff = function_train_norm2diff(ft,fti);
-        if (den > ZEROTHRESH){
-            diff /= den;
-        }
+
+        diff = function_train_relnorm2diff(ft,fti);
+
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
         if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
             printf("...... Error L/R Sweep = %E\n",diff);
         }
@@ -3338,14 +3377,18 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,cargs,apargs,-1);
         if (cargs->verbose > 1)
             printf(" ............. done with right left sweep\n");
+    
 
-        den = function_train_norm2(ft);
-        diff = function_train_norm2diff(ft,fti);
-        if (den > ZEROTHRESH){
-            diff /= den;
-        }
+        diff = function_train_relnorm2diff(ft,fti);
+
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
         if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
             printf("...... New FT norm R/L Sweep = %E\n",den);
             printf("...... Error R/L Sweep = %E\n",diff);
         }
