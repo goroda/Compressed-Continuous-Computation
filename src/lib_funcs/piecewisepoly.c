@@ -49,7 +49,7 @@
 #include "polynomials.h"
 #include "piecewisepoly.h"
 
-#define ZEROTHRESH  2e0 * DBL_EPSILON
+//#define ZEROTHRESH  2e0 * DBL_EPSILON
 
 struct PwCouple
 {

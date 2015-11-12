@@ -151,6 +151,7 @@ struct Qmarray * qmarray_vec_kron(double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_vec_kron_integrate(double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_integrate(struct Qmarray *);
 double qmarray_norm2diff(struct Qmarray *, struct Qmarray *);
+double qmarray_norm2(struct Qmarray *);
 
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 

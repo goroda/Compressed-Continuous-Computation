@@ -49,7 +49,7 @@
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e1*DBL_EPSILON
+#define ZEROTHRESH 1e4*DBL_EPSILON
 //#define ZEROTHRESH  1e-14
 //#define ZEROTHRESH 1e-20
 
@@ -863,8 +863,7 @@ qmav(struct Qmarray * Q, double * v)
 
     \return B - qmarray
 ***************************************************************/
-struct Qmarray *
-qmam(struct Qmarray * Q, double * R, size_t b)
+struct Qmarray * qmam(struct Qmarray * Q, double * R, size_t b)
 {
     size_t nrows = Q->nrows;
     struct Qmarray * B = qmarray_alloc(nrows,b);
@@ -872,8 +871,8 @@ qmam(struct Qmarray * Q, double * R, size_t b)
     for (jj = 0; jj < nrows; jj++){
         for (ii = 0; ii < b; ii++){
             B->funcs[ii*nrows+jj] = // Q[jj,:]B[:,ii]
-                generic_function_lin_comb2(Q->ncols, Q->nrows, Q->funcs + jj, 
-                                            1, R + ii*Q->ncols);
+                generic_function_lin_comb2(Q->ncols,
+                    Q->nrows, Q->funcs + jj, 1, R + ii*Q->ncols);
         }
     }
     return B;
@@ -1232,6 +1231,30 @@ double * qmarray_integrate(struct Qmarray * a)
     
     return out;
 }
+
+/***********************************************************//**
+    Norm of a qmarray
+
+    \param a [in] - first qmarray
+
+    \return out - 2 norm
+***************************************************************/
+double qmarray_norm2(struct Qmarray * a)
+{
+    double out = 0.0;
+    size_t ii;
+    for (ii = 0; ii < a->ncols * a->nrows; ii++){
+        out += generic_function_inner(a->funcs[ii],a->funcs[ii]);
+    }
+    if (out < 0){
+        fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
+        exit(1);
+        //return 0.0;
+    }
+
+    return sqrt(fabs(out));
+}
+
 /***********************************************************//**
     Two norm difference between two functions
 
@@ -1252,7 +1275,7 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
     if (out < 0){
         fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
         exit(1);
-        return 0.0;
+        //return 0.0;
     }
     generic_function_array_free(a->ncols*a->nrows,temp);
     //free(temp);
@@ -2783,10 +2806,6 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
     ///*
     double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
 
-    //*/
-    //printf("temp = ");
-    //dprint(b->cores[0]->ncols*a->cores[0]->ncols, temp);
-    //*/
         
     /*
     printf("in function_train_inner\n");
@@ -2844,7 +2863,7 @@ double function_train_norm2(struct FunctionTrain * a)
 {
     //printf("in norm2\n");
     double out = function_train_inner(a,a);
-    if (out < 0.0){
+    if (out < -ZEROTHRESH){
         fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
         exit(1);
     }
@@ -2865,7 +2884,7 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
     struct FunctionTrain * c = function_train_copy(b);
     function_train_scale(c,-1.0);
     struct FunctionTrain * d = function_train_sum(a,c);
-    printf("in function_train_norm2diff\n");
+    //printf("in function_train_norm2diff\n");
     double val = function_train_norm2(d);
     function_train_free(c);
     function_train_free(d);

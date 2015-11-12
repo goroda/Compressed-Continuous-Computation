@@ -553,7 +553,7 @@ void Test_linear_regression(CuTest * tc)
                 
     //printf("prior eval at mean = %G\n",probability_density_eval(br.prior,ms));
 
-    struct ProbabilityDensity * post2 = bayes_rule_compute(&br);
+    //struct ProbabilityDensity * post2 = bayes_rule_compute(&br);
     //struct ProbabilityDensity * post2 = NULL;
     struct ProbabilityDensity * post = bayes_rule_laplace(&br);
 

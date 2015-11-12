@@ -933,8 +933,8 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
 *       Handling the function class of the output is not very smart
 ************************************************************/
 struct GenericFunction * 
-generic_function_daxpby(double a, struct GenericFunction * x, double b,
-                struct GenericFunction * y)
+generic_function_daxpby(double a, struct GenericFunction * x, 
+            double b, struct GenericFunction * y)
 {
     //printf("in here! a =%G b = %G\n",a,b);
 
@@ -1216,7 +1216,7 @@ generic_function_lin_comb(size_t n, struct GenericFunction ** gfarray,
 ************************************************************/
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 
-                struct GenericFunction ** gfa, size_t ldc, double * c)
+        struct GenericFunction ** gfa, size_t ldc, double * c)
 {
     // this function is not optimal
     struct GenericFunction * out = NULL;

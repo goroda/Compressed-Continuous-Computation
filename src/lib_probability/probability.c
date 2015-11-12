@@ -1744,13 +1744,13 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     printf("mean = \n");
     dprint(dim,posterior->lt->b);
     
-    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+    //struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
     struct BrTrans brt;
     brt.br = br;
     brt.lt = posterior->lt;
     brt.mult = 1.0;
     
-    double normalize;
+    //double normalize;
     
     double prior_val = log(probability_density_eval(br->prior,lap->lt->b));
     double like_val = function_train_eval(br->like->like,lap->lt->b);
@@ -1770,6 +1770,7 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     printf("BAYESRUL IS BROKE!!!\n");
     exit(1);
     //
+    /*
     struct PwPolyAdaptOpts aopts;
     aopts.ptype = LEGENDRE;
     aopts.maxorder = 4;
@@ -1825,9 +1826,10 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     function_train_scale(posterior->pdf,1.0/normalize);
 
     exit(1);
-    bounding_box_free(bds); bds = NULL;
-    probability_density_free(lap); lap = NULL;
-    return posterior;
+    */
+    //bounding_box_free(bds); bds = NULL;
+    //probability_density_free(lap); lap = NULL;
+    //return posterior;
 }
 
 

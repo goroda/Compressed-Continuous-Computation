@@ -37,6 +37,11 @@
  * Provides header files and structure definitions for functions in dmrg.c
  */
 
+#ifndef DMRG_H
+#define DMRG_H
+
+#include "lib_clinalg.h"
+
 
 double * dmrg_update_right(double *, struct Qmarray *, struct Qmarray *);
 void 
@@ -52,3 +57,5 @@ dmrg_sweep_rl(struct FunctionTrain *, struct FunctionTrain *, double **,
 
 void dmrg_approx(struct FunctionTrain **, struct FunctionTrain *,
             double, size_t, int, double);
+
+#endif

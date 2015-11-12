@@ -33,14 +33,15 @@
 
 //Code
 
-/** \file algs.c
+/** \file dmrg.c
  * Provides routines for dmrg based algorithms for the FT
  */
+
 #include <stdlib.h>
 #include <assert.h>
 
 #include "array.h"
-#include  "lib_linalg.h"
+#include "lib_linalg.h"
 #include "lib_clinalg.h"
 
 /***********************************************************//**
@@ -50,10 +51,10 @@
     \param left [in] - left core for update
     \param right [in] - right core for update
 
-    \return val -  \f$ \Psi_k \f$
+    \return val - \f$ \Psi_k \f$
 
-    \note
-       \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
+    \note 
+        Computing \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
 ***************************************************************/
 double * 
 dmrg_update_right(double * psikp, struct Qmarray * left, struct Qmarray * right)
@@ -87,19 +88,26 @@ dmrg_update_right(double * psikp, struct Qmarray * left, struct Qmarray * right)
     \param b [in] - right
     \param mats [inout] - allocated space for $d-2$ doubles representing the matrices
 
-    \note
-       \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
+    \note 
+        Computing \f$ \Psi_k = \int left(x) \Psi_{k+1} right^T(x) dx \f$
 ***************************************************************/
 void dmrg_update_all_right(struct FunctionTrain * a, 
                            struct FunctionTrain * b, 
                            double ** mats)
 {
     size_t ii;
+    if (mats[a->dim-2] != NULL){
+        free(mats[a->dim-2]); mats[a->dim-2] = NULL;
+    }
     mats[a->dim-2] = calloc_double(1);
     mats[a->dim-2][0] = 1.0;
     for (ii = a->dim-3; ii > 0; ii--){
+        free(mats[ii]); 
+        mats[ii] = NULL;
         mats[ii] = dmrg_update_right(mats[ii+1],a->cores[ii+2],b->cores[ii+2]);
     }
+    free(mats[0]); 
+    mats[0] = NULL;
     mats[0] = dmrg_update_right(mats[1],a->cores[2],b->cores[2]);
 }
 
@@ -112,8 +120,8 @@ void dmrg_update_all_right(struct FunctionTrain * a,
 
     \return val -  \f$ \Phi_{k+1} \f$
 
-    \note
-       \f$ \Phi_{k+1} = \int left(x)^T \Phi_{k} right(x) dx \f$
+    \note 
+        Computing \f$ \Phi_{k+1} = \int left(x)^T \Phi_{k} right(x) dx \f$
 ***************************************************************/
 double * dmrg_update_left(double * phik, struct Qmarray * left, struct Qmarray * right)
 {
@@ -188,27 +196,28 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
         // Deal with ii+1 first ... 
         //printf("ii+1\n");
         struct Qmarray * newcorer = qmam(b->cores[ii+1],psi[ii],rsize);
+        print_qmarray(newcorer,3,NULL);
         L = calloc_double(dimtemp*dimtemp);
         templ = qmarray_householder_simple("LQ",newcorer,L);
 
-        //printf("L = \n");
-        //dprint2d_col(dimtemp,dimtemp,L);
+        printf("L = \n");
+        dprint2d_col(dimtemp,dimtemp,L);
         // Deal with ii 
         //printf("ii\n");
         struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
         R = calloc_double(dimtemp*dimtemp);
         tempr = qmarray_householder_simple("QR",newcorel,R);
 
-        //printf("R = \n");
-        //dprint2d_col(dimtemp,dimtemp,R);
+        printf("R = \n");
+        dprint2d_col(dimtemp,dimtemp,R);
 
         // do RL
         RL = calloc_double(dimtemp*dimtemp);
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
                     dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
         
-        //printf("RL = \n");
-        //dprint2d_col(dimtemp,dimtemp,RL);
+        printf("RL = \n");
+        dprint2d_col(dimtemp,dimtemp,RL);
 
         // Take svd of RL to find new ranks and split the cores
         double * u = NULL;
@@ -384,6 +393,9 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
     dmrg_update_all_right(b,ao,psi);
     //printf("radachokie\n");
     
+    if (verbose == 2){
+        printf("verbose works\n");
+    }
     printf("Starting ranks = ");
     iprint_sz(dim+1,ao->ranks);
     struct FunctionTrain * temp = NULL;
@@ -397,9 +409,13 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
         printf("temp ranks = ");
         iprint_sz(dim+1,temp->ranks);
     
-        diff = function_train_norm2diff(temp,ao);
+        diff = function_train_relnorm2diff(temp,ao);
         printf("Diff after left right = %G\n",diff);
         
+        if (diff < delta){
+            printf("diff is less than delta\n");
+        }
+
         *a = function_train_orthor(temp);
         printf("a ranks = ");
         iprint_sz(dim+1,(*a)->ranks);
@@ -409,30 +425,6 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
 
         ao = function_train_copy(*a);
         dmrg_update_all_right(b,ao,psi);
-        //function_train_free(rhs); rhs = NULL;
-
-
-
-        //*a = function_train_copy(temp);
-        //break;
-        //printf("right left \n");
-        //*a = dmrg_sweep_rl(temp,b,phi,psi,epsilon);
-     
-        //printf("new ranks = ");
-        //iprint_sz(dim+1,(*a)->ranks);
-        //diff = function_train_norm2diff(*a,ao);
-        //if (verbose > 0){
-        //    printf("\t diff = %G\n",diff);
-       // }
-       // function_train_free(ao); ao = NULL;
-       // function_train_free(temp); temp = NULL;
-        //if (diff < delta){
-       // if (1 == 2){
-       //     break;
-       // }
-       // else{
-       //     ao = function_train_copy(*a);
-       // }
     }
 
     function_train_free(ao); ao = NULL;
@@ -442,6 +434,4 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
     }
     free(phi); phi = NULL;
     free(psi); psi = NULL;
-
-
 }

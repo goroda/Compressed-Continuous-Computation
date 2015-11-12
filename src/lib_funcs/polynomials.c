@@ -45,7 +45,7 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
-#define ZEROTHRESH  1e1 * DBL_EPSILON
+#define ZEROTHRESH  1e0 * DBL_EPSILON
 //#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
@@ -1351,7 +1351,7 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     size_t N = aopts->start_num;
     
     //printf("pre ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
-    if (ptype > 10){
+    if ((int)ptype > 10){
         printf("Warning: for some reason ptype is\n");
         printf("specified to be %d, reverting to 0\n",ptype);
         ptype = 0;
