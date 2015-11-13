@@ -199,25 +199,27 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
         //print_qmarray(newcorer,3,NULL);
         L = calloc_double(dimtemp*dimtemp);
         templ = qmarray_householder_simple("LQ",newcorer,L);
-
-        //printf("L = \n");
-        //dprint2d_col(dimtemp,dimtemp,L);
+    
+        printf("newcorer (%zu,%zu)\n",newcorer->nrows,newcorer->ncols);
+        printf("templ (%zu,%zu)\n",templ->nrows,templ->ncols);
+        printf("L = \n");
+        dprint2d_col(dimtemp,dimtemp,L);
         // Deal with ii 
         //printf("ii\n");
         struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
         R = calloc_double(dimtemp*dimtemp);
         tempr = qmarray_householder_simple("QR",newcorel,R);
 
-        //printf("R = \n");
-        //dprint2d_col(dimtemp,dimtemp,R);
+        printf("R = \n");
+        dprint2d_col(dimtemp,dimtemp,R);
 
         // do RL
         RL = calloc_double(dimtemp*dimtemp);
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
                     dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
         
-        //printf("RL = \n");
-        //dprint2d_col(dimtemp,dimtemp,RL);
+        printf("RL = \n");
+        dprint2d_col(dimtemp,dimtemp,RL);
 
         // Take svd of RL to find new ranks and split the cores
         double * u = NULL;
@@ -236,7 +238,7 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
             na->cores[ii+1] = mqma(vt,templ,rank);
         }
         
-        //printf("new rank = %zu\n",rank);
+        printf("new rank = %zu\n",rank);
         //printf("roo! %zu \n", ii);
         // now create new phi matrix
         if (ii < a->dim-2){

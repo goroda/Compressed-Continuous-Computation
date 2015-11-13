@@ -2614,23 +2614,37 @@ void Test_dmrg_approx(CuTest * tc)
     printf("Testing Function: dmrg_approx\n");
     size_t dim = 4;
     struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-    struct FunctionTrain * ft = 
+    struct FunctionTrain * fta = 
         function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
+    //struct FunctionTrain * ft = function_train_sum(fta,fta);
+    struct FunctionTrain * ft = function_train_copy(fta);
+
+    struct FunctionTrain * ftc = function_train_copy(ft);
+    struct FunctionTrain * ftr = function_train_round(ftc,1e-12);
+
+    function_train_free(fta); fta = NULL;
+    function_train_free(ftc); ftc = NULL;
+
     printf("lets go real ranks = \n");
     iprint_sz(dim+1,ft->ranks);
+    printf("lets go rounded ranks = \n");
+    iprint_sz(dim+1,ftr->ranks);
+    function_train_free(ftr); ftr = NULL;
+
     //struct FunctionTrain * start = function_train_copy(ft);
     struct FunctionTrain * fcopy = function_train_copy(ft);
     //double coeffs[4] = {0.5,0.5,0.5,0.5};
     //struct FunctionTrain * start = function_train_linear(dim,bds,coeffs,NULL);
     struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
 
-    struct FunctionTrain * finish = dmrg_approx(start,ft,1e-5,1,1,0.0);
-    struct FunctionTrain * finish2 = dmrg_approx(finish,ft,1e-5,1,1,0.0);
+    struct FunctionTrain * finish = dmrg_approx(start,ft,1e-5,1,1,1e-12);
+    struct FunctionTrain * finish2 = dmrg_approx(finish,ft,1e-5,1,1,1e-12);
 
     double diff = function_train_relnorm2diff(finish2,fcopy);
-    printf("start ranks = ");
+    printf("finish ranks = ");
     iprint_sz(dim+1,finish->ranks);
-
+    
+    printf("diff = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-10);
     //CuAssertDblEquals(tc,0.0,0.0,1e-10);
 
@@ -2664,10 +2678,10 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, fta);
+    //CuSuiteAddSuite(suite, clin);
+    //CuSuiteAddSuite(suite, qma);
+    //CuSuiteAddSuite(suite, ftr);
+    //CuSuiteAddSuite(suite, fta);
     CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
