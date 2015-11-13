@@ -59,7 +59,7 @@
 double * 
 dmrg_update_right(double * psikp, struct Qmarray * left, struct Qmarray * right)
 {
-    //printf("update right\n");
+    //printf("update right (%zu, %zu)\n",left->nrows,right->nrows);
     
     double * val = calloc_double(left->nrows * right->nrows);
     size_t nrows = left->nrows;
@@ -196,28 +196,28 @@ dmrg_sweep_lr(struct FunctionTrain * a, struct FunctionTrain * b,
         // Deal with ii+1 first ... 
         //printf("ii+1\n");
         struct Qmarray * newcorer = qmam(b->cores[ii+1],psi[ii],rsize);
-        print_qmarray(newcorer,3,NULL);
+        //print_qmarray(newcorer,3,NULL);
         L = calloc_double(dimtemp*dimtemp);
         templ = qmarray_householder_simple("LQ",newcorer,L);
 
-        printf("L = \n");
-        dprint2d_col(dimtemp,dimtemp,L);
+        //printf("L = \n");
+        //dprint2d_col(dimtemp,dimtemp,L);
         // Deal with ii 
         //printf("ii\n");
         struct Qmarray * newcorel = mqma(phi[ii],b->cores[ii],lsize);
         R = calloc_double(dimtemp*dimtemp);
         tempr = qmarray_householder_simple("QR",newcorel,R);
 
-        printf("R = \n");
-        dprint2d_col(dimtemp,dimtemp,R);
+        //printf("R = \n");
+        //dprint2d_col(dimtemp,dimtemp,R);
 
         // do RL
         RL = calloc_double(dimtemp*dimtemp);
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,dimtemp,dimtemp,
                     dimtemp,1.0,R,dimtemp,L,dimtemp,0.0,RL,dimtemp);
         
-        printf("RL = \n");
-        dprint2d_col(dimtemp,dimtemp,RL);
+        //printf("RL = \n");
+        //dprint2d_col(dimtemp,dimtemp,RL);
 
         // Take svd of RL to find new ranks and split the cores
         double * u = NULL;
@@ -294,6 +294,7 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
     rsize = 1;
     for (ii = a->dim-2; ii > -1; ii--){
         //printf("lets sweep boys! %d \n", ii);
+
         dimtemp = b->cores[ii]->ncols;
 
         //printf("lets sweep boys! %d dimtemp=%zu \n", ii,dimtemp);
@@ -332,6 +333,10 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
         size_t rank = truncated_svd(dimtemp,dimtemp,dimtemp,RL,&u,&s,&vt,epsilon);
         na->ranks[ii+1] = rank;
         na->cores[ii+1] = mqma(vt,templ,rank);
+
+        //double * tcheck = calloc_double(rank*rank);
+        //cblas_dgemm(CblasColMajor,CblasNoTrans,CblasTrans,rank,rank,dimtemp,1.0,vt,rank,vt,rank,0.0,tcheck,rank);
+
         //printf("rank = %zu\n",rank);
        // printf("cores[%d] shape = (%zu,%zu)\n",ii+1,
        //                     na->cores[ii+1]->nrows,na->cores[ii+1]->ncols);
@@ -372,16 +377,38 @@ dmrg_sweep_rl(struct FunctionTrain * a, struct FunctionTrain * b,
 }
 
 /***********************************************************//**
+    Perform a left-right-left dmrg sweep
+
+    \param a [in] - initial guess
+    \param b [in] - desired ft
+    \param phi [in] - left multipliers
+    \param psi [inout] - right multiplies
+    \param epsilon [in] - splitting tolerance
+
+    \return na - a new approximation
+***************************************************************/
+struct FunctionTrain * 
+dmrg_sweep_lrl(struct FunctionTrain * a, struct FunctionTrain * b, 
+                double ** phi, double ** psi, double epsilon)
+{
+
+    struct FunctionTrain * temp = dmrg_sweep_lr(a,b,phi,psi,epsilon);
+    struct FunctionTrain * na = dmrg_sweep_rl(temp,b,phi,psi,epsilon);
+    function_train_free(temp); temp = NULL;
+    return na;
+}
+
+/***********************************************************//**
     Find an approximation of an FT with another FT through dmrg sweeps
 
-    \param a [inout] - initial guess and final solution
+    \param a [inout] - initial guess (destroyed);
     \param b [in] - desired ft
 ***************************************************************/
-void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
+struct FunctionTrain * dmrg_approx(struct FunctionTrain * a, struct FunctionTrain * b,
             double delta, size_t max_sweeps, int verbose, double epsilon)
 {
-    size_t dim = (*a)->dim;
-    struct FunctionTrain * ao = function_train_orthor(*a);
+    size_t dim = a->dim;
+    struct FunctionTrain * ao = function_train_orthor(a);
     double ** phi = malloc((dim-1)*sizeof(double));
     double ** psi = malloc((dim-1)*sizeof(double));
     size_t ii;
@@ -396,37 +423,29 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
     if (verbose == 2){
         printf("verbose works\n");
     }
+    printf("number of sweeps = %zu\n",max_sweeps);
     printf("Starting ranks = ");
     iprint_sz(dim+1,ao->ranks);
-    struct FunctionTrain * temp = NULL;
-    double diff;
+    struct FunctionTrain * na = NULL;
     for (ii = 0; ii < max_sweeps; ii++){
-        printf("On dmrg_approx iteration (%zu/%zu)\n",ii,max_sweeps-1);
-        function_train_free(*a); *a = NULL;
-        printf("left right\n");
-       // struct FunctionTrain * rhs = function_train_copy(b);
-        temp = dmrg_sweep_lr(ao,b,phi,psi,epsilon);
-        printf("temp ranks = ");
-        iprint_sz(dim+1,temp->ranks);
-    
-        diff = function_train_relnorm2diff(temp,ao);
-        printf("Diff after left right = %G\n",diff);
-        
-        if (diff < delta){
-            printf("diff is less than delta\n");
+        if (verbose > 0){
+            printf("On dmrg_approx iteration (%zu/%zu)\n",ii,max_sweeps-1);
         }
+        function_train_free(na); na = NULL;
+        na = dmrg_sweep_lrl(ao,b,phi,psi,epsilon);
 
-        *a = function_train_orthor(temp);
-        printf("a ranks = ");
-        iprint_sz(dim+1,(*a)->ranks);
-
-        function_train_free(ao);ao = NULL;
-        function_train_free(temp); temp = NULL;
-
-        ao = function_train_copy(*a);
-        dmrg_update_all_right(b,ao,psi);
+        //double diff = function_train_norm2diff(na,b);
+        double diff = 10;
+        function_train_free(ao); ao = NULL;
+        //printf("diff is %G\n",diff);
+        if (diff < delta){
+            printf("diff is small\n");
+        }
+        else{
+        //    ao = function_train_copy(na);
+        }
+        ao = function_train_copy(na);
     }
-
     function_train_free(ao); ao = NULL;
     for (ii = 0; ii < dim-1; ii++){
         free(phi[ii]); phi[ii] = NULL;
@@ -434,4 +453,6 @@ void dmrg_approx(struct FunctionTrain ** a, struct FunctionTrain * b,
     }
     free(phi); phi = NULL;
     free(psi); psi = NULL;
+
+    return na;
 }

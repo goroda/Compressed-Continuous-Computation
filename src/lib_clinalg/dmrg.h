@@ -44,18 +44,11 @@
 
 
 double * dmrg_update_right(double *, struct Qmarray *, struct Qmarray *);
-void 
-dmrg_update_all_right(struct FunctionTrain *, struct FunctionTrain *, double **);
+void dmrg_update_all_right(struct FunctionTrain *, struct FunctionTrain *, double **);
 double * dmrg_update_left(double *, struct Qmarray *, struct Qmarray *);
-struct FunctionTrain * 
-dmrg_sweep_lr(struct FunctionTrain *, struct FunctionTrain *, double **, 
-                double **, double);
-struct FunctionTrain * 
-dmrg_sweep_rl(struct FunctionTrain *, struct FunctionTrain *, double **, 
-                double **, double);
-
-
-void dmrg_approx(struct FunctionTrain **, struct FunctionTrain *,
-            double, size_t, int, double);
+struct FunctionTrain * dmrg_sweep_lr(struct FunctionTrain *, struct FunctionTrain *, double **, double **, double);
+struct FunctionTrain * dmrg_sweep_rl(struct FunctionTrain *, struct FunctionTrain *, double **, double **, double);
+struct FunctionTrain * dmrg_sweep_lrl(struct FunctionTrain * a, struct FunctionTrain * b, double ** phi, double ** psi, double epsilon);
+struct FunctionTrain * dmrg_approx(struct FunctionTrain *, struct FunctionTrain *,double, size_t, int, double);
 
 #endif

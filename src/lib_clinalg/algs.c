@@ -2804,7 +2804,8 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
    // qmarray_free(c1); c1 = NULL;
 
     ///*
-    double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
+    //double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
+    double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
 
         
     /*
@@ -2822,25 +2823,26 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
         //print_qmarray(a->cores[ii],3,NULL);
         //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
        
-        temp2 = qmarray_kron_integrate(a->cores[ii],b->cores[ii]);
+        //temp2 = qmarray_kron_integrate(a->cores[ii],b->cores[ii]);
         //printf("got kron integrate\n");
-        size_t nrows = a->cores[ii]->nrows * b->cores[ii]->nrows;
-        size_t ncols = a->cores[ii]->ncols * b->cores[ii]->ncols;
-        double * temp3 = calloc_double(ncols);
-        cblas_dgemv(CblasColMajor,CblasTrans,nrows,ncols,1.0,temp2,nrows,temp,1,0.0,temp3,1);
+        //size_t nrows = a->cores[ii]->nrows * b->cores[ii]->nrows;
+        //size_t ncols = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        //double * temp3 = calloc_double(ncols);
+        //printf("do dgemv\n");
+        //cblas_dgemv(CblasColMajor,CblasTrans,nrows,ncols,1.0,temp2,nrows,temp,1,0.0,temp3,1);
         //printf("did dgemv\n");
-        free(temp); temp = NULL;
-        free(temp2); temp2 = NULL;
-        temp = calloc_double(ncols);
-        memmove(temp,temp3,ncols*sizeof(double));
-        free(temp3); temp3 = NULL;
+        //free(temp); temp = NULL;
+        //free(temp2); temp2 = NULL;
+        //temp = calloc_double(ncols);
+        //memmove(temp,temp3,ncols*sizeof(double));
+        //free(temp3); temp3 = NULL;
 
         //*
-        //temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
-        //size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
-        //free(temp);temp=NULL;
-        //temp = calloc_double(stemp);
-        //memmove(temp, temp2,stemp*sizeof(double));
+        temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
+        size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
         //*/
         
         free(temp2); temp2 = NULL;
