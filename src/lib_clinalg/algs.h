@@ -149,6 +149,7 @@ struct Qmarray * qmarray_kron(struct Qmarray *, struct Qmarray *);
 double * qmarray_kron_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_vec_kron_integrate(double *, struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_mat_kron(size_t, double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_integrate(struct Qmarray *);
 double qmarray_norm2diff(struct Qmarray *, struct Qmarray *);
 double qmarray_norm2(struct Qmarray *);

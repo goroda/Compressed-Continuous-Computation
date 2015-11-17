@@ -53,5 +53,6 @@ include_directories(src/lib_probability)
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(examples)
+add_subdirectory(benchmarks)
 
 

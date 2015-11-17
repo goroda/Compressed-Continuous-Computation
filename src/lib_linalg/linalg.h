@@ -227,10 +227,4 @@ skeleton_func2(int (*Ap)(double *, double, size_t, size_t, double *,
                    void *, struct sk_decomp **,  double *, double *, 
                    double);
 
-//RANDOM NUMBERS
-double randu(void);
-double randn(void);
-size_t poisson(double);
-//double randn(); //not implemented yet
-
 #endif

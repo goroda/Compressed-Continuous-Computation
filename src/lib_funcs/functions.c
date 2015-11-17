@@ -260,6 +260,26 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
 }
 
 /********************************************************//**
+    Create a pseudo-random polynomial generic function 
+
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+
+    \return gf - generic function
+************************************************************/
+struct GenericFunction * 
+generic_function_poly_randu(size_t maxorder, double lower, double upper)
+{
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type sub_type = LEGENDRE;
+    struct GenericFunction * gf = generic_function_alloc(1,fc,&sub_type);
+    gf->f = orth_poly_expansion_randu(sub_type,maxorder,lower,upper);
+    gf->fargs = NULL;
+    return gf;
+}
+
+/********************************************************//**
     Take the derivative of a generic function
 
     \param gf [in] - generic function

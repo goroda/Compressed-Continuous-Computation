@@ -214,6 +214,9 @@ struct OpeAdaptOpts{
 struct OrthPolyExpansion * orth_poly_expansion_approx_adapt(double (*A)(double,void *), 
         void *, enum poly_type, double, double, struct OpeAdaptOpts *);
 
+struct OrthPolyExpansion * 
+orth_poly_expansion_randu(enum poly_type, size_t, double, double);
+
 
 double cheb_integrate2(struct OrthPolyExpansion *);
 double legendre_integrate(struct OrthPolyExpansion *);

@@ -655,6 +655,30 @@ qmarray_approx1d(size_t nrows, size_t ncols,
     return qm;
 }
 
+/********************************************************//**
+*    Create a qmarray consisting of pseudo-random orth poly expansion
+*   
+*   \param nrows [in] - number of rows
+*   \param ncols [in] - number of columns
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+*
+*   \return qm - qmarray
+************************************************************/
+struct Qmarray *
+qmarray_poly_randu(size_t nrows, size_t ncols, 
+    size_t maxorder, double lower, double upper)
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    size_t ii;
+    for (ii = 0; ii < nrows*ncols; ii++){
+        qm->funcs[ii] = generic_function_poly_randu(maxorder,lower,upper);
+    }
+    return qm;
+}
+
+
 /***********************************************************//**
     Create a qmarray from a fiber_cuts array
 

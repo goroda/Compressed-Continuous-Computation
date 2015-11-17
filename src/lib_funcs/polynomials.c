@@ -1222,7 +1222,6 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 *  \param args [in] - arguments to function
 *  \param poly [inout] - orthogonal polynomial expansion
 *
-*   
 *  \note
 *       Wont work for polynomial expansion with only the constant 
 *       term.
@@ -1321,6 +1320,8 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
 *   \param lower [in] - lower bound of input
 *   \param upper [in] - upper bound of input
 *   \param aoptsin [in] - approximation options
+*   
+*   \return poly
 *
 *   \note 
 *       Follows general scheme that trefethan outlines about 
@@ -1444,6 +1445,29 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
 
     if (default_opts == 1){
         free(aopts);
+    }
+    return poly;
+}
+
+/********************************************************//**
+*   Generate an orthonormal polynomial with pseudorandom coefficients
+*   between [-1,1]
+*
+*   \param ptype [in] - polynomial type
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+*
+*   \return poly
+*************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder, double lower, double upper)
+{
+    struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
+                                        maxorder+1, lower, upper);
+    size_t ii;
+    for (ii = 0; ii < poly->num_poly; ii++){
+        poly->coeff[ii] = randu()*2.0-1.0;
     }
     return poly;
 }

@@ -1191,7 +1191,7 @@ qmarray_vec_kron(double * a, struct Qmarray * b, struct Qmarray * c)
     If a is vector, b and c are quasimatrices then computes
             \f$ \int a^T kron(b(x),c(x)) dx  \f$
 
-    \param a [in] - vector,array (b->ncols * c->ncols);
+    \param a [in] - vector,array (b->nrows * c->nrows);
     \param b [in] - qmarray 1
     \param c [in] - qmarray 2
 
@@ -1210,6 +1210,53 @@ qmarray_vec_kron_integrate(double * a, struct Qmarray * b, struct Qmarray * c)
     return d;
 }
 
+/***********************************************************//**
+    If a is a matrix, b and c are qmarrays then computes
+             a kron(b,c) fast
+    
+    \param r [in] - number of rows of a
+    \param a [in] - array (k, b->nrows * c->nrows);
+    \param b [in] - qmarray 1
+    \param c [in] - qmarray 2
+
+    \return d - qmarray  (k, b->ncols * c->ncols)
+
+    \note
+        Do not touch this!! Who knows how it happens to be right...
+        but it is tested (dont touch the test either. and it seems to be right
+***************************************************************/
+struct Qmarray *
+qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
+{
+    struct Qmarray * d = qmarray_alloc(r, b->ncols * c->ncols);
+    
+    size_t ii,jj,kk;
+    struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
+        //struct Qmarray * temp = qmarray_alloc(b->nrows,c->ncols);
+    for (kk = 0; kk < c->ncols; kk++){
+        for (jj = 0; jj < b->nrows; jj++){
+            for (ii = 0; ii < r; ii++){
+                temp->funcs[kk * temp->nrows + jj*r + ii] = 
+                    generic_function_lin_comb2(
+                        c->nrows,1,c->funcs + kk*c->nrows,
+                        r, a + ii + jj*c->nrows*r);
+            }
+        }
+    }
+    for (jj = 0; jj < b->ncols; jj++){
+        for (kk = 0; kk < c->ncols; kk++){
+            for (ii = 0; ii < r; ii++){
+                //d->funcs[ii + kk*r + jj*r*c->ncols] =
+                // generic_function_sum_prod(temp->nrows, 1, 
+                //    b->funcs + jj*b->nrows, 1, temp->funcs + kk*temp->nrows);
+                d->funcs[ii + kk*r + jj*r*c->ncols] =
+                 generic_function_sum_prod(b->nrows, 1, 
+                    b->funcs + jj*b->nrows, r, temp->funcs + ii + kk*temp->nrows);
+            }
+        }
+    }
+    return d;
+}
 
 /***********************************************************//**
     Integrate all the elements of a qmarray
@@ -2793,7 +2840,7 @@ function_train_integrate(struct FunctionTrain * ft)
     \return out - int a(x)b(x) dx
 
     \note
-        This is a slow version, I cant seem to get fast version to be accurate
+        //This is a slow version, I cant seem to get fast version to be accurate
 ***********************************************************/
 double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 {
@@ -3497,7 +3544,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
         temp.ranks = init_ranks;
         temp.epsilon = 1e-5;
         temp.maxiter = 5;
-        temp.verbose = 2;
+        temp.verbose = 0;
         
         temp.epsround = 1e-10;
         temp.kickrank = 10;

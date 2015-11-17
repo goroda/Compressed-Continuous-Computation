@@ -46,6 +46,7 @@ void copy_dd(size_t, size_t, double **, double **);
 void free_dd(size_t N, double ** arr);
 
 double * dones(const size_t);
+double * drandu(const size_t);
 double * darray_val(const size_t, double);
 double * dzeros(const size_t);
 int * izeros(const size_t);
@@ -74,5 +75,10 @@ double * deserialize_darray_from_text(char *, size_t *);
 
 int darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
+
+//RANDOM NUMBERS
+double randu(void);
+double randn(void);
+size_t poisson(double);
 
 #endif

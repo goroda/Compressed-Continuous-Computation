@@ -66,6 +66,8 @@ struct Quasimatrix *
 quasimatrix_approx1d(size_t, double (**)(double, void *),
                     void **, enum function_class, void *, double,
                     double, void *);
+struct Qmarray *
+qmarray_poly_randu(size_t, size_t, size_t, double, double);
 
 struct Quasimatrix * 
 quasimatrix_approx_from_fiber_cuts(size_t, double (*)(double, void *),
