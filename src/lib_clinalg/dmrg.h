@@ -70,19 +70,15 @@ void qr_free(struct QR *);
 void qr_array_free(struct QR **, size_t);
 struct QR ** qr_array_alloc(size_t);
 
-struct QR *
-dmrg_update_right2(struct Qmarray *, struct QR *, struct Qmarray *);
-struct QR ** 
-dmrg_update_right2_all(struct FunctionTrain *, struct FunctionTrain *);
+struct QR * dmrg_update_right2(struct Qmarray *, struct QR *, struct Qmarray *);
+struct QR ** dmrg_update_right2_all(struct FunctionTrain *, struct FunctionTrain *);
 struct FunctionTrain * dmrg_sweep_lr2(struct FunctionTrain *, struct FunctionTrain *, 
             struct QR **, struct QR **, double);
-
-double * dmrg_update_right(double *, struct Qmarray *, struct Qmarray *);
-void dmrg_update_all_right(struct FunctionTrain *, struct FunctionTrain *, double **);
-double * dmrg_update_left(double *, struct Qmarray *, struct Qmarray *);
-struct FunctionTrain * dmrg_sweep_lr(struct FunctionTrain *, struct FunctionTrain *, double **, double **, double);
-struct FunctionTrain * dmrg_sweep_rl(struct FunctionTrain *, struct FunctionTrain *, double **, double **, double);
-struct FunctionTrain * dmrg_sweep_lrl(struct FunctionTrain * a, struct FunctionTrain * b, double ** phi, double ** psi, double epsilon);
-struct FunctionTrain * dmrg_approx(struct FunctionTrain *, struct FunctionTrain *,double, size_t, int, double);
+struct FunctionTrain * dmrg_sweep_rl2(struct FunctionTrain *, struct FunctionTrain *, 
+            struct QR **, struct QR **, double);
+struct FunctionTrain * dmrg_sweep_lrl2(struct FunctionTrain *, struct FunctionTrain *, 
+                struct QR **, struct QR **, double);
+struct FunctionTrain * dmrg_approx2(struct FunctionTrain *, struct FunctionTrain *,
+            double, size_t, int, double);
 
 #endif

@@ -1246,9 +1246,6 @@ qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
     for (jj = 0; jj < b->ncols; jj++){
         for (kk = 0; kk < c->ncols; kk++){
             for (ii = 0; ii < r; ii++){
-                //d->funcs[ii + kk*r + jj*r*c->ncols] =
-                // generic_function_sum_prod(temp->nrows, 1, 
-                //    b->funcs + jj*b->nrows, 1, temp->funcs + kk*temp->nrows);
                 d->funcs[ii + kk*r + jj*r*c->ncols] =
                  generic_function_sum_prod(b->nrows, 1, 
                     b->funcs + jj*b->nrows, r, temp->funcs + ii + kk*temp->nrows);
@@ -1257,6 +1254,54 @@ qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
     }
     return d;
 }
+
+/***********************************************************//**
+    If a is a matrix, b and c are qmarrays then computes
+             kron(b,c)a fast
+    
+    \param r [in] - number of rows of a
+    \param a [in] - array (b->ncols * c->ncols, a);
+    \param b [in] - qmarray 1
+    \param c [in] - qmarray 2
+
+    \return d - qmarray  (b->nrows * c->nrows , k)
+
+    \note
+        Do not touch this!! Who knows how it happens to be right...
+        but it is tested (dont touch the test either. and it seems to be right
+***************************************************************/
+struct Qmarray *
+qmarray_kron_mat(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
+{
+    struct Qmarray * d = qmarray_alloc(b->nrows * c->nrows,r);
+    
+    size_t ii,jj,kk;
+    struct Qmarray * temp = qmarray_alloc(c->nrows,b->ncols*r);
+    for (ii = 0; ii < r; ii++){
+        for (jj = 0; jj < c->nrows; jj++){
+            for (kk = 0; kk < b->ncols; kk++){
+                temp->funcs[jj +  kk * c->nrows + ii*c->nrows*b->ncols] = 
+                    generic_function_lin_comb2(
+                        c->ncols,c->nrows,c->funcs + jj,
+                        1, a + kk*c->ncols + ii*c->ncols*b->ncols);
+            }
+        }
+    }
+    
+    for (ii = 0; ii < r; ii++){
+        for (jj = 0; jj < b->nrows; jj++){
+            for (kk = 0; kk < c->nrows; kk++){
+                d->funcs[kk + jj*c->nrows + ii*b->nrows*c->nrows] =
+                 generic_function_sum_prod(b->ncols, b->nrows, 
+                    b->funcs + jj, c->nrows,
+                            temp->funcs + kk + ii*b->ncols*c->nrows);
+            }
+        }
+    }
+    qmarray_free(temp); temp = NULL;
+    return d;
+}
+
 
 /***********************************************************//**
     Integrate all the elements of a qmarray
