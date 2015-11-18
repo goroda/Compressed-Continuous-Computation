@@ -250,7 +250,7 @@ struct Qmarray * qmarray_extract_ncols(struct Qmarray * a, size_t nkeep)
     struct Qmarray * qm = qmarray_alloc(a->nrows,nkeep);
     size_t ii,jj;
     for (ii = 0; ii < nkeep; ii++){
-        for (jj = 0; jj < nkeep; jj++){
+        for (jj = 0; jj < a->nrows; jj++){
             qm->funcs[ii*a->nrows+jj] = generic_function_copy(a->funcs[ii*a->nrows+jj]);
         }
     }

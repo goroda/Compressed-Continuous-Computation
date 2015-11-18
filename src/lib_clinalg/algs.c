@@ -1252,6 +1252,7 @@ qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
             }
         }
     }
+    qmarray_free(temp); temp = NULL;
     return d;
 }
 

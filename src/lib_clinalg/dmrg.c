@@ -52,6 +52,9 @@
     \param type [in] - 1 then QR, 0 then LQ
 
     \return qr - QR structure
+
+    \note
+        Something is off with the type=0 causing valgrind messages.
 ***************************************************************/
 struct QR * qr_reduced(struct Qmarray * a, int type)
 {
@@ -68,7 +71,7 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
         
         double * L = calloc_double(a->nrows * a->nrows);
         struct Qmarray * Q = qmarray_householder_simple("LQ",ac,L);
-        size_t ii = 0;
+        size_t ii = 1;
         for (ii = 1; ii < a->nrows; ii++){
             if (fabs(L[ii*a->nrows+ii]) < 1e-14){
                 break;
@@ -80,16 +83,19 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
             qr->mc = a->nrows;
         }
         else{
-            qr->mc = ii;
+            //printf(" ii = %zu\n",ii);
+            //qr->mc = ii;
+            qr->mc = a->nrows; // NOTE HERE IS WHERE IT IS WASTED!!!! because it should be the above quoted line but that gives valgrind errors ...
             qr->mat = calloc_double(qr->mr * qr->mc);
             qr->Q = qmarray_alloc(qr->mc,a->ncols);
             size_t jj,kk;
             for (jj = 0; jj < qr->mc; jj++){
                 for (kk = 0; kk < qr->mr; kk++){
-                    qr->mat[kk+jj*qr->mr] = L[kk + jj*a->nrows];
+                    qr->mat[kk+jj*qr->mr] = L[kk + jj*qr->mr];
                 }
                 for (kk = 0; kk < a->ncols; kk++){
-                    qr->Q->funcs[jj+kk*qr->mc] = generic_function_copy(Q->funcs[jj+kk*a->nrows]);
+                    qr->Q->funcs[jj+kk*qr->mc] = 
+                        generic_function_copy(Q->funcs[jj+kk*Q->nrows]);
                 }
             }
             qmarray_free(Q); Q = NULL;
@@ -102,7 +108,7 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
 
         double * R = calloc_double(qr->mc * qr->mc);
         struct Qmarray * Q = qmarray_householder_simple("QR",ac,R);
-        size_t ii = 0;
+        size_t ii = 1;
         for (ii = 1; ii < qr->mc; ii++){
             if (fabs(R[ii*qr->mc+ii]) < 1e-14){
                 break;
@@ -116,20 +122,15 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
         else{
             qr->mr = ii;
             qr->mat = calloc_double(qr->mr * qr->mc);
-            qr->Q = qmarray_alloc(a->nrows, qr->mr);
+            qr->Q = qmarray_extract_ncols(Q,qr->mr);
             size_t jj,kk;
             for (jj = 0; jj < qr->mc; jj++){
                 for (kk = 0; kk < qr->mr; kk++){
                     qr->mat[kk+jj*qr->mr] = R[kk + jj*a->ncols];
                 }
-                for (kk = 0; kk < a->nrows; kk++){
-                    qr->Q->funcs[kk + jj*a->nrows] =
-                        generic_function_copy(Q->funcs[kk+jj*a->nrows]);
-                }
             }
             qmarray_free(Q); Q = NULL;
             free(R); R = NULL;
-
         }
     }
     else{

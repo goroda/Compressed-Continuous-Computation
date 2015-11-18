@@ -2721,11 +2721,11 @@ void Test_fast_kron_mat(CuTest * tc)
 CuSuite * CLinalgDMRGGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    //SUITE_ADD_TEST(suite, Test_rightorth);
-    //SUITE_ADD_TEST(suite, Test_dmrglr);
-    //SUITE_ADD_TEST(suite, Test_dmrgrl);
-    //SUITE_ADD_TEST(suite, Test_dmrg_approx);
-    //SUITE_ADD_TEST(suite,Test_fast_mat_kron);
+    SUITE_ADD_TEST(suite, Test_rightorth);
+    SUITE_ADD_TEST(suite, Test_dmrglr);
+    SUITE_ADD_TEST(suite, Test_dmrgrl);
+    SUITE_ADD_TEST(suite, Test_dmrg_approx);
+    SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     SUITE_ADD_TEST(suite,Test_fast_kron_mat);
     return suite;
 }
