@@ -2717,6 +2717,41 @@ void Test_fast_kron_mat(CuTest * tc)
     qmarray_free(is); is = NULL;
 }
 
+void Test_dmrg_prod(CuTest * tc)
+{
+
+    printf("Testing Function: dmrg_prod\n");
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+    struct FunctionTrain * a = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
+    struct FunctionTrain * ft = function_train_product(a,a);
+
+    //printf("exact ranks\n");
+    //iprint_sz(dim+1,ft->ranks);
+    struct FunctionTrain * fcopy = function_train_copy(ft);
+
+    struct FunctionTrain * rounded = function_train_round(ft,1e-12);
+    //printf("rounded ranks\n");
+    //iprint_sz(dim+1,rounded->ranks);
+
+    struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+    //struct FunctionTrain * start = function_train_copy(a);
+    struct FunctionTrain * finish = dmrg_product(start,a,a,1e-10,10,1e-12,0);
+    //printf("final ranks\n");
+    //iprint_sz(dim+1,finish->ranks);
+
+    double diff = function_train_relnorm2diff(finish,fcopy);
+    //printf("difference = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(a); a = NULL;
+    function_train_free(ft); ft = NULL;
+    function_train_free(fcopy); fcopy = NULL;
+    function_train_free(start); start = NULL;
+    function_train_free(finish); finish = NULL;
+    function_train_free(rounded); rounded = NULL;
+}
 
 CuSuite * CLinalgDMRGGetSuite()
 {
@@ -2727,6 +2762,7 @@ CuSuite * CLinalgDMRGGetSuite()
     SUITE_ADD_TEST(suite, Test_dmrg_approx);
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     SUITE_ADD_TEST(suite,Test_fast_kron_mat);
+    SUITE_ADD_TEST(suite,Test_dmrg_prod);
     return suite;
 }
 

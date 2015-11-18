@@ -16,6 +16,7 @@ doc/*
 
 bin/*
 benchmarks/fastmkron/bin/*
+benchmarks/dmrgprod/bin/*
 
 fileheaders.txt
 update_file_headers.py

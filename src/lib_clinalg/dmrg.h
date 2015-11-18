@@ -70,6 +70,12 @@ void qr_free(struct QR *);
 void qr_array_free(struct QR **, size_t);
 struct QR ** qr_array_alloc(size_t);
 
+//For FT Product
+struct FunctionTrain * dmrg_product(struct FunctionTrain *,
+            struct FunctionTrain *, struct FunctionTrain *,
+            double, size_t, double, int);
+
+//template approximation code taking account no structure
 struct QR * dmrg_update_right2(struct Qmarray *, struct QR *, struct Qmarray *);
 struct QR ** dmrg_update_right2_all(struct FunctionTrain *, struct FunctionTrain *);
 struct FunctionTrain * dmrg_sweep_lr2(struct FunctionTrain *, struct FunctionTrain *, 
