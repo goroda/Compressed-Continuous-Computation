@@ -160,6 +160,7 @@ qmarray_orth1d_rows(enum function_class, void *, size_t,
 struct Qmarray * qmarray_copy(struct Qmarray *);
 
 struct Quasimatrix * qmarray_extract_column(struct Qmarray *, size_t);
+struct Qmarray * qmarray_extract_ncols(struct Qmarray *, size_t);
 struct Quasimatrix * qmarray_extract_row(struct Qmarray *, size_t);
 
 void qmarray_set_column(struct Qmarray *, size_t, struct Quasimatrix *);

@@ -15,6 +15,7 @@ doc/c3doc/*
 doc/*
 
 bin/*
+benchmarks/fastmkron/bin/*
 
 fileheaders.txt
 update_file_headers.py

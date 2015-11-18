@@ -42,6 +42,40 @@
 
 #include "lib_clinalg.h"
 
+/** \struct QR
+ *  \brief Holds Q and R for qmarray
+ *  \var QR::right
+ *  1 if QR and 0 if LQ
+ *  \var QR::mat
+ *  matrix part
+ *  \var QR::mr
+ *  number of rows in the matrix
+ *  \var QR::mc
+ *  number of columns in the matrix
+ *  \var QR::Q
+ *  Q term;
+ */
+struct QR
+{
+    int right;
+    double * mat;
+    size_t mr;
+    size_t mc;
+    struct Qmarray * Q;
+
+};
+
+struct QR * qr_reduced(struct Qmarray *,int);
+void qr_free(struct QR *);
+void qr_array_free(struct QR **, size_t);
+struct QR ** qr_array_alloc(size_t);
+
+struct QR *
+dmrg_update_right2(struct Qmarray *, struct QR *, struct Qmarray *);
+struct QR ** 
+dmrg_update_right2_all(struct FunctionTrain *, struct FunctionTrain *);
+struct FunctionTrain * dmrg_sweep_lr2(struct FunctionTrain *, struct FunctionTrain *, 
+            struct QR **, struct QR **, double);
 
 double * dmrg_update_right(double *, struct Qmarray *, struct Qmarray *);
 void dmrg_update_all_right(struct FunctionTrain *, struct FunctionTrain *, double **);

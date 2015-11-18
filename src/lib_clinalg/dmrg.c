@@ -39,10 +39,175 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "array.h"
 #include "lib_linalg.h"
 #include "lib_clinalg.h"
+
+struct QR * qr_reduced(struct Qmarray * a, int type)
+{
+    //printf("word type=%d\n",type);
+    struct Qmarray * ac = qmarray_copy(a);
+    struct QR * qr = NULL;
+    if ( NULL == (qr = malloc(sizeof(struct QR)))){
+        fprintf(stderr, "failed to allocate memory for QR decomposition.\n");
+        exit(1);
+    }
+    
+    if (type == 0){
+        //printf("word \n");
+        qr->right = 0;
+        qr->mr = a->nrows;
+        
+        //printf("lets go\n");
+        double * L = calloc_double(a->nrows * a->nrows);
+        struct Qmarray * Q = qmarray_householder_simple("LQ",ac,L);
+        //size_t ii = 0;
+        //for (ii = 1; ii < a->nrows; ii++){
+        //    if (fabs(L[ii*a->nrows+ii]) < 1e-14){
+        //        break;
+        //    }
+       // }
+        //printf("got LQ\n");
+        //if (ii == a->nrows){
+            qr->mat = L;
+            qr->Q = Q;
+            qr->mc = a->nrows;
+       // }
+       /*
+        else{
+            qr->mc = ii;
+            qr->mat = calloc_double(qr->mr * qr->mc);
+            qr->Q = qmarray_alloc(qr->mc,a->ncols);
+            size_t jj,kk;
+            for (jj = 0; jj < qr->mc; jj++){
+                for (kk = 0; kk < qr->mr; kk++){
+                    qr->mat[kk+jj*qr->mr] = L[kk + jj*a->nrows];
+                }
+                for (kk = 0; kk < a->ncols; kk++){
+                    qr->Q->funcs[jj+kk*qr->mc] = generic_function_copy(Q->funcs[jj+kk*a->nrows]);
+                }
+            }
+            qmarray_free(Q); Q = NULL;
+            free(L); L = NULL;
+        }
+        */
+    }
+    else if (type == 1){
+        qr->right = 1;
+        qr->mc = a->ncols;
+
+        double * R = calloc_double(qr->mc * qr->mc);
+        struct Qmarray * Q = qmarray_householder_simple("QR",ac,R);
+        //size_t ii = 0;
+        //for (ii = 1; ii < qr->mc; ii++){
+        //    if (fabs(R[ii*qr->mc+ii]) < 1e-14){
+        //        break;
+        //    }
+        //}
+        //if (ii == qr->mc){
+            qr->mat = R;
+            qr->Q = Q;
+            qr->mr = qr->mc;
+       // }
+        /*
+        else{
+            qr->mr = ii;
+            qr->mat = calloc_double(qr->mr * qr->mc);
+            qr->Q = qmarray_alloc(a->nrows, qr->mr);
+            size_t jj,kk;
+            for (jj = 0; jj < qr->mc; jj++){
+                for (kk = 0; kk < qr->mr; kk++){
+                    qr->mat[kk+jj*qr->mr] = R[kk + jj*a->ncols];
+                }
+                for (kk = 0; kk < a->nrows; kk++){
+                    qr->Q->funcs[kk + jj*a->nrows] =
+                        generic_function_copy(Q->funcs[kk+jj*a->nrows]);
+                }
+            }
+            qmarray_free(Q); Q = NULL;
+            free(R); R = NULL;
+
+        }
+        */
+    }
+    else{
+        fprintf(stderr, "Can't take reduced qr decomposition of type %d\n",type);
+        exit(1);
+    }
+    qmarray_free(ac); ac = NULL;
+    return qr;
+
+}
+
+void qr_free(struct QR * qr)
+{
+    if (qr != NULL){
+        free(qr->mat); qr->mat = NULL;
+        qmarray_free(qr->Q); qr->Q = NULL;
+        free(qr); qr = NULL;
+    }
+}
+
+struct QR ** qr_array_alloc(size_t n)
+{
+    struct QR ** qr = NULL;
+    if ( NULL == (qr = malloc(n*sizeof(struct QR *)))){
+        fprintf(stderr, "failed to allocate memory for QR array.\n");
+        exit(1);
+    }
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        qr[ii] = NULL;
+    }
+    return qr;
+}
+
+
+void qr_array_free(struct QR ** qr, size_t n)
+{
+    if (qr != NULL){
+        size_t ii;
+        for (ii = 0; ii < n; ii++){
+            qr_free(qr[ii]); qr[ii] = NULL;
+        }
+        free(qr); qr = NULL;
+    }
+}
+
+
+struct QR *
+dmrg_update_right2(struct Qmarray * nextleft, struct QR * prev, struct Qmarray * z)
+{
+
+    double * val = qmaqmat_integrate(prev->Q,z);
+    struct Qmarray * temp = qmam(nextleft,val,z->nrows);
+    struct QR * lq = qr_reduced(temp,0);
+    qmarray_free(temp); temp = NULL;
+    free(val); val = NULL;
+    return lq;
+}
+
+struct QR ** 
+dmrg_update_right2_all(struct FunctionTrain * y, struct FunctionTrain * z)
+{
+    size_t dim = y->dim;
+    struct QR ** right = NULL;
+    if ( NULL == (right = malloc((dim-1)*sizeof(struct QR *)))){
+        fprintf(stderr, "failed to allocate memory for dmrg all right QR decompositions.\n");
+        exit(1);
+    }
+    right[dim-2] = qr_reduced(y->cores[dim-1],0);
+    int ii;
+    for (ii = dim-3; ii > -1; ii--){
+        //printf("on core %d\n",ii);
+        right[ii] = dmrg_update_right2(y->cores[ii+1], 
+                                        right[ii+1],
+                                        z->cores[ii+2]);
+    }
+    return right;
+}
 
 /***********************************************************//**
     Update \f$ \Psi \f$ for the dmrg equations
@@ -150,6 +315,95 @@ double * dmrg_update_left(double * phik, struct Qmarray * left, struct Qmarray *
     */
 
     return val;
+}
+
+/***********************************************************//**
+    Perform a left-right dmrg sweep
+
+    \param z [in] - initial guess
+    \param y [in] - desired ft
+    \param phi [inout] - left multipliers
+    \param psi [in] - right multiplies
+    \param epsilon [in] - splitting tolerance
+
+    \return na - a new approximation
+***************************************************************/
+struct FunctionTrain * 
+dmrg_sweep_lr2(struct FunctionTrain * z, struct FunctionTrain * y, 
+            struct QR ** phil, struct QR ** psir, double epsilon)
+{
+    double * RL = NULL;
+    size_t dim = z->dim;
+    struct FunctionTrain * na = function_train_alloc(dim);
+    na->ranks[0] = 1;
+    na->ranks[na->dim] = 1;
+    
+    
+    if (phil[0] == NULL){
+        phil[0] = qr_reduced(y->cores[0],1);
+    }
+    
+    size_t nrows = phil[0]->mr;
+    size_t nmult = phil[0]->mc;
+    size_t ncols = psir[0]->mc;
+
+    RL = calloc_double(nrows * ncols);
+    cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,nrows,ncols,
+                nmult,1.0,phil[0]->mat,nrows,psir[0]->mat,nmult,0.0,RL,nrows);
+
+    double * u = NULL;
+    double * vt = NULL;
+    double * s = NULL;
+    size_t rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+    na->ranks[1] = rank;
+    na->cores[0] = qmam(phil[0]->Q,u,rank);
+    
+    size_t ii;
+    for (ii = 1; ii < dim-1; ii++){
+        double * newphi = calloc_double(rank * phil[ii-1]->mc);
+        cblas_dgemm(CblasColMajor,CblasTrans,CblasNoTrans,rank,nmult,
+                    nrows,1.0,u,nrows,phil[ii-1]->mat,nrows,0.0,newphi,rank);
+        struct Qmarray * temp = mqma(newphi,y->cores[ii],rank);
+
+        qr_free(phil[ii]); phil[ii] = NULL;
+        phil[ii] = qr_reduced(temp,1);
+        
+        free(RL); RL = NULL;
+        free(newphi); newphi = NULL;
+        free(u); u = NULL;
+        free(vt); vt = NULL;
+        free(s); s = NULL;
+        qmarray_free(temp); temp = NULL;
+
+        nrows = phil[ii]->mr;
+        nmult = phil[ii]->mc;
+        ncols = psir[ii]->mc;
+
+        RL = calloc_double(nrows * ncols);
+        cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,nrows,ncols,
+                    nmult,1.0,phil[ii]->mat,nrows,psir[ii]->mat,nmult,0.0,RL,nrows);
+
+        rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+        na->ranks[ii+1] = rank;
+        na->cores[ii] = qmam(phil[ii]->Q,u,rank);
+    }
+    
+    size_t kk,jj;
+    for (kk = 0; kk < ncols; kk++){
+        for (jj = 0; jj < rank; jj++){
+            vt[kk*rank+jj] = vt[kk*rank+jj]*s[jj];
+        }
+    }
+    
+    
+    na->cores[dim-1] = mqma(vt,psir[dim-2]->Q,rank);
+
+    free(RL); RL = NULL;
+    free(u); u = NULL;
+    free(vt); vt = NULL;
+    free(s); s = NULL;
+
+    return na;
 }
 
 /***********************************************************//**

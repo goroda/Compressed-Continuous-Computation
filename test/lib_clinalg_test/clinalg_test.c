@@ -2484,6 +2484,22 @@ void Test_rightorth(CuTest * tc)
     struct FunctionTrain * fcopy = function_train_copy(ft);
     struct FunctionTrain * ao = function_train_orthor(ft);
     
+    size_t ii,jj,kk;
+    for (ii = 1; ii < dim; ii++){
+        double * intmat = qmaqmat_integrate(ao->cores[ii],ao->cores[ii]);
+        for (jj = 0; jj < ao->cores[ii]->nrows; jj++){
+            for (kk = 0; kk < ao->cores[ii]->nrows; kk++){
+                if (jj == kk){
+                    CuAssertDblEquals(tc,1.0,intmat[jj*ao->cores[ii]->nrows+kk],1e-14);
+                }
+                else{
+                    CuAssertDblEquals(tc,0.0,intmat[jj*ao->cores[ii]->nrows+kk],1e-14);
+                }
+            }
+        }
+        free(intmat); intmat = NULL;
+    }
+
     double diff = function_train_relnorm2diff(ao,fcopy);
     //printf("\nfinal diff = %G\n",diff*diff);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
@@ -2494,120 +2510,71 @@ void Test_rightorth(CuTest * tc)
     bounding_box_free(bds); bds = NULL;
 }
 
+double funcCheck3(double * x, void * args){
+    assert (args == NULL);
+    double out = pow(x[0] * x[1],2) + x[1]*sin(x[0]);
+    return out;
+}
 
 void Test_dmrglr(CuTest * tc)
 {
 
-    printf("Testing Function: dmrg_sweep_lr and dmrg_sweep_rl\n");
+    printf("Testing Function: dmrg_sweep_lr\n");
     size_t dim = 4;
-    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
 
     double diff;
 
-    //double coeffs[4] = {1.0, 2.0, 3.0,4.0};
-    //struct FunctionTrain * ft =function_train_linear(dim, bds, coeffs,NULL);
-    //struct FunctionTrain * ft = function_train_cross(funcGrad,NULL,bds,NULL,NULL,NULL);
     struct FunctionTrain * ft = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
-    
+
+    //printf("true ranks\n");
+    //iprint_sz(dim+1,ft->ranks);
     struct FunctionTrain * fcopy = function_train_copy(ft);
-    struct FunctionTrain * fcopy2 = function_train_copy(ft);
-    struct FunctionTrain * ao = function_train_orthor(ft);
+    struct FunctionTrain * ao = function_train_orthor(fcopy);
+    struct QR ** psir = dmrg_update_right2_all(ft,ao);
+    struct QR ** phil = qr_array_alloc(dim-1);
 
-    diff = function_train_relnorm2diff(ao,fcopy);
+    diff = function_train_relnorm2diff(ao,ft);
+    //printf("difference = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-    diff = function_train_relnorm2diff(ao,fcopy2);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-   
-    double ** phi = malloc((dim-1)*sizeof(double));
-    double ** psi = malloc((dim-1)*sizeof(double));
-    size_t ii;
+    
+    //printf("start sweep\n");
+    struct FunctionTrain * new = dmrg_sweep_lr2(ao,ft,phil,psir,0.0);
+    
+    //printf("new ranks are \n");
+    //iprint_sz(dim+1,new->ranks);
+
+    size_t ii,jj,kk;
     for (ii = 0; ii < dim-1; ii++){
-        phi[ii] = NULL;
-        psi[ii] = NULL;
-    }
-    dmrg_update_all_right(fcopy,ao,psi);
-    diff = function_train_relnorm2diff(ao,fcopy2);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-    diff = function_train_relnorm2diff(fcopy,fcopy2);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    struct FunctionTrain * out = dmrg_sweep_lr(ao,fcopy,phi,psi,0);
-    diff = function_train_relnorm2diff(ao,fcopy2);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    diff = function_train_relnorm2diff(out,fcopy);
-    //printf("diff = %G\n",diff*diff);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    //check orthogonality
-    size_t jj,kk;
-    for (ii = 0; ii < dim-1; ii++){
-        struct Qmarray * temp = qmatqma(out->cores[ii],out->cores[ii]);
-        double * intmat = qmarray_integrate(temp);
-        //dprint2d_col(temp->nrows, temp->ncols,intmat);
-        //qmarray_free(temp); temp = NULL;
-        for (jj = 0; jj < temp->ncols; jj++){
-            for (kk = 0; kk < temp->nrows; kk++){
+        double * intmat = qmatqma_integrate(new->cores[ii],new->cores[ii]);
+        for (jj = 0; jj < new->cores[ii]->ncols; jj++){
+            for (kk = 0; kk < new->cores[ii]->ncols; kk++){
                 if (jj == kk){
-                    CuAssertDblEquals(tc,1.0,intmat[jj*temp->nrows+kk],1e-14);
+                    CuAssertDblEquals(tc,1.0,intmat[jj*new->cores[ii]->ncols+kk],1e-14);
                 }
                 else{
-                    CuAssertDblEquals(tc,0.0,intmat[jj*temp->nrows+kk],1e-14);
-                }
-            }
-        }
-        free(intmat); intmat = NULL;
-        qmarray_free(temp); temp = NULL;
-    }
-    //printf("Left orthogonality is good!\n");
-
-    //struct FunctionTrain * out2 = NULL;
-    struct FunctionTrain * out2 = dmrg_sweep_rl(out,fcopy,phi,psi,0);
-
-    for (ii = 1; ii < dim; ii++){
-        //printf("check orth columns %zu \n",ii);
-        double * intmat = qmaqmat_integrate(out2->cores[ii],out2->cores[ii]);
-        //dprint2d_col(out2->cores[ii]->nrows, out2->cores[ii]->nrows,intmat);
-        for (jj = 0; jj < out2->cores[ii]->nrows; jj++){
-            for (kk = 0; kk < out2->cores[ii]->nrows; kk++){
-                if (jj == kk){
-                    CuAssertDblEquals(tc,1.0,intmat[jj*out2->cores[ii]->nrows+kk],1e-14);
-                }
-                else{
-                    CuAssertDblEquals(tc,0.0,intmat[jj*out2->cores[ii]->nrows+kk],1e-14);
+                    CuAssertDblEquals(tc,0.0,intmat[jj*new->cores[ii]->ncols+kk],1e-14);
                 }
             }
         }
         free(intmat); intmat = NULL;
     }
-    //printf("Right orthogonality is good!\n");
 
-    diff = function_train_relnorm2diff(out2,fcopy);///normsize;
-    //printf("diff = %G\n",diff*diff);
+    diff = function_train_relnorm2diff(new,ft);
+    //printf("difference = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
 
-   // printf("sweep one more time lr to check if psi was updated prop\n");
-    struct FunctionTrain * out3 = dmrg_sweep_lr(out2,fcopy,phi,psi,0);
-    diff = function_train_relnorm2diff(out3,fcopy);///normsize;
-    //printf("diff = %G\n",diff*diff);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    for (ii = 0; ii < dim-1; ii++){
-        free(phi[ii]);
-        free(psi[ii]);
-    }
-
-    free(phi); 
-    free(psi);
+    
+    qr_array_free(psir,dim-1);
+    qr_array_free(phil,dim-1);
     function_train_free(ft); ft = NULL;
-    function_train_free(ao); ao = NULL;
     function_train_free(fcopy); fcopy = NULL;
-    function_train_free(fcopy2); fcopy2 = NULL;
-    function_train_free(out); out = NULL;
-    function_train_free(out2); out2 = NULL;
-    function_train_free(out3); out3 = NULL;
+    function_train_free(ao); ao = NULL;
+    function_train_free(new); new = NULL;
     bounding_box_free(bds); bds = NULL;
 }
+
+
 
 void Test_dmrg_approx(CuTest * tc)
 {
@@ -2695,9 +2662,9 @@ CuSuite * CLinalgDMRGGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     //SUITE_ADD_TEST(suite, Test_rightorth);
-    //SUITE_ADD_TEST(suite, Test_dmrglr);
+    SUITE_ADD_TEST(suite, Test_dmrglr);
     //SUITE_ADD_TEST(suite, Test_dmrg_approx);
-    SUITE_ADD_TEST(suite,Test_fast_mat_kron);
+    //SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     return suite;
 }
 

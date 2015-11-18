@@ -237,6 +237,28 @@ qmarray_extract_column(struct Qmarray * qma, size_t col)
 }
 
 /***********************************************************//**
+    Extract a copy of the first nkeep columns of a qmarray
+
+    \param a [in] - qmarray from which to extract columns
+    \param nkeep [in] : number of columns to extract
+
+    \return qm - qmarray
+***************************************************************/
+struct Qmarray * qmarray_extract_ncols(struct Qmarray * a, size_t nkeep)
+{
+    
+    struct Qmarray * qm = qmarray_alloc(a->nrows,nkeep);
+    size_t ii,jj;
+    for (ii = 0; ii < nkeep; ii++){
+        for (jj = 0; jj < nkeep; jj++){
+            qm->funcs[ii*a->nrows+jj] = generic_function_copy(a->funcs[ii*a->nrows+jj]);
+        }
+    }
+    return qm;
+}
+
+
+/***********************************************************//**
     Extract a copy of a quasimatrix from a row of a qmarray
 
     \param qma [in] - qmarray
@@ -624,6 +646,7 @@ struct Qmarray * qmarray_alloc(size_t nrows, size_t ncols){
     }
     return qm;
 }
+
 
 /***********************************************************//**
     Create a qmarray by approximating 1d functions
