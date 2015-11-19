@@ -1176,18 +1176,29 @@ void function_train_free(struct FunctionTrain * ft)
     }
 }
 
-//struct FunctionTrain *
-//function_train_random(struct BoundingBox * bds, size_t * ranks, size_t poly_order)
-//{
-    
-//    struct FunctionTrain * ft = function_train_alloc(bds->dim);
-//    memmove(ft->ranks,ranks,(bds->dim+1)*sizeof(size_t));
-    
-//    size_t ii;
-//    for (ii = 0; ii < bds->dim; ii++){
-        
-//    }
-//}
+/********************************************************//**
+*    Create a functiontrain consisting of pseudo-random orth poly expansion
+*   
+*   \param bds [in] - boundaries
+*   \param ranks [in] - (dim+1,1) array of ranks
+*   \param maxorder [in] - maximum order of the polynomial
+*
+*   \return ft - runction train
+************************************************************/
+struct FunctionTrain *
+function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxorder)
+{
+    size_t dim = bds->dim;
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    memmove(ft->ranks,ranks, (dim+1)*sizeof(size_t));
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        ft->cores[ii] = qmarray_poly_randu(ranks[ii],ranks[ii+1],maxorder,
+                            bds->lb[ii],bds->ub[ii]);
+    }
+    return ft;
+}
 
 /***********************************************************//**
     Compute a function train representation of \f$ f1(x1)*f2(x2)*...* fd(xd)\f$

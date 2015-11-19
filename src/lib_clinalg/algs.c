@@ -2643,14 +2643,15 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 /********************************************************//**
     Rounding of a function train
 
-    \param a [inout] - FT (overwritten)
+    \param ain [in] - FT 
     \param epsilon [in] - threshold
 
     \return ft - rounded function train
 ***********************************************************/
 struct FunctionTrain * 
-function_train_round(struct FunctionTrain * a, double epsilon)
+function_train_round(struct FunctionTrain * ain, double epsilon)
 {
+    struct FunctionTrain * a = function_train_copy(ain);
     size_t ii, core;
     struct Qmarray * temp = NULL;
 
@@ -2716,6 +2717,8 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     for (ii = 0; ii < ft->dim; ii++){
         qmarray_roundt(&ft->cores[ii], epsilon);
     }
+
+    function_train_free(a); a = NULL;
     return ft;
 }
 

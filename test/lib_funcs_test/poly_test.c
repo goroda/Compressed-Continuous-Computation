@@ -1129,7 +1129,7 @@ void Test_pw_approx_adapt_weird(CuTest * tc){
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
     err = sqrt(err / errNorm);
-    printf("error = %G\n",err);
+    //printf("error = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-9);
     piecewise_poly_free(p);
     free(xtest);

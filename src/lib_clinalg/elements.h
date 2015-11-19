@@ -243,6 +243,9 @@ struct FunctionTrain * function_train_alloc(size_t);
 struct FunctionTrain * function_train_copy(struct FunctionTrain *);
 void function_train_free(struct FunctionTrain *);
 
+struct FunctionTrain *
+function_train_poly_randu(struct BoundingBox *, size_t *, size_t);
+
 struct FunctionTrain * function_train_initsum(size_t, 
         double (**)(double, void *), void **, struct BoundingBox *,
         struct FtApproxArgs * ); 

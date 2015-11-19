@@ -292,6 +292,7 @@ dmrg_sweep_lr_prod(struct FunctionTrain * z,
     double * u = NULL;
     double * vt = NULL;
     double * s = NULL;
+    //printf("(nrows,ncols)=(%zu,%zu)\n",nrows,ncols);
     size_t rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
     na->ranks[1] = rank;
     na->cores[0] = qmam(phil[0]->Q,u,rank);

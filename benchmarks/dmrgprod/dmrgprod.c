@@ -13,172 +13,99 @@
 int main(int argc, char * argv[])
 {
     srand(time(NULL));
-
     if ((argc != 2)){
-       printf("Correct function call = ./fmkronbench type\n");
+       printf("Correct function call = ./dmrgprodbench type\n");
        printf("Options for type name include: \n");
-       printf("\t \"0\": time vs. order, \"1\": time vs k, \"2\": time vs r \n");
-       printf("\t Recall that we are performing Ckron(A,B) where \n");
-       printf("\t\t C is k x r^2 matrix and \n");
-       printf("\t\t A,B are r x r matrix valued functions \n");
+       printf("\t \"0\": time vs r comparison between dmrg and standard prod-round\n");
+       printf("\t \"1\": run for profile purposes\n");
        return 0;
     }
-
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t r11 = 5;
-    size_t r12 = 5;
-    size_t r21 = 5;
-    size_t r22 = 5;
-    size_t k = 5;
-    size_t maxorder = 5;
-    double diff; 
-    size_t nrepeats = 50;
     
     if (strcmp(argv[1],"0") == 0){
-        size_t nOrders = 20;
-        double * results = calloc_double(nOrders*3);
-        size_t ii,jj;
-        for (ii = 0; ii < nOrders; ii++){
+        size_t dim = 4;
+        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+        size_t ranks[5] = {1,4,4,4,1};
+        size_t maxorder = 10;
 
-            maxorder = 1 + ii;
-            results[ii] = maxorder;
-            
-            for (jj = 0; jj < nrepeats; jj++){
-                double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
-            
+        size_t nrepeat = 1;
+        size_t nranks = 6;
+        size_t jj,kk;
 
-                // method 1
+        double * results = calloc_double(nranks*4);
+        for (jj = 0; jj < nranks; jj++){
+            for (kk = 1; kk < dim; kk++){
+                ranks[kk] = 1 + 2*jj;
+            }
+
+            results[jj] = (double) ranks[1];
+
+            printf("base ranks are ");
+            iprint_sz(dim+1,ranks);
+
+            double time = 0.0;
+            double time2 = 0.0;
+            double mrank = 0.0;
+            size_t ii;
+            for (ii = 0; ii < nrepeat; ii++){
+
+                struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
+                struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+
                 clock_t tic = clock();
-                struct Qmarray * mat3 = qmarray_kron(mat1,mat2);
-                struct Qmarray * shouldbe = mqma(mat,mat3,k);
+                struct FunctionTrain * p = function_train_product(a,a);
+                struct FunctionTrain * pr = function_train_round(p,1e-10);
                 clock_t toc = clock();
-                
-                results[nOrders+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
+                time += (double)(toc - tic) / CLOCKS_PER_SEC;
 
-                // method 2
+                //printf("Actual ranks are ");
+                //iprint_sz(dim+1,pr->ranks);
+                mrank += pr->ranks[2];
+
                 tic = clock();
-                struct Qmarray * is = qmarray_mat_kron(k,mat,mat1,mat2);
+                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
                 toc = clock();
-                results[2*nOrders+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
+                time2 += (double)(toc - tic) / CLOCKS_PER_SEC;
 
-                diff = qmarray_norm2diff(shouldbe,is);
-                assert ( (diff < 1e-10) == 1);
+                double diff = function_train_relnorm2diff(pr,finish);
+                assert (diff*diff < 1e-10);
+                function_train_free(p); p = NULL;
+                function_train_free(pr); p = NULL;
+                function_train_free(finish); finish=NULL;
 
-                free(mat); mat = NULL;
-                qmarray_free(mat1); mat1 = NULL;
-                qmarray_free(mat2); mat2 = NULL;
-                qmarray_free(mat3); mat3 = NULL;
-                qmarray_free(shouldbe); shouldbe = NULL;
-                qmarray_free(is); is = NULL;
-            }   
-            results[nOrders+ii] /= nrepeats;
-            results[2*nOrders+ii] /= nrepeats;
-            printf("On order %zu, total times are (%G,%G)\n",maxorder,results[nOrders+ii],results[2*nOrders+ii]);
+                function_train_free(a); a = NULL;
+                function_train_free(start); start = NULL;
+            }
+            time /= nrepeat;
+            time2 /= nrepeat;
+            mrank /= nrepeat;
+            printf("Average times are (%G,%G) max rank is %G \n", time,time2,mrank);
+
+            results[nranks+jj] = time;
+            results[2*nranks+jj] = time2;
+            results[3*nranks+jj] = mrank;
+
         }
-        darray_save(nOrders,3,results,"time_vs_order.dat",1);
-        
-        free(results); results = NULL;
+        darray_save(nranks,4,results,"time_vs_rank.dat",1);
+        bounding_box_free(bds); bds = NULL;
     }
-    else if (strcmp(argv[1],"1") == 0){
-        size_t nks = 20;
-        double * results = calloc_double(nks*3);
-        size_t ii,jj;
-        for (ii = 0; ii < nks; ii++){
+    else{
+        size_t dim = 4;
+        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+        size_t ranks[5] = {1,4,4,4,1};
+        size_t maxorder = 10;
 
-            k = 1 + 10*ii;
-            results[ii] = (double) k;
-            
-            for (jj = 0; jj < nrepeats; jj++){
-                double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
-            
+        struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
+        struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
 
-                // method 1
-                clock_t tic = clock();
-                struct Qmarray * mat3 = qmarray_kron(mat1,mat2);
-                struct Qmarray * shouldbe = mqma(mat,mat3,k);
-                clock_t toc = clock();
-                
-                results[nks+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
+        clock_t tic = clock();
+        struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
+        clock_t toc = clock();
+        printf("timing is %G\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
-                // method 2
-                tic = clock();
-                struct Qmarray * is = qmarray_mat_kron(k,mat,mat1,mat2);
-                toc = clock();
-                results[2*nks+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
-
-                diff = qmarray_norm2diff(shouldbe,is);
-                assert ( (diff < 1e-10) == 1);
-
-                free(mat); mat = NULL;
-                qmarray_free(mat1); mat1 = NULL;
-                qmarray_free(mat2); mat2 = NULL;
-                qmarray_free(mat3); mat3 = NULL;
-                qmarray_free(shouldbe); shouldbe = NULL;
-                qmarray_free(is); is = NULL;
-            }   
-            results[nks+ii] /= nrepeats;
-            results[2*nks+ii] /= nrepeats;
-            printf("On k=%zu, total times are (%G,%G)\n",k,results[nks+ii],results[2*nks+ii]);
-        }
-        darray_save(nks,3,results,"time_vs_k.dat",1);
-        
-        free(results); results = NULL;
-    }
-    else if (strcmp(argv[1],"2") == 0){
-        size_t nrs = 20;
-        double * results = calloc_double(nrs*3);
-        size_t ii,jj;
-        for (ii = 0; ii < nrs; ii++){
-            
-            r11 = 1 + 2*ii;
-            r12 = r11;
-            r21 = r11;
-            r22 = r21;
-
-            results[ii] = (double) r11;
-            
-            for (jj = 0; jj < nrepeats; jj++){
-                double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
-            
-
-                // method 1
-                clock_t tic = clock();
-                struct Qmarray * mat3 = qmarray_kron(mat1,mat2);
-                struct Qmarray * shouldbe = mqma(mat,mat3,k);
-                clock_t toc = clock();
-                
-                results[nrs+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
-
-                // method 2
-                tic = clock();
-                struct Qmarray * is = qmarray_mat_kron(k,mat,mat1,mat2);
-                toc = clock();
-                results[2*nrs+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
-
-                diff = qmarray_norm2diff(shouldbe,is);
-                assert ( (diff < 1e-10) == 1);
-
-                free(mat); mat = NULL;
-                qmarray_free(mat1); mat1 = NULL;
-                qmarray_free(mat2); mat2 = NULL;
-                qmarray_free(mat3); mat3 = NULL;
-                qmarray_free(shouldbe); shouldbe = NULL;
-                qmarray_free(is); is = NULL;
-            }   
-            results[nrs+ii] /= nrepeats;
-            results[2*nrs+ii] /= nrepeats;
-            printf("On r=%zu, total times are (%G,%G)\n",r11,results[nrs+ii],results[2*nrs+ii]);
-        }
-        darray_save(nrs,3,results,"time_vs_r.dat",1);
-        
-        free(results); results = NULL;
+        function_train_free(a); a = NULL;
+        function_train_free(start); start = NULL;
+        function_train_free(finish); finish = NULL;
+        bounding_box_free(bds); bds = NULL;
     }
 
     return 0;
