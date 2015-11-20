@@ -1636,16 +1636,16 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
 
     struct OrthPolyExpansion * c = NULL;
     double lb = a[0]->lower_bound;
-    double ub = a[1]->upper_bound;
+    double ub = a[0]->upper_bound;
 
     size_t ii;
     size_t maxordera = 0;
     size_t maxorderb = 0;
     size_t maxorder = 0;
-    int legen = 1;
+    //int legen = 1;
     for (ii = 0; ii < n; ii++){
         if ((a[ii*lda]->p->ptype != LEGENDRE) || (b[ii*ldb]->p->ptype != LEGENDRE)){
-            legen = 0;
+            //legen = 0;
             return c; // cant do it
         }
         size_t neworder = a[ii*lda]->num_poly + b[ii*ldb]->num_poly;
@@ -1689,6 +1689,59 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
     orth_poly_expansion_round(&c);
     return c;
 }
+
+/********************************************************//**
+*   Compute a linear combination of generic functions
+*
+*   \param n [in] - number of functions
+*   \param ldx [in] - stride of first array
+*   \param x [in] - functions
+*   \param ldc [in] - stride of coefficients
+*   \param c [in] - scaling coefficients
+*
+*   \return  out  = \f$sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*
+*   \note 
+*       If both arrays do not consist of only LEGENDRE polynomials
+*       return NULL. All the functions need to have the same lower 
+*       and upper bounds
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_lin_comb(size_t n, size_t ldx, 
+        struct OrthPolyExpansion ** x, size_t ldc,
+        double * c )
+{
+
+    struct OrthPolyExpansion * out = NULL;
+    double lb = x[0]->lower_bound;
+    double ub = x[0]->upper_bound;
+
+    size_t ii;
+    size_t maxorder = 0;
+    //int legen = 1;
+    for (ii = 0; ii < n; ii++){
+        if (x[ii*ldx]->p->ptype != LEGENDRE){
+            //legen = 0;
+            return out; // cant do it
+        }
+        size_t neworder = x[ii*ldx]->num_poly;
+        if (neworder > maxorder){
+            maxorder = neworder;
+        }
+    }
+    
+    enum poly_type p = LEGENDRE;
+    out = orth_poly_expansion_init(p, maxorder, lb, ub);
+    size_t kk;
+    for (kk = 0; kk < n; kk++){
+        for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
+            out->coeff[ii] +=  c[kk*ldc]*x[kk*ldx]->coeff[ii];
+        }
+    }
+    orth_poly_expansion_round(&out);
+    return out;
+}
+
 
 
 /********************************************************//**

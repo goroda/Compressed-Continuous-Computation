@@ -28,13 +28,13 @@ int main(int argc, char * argv[])
         size_t maxorder = 10;
 
         size_t nrepeat = 1;
-        size_t nranks = 6;
+        size_t nranks = 15;
         size_t jj,kk;
 
         double * results = calloc_double(nranks*4);
         for (jj = 0; jj < nranks; jj++){
             for (kk = 1; kk < dim; kk++){
-                ranks[kk] = 1 + 2*jj;
+                ranks[kk] = 4 + 1*jj;
             }
 
             results[jj] = (double) ranks[1];
@@ -91,7 +91,7 @@ int main(int argc, char * argv[])
     else{
         size_t dim = 4;
         struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-        size_t ranks[5] = {1,4,4,4,1};
+        size_t ranks[5] = {1,15,15,15,1};
         size_t maxorder = 10;
 
         struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);

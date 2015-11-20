@@ -4,3 +4,5 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/fastmkron/bi
 add_subdirectory(fastmkron)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/dmrgprod/bin)
 add_subdirectory(dmrgprod)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/qrdecomp/bin)
+add_subdirectory(qrdecomp)
