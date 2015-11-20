@@ -225,6 +225,10 @@ double legendre_integrate(struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_prod(struct OrthPolyExpansion *,
                          struct OrthPolyExpansion *);
+struct OrthPolyExpansion *
+orth_poly_expansion_sum_prod(size_t, size_t, 
+        struct OrthPolyExpansion **, size_t,
+        struct OrthPolyExpansion **);
 
 double orth_poly_expansion_integrate(struct OrthPolyExpansion *);
 double orth_poly_expansion_inner_w(struct OrthPolyExpansion *,

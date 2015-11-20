@@ -601,7 +601,42 @@ struct GenericFunction *
 generic_function_sum_prod(size_t n, size_t lda,  struct GenericFunction ** a, 
                 size_t ldb, struct GenericFunction ** b)
 {
-    size_t ii = 0;
+    size_t ii;
+    int allpoly = 1;
+    for (ii = 0; ii < n; ii++){
+        if (a[ii*lda]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+        if (b[ii*ldb]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+    }
+
+    if (allpoly == 1){
+        struct OrthPolyExpansion ** aa = NULL;
+        struct OrthPolyExpansion ** bb= NULL;
+        if (NULL == (aa = malloc(n * sizeof(struct OrthPolyExpansion)))){
+            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
+            exit(1);
+        }
+        if (NULL == (bb = malloc(n * sizeof(struct OrthPolyExpansion)))){
+            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
+            exit(1);
+        }
+        for  (ii = 0; ii < n; ii++){
+            aa[ii] = a[ii*lda]->f;
+            bb[ii] = b[ii*ldb]->f;
+        }
+        
+        struct GenericFunction * gf = generic_function_alloc(1,a[0]->fc,&(a[0]->sub_type.ptype));
+        gf->f = orth_poly_expansion_sum_prod(n,1,aa,1,bb);
+        gf->fargs = NULL;
+        return gf;
+    }
+
+    ii = 0;
     struct GenericFunction * out = generic_function_prod(a[lda*ii],b[ldb*ii]);
     struct GenericFunction * out2 = NULL;
     struct GenericFunction * temp = NULL;

@@ -1538,8 +1538,8 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     enum poly_type p = a->p->ptype;
     if ( (p == LEGENDRE) && (a->num_poly < 25) && (b->num_poly < 25)){
         //printf("in special prod\n");
-        double lb = a->lower_bound;
-        double ub = b->upper_bound;
+        //double lb = a->lower_bound;
+        //double ub = b->upper_bound;
             
         size_t ii,jj;
         c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
@@ -1614,6 +1614,80 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     //*/
     return c;
 }
+
+/********************************************************//**
+*   Compute the sum of the product between the functions in two arraysarrays
+*
+*   \param n [in] - number of functions
+*   \param lda [in] - stride of first array
+*   \param a [in] - array of orthonormal polynomial expansions
+*   \param ldb [in] - stride of second array
+*   \param b [in] - array of orthonormal polynomial expansions
+*
+*   \return c - polynomial expansion
+*
+*   \note 
+*       If both arrays do not consist of only LEGENDRE polynomials
+*       return NULL. All the functions need to have the same lower 
+*       and upper bounds
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_sum_prod(size_t n, size_t lda, 
+        struct OrthPolyExpansion ** a, size_t ldb,
+        struct OrthPolyExpansion ** b)
+{
+
+    struct OrthPolyExpansion * c = NULL;
+    double lb = a[0]->lower_bound;
+    double ub = a[1]->upper_bound;
+
+    size_t ii;
+    size_t maxorder = 0;
+    int legen = 1;
+    for (ii = 0; ii < n; ii++){
+        if ((a[ii*lda]->p->ptype != LEGENDRE) || (b[ii*ldb]->p->ptype != LEGENDRE)){
+            legen = 0;
+            return c; // cant do it
+        }
+        size_t neworder = a[ii*lda]->num_poly + b[ii*ldb]->num_poly;
+        if (neworder > maxorder){
+            maxorder = neworder;
+        }
+    }
+    if (maxorder > 50){
+        fprintf(stderr, "Cant multiply functions of greater than 25 together. Increase size of legtenscoeffs\n");
+        exit(1);
+    }
+    
+    enum poly_type p = LEGENDRE;
+    c = orth_poly_expansion_init(p, maxorder, lb, ub);
+    size_t kk,jj,ll;
+    for (kk = 0; kk < n; kk++){
+        double * allprods = calloc_double(a[kk*lda]->num_poly * b[kk*ldb]->num_poly);
+        for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
+            for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
+                allprods[jj + ii * b[kk*ldb]->num_poly] = 
+                        a[kk*lda]->coeff[ii] * b[kk*ldb]->coeff[jj];
+            }
+        }
+        
+        for (ll = 0; ll < c->num_poly; ll++){
+            for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
+                for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
+                    //printf("\t ctenscoeff[%zu] = %G and prods = % G\n",
+                    //        ii+jj*50+kk*250,lpolycoeffs[ii+jj*50+kk*2500],
+                    //        allprods[jj+ii*b->num_poly]);
+                    c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
+                                        allprods[jj+ii*b[kk*ldb]->num_poly];
+                }
+            }
+        }
+        free(allprods); allprods=NULL;
+    }
+    orth_poly_expansion_round(&c);
+    return c;
+}
+
 
 /********************************************************//**
 *   Integrate an orthogonal polynomial expansion 
