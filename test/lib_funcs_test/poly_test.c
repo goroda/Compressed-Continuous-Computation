@@ -152,7 +152,7 @@ void Test_cheb_approx_adapt(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err =err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-13);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -183,7 +183,7 @@ void Test_cheb_approx_adapt_weird(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -338,7 +338,7 @@ void Test_legendre_approx_adapt(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -369,7 +369,7 @@ void Test_legendre_approx_adapt_weird(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -425,7 +425,7 @@ void Test_legendre_derivative(CuTest * tc){
         //printf("pt= %G err = %G \n",xtest[ii], err);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     //printf("err = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-12);
     FREE_CHEB(cpoly);
@@ -506,6 +506,47 @@ void Test_legendre_norm_w(CuTest * tc){
     FREE_CHEB(cpoly);
 }
 
+void Test_legendre_product(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_product with legendre poly \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    struct counter c;
+    c.N = 0;
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    struct counter c2;
+    c2.N = 0;
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    opoly_t * cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly3,pts[ii]);
+        double eval2 = orth_poly_expansion_eval(cpoly,pts[ii]) * 
+                        orth_poly_expansion_eval(cpoly2,pts[ii]);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+    FREE_CHEB(cpoly3);
+}
+
 void Test_legendre_norm(CuTest * tc){
     
     printf("Testing function: orth_poly_expansion_norm with legendre poly\n");
@@ -555,6 +596,7 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_inner);
     SUITE_ADD_TEST(suite, Test_legendre_norm_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm);
+    SUITE_ADD_TEST(suite, Test_legendre_product);
 
     return suite;
 }
@@ -748,10 +790,13 @@ void Test_maxmin_poly_expansion(CuTest * tc){
     double min = orth_poly_expansion_min(pl, &loc);
     double absmax = orth_poly_expansion_absmax(pl, &loc);
 
-    
-    CuAssertDblEquals(tc, 1.0, max, 1e-10);
-    CuAssertDblEquals(tc, -1.0, min, 1e-10);
-    CuAssertDblEquals(tc, 1.0, absmax, 1e-10);
+    double diff;
+
+    diff = fabs(1.0-max);
+    //printf("diff =%G\n",diff);
+    CuAssertDblEquals(tc,0.0, diff, 1e-9);
+    CuAssertDblEquals(tc, -1.0, min, 1e-9);
+    CuAssertDblEquals(tc, 1.0, absmax, 1e-9);
 
     orth_poly_expansion_free(pl);
 }
@@ -1764,7 +1809,7 @@ void Test_pap1(CuTest * tc){
     size_t nbounds;
     double * bounds = NULL;
     piecewise_poly_boundaries(cpoly,&nbounds,&bounds,NULL);
-    printf("nregions = %zu \n",nbounds-1);
+   // printf("nregions = %zu \n",nbounds-1);
     //dprint(nbounds,bounds);
     free(bounds);
 
@@ -1781,7 +1826,7 @@ void Test_pap1(CuTest * tc){
         errNorm += pow(val,2);
         //printf("x=%G,diff=%G\n",xtest[ii],diff/val);
     }
-    err = sqrt(err / errNorm);
+    err = err / errNorm;
     //printf("error = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-10);
     piecewise_poly_free(cpoly);

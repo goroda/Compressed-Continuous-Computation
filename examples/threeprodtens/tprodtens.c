@@ -24,7 +24,7 @@ int main()
     gauss_legendre(nquad,pt,wt);
 
     double * evals = calloc_double(nquad * (maxorder+1));
-    for (kk = 0; kk < maxorder+1; kk++){   
+    for (kk = 0; kk < maxorder; kk++){   
         for (ll = 0; ll < nquad; ll++){
             if (kk == 0){
                 evals[ll + kk*nquad] = orth_poly_eval(leg,0,pt[ll]);

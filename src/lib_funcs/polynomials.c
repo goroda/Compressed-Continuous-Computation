@@ -55,6 +55,7 @@
 #include "polynomials.h"
 #include "quadrature.h"
 #include "linalg.h"
+#include "legtens.h"
 
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
@@ -1138,6 +1139,7 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
     if (0 == 0){
         double thresh = ZEROTHRESH;
+        //printf("thresh = %G\n",thresh);
         size_t jj = 0;
         //
 	    for (jj = 0; jj < (*p)->num_poly;jj++){
@@ -1168,6 +1170,7 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
                 (*p)->num_poly = num_poly;
             }
         }
+        //orth_poly_expansion_roundt(p,thresh);
     }
 }
 
@@ -1529,58 +1532,73 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
 {
 
     struct OrthPolyExpansion * c = NULL;
+    double lb = a->lower_bound;
+    double ub = a->upper_bound;
 
     enum poly_type p = a->p->ptype;
-    double lb = a->lower_bound;
-    double ub = b->upper_bound;
+    if ( (p == LEGENDRE) && (a->num_poly < 25) && (b->num_poly < 25)){
+        //printf("in special prod\n");
+        double lb = a->lower_bound;
+        double ub = b->upper_bound;
+            
+        size_t ii,jj;
+        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+        double * allprods = calloc_double(a->num_poly * b->num_poly);
+        for (ii = 0; ii < a->num_poly; ii++){
+            for (jj = 0; jj < b->num_poly; jj++){
+                allprods[jj + ii * b->num_poly] = a->coeff[ii] * b->coeff[jj];
+            }
+        }
+        
+        //printf("A = \n");
+        //print_orth_poly_expansion(a,1,NULL);
 
-    struct OrthPolyExpansion * comb[2];
-    comb[0] = a;
-    comb[1] = b;
-    
-    //printf(" poly a = \n");
-    //print_orth_poly_expansion(a,0,NULL);
-    //printf(" poly b = \n");
-    //print_orth_poly_expansion(b,0,NULL);
+        //printf("B = \n");
+        //print_orth_poly_expansion(b,1,NULL);
 
-    //printf("num poly = %zu\n",a->num_poly+b->num_poly);
-    double norma = 0.0, normb = 0.0;
-    size_t ii;
-    for (ii = 0; ii < a->num_poly; ii++){
-        norma += pow(a->coeff[ii],2);
-    }
-    for (ii = 0; ii < b->num_poly; ii++){
-        normb += pow(b->coeff[ii],2);
-    }
-    
-    if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
-        //printf("in here \n");
-        c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+        //dprint2d_col(b->num_poly, a->num_poly, allprods);
+
+        size_t kk;
+        for (kk = 0; kk < c->num_poly; kk++){
+            for (ii = 0; ii < a->num_poly; ii++){
+                for (jj = 0; jj < b->num_poly; jj++){
+                    //printf("\t ctenscoeff[%zu] = %G and prods = % G\n",
+                    //        ii+jj*50+kk*250,lpolycoeffs[ii+jj*50+kk*2500],
+                    //        allprods[jj+ii*b->num_poly]);
+                    c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] * 
+                                        allprods[jj+ii*b->num_poly];
+                }
+            }
+            //printf("c coeff[%zu]=%G\n",kk,c->coeff[kk]);
+        }
+        orth_poly_expansion_round(&c);
+        free(allprods); allprods=NULL;
     }
     else{
-        //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
-        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
-        orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
-        orth_poly_expansion_round(&c);
+        struct OrthPolyExpansion * comb[2];
+        comb[0] = a;
+        comb[1] = b;
+        
+        double norma = 0.0, normb = 0.0;
+        size_t ii;
+        for (ii = 0; ii < a->num_poly; ii++){
+            norma += pow(a->coeff[ii],2);
+        }
+        for (ii = 0; ii < b->num_poly; ii++){
+            normb += pow(b->coeff[ii],2);
+        }
+        
+        if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
+            //printf("in here \n");
+            c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+        }
+        else{
+            //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
+            c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+            orth_poly_expansion_round(&c);
+        }
     }
-    //printf("poly c = \n");
-    //print_orth_poly_expansion(c,0,NULL);
-    //orth_poly_expansion_roundt(&c,sqrt(norma*normb));
-
-    /*
-    size_t ii;
-    printf("coeffs after rounding \n");
-    for (ii = 0; ii < c->num_poly; ii++){
-        printf("%3.15G ",c->coeff[ii]);
-    }
-    printf("\n");
-    */
-    //dprint(c->num_poly,c->coeff);
-    //printf(" num polys after = %zu \n", c->num_poly);
-    //printf("\n");
-    /*
-    dprint(d->num_poly,d->coeff);
-    */
     
     //*
     //printf("compute product\n");
