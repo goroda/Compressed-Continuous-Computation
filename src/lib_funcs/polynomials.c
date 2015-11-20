@@ -1562,9 +1562,6 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         for (kk = 0; kk < c->num_poly; kk++){
             for (ii = 0; ii < a->num_poly; ii++){
                 for (jj = 0; jj < b->num_poly; jj++){
-                    //printf("\t ctenscoeff[%zu] = %G and prods = % G\n",
-                    //        ii+jj*50+kk*250,lpolycoeffs[ii+jj*50+kk*2500],
-                    //        allprods[jj+ii*b->num_poly]);
                     c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] * 
                                         allprods[jj+ii*b->num_poly];
                 }
@@ -1642,6 +1639,8 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
     double ub = a[1]->upper_bound;
 
     size_t ii;
+    size_t maxordera = 0;
+    size_t maxorderb = 0;
     size_t maxorder = 0;
     int legen = 1;
     for (ii = 0; ii < n; ii++){
@@ -1653,6 +1652,12 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         if (neworder > maxorder){
             maxorder = neworder;
         }
+        if (a[ii*lda]->num_poly > maxordera){
+            maxordera = a[ii*lda]->num_poly;
+        }
+        if (b[ii*ldb]->num_poly > maxorderb){
+            maxorderb = b[ii*ldb]->num_poly;
+        }
     }
     if (maxorder > 50){
         fprintf(stderr, "Cant multiply functions of greater than 25 together. Increase size of legtenscoeffs\n");
@@ -1662,28 +1667,25 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
     enum poly_type p = LEGENDRE;
     c = orth_poly_expansion_init(p, maxorder, lb, ub);
     size_t kk,jj,ll;
+    double * allprods = calloc_double( maxorderb * maxordera);
     for (kk = 0; kk < n; kk++){
-        double * allprods = calloc_double(a[kk*lda]->num_poly * b[kk*ldb]->num_poly);
         for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
             for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
-                allprods[jj + ii * b[kk*ldb]->num_poly] = 
+                allprods[jj + ii * maxorderb] += 
                         a[kk*lda]->coeff[ii] * b[kk*ldb]->coeff[jj];
             }
         }
-        
-        for (ll = 0; ll < c->num_poly; ll++){
-            for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
-                for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
-                    //printf("\t ctenscoeff[%zu] = %G and prods = % G\n",
-                    //        ii+jj*50+kk*250,lpolycoeffs[ii+jj*50+kk*2500],
-                    //        allprods[jj+ii*b->num_poly]);
-                    c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
-                                        allprods[jj+ii*b[kk*ldb]->num_poly];
-                }
+    }
+
+    for (ll = 0; ll < c->num_poly; ll++){
+        for (ii = 0; ii < maxordera; ii++){
+            for (jj = 0; jj < maxorderb; jj++){
+                c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
+                                    allprods[jj+ii*maxorderb];
             }
         }
-        free(allprods); allprods=NULL;
     }
+    free(allprods); allprods=NULL;
     orth_poly_expansion_round(&c);
     return c;
 }
