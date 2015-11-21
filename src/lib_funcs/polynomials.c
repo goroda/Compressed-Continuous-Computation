@@ -1142,32 +1142,41 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
         //printf("thresh = %G\n",thresh);
         size_t jj = 0;
         //
+        int allzero = 1;
 	    for (jj = 0; jj < (*p)->num_poly;jj++){
 	       if (fabs((*p)->coeff[jj]) < thresh){
                (*p)->coeff[jj] = 0.0;
-            }
+           }
+           else{
+               allzero = 0;
+           }
 	    }
-	    jj = 0;
-        size_t end = (*p)->num_poly;
-        if ((*p)->num_poly > 2){
-            while (fabs((*p)->coeff[end-1]) < thresh){
-                end-=1;
-                if (end == 0){
-                    break;
+        if (allzero == 1){
+            (*p)->num_poly = 1;
+        }
+        else {
+            jj = 0;
+            size_t end = (*p)->num_poly;
+            if ((*p)->num_poly > 2){
+                while (fabs((*p)->coeff[end-1]) < thresh){
+                    end-=1;
+                    if (end == 0){
+                        break;
+                    }
                 }
-            }
-            
-            if (end > 0){
-                //printf("SHOULD NOT BE HERE\n");
-                size_t num_poly = end;
-                //
-                //double * new_coeff = calloc_double(num_poly);
-                //for (jj = 0; jj < num_poly; jj++){
-                //    new_coeff[jj] = (*p)->coeff[jj];
-               // }
-                //free((*p)->coeff); (*p)->coeff=NULL;
-                //(*p)->coeff = new_coeff;
-                (*p)->num_poly = num_poly;
+                
+                if (end > 0){
+                    //printf("SHOULD NOT BE HERE\n");
+                    size_t num_poly = end;
+                    //
+                    //double * new_coeff = calloc_double(num_poly);
+                    //for (jj = 0; jj < num_poly; jj++){
+                    //    new_coeff[jj] = (*p)->coeff[jj];
+                   // }
+                    //free((*p)->coeff); (*p)->coeff=NULL;
+                    //(*p)->coeff = new_coeff;
+                    (*p)->num_poly = num_poly;
+                }
             }
         }
         //orth_poly_expansion_roundt(p,thresh);
@@ -1990,23 +1999,39 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
     printf("y=\n");
     print_orth_poly_expansion(y,0,NULL);
     */
+    
+    //double diffa = fabs(a-ZEROTHRESH);
+    //double diffb = fabs(b-ZEROTHRESH);
     size_t ii;
     struct OrthPolyExpansion * p ;
-    if (x == NULL && y != NULL){
-        p = orth_poly_expansion_init(y->p->ptype,
-                    y->num_poly, y->lower_bound, y->upper_bound);
-        for (ii = 0; ii < y->num_poly; ii++){
-            p->coeff[ii] = y->coeff[ii] * b;
-        }
+    //if ( (x == NULL && y != NULL) || ((diffa <= ZEROTHRESH) && (y != NULL))){
+    if ( (x == NULL && y != NULL)){
+        //printf("b = %G\n",b);
+        //if (diffb <= ZEROTHRESH){
+        //    p = orth_poly_expansion_init(y->p->ptype,1,y->lower_bound, y->upper_bound);
+       // }
+       // else{    
+            p = orth_poly_expansion_init(y->p->ptype,
+                        y->num_poly, y->lower_bound, y->upper_bound);
+            for (ii = 0; ii < y->num_poly; ii++){
+                p->coeff[ii] = y->coeff[ii] * b;
+            }
+        //}
         orth_poly_expansion_round(&p);
         return p;
     }
-    else if (y == NULL && x != NULL){
-        p = orth_poly_expansion_init(x->p->ptype,
-                    x->num_poly, x->lower_bound, x->upper_bound);
-        for (ii = 0; ii < x->num_poly; ii++){
-            p->coeff[ii] = x->coeff[ii] * a;
-        }
+    //if ( (y == NULL && x != NULL) || ((diffb <= ZEROTHRESH) && (x != NULL))){
+    if ( (y == NULL && x != NULL)){
+        //if (a <= ZEROTHRESH){
+        //    p = orth_poly_expansion_init(x->p->ptype,1, x->lower_bound, x->upper_bound);
+       // }
+        //else{
+            p = orth_poly_expansion_init(x->p->ptype,
+                        x->num_poly, x->lower_bound, x->upper_bound);
+            for (ii = 0; ii < x->num_poly; ii++){
+                p->coeff[ii] = x->coeff[ii] * a;
+            }
+        //}
         orth_poly_expansion_round(&p);
         return p;
     }
@@ -2019,20 +2044,36 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
     size_t xN = x->num_poly;
     size_t yN = y->num_poly;
 
+    //printf("diffa = %G, x==NULL %d\n",diffa,x==NULL);
+    //printf("diffb = %G, y==NULL %d\n",diffb,y==NULL);
+   // assert(diffa > ZEROTHRESH);
+   // assert(diffb > ZEROTHRESH);
     if (xN > yN){
         for (ii = 0; ii < yN; ii++){
             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
         for (ii = yN; ii < xN; ii++){
             p->coeff[ii] = x->coeff[ii]*a;
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
     }
     else{
         for (ii = 0; ii < xN; ii++){
             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
         for (ii = xN; ii < yN; ii++){
             p->coeff[ii] = y->coeff[ii]*b;
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+            //}
         }
     }
 
@@ -2229,12 +2270,15 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
             (p->p->upper - p->p->lower);
     double off = p->upper_bound - m * p->p->upper;
 
-    //printf("coeffs are \n");
-    //dprint(p->num_poly, p->coeff);
+    orth_poly_expansion_round(&p);
+   // print_orth_poly_expansion(p,3,NULL);
     //printf("last 2 = %G\n",p->coeff[p->num_poly-1]);
     size_t N = p->num_poly-1;
     //printf("N = %zu\n",N);
-    if (N == 1){
+    if (N == 0){
+        return real_roots;
+    }
+    else if (N == 1){
         if (fabs(p->coeff[N]) <= ZEROTHRESH){
             return real_roots;
         }
