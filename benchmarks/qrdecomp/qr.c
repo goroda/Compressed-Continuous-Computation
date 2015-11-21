@@ -88,5 +88,35 @@ int main(int argc, char * argv[])
         darray_save(nr1s,2,results,"time_vs_r1.dat",1);
         free(results); results = NULL;
     }
+    else if (strcmp(argv[1],"2") == 0){
+        size_t nr2s = 40;
+        double * results = calloc_double(nr2s*2);
+        size_t ii,jj;
+        for (ii = 0; ii < nr2s; ii++){
+
+            r2 = 1 + 2*ii;
+            results[ii] = r2;
+            
+            for (jj = 0; jj < nrepeats; jj++){
+                struct Qmarray * mat = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+                double * R = calloc_double(r2 * r2);
+
+                // method 1
+                clock_t tic = clock();
+                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R);
+                clock_t toc = clock();
+                
+                results[nr2s+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
+
+                qmarray_free(mat); mat = NULL;
+                qmarray_free(Q); Q = NULL;
+                free(R); R = NULL;
+            }   
+            results[nr2s+ii] /= nrepeats;
+            printf("On r2=%zu, total time (%G)\n",r2,results[nr2s+ii]);
+        }
+        darray_save(nr2s,2,results,"time_vs_r2.dat",1);
+        free(results); results = NULL;
+    }
     return 0;
 }

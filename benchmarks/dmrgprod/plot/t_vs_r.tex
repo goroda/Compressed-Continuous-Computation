@@ -28,8 +28,8 @@
     \begin{tikzpicture}
 		\begin{loglogaxis}[ 
             %cycle list name=black white,
-			%xlabel={rank($a^2$)},
-			xlabel={rank($a$)},
+			xlabel={rank($a^2$)},
+			%xlabel={rank($a$)},
 			ylabel={Time},
 			%width={0.3\textwidth},
             grid=major,
@@ -40,10 +40,10 @@
             },
 			%colorbar,
         ]
-        \addplot table [x=x0,y=x1] {\myvar};
-        \addplot table [x=x0,y=x2] {\myvar};
+        \addplot table [x=x3,y=x1] {\myvar};
+        \addplot table [x=x3,y=x2] {\myvar};
         \addplot[no marks] table [ 
-            x=x0,
+            x=x3,
             y={create col/linear regression={y=x1,
                 variance list={1000,800,600,400,200,100}}}] {\myvar}
             coordinate [pos=0.03] (A)
@@ -56,7 +56,7 @@
           {\pgfmathprintnumber{\slope}};
 
         \addplot[dashed] table [
-            x=x0,
+            x=x3,
             y={create col/linear regression={y=x2,
                 variance list={1000,800,600,400,200,100}}}] {\myvar}
             coordinate [pos=0.7] (C)
