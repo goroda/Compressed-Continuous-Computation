@@ -1055,6 +1055,43 @@ generic_function_sum3_up(double a, struct GenericFunction * x,
 }
 
 /********************************************************//**
+*   Add two generic functions \f$ y \leftarrow  = ax + y
+*
+*   \param a [in] - scaling of first function
+*   \param x [in] - first function
+*   \param y [inout] - second function
+*
+*   \param 1 if successfull, 0 if error
+*
+*   \note
+*       Handling the function class of the output is not very smart
+************************************************************/
+int generic_function_axpy(double a, struct GenericFunction * x, 
+            struct GenericFunction * y)
+{
+    //printf("in here! a =%G b = %G\n",a,b);
+
+    assert (y != NULL);
+    assert (x != NULL);
+    assert (x->fc == y->fc);
+
+    int success = 0;
+    switch (x->fc){
+        case PIECEWISE:
+            break;
+        case POLYNOMIAL:
+            success = orth_poly_expansion_axpy(a,x->f,y->f);
+            break;    
+        case RATIONAL:
+            break;
+        case KERNEL:
+            break;
+    }
+    
+    return success;
+}
+
+/********************************************************//**
 *   Add two generic functions z = ax + by
 *
 *   \param a [in] - scaling of first function

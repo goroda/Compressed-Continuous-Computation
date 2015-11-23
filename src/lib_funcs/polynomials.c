@@ -2097,7 +2097,62 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
                 x->num_poly, y->num_poly, z->num_poly);
         exit(1);
     }
+    orth_poly_expansion_round(&z);
 }
+
+/********************************************************//**
+*   Multiply by scalar and add two orthgonal 
+*   expansions of the same family together /f$ y \leftarrow ax + y
+*
+*   \param a [in] - scaling factor for first polynomial
+*   \param x [in] - first polynomial
+*   \param y [in] - second polynomial
+*
+*   \return 1 if successfull 0 if error with allocating more space for y
+*
+*   \note 
+*       Computes z=ax+by, where x and y are polynomial expansionx
+*       Requires both polynomials to have the same upper 
+*       and lower bounds
+*   
+*************************************************************/
+int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
+                        struct OrthPolyExpansion * y)
+{
+        
+    assert (y != NULL);
+    assert (x != NULL);
+    assert (x->p->ptype == y->p->ptype);
+    assert ( fabs(x->lower_bound - y->lower_bound) < DBL_EPSILON );
+    assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON );
+    
+    if (x->num_poly < y->num_poly){
+        size_t ii;
+        for (ii = 0; ii < x->num_poly; ii++){
+            y->coeff[ii] += a * x->coeff[ii];
+        }
+    }
+    else{
+        double * temp = realloc(y->coeff, (x->num_poly)*sizeof(double));
+        if (temp == NULL){
+            return 0;
+        }
+        else{
+            y->coeff = temp;
+        }
+        size_t ii;
+        for (ii = 0; ii < y->num_poly; ii++){
+            y->coeff[ii] += a * x->coeff[ii];
+        }
+        for (ii = y->num_poly; ii < x->num_poly; ii++){
+            y->coeff[ii] = a * x->coeff[ii];
+        }
+        y->num_poly = x->num_poly;
+    }
+    orth_poly_expansion_round(&y);
+    return 1;
+}
+
 
 /********************************************************//**
 *   Multiply by scalar and add two orthgonal 

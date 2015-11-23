@@ -730,7 +730,7 @@ void Test_qmarray_householder3(CuTest * tc){
             temp2 = generic_function_1d_eval(A->funcs[ii],xtest[jj]);
             err += fabs(temp1-temp2);
         }
-        printf("err= %3.15G\n",err);
+        //printf("err= %3.15G\n",err);
         CuAssertDblEquals(tc,0.0,err,1e-6);
     }
 
@@ -912,6 +912,55 @@ void Test_qmarray_householder4(CuTest * tc){
     free(R2);
 }
 
+void Test_qmarray_qr(CuTest * tc)
+{
+    printf("Testing function: qmarray_qr \n");
+    
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t r1 = 5;
+    size_t r2 = 7;
+    size_t maxorder = 10;
+
+    struct Qmarray * A = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    struct Qmarray * Q = NULL;
+    double * R = NULL;
+    qmarray_qr(A,&Q,&R);
+    printf("got it \n");
+    
+    printf("R = \n");
+    dprint2d_col(r2,r2,R);
+    
+    printf("Check ortho\n");
+    double * mat = qmatqma_integrate(Q,Q);
+    size_t ii,jj;
+    for (ii = 0; ii < r2; ii++){
+        for (jj = 0; jj < r2; jj++){
+            if (ii == jj){
+               // CuAssertDblEquals(tc,1.0,mat[ii*r2+jj],1e-14);
+            }
+            else{
+               // CuAssertDblEquals(tc,0.0,mat[ii*r2+jj],1e-14);
+            }
+        }
+    }
+    dprint2d_col(r2,r2,mat);
+    free(mat);
+
+    struct Qmarray * QR = qmam(Q,R,r2);
+    
+    double diff = qmarray_norm2diff(QR,Acopy);
+    printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(QR); QR = NULL;
+    free(R); R = NULL;
+}
 
 void Test_qmarray_householder_rows(CuTest * tc){
 
@@ -1208,11 +1257,11 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
 
     qmarray_maxvol1d(A,Asinv,pivi,pivx);
      
-    //*
+    /*
     printf("pivots at = \n");
     iprint_sz(6,pivi); 
     dprint(6,pivx);
-    //*/
+    */
 
     struct Qmarray * B = qmam(A,Asinv,2);
     double maxval, maxloc;
@@ -1396,6 +1445,7 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_householder2);
     SUITE_ADD_TEST(suite, Test_qmarray_householder3);
     SUITE_ADD_TEST(suite, Test_qmarray_householder4);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
     //SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
@@ -2779,11 +2829,11 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuiteAddSuite(suite, clin);
+   // CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
+   // CuSuiteAddSuite(suite, ftr);
+   // CuSuiteAddSuite(suite, fta);
+   // CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);

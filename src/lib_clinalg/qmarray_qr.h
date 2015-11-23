@@ -33,17 +33,15 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file qmarray_qr.h
+ * Header files for qmarray_qr.c
  */
 
+#ifndef QMARRAY_QR_H
+#define QMARRAY_QR_H
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "elements.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "qmarray_qr.h"
+int qmarray_qr(struct Qmarray *, struct Qmarray **, double **);
 
 #endif
+
+

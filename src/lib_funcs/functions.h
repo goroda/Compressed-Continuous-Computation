@@ -172,6 +172,8 @@ generic_function_sum3_up(double, struct GenericFunction *,
                          double, struct GenericFunction *,
                          double, struct GenericFunction *);
 
+int generic_function_axpy(double, struct GenericFunction *, struct GenericFunction *);
+
 struct GenericFunction **
 generic_function_array_daxpby(size_t, double, size_t, 
         struct GenericFunction **, double, size_t, 

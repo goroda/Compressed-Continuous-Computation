@@ -245,6 +245,8 @@ struct OrthPolyExpansion *
 orth_poly_expansion_daxpby(double, struct OrthPolyExpansion *,
                            double, struct OrthPolyExpansion *);
 
+int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
+                        struct OrthPolyExpansion * y);
 void
 orth_poly_expansion_sum3_up(double, struct OrthPolyExpansion *,
                            double, struct OrthPolyExpansion *,

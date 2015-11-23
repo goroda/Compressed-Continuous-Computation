@@ -255,11 +255,11 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
     double rho, sigma, alpha;
     double temp1;
     for (ii = 0; ii < A->n; ii++){
-        printf(" On iter (%zu / %zu) \n", ii,A->n);
+       // printf(" On iter (%zu / %zu) \n", ii,A->n);
         e = E->funcs[ii];    
         x = A->funcs[ii];
         rho = generic_function_norm(x);
-        printf(" \t ... rho = %3.15G\n",rho);
+       // printf(" \t ... rho = %3.15G\n",rho);
 
         /*
         printf("X+==================================\n");
@@ -272,7 +272,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
         R[ii * A->n + ii] = rho;
         //printf("pre alpha------------------------------------\n");
         alpha = generic_function_inner(e,x);
-        printf(" \t ... alpha = %3.15G\n",alpha);
+        //printf(" \t ... alpha = %3.15G\n",alpha);
         if (alpha >= ZEROTHRESH){
             //printf("flip sign\n");
             generic_function_flip_sign(e);
@@ -290,7 +290,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
 
         //print_generic_function(v,3,NULL);
         sigma = generic_function_norm(v);
-        printf(" \t ... sigma = %3.15G\n",sigma);
+        //printf(" \t ... sigma = %3.15G\n",sigma);
 
         //printf("v2pre = \n");
         //print_generic_function(v,3,NULL);
@@ -308,7 +308,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
         //print_generic_function(v2,3,NULL);
 
         for (jj = ii+1; jj < A->n; jj++){
-            printf("\t On sub-iter %zu\n", jj);
+         //   printf("\t On sub-iter %zu\n", jj);
             //printf("Aqm = \n");
             //print_generic_function(A->funcs[jj],3,NULL);
             temp1 = generic_function_inner(v2,A->funcs[jj]);
@@ -316,11 +316,11 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
             if (fabs(temp1) < ZEROTHRESH){
                 temp1 = 0.0;
             }
-            printf("\t\t temp1= %3.15G\n", temp1);
+          //  printf("\t\t temp1= %3.15G\n", temp1);
 
             atemp = generic_function_daxpby(1.0, A->funcs[jj], -2.0 * temp1, v2);
             R[jj * A->n + ii] = generic_function_inner(e, atemp);
-            printf("\t\t e^T atemp= %3.15G\n", R[jj*A->n+ii]);
+          //  printf("\t\t e^T atemp= %3.15G\n", R[jj*A->n+ii]);
             generic_function_free(A->funcs[jj]);
 
             A->funcs[jj] = generic_function_daxpby(1.0, atemp, -R[jj * A->n + ii], e);

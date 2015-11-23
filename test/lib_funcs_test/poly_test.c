@@ -547,6 +547,47 @@ void Test_legendre_product(CuTest * tc){
     FREE_CHEB(cpoly3);
 }
 
+void Test_legendre_axpy(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_axpy with legendre poly \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    struct counter c;
+    c.N = 0;
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    struct counter c2;
+    c2.N = 0;
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
+    CuAssertIntEquals(tc,1,success);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly,pts[ii]);
+        double eval2 = 2.0 * func3(pts[ii],&c2) + func2(pts[ii],&c);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+}
+
+
 void Test_legendre_norm(CuTest * tc){
     
     printf("Testing function: orth_poly_expansion_norm with legendre poly\n");
@@ -597,6 +638,7 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_norm_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm);
     SUITE_ADD_TEST(suite, Test_legendre_product);
+    SUITE_ADD_TEST(suite, Test_legendre_axpy);
 
     return suite;
 }
