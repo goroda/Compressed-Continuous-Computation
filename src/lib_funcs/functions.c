@@ -1028,6 +1028,33 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
 }
 
 /********************************************************//**
+*   Multiply and add 3 functions \f$ z \leftarrow ax + by + cz \f$
+*
+*   \param a [in] - first scaling factor 
+*   \param x [in] - first function
+*   \param b [in] - second scaling factor 
+*   \param y [in] - second function
+*   \param c [in] - third scaling factor 
+*   \param z [in] - third function
+*
+*************************************************************/
+void
+generic_function_sum3_up(double a, struct GenericFunction * x,
+                         double b, struct GenericFunction * y,
+                         double c, struct GenericFunction * z)
+{
+    if ( x->fc != POLYNOMIAL){
+        fprintf(stderr, "Have not yet implemented generic_function_sum3_up \n");
+        fprintf(stderr, "for functions other than polynomials\n");
+        exit(1);
+    }
+    assert (x->fc == y->fc);
+    assert (y->fc == z->fc);
+    
+    orth_poly_expansion_sum3_up(a,x->f,b,y->f,c,z->f);
+}
+
+/********************************************************//**
 *   Add two generic functions z = ax + by
 *
 *   \param a [in] - scaling of first function

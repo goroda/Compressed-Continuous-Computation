@@ -167,6 +167,11 @@ struct GenericFunction * generic_function_daxpby(double, struct GenericFunction 
 void generic_function_weighted_sum_pa(double, struct GenericFunction *, 
             double, struct GenericFunction *, struct GenericFunction *);
 
+void
+generic_function_sum3_up(double, struct GenericFunction *,
+                         double, struct GenericFunction *,
+                         double, struct GenericFunction *);
+
 struct GenericFunction **
 generic_function_array_daxpby(size_t, double, size_t, 
         struct GenericFunction **, double, size_t, 

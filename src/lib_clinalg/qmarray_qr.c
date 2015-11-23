@@ -104,16 +104,27 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
             (*R)[ii*nrows+kk] = generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1,A->funcs+kk*nrows);
             (*R)[ii*nrows+kk] += (-2.0 * ev * temp);
             for (ll = 0; ll < nrows; ll++){
-                I AM HERE
-                //generic_function_sum3_up(-2.0*temp,V->funcs[ii*nrows+ll],
-                //                        (*R)[ii*nrows+kk],E->funcs[ii*nrows+ll],
-                //                        A->funcs[ii*nrows+ll]);
+                generic_function_sum3_up(-2.0*temp,V->funcs[ii*nrows+ll],
+                                        (*R)[ii*nrows+kk],(*Q)->funcs[ii*nrows+ll],
+                                        1.0,A->funcs[ii*nrows+ll]);
             }
 
         }
     }
     
+    // form Q
+    size_t counter = 0;
+    size_t ii = ncols-1;
+    while (counter < ncols){
+        
+        for (jj = ii; jj < ncols; jj++){
+            double val = generic_function_inner_sum(nrows,1,
+                    (*Q)->funcs+ii*nrows, 1, V->funcs+ii*nrows);
+            // NEED to update here
+        }
 
+        ii = ii - 1;
+    }
 
 
     return 1;

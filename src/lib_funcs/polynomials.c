@@ -1,5 +1,3 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -1968,6 +1966,136 @@ void orth_poly_expansion_scale(double a, struct OrthPolyExpansion * x)
     size_t ii;
     for (ii = 0; ii < x->num_poly; ii++){
         x->coeff[ii] *= a;
+    }
+}
+
+/********************************************************//**
+*   Multiply and add 3 expansions \f$ z \leftarrow ax + by + cz \f$
+*
+*   \param a [in] - scaling factor for first polynomial
+*   \param x [in] - first polynomial
+*   \param b [in] - scaling factor for second polynomial
+*   \param y [in] - second polynomial
+*   \param c [in] - scaling factor for third polynomial
+*   \param z [in] - third polynomial
+*
+*************************************************************/
+void
+orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
+                           double b, struct OrthPolyExpansion * y,
+                           double c, struct OrthPolyExpansion * z)
+{
+    assert (x->p->ptype == y->p->ptype);
+    assert (y->p->ptype == z->p->ptype);
+    
+    assert ( x != NULL );
+    assert ( y != NULL );
+    assert ( z != NULL );
+    
+    size_t ii;
+    if ( (z->num_poly >= x->num_poly) && (z->num_poly >= y->num_poly) ){
+        
+        if (x->num_poly > y->num_poly){
+            for (ii = 0; ii < y->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = y->num_poly; ii < x->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < z->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii];
+            }
+        }
+        else{
+            for (ii = 0; ii < x->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < y->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < z->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii];
+            }
+        }
+    }
+    else if ((z->num_poly >= x->num_poly) && ( z->num_poly < y->num_poly)) {
+        double * temp = realloc(z->coeff, (y->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        else{
+            z->coeff = temp;
+        }
+        for (ii = 0; ii < x->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = x->num_poly; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = b*y->coeff[ii];
+        }
+        z->num_poly = y->num_poly;
+    }
+    else if ( (z->num_poly < x->num_poly) && ( z->num_poly >= y->num_poly) ){
+        double * temp = realloc(z->coeff, (x->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        else{
+            z->coeff = temp;
+        }
+        for (ii = 0; ii < y->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = y->num_poly; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii];
+        }
+        z->num_poly = x->num_poly;
+    }
+    else if ( x->num_poly <= y->num_poly){
+        double * temp = realloc(z->coeff, (y->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        for (ii = 0; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = x->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = b*y->coeff[ii];
+        }
+        z->num_poly = y->num_poly;
+    }
+    else if (y->num_poly <= x->num_poly) {
+        double * temp = realloc(z->coeff, (x->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        for (ii = 0; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = y->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii];
+        }
+        z->num_poly = x->num_poly;
+    }
+    else{
+        fprintf(stderr,"Haven't accounted for anything else?! %zu %zu %zu\n", 
+                x->num_poly, y->num_poly, z->num_poly);
+        exit(1);
     }
 }
 

@@ -244,6 +244,12 @@ void orth_poly_expansion_scale(double, struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_daxpby(double, struct OrthPolyExpansion *,
                            double, struct OrthPolyExpansion *);
+
+void
+orth_poly_expansion_sum3_up(double, struct OrthPolyExpansion *,
+                           double, struct OrthPolyExpansion *,
+                           double, struct OrthPolyExpansion *);
+
 struct OrthPolyExpansion *
 orth_poly_expansion_lin_comb(size_t, size_t, 
         struct OrthPolyExpansion **, size_t,
