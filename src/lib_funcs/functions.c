@@ -147,6 +147,27 @@ void bounding_box_free(struct BoundingBox * b)
 }
 
 /********************************************************//**
+    Allocate memory for a generic function without specifying class or sub_type
+
+    \param dim [in] - dimension of functions
+
+    \return out - generic function
+************************************************************/
+struct GenericFunction * generic_function_alloc_base(size_t dim)
+{
+    struct GenericFunction * out;
+    if (NULL == ( out = malloc(sizeof(struct GenericFunction)))){
+        fprintf(stderr, "failed to allocate for a generic function.\n");
+        exit(1);
+    }
+    out->dim = dim;
+    out->fargs = NULL;
+    out->f = NULL;
+    return out;
+}
+
+
+/********************************************************//**
     Allocate memory for a generic function of a particular
     function class
 
@@ -340,6 +361,34 @@ generic_function_copy(struct GenericFunction * gf)
     }
     return out;
 }
+
+/********************************************************//**
+    Copy a generic function to a preallocated generic function
+
+    \param gf [in] - generic function
+    \param gfpa [inout] - preallocated function
+
+************************************************************/
+void generic_function_copy_pa(struct GenericFunction * gf, struct GenericFunction * gfpa)
+{
+    switch (gf->fc){
+        case PIECEWISE:
+            gfpa->fc = gf->fc;
+            gfpa->sub_type.ptype = gf->sub_type.ptype;
+            gfpa->f = piecewise_poly_copy(gf->f);
+            break;
+        case POLYNOMIAL:
+            gfpa->fc = gf->fc;
+            gfpa->sub_type.ptype = gf->sub_type.ptype;
+            gfpa->f = orth_poly_expansion_copy(gf->f); 
+            break;    
+        case RATIONAL:
+            break;
+        case KERNEL:
+            break;
+    }
+}
+
 
 /********************************************************//**
     Free memory for generic function
@@ -1130,6 +1179,52 @@ generic_function_daxpby(double a, struct GenericFunction * x,
     //printf("in there!|n");
     return out;
 }
+
+/********************************************************//**
+*   Add two generic functions z = ax + by where z is preallocated (pa)
+*
+*   \param a [in] - scaling of first function 
+*   \param x [in] - first function (NOT NULL)
+*   \param b [in] - scaling of second function
+*   \param y [in] - second function (NOT NULL)
+*   \param z [inout] - Generic function is allocated but sub function (may) not be
+*
+*   \note
+*       Handling the function class of the output is not very smart
+************************************************************/
+void
+generic_function_weighted_sum_pa(double a, struct GenericFunction * x, 
+        double b, struct GenericFunction * y, struct GenericFunction * z)
+{
+    assert (x != NULL);
+    assert (y != NULL);
+    if  (x->fc != y->fc){
+        fprintf(stderr, "generic_function_sum2 cannot yet handle generic functions with different function classes\n");
+        exit(1);
+    }
+    else{
+        enum function_class fc = x->fc;
+        if (fc == POLYNOMIAL){
+            if (z->f == NULL){
+                z->fc = POLYNOMIAL;
+                z->f = orth_poly_expansion_daxpby(
+                            a, (struct OrthPolyExpansion *) x->f,
+                            b, (struct OrthPolyExpansion *) y->f );
+                z->sub_type.ptype = LEGENDRE;
+                z->fargs = NULL;
+            }
+            else{
+                fprintf(stderr, "cant handle overwriting functions yet\n");
+                exit(1);
+            }
+        }
+        else{
+            generic_function_free(z); (z) = NULL;
+            z = generic_function_daxpby(a,x,b,y);
+        }
+    }
+}
+
 
 /********************************************************//**
 *   Compute axpby for a an array of generic functions

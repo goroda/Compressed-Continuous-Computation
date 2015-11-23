@@ -108,6 +108,7 @@ struct GenericFunction {
     void * fargs;
 };
 
+struct GenericFunction * generic_function_alloc_base(size_t);
 struct GenericFunction * generic_function_alloc(size_t, enum function_class, void *);
 void generic_function_roundt(struct GenericFunction **, double);
 
@@ -121,6 +122,8 @@ struct GenericFunction *
 generic_function_poly_randu(size_t, double, double);
 
 struct GenericFunction * generic_function_copy(struct GenericFunction *);
+void generic_function_copy_pa(struct GenericFunction *, struct GenericFunction *);
+
 void generic_function_free(struct GenericFunction *);
 void generic_function_array_free(size_t, struct GenericFunction **);
 unsigned char * serialize_generic_function(unsigned char *, 
@@ -160,6 +163,9 @@ void generic_function_array_flip_sign(size_t, size_t, struct GenericFunction **)
 
 struct GenericFunction * generic_function_daxpby(double, struct GenericFunction * m,
             double, struct GenericFunction *);
+
+void generic_function_weighted_sum_pa(double, struct GenericFunction *, 
+            double, struct GenericFunction *, struct GenericFunction *);
 
 struct GenericFunction **
 generic_function_array_daxpby(size_t, double, size_t, 

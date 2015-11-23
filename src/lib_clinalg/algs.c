@@ -2221,7 +2221,6 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     return info;
 }
 
-
 /***********************************************************//**
     Compute the householder triangularization of a 
     qmarray. whose elements consist of
