@@ -17,6 +17,7 @@ doc/*
 bin/*
 benchmarks/fastmkron/bin/*
 benchmarks/dmrgprod/bin/*
+benchmarks/dmrgprod/dat/*
 benchmarks/qrdecomp/bin/*
 
 fileheaders.txt

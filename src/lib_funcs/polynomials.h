@@ -148,6 +148,8 @@ double orth_poly_eval(const struct OrthPoly *, size_t, double);
  * upper bound of input space
  * \var OrthPolyExpansion::coeff
  * coefficients of basis functions
+ * \var OrthPolyExpansion::nalloc
+ * size of double allocated
  */
 struct OrthPolyExpansion{
 
@@ -158,7 +160,10 @@ struct OrthPolyExpansion{
     double lower_bound; 
     double upper_bound; 
     double * coeff;
+
+    size_t nalloc; // number of coefficients allocated for efficiency
 };
+#define OPECALLOC 50;
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);

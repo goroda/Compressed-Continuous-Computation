@@ -74,8 +74,22 @@ double chebortho(size_t n) {
         return M_PI/2.0;
     }
 }
+
+static const double legorthoarr[27] = {1.000000000000000e+00, 3.333333333333333e-01,2.000000000000000e-01,
+            1.428571428571428e-01,1.111111111111111e-01,9.090909090909091e-02,7.692307692307693e-02,
+            6.666666666666667e-02,5.882352941176471e-02,5.263157894736842e-02,4.761904761904762e-02,
+            4.347826086956522e-02,4.000000000000000e-02,3.703703703703703e-02,3.448275862068965e-02,
+            3.225806451612903e-02,3.030303030303030e-02,2.857142857142857e-02,2.702702702702703e-02,
+            2.564102564102564e-02,2.439024390243903e-02,2.325581395348837e-02,2.222222222222222e-02,
+            2.127659574468085e-02,2.040816326530612e-02,1.960784313725490e-02,1.886792452830189e-02};
+
 double legortho(size_t n){
-    return (1.0 / (2.0 * (double) n + 1.0));
+    if (n < 27){
+        return legorthoarr[n];
+    }
+    else{
+        return (1.0 / (2.0 * (double) n + 1.0));
+    }
 }
 
 // Helper functions
@@ -599,7 +613,9 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
     }
 
     p->num_poly = num_poly;
-    p->coeff = calloc_double(num_poly);
+    p->nalloc = OPECALLOC;
+    p->coeff = calloc_double(p->nalloc);
+    //p->coeff = calloc_double(num_poly);
     p->lower_bound = lb;
     p->upper_bound = ub;
 
@@ -637,7 +653,9 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
     }
 
     p->num_poly = pin->num_poly;
-    p->coeff = calloc_double(p->num_poly);
+    p->nalloc = pin->nalloc;
+    //p->coeff = calloc_double(p->num_poly);
+    p->coeff = calloc_double(pin->nalloc);
     memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
     p->lower_bound = pin->lower_bound;
     p->upper_bound = pin->upper_bound;
@@ -925,6 +943,7 @@ deserialize_orth_poly_expansion(unsigned char * ser,
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
+    (*poly)->nalloc = OPECALLOC;
     (*poly)->p = p;
     
     return ptr;
@@ -1219,6 +1238,7 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     memmove(new_coeff,(*p)->coeff, keep * sizeof(double));
     free((*p)->coeff);
     (*p)->num_poly = keep;
+    (*p)->nalloc = OPECALLOC;
     (*p)->coeff = new_coeff;
 }
 
@@ -2128,29 +2148,57 @@ int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
     assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON );
     
     if (x->num_poly < y->num_poly){
+        // shouldnt need rounding here
         size_t ii;
         for (ii = 0; ii < x->num_poly; ii++){
             y->coeff[ii] += a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
         }
     }
     else{
-        double * temp = realloc(y->coeff, (x->num_poly)*sizeof(double));
-        if (temp == NULL){
-            return 0;
-        }
-        else{
-            y->coeff = temp;
-        }
         size_t ii;
-        for (ii = 0; ii < y->num_poly; ii++){
-            y->coeff[ii] += a * x->coeff[ii];
+        if (x->num_poly > y->nalloc){
+            printf("hereee\n");
+            y->nalloc = x->num_poly+10;
+            double * temp = realloc(y->coeff, (y->nalloc)*sizeof(double));
+            if (temp == NULL){
+                return 0;
+            }
+            else{
+                y->coeff = temp;
+                for (ii = y->num_poly; ii < y->nalloc; ii++){
+                    y->coeff[ii] = 0.0;
+                }
+            }
+            printf("finished\n");
         }
         for (ii = y->num_poly; ii < x->num_poly; ii++){
             y->coeff[ii] = a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
+        }
+        for (ii = 0; ii < y->num_poly; ii++){
+            y->coeff[ii] += a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
         }
         y->num_poly = x->num_poly;
+        size_t nround = y->num_poly;
+        for (ii = 0; ii < y->num_poly-1;ii++){
+            if (fabs(y->coeff[y->num_poly-1-ii]) > ZEROTHRESH){
+                break;
+            }
+            else{
+                nround = nround-1;
+            }
+        }
+        y->num_poly = nround;
+
     }
-    orth_poly_expansion_round(&y);
     return 1;
 }
 
