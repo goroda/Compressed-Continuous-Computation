@@ -816,7 +816,9 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
     for (ii = 0; ii < nrows; ii++){
         funcs[ii] = NULL;
     }
+    //printf("wwwhat\n");
     generic_function_array_orth(nrows, fc, st, funcs, &ob);
+    //printf("wwwhere\n");
     
     for (jj = 0; jj < nrows; jj++){
         qm->funcs[jj] = generic_function_copy(funcs[jj]);

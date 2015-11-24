@@ -613,7 +613,7 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
     }
 
     p->num_poly = num_poly;
-    p->nalloc = OPECALLOC;
+    p->nalloc = num_poly+OPECALLOC;
     p->coeff = calloc_double(p->nalloc);
     //p->coeff = calloc_double(num_poly);
     p->lower_bound = lb;
@@ -779,12 +779,18 @@ orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, dou
 struct OrthPolyExpansion *
 orth_poly_expansion_genorder(enum poly_type ptype, size_t order, double lb, double ub)
 {
+    //printf("whhhh\n");
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(ptype, order+1, lb, ub);
+    //printf("wherhhh\n");
     
     double m = (p->upper_bound - p->lower_bound) / 
                     (p->p->upper - p->p->lower);
+    //printf("here \n");
+    //printf("order = %zu\n",order);
+    //printf("nalloc = %zu\n",p->nalloc);
     p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+    //printf("there \n");
     return p;
 }
 
@@ -2160,7 +2166,7 @@ int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
     else{
         size_t ii;
         if (x->num_poly > y->nalloc){
-            printf("hereee\n");
+            //printf("hereee\n");
             y->nalloc = x->num_poly+10;
             double * temp = realloc(y->coeff, (y->nalloc)*sizeof(double));
             if (temp == NULL){
@@ -2172,7 +2178,7 @@ int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
                     y->coeff[ii] = 0.0;
                 }
             }
-            printf("finished\n");
+            //printf("finished\n");
         }
         for (ii = y->num_poly; ii < x->num_poly; ii++){
             y->coeff[ii] = a * x->coeff[ii];
