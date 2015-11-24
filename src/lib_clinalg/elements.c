@@ -783,16 +783,19 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
         }
         onnon = onnon+1;
         if (onnon == nrows){
-            generic_function_free(funcs[onorder]);
-            funcs[onorder] = NULL;
+            //generic_function_free(funcs[onorder]);
+            //funcs[onorder] = NULL;
             onorder = onorder+1;
             onnon = 0;
         }
     }
     //printf("max order cols = %zu\n",onorder);
-    
-    generic_function_free(zero); zero = NULL;
+    for (ii = 0; ii < ncols;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
     free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
 
     return qm;
 }
@@ -849,16 +852,18 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
         }
         onnon = onnon+1;
         if (onnon == ncols){
-            generic_function_free(funcs[onorder]);
-            funcs[onorder] = NULL;
             onorder = onorder+1;
             onnon = 0;
         }
     }
     //printf("max order rows = %zu\n",onorder);
     
-    generic_function_free(zero); zero = NULL;
+    for (ii = 0; ii < nrows;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
     free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
 
     return qm;
 }
