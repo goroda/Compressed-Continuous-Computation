@@ -18,6 +18,7 @@ int main(int argc, char * argv[])
        printf("Options for type name include: \n");
        printf("\t \"0\": time vs r comparison between dmrg and standard prod-round\n");
        printf("\t \"1\": run for profile purposes\n");
+       printf("\t \"2\": time vs r comparison for just dmrg\n");
        return 0;
     }
     
@@ -111,6 +112,58 @@ int main(int argc, char * argv[])
         function_train_free(finish); finish = NULL;
         bounding_box_free(bds); bds = NULL;
     }
+    if (strcmp(argv[1],"2") == 0){
+        size_t dim = 4;
+        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+        size_t ranks[5] = {1,4,4,4,1};
+        size_t maxorder = 10;
+
+        size_t nrepeat = 5;
+        size_t nranks = 20;
+        size_t jj,kk;
+
+        double * results = calloc_double(nranks*3);
+        for (jj = 0; jj < nranks; jj++){
+            for (kk = 1; kk < dim; kk++){
+                ranks[kk] = 2 + 1*jj;
+            }
+
+            results[jj] = (double) ranks[1];
+
+            printf("base ranks are ");
+            iprint_sz(dim+1,ranks);
+
+            double time2 = 0.0;
+            double mrank = 0.0;
+            size_t ii;
+            for (ii = 0; ii < nrepeat; ii++){
+
+                struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
+                struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+
+                clock_t tic = clock();
+                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
+                clock_t toc = clock();
+                time2 += (double)(toc - tic) / CLOCKS_PER_SEC;
+                mrank += finish->ranks[2];
+
+                function_train_free(finish); finish=NULL;
+
+                function_train_free(a); a = NULL;
+                function_train_free(start); start = NULL;
+            }
+            time2 /= nrepeat;
+            mrank /= nrepeat;
+            printf("Average time is (%G) max rank is %G \n",time2,mrank);
+
+            results[nranks+jj] = time2;
+            results[2*nranks+jj] = mrank;
+
+        }
+        darray_save(nranks,3,results,"time_vs_rank_dmrg.dat",1);
+        bounding_box_free(bds); bds = NULL;
+    }
+
 
     return 0;
 }

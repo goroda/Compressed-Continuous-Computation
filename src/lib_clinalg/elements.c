@@ -763,20 +763,35 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj;
+    size_t ii, jj,kk;
     for (ii = 0; ii < ncols; ii++){
         funcs[ii] = NULL;
     }
     generic_function_array_orth(ncols, fc, st, funcs, &ob);
     
+    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
     for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows] = generic_function_copy(funcs[jj]);
-        for (ii = 1; ii < nrows; ii++){
-            qm->funcs[jj*nrows+ii] = generic_function_daxpby(0.0, funcs[jj], 0.0, NULL);
+        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
         }
-        generic_function_free(funcs[jj]);funcs[jj] = NULL;
+        for (kk = onnon+1; kk < nrows; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == nrows){
+            generic_function_free(funcs[onorder]);
+            funcs[onorder] = NULL;
+            onorder = onorder+1;
+            onnon = 0;
+        }
     }
-
+    //printf("max order cols = %zu\n",onorder);
+    
+    generic_function_free(zero); zero = NULL;
     free(funcs); funcs=NULL;
 
     return qm;
@@ -812,7 +827,7 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj;
+    size_t ii, jj,kk;
     for (ii = 0; ii < nrows; ii++){
         funcs[ii] = NULL;
     }
@@ -820,16 +835,29 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
     generic_function_array_orth(nrows, fc, st, funcs, &ob);
     //printf("wwwhere\n");
     
+     struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
     for (jj = 0; jj < nrows; jj++){
-        qm->funcs[jj] = generic_function_copy(funcs[jj]);
-    }
-    for (jj = 0; jj < nrows; jj++){
-        for (ii = 1; ii < ncols; ii++){
-            qm->funcs[ii*nrows+jj] = generic_function_daxpby(0.0, funcs[jj], 0.0, NULL);
+        qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
         }
-        generic_function_free(funcs[jj]);funcs[jj] = NULL;
+        for (kk = onnon+1; kk < ncols; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == ncols){
+            generic_function_free(funcs[onorder]);
+            funcs[onorder] = NULL;
+            onorder = onorder+1;
+            onnon = 0;
+        }
     }
-
+    //printf("max order rows = %zu\n",onorder);
+    
+    generic_function_free(zero); zero = NULL;
     free(funcs); funcs=NULL;
 
     return qm;
