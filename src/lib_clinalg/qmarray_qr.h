@@ -40,7 +40,9 @@
 #ifndef QMARRAY_QR_H
 #define QMARRAY_QR_H
 
+#include "elements.h"
 int qmarray_qr(struct Qmarray *, struct Qmarray **, double **);
+int qmarray_lq(struct Qmarray *, struct Qmarray **, double **);
 
 #endif
 

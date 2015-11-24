@@ -34,7 +34,7 @@ int main(int argc, char * argv[])
         double * results = calloc_double(nranks*4);
         for (jj = 0; jj < nranks; jj++){
             for (kk = 1; kk < dim; kk++){
-                ranks[kk] = 4 + 1*jj;
+                ranks[kk] = 2 + 1*jj;
             }
 
             results[jj] = (double) ranks[1];
@@ -52,7 +52,8 @@ int main(int argc, char * argv[])
                 struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
 
                 clock_t tic = clock();
-                struct FunctionTrain * p = function_train_product(a,a);
+                struct FunctionTrain * at = function_train_product(a,a);
+                struct FunctionTrain * p = function_train_copy(at);
                 struct FunctionTrain * pr = function_train_round(p,1e-10);
                 clock_t toc = clock();
                 time += (double)(toc - tic) / CLOCKS_PER_SEC;
@@ -66,13 +67,16 @@ int main(int argc, char * argv[])
                 toc = clock();
                 time2 += (double)(toc - tic) / CLOCKS_PER_SEC;
 
-                double diff = function_train_relnorm2diff(pr,finish);
+                //double diff = function_train_relnorm2diff(pr,finish);
+                double diff = function_train_relnorm2diff(at,finish);
+                printf("diff = %G\n",diff);
                 assert (diff*diff < 1e-10);
                 function_train_free(p); p = NULL;
                 function_train_free(pr); p = NULL;
                 function_train_free(finish); finish=NULL;
 
                 function_train_free(a); a = NULL;
+                function_train_free(at); at = NULL;
                 function_train_free(start); start = NULL;
             }
             time /= nrepeat;

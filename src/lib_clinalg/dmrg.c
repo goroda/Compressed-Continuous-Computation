@@ -68,69 +68,16 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
     if (type == 0){
         qr->right = 0;
         qr->mr = a->nrows;
-        
-        double * L = calloc_double(a->nrows * a->nrows);
-        struct Qmarray * Q = qmarray_householder_simple("LQ",ac,L);
-        size_t ii = 1;
-        for (ii = 1; ii < a->nrows; ii++){
-            if (fabs(L[ii*a->nrows+ii]) < 1e-14){
-                break;
-            }
-        }
-        //if (ii == a->nrows){
-            qr->mat = L;
-            qr->Q = Q;
-            qr->mc = a->nrows;
-       // }
-      //  else{
-            //printf(" ii = %zu\n",ii);
-            //qr->mc = ii;
-      //      qr->mat = calloc_double(qr->mr * qr->mc);
-      //      qr->Q = qmarray_alloc(qr->mc,a->ncols);
-      //      size_t jj,kk;
-      //      for (jj = 0; jj < qr->mc; jj++){
-      //          for (kk = 0; kk < qr->mr; kk++){
-      //              qr->mat[kk+jj*qr->mr] = L[kk + jj*qr->mr];
-      //          }
-      //          for (kk = 0; kk < a->ncols; kk++){
-      //              qr->Q->funcs[jj+kk*qr->mc] = 
-      //                  generic_function_copy(Q->funcs[jj+kk*Q->nrows]);
-      //          }
-      //      }
-      //      qmarray_free(Q); Q = NULL;
-      //      free(L); L = NULL;
-      //  }
+        qr->mc = a->nrows;
+        int success = qmarray_lq(ac,&(qr->Q),&(qr->mat));
+        assert (success == 1);
     }
     else if (type == 1){
         qr->right = 1;
         qr->mc = a->ncols;
-
-        double * R = calloc_double(qr->mc * qr->mc);
-        struct Qmarray * Q = qmarray_householder_simple("QR",ac,R);
-        size_t ii = 1;
-        for (ii = 1; ii < qr->mc; ii++){
-            if (fabs(R[ii*qr->mc+ii]) < 1e-14){
-                break;
-            }
-        }
-        //if (ii == qr->mc){
-            qr->mat = R;
-            qr->Q = Q;
-            qr->mr = qr->mc;
-       // }
-       // else{
-            //qr->mr = ii;
-       //     qr->mat = calloc_double(qr->mr * qr->mc);
-       //     qr->Q = qmarray_extract_ncols(Q,qr->mr);
-       //     size_t jj,kk;
-       //     for (jj = 0; jj < qr->mc; jj++){
-       //         for (kk = 0; kk < qr->mr; kk++){
-       //             qr->mat[kk+jj*qr->mr] = R[kk + jj*a->ncols];
-       //         }
-       //     }
-       //     qmarray_free(Q); Q = NULL;
-       //     free(R); R = NULL;
-       // }
+        qr->mr = a->ncols;
+        int success = qmarray_qr(ac,&(qr->Q),&(qr->mat));
+        assert (success == 1);
     }
     else{
         fprintf(stderr, "Can't take reduced qr decomposition of type %d\n",type);

@@ -1967,6 +1967,7 @@ void orth_poly_expansion_scale(double a, struct OrthPolyExpansion * x)
     for (ii = 0; ii < x->num_poly; ii++){
         x->coeff[ii] *= a;
     }
+    orth_poly_expansion_round(&x);
 }
 
 /********************************************************//**
@@ -2102,7 +2103,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 
 /********************************************************//**
 *   Multiply by scalar and add two orthgonal 
-*   expansions of the same family together /f$ y \leftarrow ax + y
+*   expansions of the same family together \f[ y \leftarrow ax + y /f]
 *
 *   \param a [in] - scaling factor for first polynomial
 *   \param x [in] - first polynomial

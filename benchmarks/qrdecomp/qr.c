@@ -39,11 +39,13 @@ int main(int argc, char * argv[])
             
             for (jj = 0; jj < nrepeats; jj++){
                 struct Qmarray * mat = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
-                double * R = calloc_double(r2 * r2);
+                double * R = NULL;//calloc_double(r2 * r2);
+                struct Qmarray * Q = NULL;
 
                 // method 1
                 clock_t tic = clock();
-                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R);
+                qmarray_qr(mat,&Q,&R);
+                //qmarray_householder_simple("QR",mat,R);
                 clock_t toc = clock();
                 
                 results[nOrders+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;

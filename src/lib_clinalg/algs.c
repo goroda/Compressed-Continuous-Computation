@@ -44,6 +44,7 @@
 #include <assert.h>
 #include <float.h>
 
+#include "qmarray_qr.h"
 #include "lib_funcs.h"
 #include "algs.h"
 #include "array.h"
@@ -1802,7 +1803,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
     double temp1;
     
     //printf("ORTHONORMAL QMARRAY IS \n");
-    //print_qmarray(E,3,NULL);
+    //print_qmarray(E,0,NULL);
     //printf("qm array\n");
     for (ii = 0; ii < A->ncols; ii++){
         if (VQMAHOUSEHOLDER){
@@ -1886,6 +1887,8 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             printf(" \t ... sigma = %3.15G ZEROTHRESH=%3.15G\n",
                             sigma,ZEROTHRESH);
         }
+            //printf(" \t ... sigma = %3.15G ZEROTHRESH=%3.15G\n",
+            //                sigma,ZEROTHRESH);
         
         //printf("v2preqma = \n");
         //print_generic_function(v->funcs[0],3,NULL);
@@ -2251,32 +2254,18 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
    
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
+
+        //free(R); R = NULL;
+        //int out = qmarray_qr(A,&Q,&R);
+        //assert (out == 1);
         Q = qmarray_orth1d_columns(POLYNOMIAL, 
                         &ptype, A->nrows, ncols, lb, ub); 
-
         struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-        
-        //printf("here\n");
         int out = 0;
-
-        
-        //printf("orth=\n");
-        //print_qmarray(Q, 0, NULL);
         out = qmarray_householder(A,Q,V,R);
         assert(out == 0);
-        //printf("R=\n");
-        //dprint2d_col(A->ncols, A->ncols,R);
-        
-        //printf("there!\n");
-        /*
-        printf("V=\n");
-        print_qmarray(V, 0, NULL);
-        printf("orth after =\n");
-        print_qmarray(Q, 0, NULL);
-        */
         out = qmarray_qhouse(Q,V);
         assert(out == 0);
-
         qmarray_free(V);
     }
     else if (strcmp(dir, "LQ") == 0){
