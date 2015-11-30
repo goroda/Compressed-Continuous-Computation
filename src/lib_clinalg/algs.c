@@ -2316,6 +2316,21 @@ void qmarray_roundt(struct Qmarray ** qma, double epsilon)
     }
 }
 
+/***********************************************************//**
+    Evaluate a qmarray
+
+    \param qma [in] - quasimatrix array
+    \param x [in] - location at which to evaluate
+    \param out [in] - allocated array to store output (qma->nrows * qma->ncols)
+
+***************************************************************/
+void qmarray_eval(struct Qmarray * qma, double x, double * out)
+{
+    size_t ii;
+    for (ii = 0; ii < qma->nrows*qma->ncols; ii++){
+        out[ii] = generic_function_1d_eval(qma->funcs[ii],x);
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 // function_train

@@ -176,6 +176,9 @@ struct Qmarray * qmarray_stackv(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_deriv(struct Qmarray *);
 void qmarray_roundt(struct Qmarray **, double);
+
+void qmarray_eval(struct Qmarray *, double, double *);
+
 ////////////////////////////////////////////////////////////////////////////
 // function_train
 
