@@ -1846,7 +1846,7 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
                                  bds->lb[onDim], bds->ub[onDim], approx_opts);
     
     for (onDim = 1; onDim < dim-1; onDim++){
-        printf("on dimension (%zu/%zu)\n",onDim+1,dim);
+        //printf("on dimension (%zu/%zu)\n",onDim+1,dim);
         fc = ft_approx_args_getfc(ftargs_use, onDim);
         sub_type = ft_approx_args_getst(ftargs_use, onDim);
         approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);

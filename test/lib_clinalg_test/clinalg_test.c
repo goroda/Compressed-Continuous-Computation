@@ -354,13 +354,13 @@ void Test_quasimatrix_maxvol1d(CuTest * tc){
     struct Quasimatrix * A = quasimatrix_approx1d(
                         3, funcs, args, PIECEWISE, &p, -1.0, 1.0, NULL);
     
-    printf("got approximation\n");
+    //printf("got approximation\n");
     double * Asinv = calloc_double(3*3);
     double * piv = calloc_double(3);
     quasimatrix_maxvol1d(A,Asinv,piv);
      
-    printf("pivots at = \n");
-    dprint(3,piv);
+    //printf("pivots at = \n");
+    //dprint(3,piv);
 
     struct Quasimatrix * B = qmm(A,Asinv,3);
     double maxval, maxloc;
@@ -2219,7 +2219,7 @@ void Test_ftapprox_cross3(CuTest * tc)
     struct FtCrossArgs fca;
     fca.epsilon = 1e-4;
     fca.maxiter = 5;
-    fca.verbose = 2;
+    fca.verbose = 0;
     fca.dim = dim;
     fca.ranks = ranks;
 
@@ -2267,7 +2267,7 @@ void Test_ftapprox_cross3(CuTest * tc)
     }
 
     double err = sqrt(out1/den);
-    printf("err=%G\n",err);
+    //printf("err=%G\n",err);
     CuAssertDblEquals(tc,0.0,err,1e-10);
     //CuAssertDblEquals(tc,0.0,0.0,1e-15);
     //
@@ -2412,7 +2412,7 @@ void Test_sin10dint(CuTest * tc)
     double should = -0.62993525905472629935874873250680615583558172687;
 
     double relerr = fabs(intval-should)/fabs(should);
-    printf("Relative error of integrating 10 dimensional sin = %G\n",relerr);
+    //printf("Relative error of integrating 10 dimensional sin = %G\n",relerr);
     CuAssertDblEquals(tc,0.0,relerr,1e-12);
 
 
@@ -2623,8 +2623,8 @@ void Test_ftapprox_hess(CuTest * tc)
     struct FunctionTrain * ft = 
         function_train_cross(funcHess,NULL,bds,NULL,NULL,fapp);
     ft_approx_args_free(fapp);
-    printf("ranks are\n");
-    iprint_sz(dim+1,ft->ranks);
+    //printf("ranks are\n");
+    //iprint_sz(dim+1,ft->ranks);
     size_t N = 10;
     double * xtest = linspace(bds->lb[0],bds->ub[0],N);
     double err = 0.0;
@@ -2649,7 +2649,7 @@ void Test_ftapprox_hess(CuTest * tc)
     //printf("ft ranks = \n");
     //iprint_sz(dim+1,ft->ranks);
     err = sqrt(err/den);
-    printf("err=%G\n",err);
+    //printf("err=%G\n",err);
     CuAssertDblEquals(tc,0.0,err,1e-12);
     free(xtest); xtest = NULL;
 
@@ -2995,11 +2995,11 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-   // CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
-   // CuSuiteAddSuite(suite, ftr);
-   // CuSuiteAddSuite(suite, fta);
-   // CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, ftr);
+    CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
