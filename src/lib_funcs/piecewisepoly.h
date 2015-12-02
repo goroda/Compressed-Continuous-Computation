@@ -79,18 +79,24 @@ struct PiecewisePoly * piecewise_poly_alloc();
 struct PiecewisePoly ** piecewise_poly_array_alloc(size_t);
 struct PiecewisePoly * piecewise_poly_copy(struct PiecewisePoly *);
 void piecewise_poly_free(struct PiecewisePoly *);
+void piecewise_poly_array_free(struct PiecewisePoly **, size_t);
+
 struct PiecewisePoly * 
 piecewise_poly_constant(double, enum poly_type, double, double) ;
 struct PiecewisePoly * 
 piecewise_poly_linear(double, double, enum poly_type, double,  double);
 struct PiecewisePoly * 
 piecewise_poly_quadratic(double,double,double, enum poly_type, double, double);
+struct PiecewisePoly * 
+orth_poly_expansion_split(struct OrthPolyExpansion *, double);
 
 
 //basic functions to extract information
+int piecewise_poly_isflat(struct PiecewisePoly *);
 double piecewise_poly_lb(struct PiecewisePoly *);
 double piecewise_poly_ub(struct PiecewisePoly *);
-void piecewise_poly_nregions(size_t *, struct PiecewisePoly *);
+void piecewise_poly_nregions_base(size_t *, struct PiecewisePoly *);
+size_t piecewise_poly_nregions(struct PiecewisePoly *);
 void piecewise_poly_boundaries(struct PiecewisePoly *,size_t *,double **,size_t *);
 
 //operations using one piecewise poly
@@ -106,13 +112,16 @@ double piecewise_poly_norm(struct PiecewisePoly *);
 void piecewise_poly_flip_sign(struct PiecewisePoly *);
 
 
-//operations to generate modfied piecewise polynomials
+//operations to modfiy/generate modfied piecewise polynomials
+void piecewise_poly_copy_leaves(struct PiecewisePoly *, struct PiecewisePoly ** , size_t *);
+void piecewise_poly_ref_leaves(struct PiecewisePoly *, struct PiecewisePoly ** , size_t *);
+void piecewise_poly_flatten(struct PiecewisePoly *);
 struct PiecewisePoly * 
 piecewise_poly_finer_grid(struct PiecewisePoly *, size_t, double *);
 
 //operations using two piecewise polynomials
-//void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
-//                     struct PiecewisePoly *, struct PiecewisePoly **);
+void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
+                     struct PiecewisePoly *, struct PiecewisePoly **);
 struct PiecewisePoly *
 piecewise_poly_prod(struct PiecewisePoly *, struct PiecewisePoly *);
 double piecewise_poly_inner(struct PiecewisePoly *, struct PiecewisePoly *);

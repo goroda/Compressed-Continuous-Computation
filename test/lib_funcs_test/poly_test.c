@@ -569,7 +569,7 @@ void Test_legendre_axpy(CuTest * tc){
                             LEGENDRE,lb,ub, &opts);
     
     int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
-    CuAssertIntEquals(tc,1,success);
+    CuAssertIntEquals(tc,0,success);
     //print_orth_poly_expansion(cpoly3,0,NULL);
     
     size_t N = 100;
@@ -1281,6 +1281,54 @@ void Test_pw_approx1(CuTest * tc){
     free(xtest); xtest = NULL;
 }
 
+void Test_pw_flatten(CuTest * tc){
+   
+    printf("Testing functions: piecewise_poly_flatten \n");
+    
+    double lb = -5.0;
+    double ub = 1.0;
+
+    struct PwPolyAdaptOpts aopts;
+    aopts.ptype = LEGENDRE;
+    aopts.maxorder = 7;
+    aopts.minsize = 1e-2;
+    aopts.coeff_check = 2;
+    aopts.epsilon = 1e-3;
+    aopts.nregions = 5;
+    aopts.pts = NULL;
+
+
+    struct PiecewisePoly * p = 
+            piecewise_poly_approx1_adapt(pw_disc, NULL, lb, ub, &aopts);
+    
+    size_t nregions = piecewise_poly_nregions(p);
+    int isflat = piecewise_poly_isflat(p);
+    CuAssertIntEquals(tc,0,isflat);
+    piecewise_poly_flatten(p);
+    CuAssertIntEquals(tc,nregions,p->nbranches);
+    isflat = piecewise_poly_isflat(p);
+    CuAssertIntEquals(tc,1,isflat);
+    
+    size_t N = 100;
+    double * xtest = linspace(lb,ub,N);
+    double err = 0.0;
+    double errNorm = 0.0;
+    double diff;
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        diff = piecewise_poly_eval(p,xtest[ii]) - pw_disc(xtest[ii],NULL);
+        err += pow(diff,2);
+        errNorm += pow(pw_disc(xtest[ii],NULL),2);
+
+        //printf("x=%G, terr=%G\n",xtest[ii],terr);
+    }
+    err = sqrt(err / errNorm);
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
+    piecewise_poly_free(p); p = NULL;
+    free(xtest); xtest = NULL;
+}
+
 double pw_disc2(double x, void * args){
     
     assert ( args == NULL );
@@ -1292,7 +1340,6 @@ double pw_disc2(double x, void * args){
         return pow(x,2) + 2.0 * x;
     }
 }
-
 
 void Test_pw_integrate(CuTest * tc){
    
@@ -1623,8 +1670,8 @@ void Test_pw_real_roots(CuTest * tc){
     size_t nroots;
     double * roots = piecewise_poly_real_roots(pl, &nroots);
     
-    printf("roots are: (double roots in piecewise_poly)\n");
-    dprint(nroots, roots);
+    //printf("roots are: (double roots in piecewise_poly)\n");
+    //dprint(nroots, roots);
     
     CuAssertIntEquals(tc, 1, 1);
     /*
@@ -1728,8 +1775,7 @@ void Test_poly_match(CuTest * tc){
     struct PiecewisePoly * a = 
             piecewise_poly_approx1(pw_disc2, NULL, lb, ub, NULL);
 
-    size_t npa = 0;
-    piecewise_poly_nregions(&npa,a);
+    size_t npa = piecewise_poly_nregions(a);
     piecewise_poly_boundaries(a,&Na, &nodesa, NULL);
     CuAssertIntEquals(tc, npa, Na-1);
     CuAssertDblEquals(tc,-2.0,nodesa[0],1e-15);
@@ -1739,8 +1785,7 @@ void Test_poly_match(CuTest * tc){
             piecewise_poly_approx1(pw_disc, NULL, lb, ub, NULL);
     
     printf("got both\n");
-    size_t npb = 0;
-    piecewise_poly_nregions(&npb, b);
+    size_t npb = piecewise_poly_nregions(b);
     piecewise_poly_boundaries(b,&Nb, &nodesb, NULL);
     printf("got boundaries\n");
     CuAssertIntEquals(tc, npb, Nb-1);
@@ -1753,10 +1798,8 @@ void Test_poly_match(CuTest * tc){
     piecewise_poly_match(a,&aa,b,&bb);
     printf("matched\n");
 
-    size_t npaa = 0;
-    piecewise_poly_nregions(&npaa,aa);
-    size_t npbb = 0;
-    piecewise_poly_nregions(&npbb,bb);
+    size_t npaa = piecewise_poly_nregions(aa);
+    size_t npbb = piecewise_poly_nregions(bb);
     CuAssertIntEquals(tc,npaa,npbb);
 
     size_t Naa, Nbb;
@@ -1796,11 +1839,12 @@ CuSuite * PiecewisePolyGetSuite(){
     
     SUITE_ADD_TEST(suite, Test_pw_linear);
     SUITE_ADD_TEST(suite, Test_pw_quad);
-    SUITE_ADD_TEST(suite,Test_pw_approx);
-    SUITE_ADD_TEST(suite,Test_pw_approx_nonnormal);
-    SUITE_ADD_TEST(suite,Test_pw_approx1_adapt);
-    SUITE_ADD_TEST(suite,Test_pw_approx_adapt_weird);
+    SUITE_ADD_TEST(suite, Test_pw_approx);
+    SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_pw_approx1_adapt);
+    SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird);
     SUITE_ADD_TEST(suite, Test_pw_approx1);
+    SUITE_ADD_TEST(suite, Test_pw_flatten);
     SUITE_ADD_TEST(suite, Test_pw_integrate);
     SUITE_ADD_TEST(suite, Test_pw_integrate2);
     SUITE_ADD_TEST(suite, Test_pw_inner);
