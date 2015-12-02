@@ -461,6 +461,27 @@ piecewise_poly_eval(struct PiecewisePoly * poly, double x){
 }
 
 /********************************************************//**
+*   Scale a piecewise polynomial
+*
+*   \param a [in] - scale factors
+*   \param poly [inout] - pw poly
+
+*************************************************************/
+void piecewise_poly_scale(double a, struct PiecewisePoly * poly){
+    
+    if (poly->leaf == 1){
+        orth_poly_expansion_scale(a,poly->ope);
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < poly->nbranches; ii++){
+            piecewise_poly_scale(a,poly->branches[ii]);
+        }
+    }
+}
+
+
+/********************************************************//**
 *   Differentiate a piecewise polynomial
 *   
 *   \param p [in] - pw poly to differentiate (from the left)

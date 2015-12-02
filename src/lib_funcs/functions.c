@@ -817,7 +817,15 @@ double generic_function_inner(struct GenericFunction * a, struct GenericFunction
 
     switch (fc){
         case PIECEWISE:
-            //printf("in here\n");
+            if (ap == NULL){
+                //printf("anull\n");
+                ap = a->f;
+            }
+            if (bp == NULL){
+                //printf("bnull\n");
+                bp = b->f;
+            }
+            //printf("in here, ap==NULL=%d, bp==NULL=%d\n",ap==NULL,bp==NULL);
             //print_piecewise_poly(ap,3,NULL);
             //print_piecewise_poly(bp,3,NULL);
             out = piecewise_poly_inner(ap, bp);
@@ -1061,7 +1069,7 @@ generic_function_sum3_up(double a, struct GenericFunction * x,
 *   \param x [in] - first function
 *   \param y [inout] - second function
 *
-*   \param 1 if successfull, 0 if error
+*   \param 0 if successfull, 1 if error
 *
 *   \note
 *       Handling the function class of the output is not very smart
@@ -1075,9 +1083,11 @@ int generic_function_axpy(double a, struct GenericFunction * x,
     assert (x != NULL);
     assert (x->fc == y->fc);
 
-    int success = 0;
+    int success = 1;
     switch (x->fc){
         case PIECEWISE:
+            fprintf(stderr,"Error: axpy not implemented for piecewise polynomials\n");
+            exit(1);
             break;
         case POLYNOMIAL:
             success = orth_poly_expansion_axpy(a,x->f,y->f);
@@ -1216,6 +1226,7 @@ generic_function_daxpby(double a, struct GenericFunction * x,
                 bp = y->f;
             }
             pw = piecewise_poly_daxpby(a, ap, b, bp);
+            //printf("got it pw is null? %d\n",pw==NULL);
             /*
             printf("---\n");
             printf("a=%G\n",a);
@@ -1254,28 +1265,37 @@ generic_function_daxpby(double a, struct GenericFunction * x,
 *   \param z [inout] - Generic function is allocated but sub function (may) not be
 *
 *   \note
-*       Handling the function class of the output is not very smart
+*       Handling when dealing with PW poly is not yet good.
 ************************************************************/
 void
 generic_function_weighted_sum_pa(double a, struct GenericFunction * x, 
-        double b, struct GenericFunction * y, struct GenericFunction * z)
+        double b, struct GenericFunction * y, struct GenericFunction ** z)
 {
     assert (x != NULL);
     assert (y != NULL);
     if  (x->fc != y->fc){
-        fprintf(stderr, "generic_function_sum2 cannot yet handle generic functions with different function classes\n");
-        exit(1);
+        //printf("here\n");
+        generic_function_free(*z); *z = NULL;
+        *z = generic_function_daxpby(a,x,b,y);
+        assert ( (*z)->f != NULL);
+        //printf("there %d\n",(*z)->f == NULL);
+        //printf("xnull? %d ynull? %d\n",x->f==NULL,y->f==NULL);
+
+        //fprintf(stderr, "generic_function_weighted_sum_pa cannot yet handle generic functions with different function classes\n");
+        //fprintf(stderr, "type of x is %d and type of y is %d --- (0:PIECEWISE,1:POLYNOMIAL)\n",x->fc,y->fc);
+        //fprintf(stderr, "type of z is %d\n",z->fc);
+        //exit(1);
     }
     else{
         enum function_class fc = x->fc;
         if (fc == POLYNOMIAL){
-            if (z->f == NULL){
-                z->fc = POLYNOMIAL;
-                z->f = orth_poly_expansion_daxpby(
+            if ((*z)->f == NULL){
+                (*z)->fc = POLYNOMIAL;
+                (*z)->f = orth_poly_expansion_daxpby(
                             a, (struct OrthPolyExpansion *) x->f,
                             b, (struct OrthPolyExpansion *) y->f );
-                z->sub_type.ptype = LEGENDRE;
-                z->fargs = NULL;
+                (*z)->sub_type.ptype = LEGENDRE;
+                (*z)->fargs = NULL;
             }
             else{
                 fprintf(stderr, "cant handle overwriting functions yet\n");
@@ -1283,8 +1303,8 @@ generic_function_weighted_sum_pa(double a, struct GenericFunction * x,
             }
         }
         else{
-            generic_function_free(z); (z) = NULL;
-            z = generic_function_daxpby(a,x,b,y);
+            generic_function_free(*z); (*z) = NULL;
+            *z = generic_function_daxpby(a,x,b,y);
         }
     }
 }
@@ -1575,7 +1595,7 @@ void generic_function_scale(double a, struct GenericFunction * gf)
 {
      switch (gf->fc){
         case PIECEWISE:
-            fprintf(stderr, "SCALING NOT YET IMPLEMENTED FOR PIECEWISE\n");
+            piecewise_poly_scale(a,gf->f);
             break;
         case POLYNOMIAL:
             orth_poly_expansion_scale(a,gf->f);

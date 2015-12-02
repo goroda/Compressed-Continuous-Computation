@@ -2255,9 +2255,10 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
 
-        //free(R); R = NULL;
-        //int out = qmarray_qr(A,&Q,&R);
-        //assert (out == 1);
+        free(R); R = NULL;
+        int out = qmarray_qr(A,&Q,&R);
+        assert (out == 0);
+        /*
         Q = qmarray_orth1d_columns(POLYNOMIAL, 
                         &ptype, A->nrows, ncols, lb, ub); 
         struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
@@ -2267,6 +2268,7 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         out = qmarray_qhouse(Q,V);
         assert(out == 0);
         qmarray_free(V);
+        */
     }
     else if (strcmp(dir, "LQ") == 0){
         Q = qmarray_orth1d_rows(POLYNOMIAL, 

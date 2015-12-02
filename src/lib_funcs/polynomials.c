@@ -2181,7 +2181,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 *   \param x [in] - first polynomial
 *   \param y [in] - second polynomial
 *
-*   \return 1 if successfull 0 if error with allocating more space for y
+*   \return 0 if successfull 1 if error with allocating more space for y
 *
 *   \note 
 *       Computes z=ax+by, where x and y are polynomial expansionx
@@ -2251,7 +2251,7 @@ int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
         y->num_poly = nround;
 
     }
-    return 1;
+    return 0;
 }
 
 

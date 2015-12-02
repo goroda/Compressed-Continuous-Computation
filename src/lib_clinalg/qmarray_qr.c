@@ -62,8 +62,10 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
     enum poly_type ptype = LEGENDRE;
     *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
    // print_qmarray(*Q,0,NULL);
-
-    *R = calloc_double(ncols*ncols);
+    
+    if ((*R) == NULL){
+        *R = calloc_double(ncols*ncols);
+    }
     
     struct Qmarray * V = qmarray_alloc(nrows,ncols);
     for (ii = 0; ii < nrows * ncols; ii++){
@@ -93,10 +95,13 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         //should be able to get sigma without doing computation
         sigma = 0.0;
         for (kk = 0; kk < nrows; kk++){
+            //printf("kk = %zu\n",kk);
             generic_function_weighted_sum_pa(
                 rho,(*Q)->funcs[ii*nrows+kk],-1.0,A->funcs[ii*nrows+kk],
-                V->funcs[ii*nrows+kk]);
-                sigma += generic_function_inner(V->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
+                &(V->funcs[ii*nrows+kk]));
+            //printf("v is null? %d \n",V->funcs[ii*nrows+kk]->f == NULL);
+            sigma += generic_function_inner(V->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
+            //printf("take innert = %zu\n",kk);
         }
         sigma = sqrt(sigma);
 
@@ -121,10 +126,10 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
             (*R)[kk*ncols+ii] += (-2.0 * ev * temp);
             for (ll = 0; ll < nrows; ll++){
                 int success = generic_function_axpy(-2.0*temp,V->funcs[ii*nrows+ll],A->funcs[kk*nrows+ll]);
-                assert (success == 1);
+                assert (success == 0);
                 success = generic_function_axpy(-(*R)[kk*ncols+ii],
                         (*Q)->funcs[ii*nrows+ll],A->funcs[kk*nrows+ll]);
-                assert (success == 1);
+                assert (success == 0);
             }
         }
     }
@@ -151,7 +156,7 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
     }
     
     qmarray_free(V); V = NULL;
-    return 1;
+    return 0;
 }
 
 int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
@@ -166,7 +171,9 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
     enum poly_type ptype = LEGENDRE;
     *Q = qmarray_orth1d_rows(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
 
-    *L = calloc_double(nrows*nrows);
+    if ((*L) == NULL){
+        *L = calloc_double(nrows*nrows);
+    }
     
     struct Qmarray * V = qmarray_alloc(nrows,ncols);
     for (ii = 0; ii < nrows * ncols; ii++){
@@ -198,7 +205,7 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
         for (kk = 0; kk < ncols; kk++){
             generic_function_weighted_sum_pa(
                 rho,(*Q)->funcs[kk*nrows+ii],-1.0,A->funcs[kk*nrows+ii],
-                V->funcs[kk*nrows+ii]);
+                &(V->funcs[kk*nrows+ii]));
                 sigma += generic_function_inner(V->funcs[kk*nrows+ii],V->funcs[kk*nrows+ii]);
         }
         sigma = sqrt(sigma);
@@ -226,10 +233,10 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
             (*L)[ii*nrows+kk] += (-2.0 * ev * temp);
             for (ll = 0; ll < ncols; ll++){
                 int success = generic_function_axpy(-2.0*temp,V->funcs[ll*nrows+ii],A->funcs[ll*nrows+kk]);
-                assert (success == 1);
+                assert (success == 0);
                 success = generic_function_axpy(-(*L)[ii*nrows+kk],
                         (*Q)->funcs[ll*nrows+ii],A->funcs[ll*nrows+kk]);
-                assert (success == 1);
+                assert (success == 0);
             }
         }
     }
@@ -256,6 +263,6 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
     }
     
     qmarray_free(V); V = NULL;
-    return 1;
+    return 0;
 }
 

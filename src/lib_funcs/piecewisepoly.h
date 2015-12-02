@@ -95,6 +95,7 @@ void piecewise_poly_boundaries(struct PiecewisePoly *,size_t *,double **,size_t 
 
 //operations using one piecewise poly
 double piecewise_poly_eval(struct PiecewisePoly *, double);
+void piecewise_poly_scale(double, struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_deriv(struct PiecewisePoly *);
 double piecewise_poly_integrate(struct PiecewisePoly *);
 double * piecewise_poly_real_roots(struct PiecewisePoly *, size_t *);
@@ -110,8 +111,8 @@ struct PiecewisePoly *
 piecewise_poly_finer_grid(struct PiecewisePoly *, size_t, double *);
 
 //operations using two piecewise polynomials
-void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
-                     struct PiecewisePoly *, struct PiecewisePoly **);
+//void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
+//                     struct PiecewisePoly *, struct PiecewisePoly **);
 struct PiecewisePoly *
 piecewise_poly_prod(struct PiecewisePoly *, struct PiecewisePoly *);
 double piecewise_poly_inner(struct PiecewisePoly *, struct PiecewisePoly *);
