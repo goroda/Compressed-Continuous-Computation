@@ -87,9 +87,8 @@ struct PiecewisePoly *
 piecewise_poly_linear(double, double, enum poly_type, double,  double);
 struct PiecewisePoly * 
 piecewise_poly_quadratic(double,double,double, enum poly_type, double, double);
-struct PiecewisePoly * 
-orth_poly_expansion_split(struct OrthPolyExpansion *, double);
-
+void piecewise_poly_split(struct PiecewisePoly *, double);
+void piecewise_poly_splitn(struct PiecewisePoly *, size_t, double *);
 
 //basic functions to extract information
 int piecewise_poly_isflat(struct PiecewisePoly *);
