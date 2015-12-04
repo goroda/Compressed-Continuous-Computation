@@ -237,6 +237,28 @@ qmarray_extract_column(struct Qmarray * qma, size_t col)
 }
 
 /***********************************************************//**
+    Extract a copy of the first nkeep columns of a qmarray
+
+    \param a [in] - qmarray from which to extract columns
+    \param nkeep [in] : number of columns to extract
+
+    \return qm - qmarray
+***************************************************************/
+struct Qmarray * qmarray_extract_ncols(struct Qmarray * a, size_t nkeep)
+{
+    
+    struct Qmarray * qm = qmarray_alloc(a->nrows,nkeep);
+    size_t ii,jj;
+    for (ii = 0; ii < nkeep; ii++){
+        for (jj = 0; jj < a->nrows; jj++){
+            qm->funcs[ii*a->nrows+jj] = generic_function_copy(a->funcs[ii*a->nrows+jj]);
+        }
+    }
+    return qm;
+}
+
+
+/***********************************************************//**
     Extract a copy of a quasimatrix from a row of a qmarray
 
     \param qma [in] - qmarray
@@ -625,6 +647,7 @@ struct Qmarray * qmarray_alloc(size_t nrows, size_t ncols){
     return qm;
 }
 
+
 /***********************************************************//**
     Create a qmarray by approximating 1d functions
 
@@ -654,6 +677,30 @@ qmarray_approx1d(size_t nrows, size_t ncols,
     }
     return qm;
 }
+
+/********************************************************//**
+*    Create a qmarray consisting of pseudo-random orth poly expansion
+*   
+*   \param nrows [in] - number of rows
+*   \param ncols [in] - number of columns
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+*
+*   \return qm - qmarray
+************************************************************/
+struct Qmarray *
+qmarray_poly_randu(size_t nrows, size_t ncols, 
+    size_t maxorder, double lower, double upper)
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    size_t ii;
+    for (ii = 0; ii < nrows*ncols; ii++){
+        qm->funcs[ii] = generic_function_poly_randu(maxorder,lower,upper);
+    }
+    return qm;
+}
+
 
 /***********************************************************//**
     Create a qmarray from a fiber_cuts array
@@ -716,21 +763,39 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj;
+    size_t ii, jj,kk;
     for (ii = 0; ii < ncols; ii++){
         funcs[ii] = NULL;
     }
     generic_function_array_orth(ncols, fc, st, funcs, &ob);
     
+    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
     for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows] = generic_function_copy(funcs[jj]);
-        for (ii = 1; ii < nrows; ii++){
-            qm->funcs[jj*nrows+ii] = generic_function_daxpby(0.0, funcs[jj], 0.0, NULL);
+        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
         }
-        generic_function_free(funcs[jj]);funcs[jj] = NULL;
+        for (kk = onnon+1; kk < nrows; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == nrows){
+            //generic_function_free(funcs[onorder]);
+            //funcs[onorder] = NULL;
+            onorder = onorder+1;
+            onnon = 0;
+        }
     }
-
+    //printf("max order cols = %zu\n",onorder);
+    for (ii = 0; ii < ncols;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
     free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
 
     return qm;
 }
@@ -765,23 +830,40 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj;
+    size_t ii, jj,kk;
     for (ii = 0; ii < nrows; ii++){
         funcs[ii] = NULL;
     }
+    //printf("wwwhat\n");
     generic_function_array_orth(nrows, fc, st, funcs, &ob);
+    //printf("wwwhere\n");
     
+     struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
     for (jj = 0; jj < nrows; jj++){
-        qm->funcs[jj] = generic_function_copy(funcs[jj]);
-    }
-    for (jj = 0; jj < nrows; jj++){
-        for (ii = 1; ii < ncols; ii++){
-            qm->funcs[ii*nrows+jj] = generic_function_daxpby(0.0, funcs[jj], 0.0, NULL);
+        qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
         }
-        generic_function_free(funcs[jj]);funcs[jj] = NULL;
+        for (kk = onnon+1; kk < ncols; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == ncols){
+            onorder = onorder+1;
+            onnon = 0;
+        }
     }
-
+    //printf("max order rows = %zu\n",onorder);
+    
+    for (ii = 0; ii < nrows;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
     free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
 
     return qm;
 }
@@ -1127,6 +1209,30 @@ void function_train_free(struct FunctionTrain * ft)
         free(ft->cores); ft->cores=NULL;
         free(ft); ft = NULL;
     }
+}
+
+/********************************************************//**
+*    Create a functiontrain consisting of pseudo-random orth poly expansion
+*   
+*   \param bds [in] - boundaries
+*   \param ranks [in] - (dim+1,1) array of ranks
+*   \param maxorder [in] - maximum order of the polynomial
+*
+*   \return ft - runction train
+************************************************************/
+struct FunctionTrain *
+function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxorder)
+{
+    size_t dim = bds->dim;
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    memmove(ft->ranks,ranks, (dim+1)*sizeof(size_t));
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        ft->cores[ii] = qmarray_poly_randu(ranks[ii],ranks[ii+1],maxorder,
+                            bds->lb[ii],bds->ub[ii]);
+    }
+    return ft;
 }
 
 /***********************************************************//**
@@ -1740,7 +1846,7 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
                                  bds->lb[onDim], bds->ub[onDim], approx_opts);
     
     for (onDim = 1; onDim < dim-1; onDim++){
-        printf("on dimension (%zu/%zu)\n",onDim+1,dim);
+        //printf("on dimension (%zu/%zu)\n",onDim+1,dim);
         fc = ft_approx_args_getfc(ftargs_use, onDim);
         sub_type = ft_approx_args_getst(ftargs_use, onDim);
         approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);

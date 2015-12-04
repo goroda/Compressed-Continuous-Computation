@@ -147,6 +147,27 @@ void bounding_box_free(struct BoundingBox * b)
 }
 
 /********************************************************//**
+    Allocate memory for a generic function without specifying class or sub_type
+
+    \param dim [in] - dimension of functions
+
+    \return out - generic function
+************************************************************/
+struct GenericFunction * generic_function_alloc_base(size_t dim)
+{
+    struct GenericFunction * out;
+    if (NULL == ( out = malloc(sizeof(struct GenericFunction)))){
+        fprintf(stderr, "failed to allocate for a generic function.\n");
+        exit(1);
+    }
+    out->dim = dim;
+    out->fargs = NULL;
+    out->f = NULL;
+    return out;
+}
+
+
+/********************************************************//**
     Allocate memory for a generic function of a particular
     function class
 
@@ -260,6 +281,26 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
 }
 
 /********************************************************//**
+    Create a pseudo-random polynomial generic function 
+
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+
+    \return gf - generic function
+************************************************************/
+struct GenericFunction * 
+generic_function_poly_randu(size_t maxorder, double lower, double upper)
+{
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type sub_type = LEGENDRE;
+    struct GenericFunction * gf = generic_function_alloc(1,fc,&sub_type);
+    gf->f = orth_poly_expansion_randu(sub_type,maxorder,lower,upper);
+    gf->fargs = NULL;
+    return gf;
+}
+
+/********************************************************//**
     Take the derivative of a generic function
 
     \param gf [in] - generic function
@@ -320,6 +361,34 @@ generic_function_copy(struct GenericFunction * gf)
     }
     return out;
 }
+
+/********************************************************//**
+    Copy a generic function to a preallocated generic function
+
+    \param gf [in] - generic function
+    \param gfpa [inout] - preallocated function
+
+************************************************************/
+void generic_function_copy_pa(struct GenericFunction * gf, struct GenericFunction * gfpa)
+{
+    switch (gf->fc){
+        case PIECEWISE:
+            gfpa->fc = gf->fc;
+            gfpa->sub_type.ptype = gf->sub_type.ptype;
+            gfpa->f = piecewise_poly_copy(gf->f);
+            break;
+        case POLYNOMIAL:
+            gfpa->fc = gf->fc;
+            gfpa->sub_type.ptype = gf->sub_type.ptype;
+            gfpa->f = orth_poly_expansion_copy(gf->f); 
+            break;    
+        case RATIONAL:
+            break;
+        case KERNEL:
+            break;
+    }
+}
+
 
 /********************************************************//**
     Free memory for generic function
@@ -495,8 +564,11 @@ deserialize_generic_function(unsigned char * ser,
 ************************************************************/
 double generic_function_norm(struct GenericFunction * f){
     double out = generic_function_inner(f,f);
-    if (out < 0.0)
-        out = 0.0;
+
+    if (out < 0.0){
+        fprintf(stderr, "Norm of a function cannot be negative %G\n",out);
+        exit(1);
+    }
     //assert (out > -1e-15);
     return sqrt(out);
 }
@@ -578,7 +650,46 @@ struct GenericFunction *
 generic_function_sum_prod(size_t n, size_t lda,  struct GenericFunction ** a, 
                 size_t ldb, struct GenericFunction ** b)
 {
-    size_t ii = 0;
+    size_t ii;
+    int allpoly = 1;
+    for (ii = 0; ii < n; ii++){
+        if (a[ii*lda]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+        if (b[ii*ldb]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+    }
+
+    if (allpoly == 1){
+        struct OrthPolyExpansion ** aa = NULL;
+        struct OrthPolyExpansion ** bb= NULL;
+        if (NULL == (aa = malloc(n * sizeof(struct OrthPolyExpansion *)))){
+            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
+            exit(1);
+        }
+        if (NULL == (bb = malloc(n * sizeof(struct OrthPolyExpansion *)))){
+            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
+            exit(1);
+        }
+        for  (ii = 0; ii < n; ii++){
+            aa[ii] = a[ii*lda]->f;
+            bb[ii] = b[ii*ldb]->f;
+        }
+        
+        struct GenericFunction * gf = generic_function_alloc(1,a[0]->fc,&(a[0]->sub_type.ptype));
+        gf->f = orth_poly_expansion_sum_prod(n,1,aa,1,bb);
+        gf->fargs = NULL;
+        free(aa); aa = NULL;
+        free(bb); bb = NULL;
+
+        assert (gf->f != NULL);
+        return gf;
+    }
+
+    ii = 0;
     struct GenericFunction * out = generic_function_prod(a[lda*ii],b[ldb*ii]);
     struct GenericFunction * out2 = NULL;
     struct GenericFunction * temp = NULL;
@@ -706,7 +817,15 @@ double generic_function_inner(struct GenericFunction * a, struct GenericFunction
 
     switch (fc){
         case PIECEWISE:
-            //printf("in here\n");
+            if (ap == NULL){
+                //printf("anull\n");
+                ap = a->f;
+            }
+            if (bp == NULL){
+                //printf("bnull\n");
+                bp = b->f;
+            }
+            //printf("in here, ap==NULL=%d, bp==NULL=%d\n",ap==NULL,bp==NULL);
             //print_piecewise_poly(ap,3,NULL);
             //print_piecewise_poly(bp,3,NULL);
             out = piecewise_poly_inner(ap, bp);
@@ -917,6 +1036,72 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
 }
 
 /********************************************************//**
+*   Multiply and add 3 functions \f$ z \leftarrow ax + by + cz \f$
+*
+*   \param a [in] - first scaling factor 
+*   \param x [in] - first function
+*   \param b [in] - second scaling factor 
+*   \param y [in] - second function
+*   \param c [in] - third scaling factor 
+*   \param z [in] - third function
+*
+*************************************************************/
+void
+generic_function_sum3_up(double a, struct GenericFunction * x,
+                         double b, struct GenericFunction * y,
+                         double c, struct GenericFunction * z)
+{
+    if ( x->fc != POLYNOMIAL){
+        fprintf(stderr, "Have not yet implemented generic_function_sum3_up \n");
+        fprintf(stderr, "for functions other than polynomials\n");
+        exit(1);
+    }
+    assert (x->fc == y->fc);
+    assert (y->fc == z->fc);
+    
+    orth_poly_expansion_sum3_up(a,x->f,b,y->f,c,z->f);
+}
+
+/********************************************************//**
+*   Add two generic functions \f$ y \leftarrow  = ax + y
+*
+*   \param a [in] - scaling of first function
+*   \param x [in] - first function
+*   \param y [inout] - second function
+*
+*   \param 0 if successfull, 1 if error
+*
+*   \note
+*       Handling the function class of the output is not very smart
+************************************************************/
+int generic_function_axpy(double a, struct GenericFunction * x, 
+            struct GenericFunction * y)
+{
+    //printf("in here! a =%G b = %G\n",a,b);
+
+    assert (y != NULL);
+    assert (x != NULL);
+    assert (x->fc == y->fc);
+
+    int success = 1;
+    switch (x->fc){
+        case PIECEWISE:
+            fprintf(stderr,"Error: axpy not implemented for piecewise polynomials\n");
+            exit(1);
+            break;
+        case POLYNOMIAL:
+            success = orth_poly_expansion_axpy(a,x->f,y->f);
+            break;    
+        case RATIONAL:
+            break;
+        case KERNEL:
+            break;
+    }
+    
+    return success;
+}
+
+/********************************************************//**
 *   Add two generic functions z = ax + by
 *
 *   \param a [in] - scaling of first function
@@ -930,8 +1115,8 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
 *       Handling the function class of the output is not very smart
 ************************************************************/
 struct GenericFunction * 
-generic_function_daxpby(double a, struct GenericFunction * x, double b,
-                struct GenericFunction * y)
+generic_function_daxpby(double a, struct GenericFunction * x, 
+            double b, struct GenericFunction * y)
 {
     //printf("in here! a =%G b = %G\n",a,b);
 
@@ -1041,6 +1226,7 @@ generic_function_daxpby(double a, struct GenericFunction * x, double b,
                 bp = y->f;
             }
             pw = piecewise_poly_daxpby(a, ap, b, bp);
+            //printf("got it pw is null? %d\n",pw==NULL);
             /*
             printf("---\n");
             printf("a=%G\n",a);
@@ -1068,6 +1254,61 @@ generic_function_daxpby(double a, struct GenericFunction * x, double b,
     //printf("in there!|n");
     return out;
 }
+
+/********************************************************//**
+*   Add two generic functions z = ax + by where z is preallocated (pa)
+*
+*   \param a [in] - scaling of first function 
+*   \param x [in] - first function (NOT NULL)
+*   \param b [in] - scaling of second function
+*   \param y [in] - second function (NOT NULL)
+*   \param z [inout] - Generic function is allocated but sub function (may) not be
+*
+*   \note
+*       Handling when dealing with PW poly is not yet good.
+************************************************************/
+void
+generic_function_weighted_sum_pa(double a, struct GenericFunction * x, 
+        double b, struct GenericFunction * y, struct GenericFunction ** z)
+{
+    assert (x != NULL);
+    assert (y != NULL);
+    if  (x->fc != y->fc){
+        //printf("here\n");
+        generic_function_free(*z); *z = NULL;
+        *z = generic_function_daxpby(a,x,b,y);
+        assert ( (*z)->f != NULL);
+        //printf("there %d\n",(*z)->f == NULL);
+        //printf("xnull? %d ynull? %d\n",x->f==NULL,y->f==NULL);
+
+        //fprintf(stderr, "generic_function_weighted_sum_pa cannot yet handle generic functions with different function classes\n");
+        //fprintf(stderr, "type of x is %d and type of y is %d --- (0:PIECEWISE,1:POLYNOMIAL)\n",x->fc,y->fc);
+        //fprintf(stderr, "type of z is %d\n",z->fc);
+        //exit(1);
+    }
+    else{
+        enum function_class fc = x->fc;
+        if (fc == POLYNOMIAL){
+            if ((*z)->f == NULL){
+                (*z)->fc = POLYNOMIAL;
+                (*z)->f = orth_poly_expansion_daxpby(
+                            a, (struct OrthPolyExpansion *) x->f,
+                            b, (struct OrthPolyExpansion *) y->f );
+                (*z)->sub_type.ptype = LEGENDRE;
+                (*z)->fargs = NULL;
+            }
+            else{
+                fprintf(stderr, "cant handle overwriting functions yet\n");
+                exit(1);
+            }
+        }
+        else{
+            generic_function_free(*z); (*z) = NULL;
+            *z = generic_function_daxpby(a,x,b,y);
+        }
+    }
+}
+
 
 /********************************************************//**
 *   Compute axpby for a an array of generic functions
@@ -1209,11 +1450,11 @@ generic_function_lin_comb(size_t n, struct GenericFunction ** gfarray,
 *   \param ldc [in] - stride of coefficents
 *   \param c [in] - scaling coefficients
 *
-*   \return out  = sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]]
+*   \return out  = \f$sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 ************************************************************/
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 
-                struct GenericFunction ** gfa, size_t ldc, double * c)
+        struct GenericFunction ** gfa, size_t ldc, double * c)
 {
     // this function is not optimal
     struct GenericFunction * out = NULL;
@@ -1224,6 +1465,35 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
         out = generic_function_daxpby(c[0],gfa[0], 0.0, NULL);
     }
     else{
+
+        int allpoly = 1;
+        for (ii = 0; ii < n; ii++){
+            if (gfa[ii*ldgf]->fc != POLYNOMIAL){
+                allpoly = 0;
+                break;
+            }
+        }
+
+        if (allpoly == 1){
+            struct OrthPolyExpansion ** xx = NULL;
+            if (NULL == (xx = malloc(n * sizeof(struct OrthPolyExpansion *)))){
+                fprintf(stderr, "failed to allocate memmory in generic_function_lin_comb2\n");
+                exit(1);
+            }
+            for  (ii = 0; ii < n; ii++){
+                xx[ii] = gfa[ii*ldgf]->f;
+            }
+            
+            struct GenericFunction * gf = generic_function_alloc(1,gfa[0]->fc,&(gfa[0]->sub_type.ptype));
+            gf->f = orth_poly_expansion_lin_comb(n,1,xx,ldc,c);
+            gf->fargs = NULL;
+            free(xx); xx = NULL;
+
+            assert (gf->f != NULL);
+            return gf;
+        }
+
+
         temp1 = generic_function_daxpby(c[0],gfa[0],c[ldc],gfa[ldgf]);
         for (ii = 2; ii < n; ii++){
             if (ii % 2 == 0){
@@ -1325,7 +1595,7 @@ void generic_function_scale(double a, struct GenericFunction * gf)
 {
      switch (gf->fc){
         case PIECEWISE:
-            fprintf(stderr, "SCALING NOT YET IMPLEMENTED FOR PIECEWISE\n");
+            piecewise_poly_scale(a,gf->f);
             break;
         case POLYNOMIAL:
             orth_poly_expansion_scale(a,gf->f);

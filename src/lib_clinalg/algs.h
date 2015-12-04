@@ -142,12 +142,18 @@ struct Qmarray * qmaqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqma(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmaqmat(struct Qmarray * a, struct Qmarray * b);
 struct Qmarray * qmatqmat(struct Qmarray * a, struct Qmarray * b);
+double * qmatqma_integrate(struct Qmarray *, struct Qmarray *);
+double * qmaqmat_integrate(struct Qmarray *, struct Qmarray *);
 double * qmatqmat_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_kron(struct Qmarray *, struct Qmarray *);
+double * qmarray_kron_integrate(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_vec_kron_integrate(double *, struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_mat_kron(size_t, double *, struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_kron_mat(size_t, double *, struct Qmarray *, struct Qmarray *);
 double * qmarray_integrate(struct Qmarray *);
 double qmarray_norm2diff(struct Qmarray *, struct Qmarray *);
+double qmarray_norm2(struct Qmarray *);
 
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 
@@ -193,6 +199,7 @@ double function_train_integrate(struct FunctionTrain *);
 double function_train_inner(struct FunctionTrain *, struct FunctionTrain *);
 double function_train_norm2(struct FunctionTrain *);
 double function_train_norm2diff(struct FunctionTrain *, struct FunctionTrain *);
+double function_train_relnorm2diff(struct FunctionTrain *, struct FunctionTrain *);
 
 struct FT1DArray * function_train_gradient(struct FunctionTrain *);
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray *);

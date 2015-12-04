@@ -49,7 +49,7 @@
 #include "polynomials.h"
 #include "piecewisepoly.h"
 
-#define ZEROTHRESH  2e0 * DBL_EPSILON
+//#define ZEROTHRESH  2e0 * DBL_EPSILON
 
 struct PwCouple
 {
@@ -179,7 +179,7 @@ struct PiecewisePoly **
 piecewise_poly_array_alloc(size_t size)
 {
     struct PiecewisePoly ** p;
-    if ( NULL == (p = malloc(size*sizeof(struct PiecewisePoly)))){
+    if ( NULL == (p = malloc(size*sizeof(struct PiecewisePoly *)))){
         fprintf(stderr,"failed to allocate memory for \
                         piecewise polynomial.\n");
         exit(1);
@@ -243,6 +243,28 @@ piecewise_poly_free(struct PiecewisePoly * poly){
             }
             free(poly->branches);
             poly->branches = NULL;
+        }
+        free(poly);
+        poly = NULL;
+    }
+}
+
+/********************************************************//**
+*   Free memory allocated for piecewise polynomial array
+*
+*   \param poly [inout] - polynomial to free
+*   \param n [in] - number of elements in the array
+*
+*************************************************************/
+void piecewise_poly_array_free(struct PiecewisePoly ** poly, size_t n)
+{
+    
+    if (poly != NULL)
+    {   
+        size_t ii;
+        for (ii = 0; ii < n; ii++){
+            piecewise_poly_free(poly[ii]);
+            poly[ii] = NULL;
         }
         free(poly);
         poly = NULL;
@@ -315,6 +337,110 @@ piecewise_poly_quadratic(double a, double b, double c, enum poly_type ptype,
     return p;
 }
 
+/********************************************************//**
+*   Split a pw-poly leaf into two parts
+*
+*   \param pw [in] - polynomial to split
+*   \param loc [in] - location to split a
+*
+*************************************************************/
+void
+orth_poly_expansion_split(struct PiecewisePoly * pw, double loc)
+{
+    assert (pw->leaf == 1);
+    struct OrthPolyExpansion * ope = pw->ope;
+
+    double lb = ope->lower_bound;
+    double ub = ope->upper_bound;
+    assert (loc > lb);
+    assert (loc < ub);
+
+    pw->leaf = 0;
+    pw->nbranches = 2;
+    pw->branches = piecewise_poly_array_alloc(2);
+
+    enum poly_type pt = ope->p->ptype;
+
+    pw->branches[0] = piecewise_poly_alloc();
+    pw->branches[0]->leaf = 1;
+    pw->branches[0]->branches = NULL;
+    pw->branches[0]->ope = orth_poly_expansion_init(pt,ope->num_poly,lb,loc);
+    orth_poly_expansion_approx(pw_eval_ope,ope,pw->branches[0]->ope);
+    orth_poly_expansion_round(&(pw->branches[0]->ope));
+
+    pw->branches[1] = piecewise_poly_alloc();
+    pw->branches[1]->leaf = 1;
+    pw->branches[1]->branches = NULL;
+    pw->branches[1]->ope = orth_poly_expansion_init(pt,ope->num_poly,loc,ub);
+    orth_poly_expansion_approx(pw_eval_ope,ope,pw->branches[1]->ope);
+    orth_poly_expansion_round(&(pw->branches[1]->ope));
+    
+    orth_poly_expansion_free(pw->ope);
+    pw->ope = NULL;
+}
+
+/********************************************************//**
+*   Split a pw-poly leaf 
+*
+*   \param pw [inout] - polynomial to split (leaf of a pw polynomial)
+*   \param N [in] - number of boundaries (including global lb and ub)
+*   \param bounds [in] - boundaries to split it into
+
+*************************************************************/
+void piecewise_poly_splitn(struct PiecewisePoly * pw, size_t N, double * bounds)
+{
+    assert(pw->leaf == 1);
+    struct OrthPolyExpansion * ope = pw->ope;
+
+    double lb = ope->lower_bound;
+    double ub = ope->upper_bound;
+    assert (fabs(bounds[0]- lb) == 0.0);
+    assert (fabs(bounds[N-1]-ub) == 0.0);
+
+    pw->leaf = 0;
+    pw->nbranches = N-1;
+    pw->branches = piecewise_poly_array_alloc(N-1);
+
+    enum poly_type pt = ope->p->ptype;
+    
+    size_t ii;
+    for (ii = 0; ii < N-1; ii++){
+        pw->branches[ii] = piecewise_poly_alloc();
+        pw->branches[ii]->leaf = 1;
+        pw->branches[ii]->branches = NULL;
+        pw->branches[ii]->ope = orth_poly_expansion_init(pt,ope->num_poly,bounds[ii],bounds[ii+1]);
+        orth_poly_expansion_approx(pw_eval_ope,ope,pw->branches[ii]->ope);
+        orth_poly_expansion_round(&(pw->branches[ii]->ope));
+    }
+    orth_poly_expansion_free(pw->ope);
+    pw->ope = NULL;
+}
+
+
+
+/********************************************************//**
+*   Determine if the tree is flat (only leaves);   
+*
+*   \param p [in] - pw poly
+*
+*   \return 1 if flat, 0 if not
+*************************************************************/
+int piecewise_poly_isflat(struct PiecewisePoly * p)
+{
+    if (p->leaf == 1){
+        return 1;
+    }
+
+    int flat = 1;
+    size_t ii;
+    for (ii = 0; ii < p->nbranches; ii++){
+        if (p->branches[ii]->leaf != 1){
+            flat = 0;
+            break;
+        }
+    }
+    return flat;
+}
 
 /********************************************************//**
 *   Get the lower bound of the space on which a pw polynomial
@@ -355,12 +481,12 @@ double piecewise_poly_ub(struct PiecewisePoly * a)
 }
 
 /********************************************************//**
-*   Get number of pieces in a piecewise poly
+*   Get number of pieces in a piecewise poly base function
 *
 *   \param a [in] - pw polynomial
-*   \param N [inout] - number of pieces
+*   \param N [inout] - number of pieces (must preset to 0!!!)
 *************************************************************/
-void piecewise_poly_nregions(size_t * N, struct PiecewisePoly * a)
+void piecewise_poly_nregions_base(size_t * N, struct PiecewisePoly * a)
 {
     if (a->leaf == 1){
         *N = *N + 1;
@@ -368,11 +494,22 @@ void piecewise_poly_nregions(size_t * N, struct PiecewisePoly * a)
     else{
         size_t ii;
         for (ii = 0; ii < a->nbranches; ii++){
-            piecewise_poly_nregions(N,a->branches[ii]);
+            piecewise_poly_nregions_base(N,a->branches[ii]);
         }
     }
 }
 
+/********************************************************//**
+*   Get number of pieces in a piecewise poly 
+*
+*   \param a [in] - pw polynomial
+*************************************************************/
+size_t piecewise_poly_nregions(struct PiecewisePoly * a)
+{
+    size_t N = 0;
+    piecewise_poly_nregions_base(&N,a);
+    return N;
+}
 
 /********************************************************//**
 *   Get boundary nodes between piecewise polynomials
@@ -398,8 +535,7 @@ piecewise_poly_boundaries(struct PiecewisePoly * a, size_t *N,
             size_t * onNum)
 {
     if (*nodes == NULL){ // first allocate required number of nodes
-        size_t nregions = 0;
-        piecewise_poly_nregions(&nregions,a);
+        size_t nregions = piecewise_poly_nregions(a);
         *N = nregions + 1;
         *nodes = calloc_double(*N);
         if ((*N) == 2){
@@ -459,6 +595,27 @@ piecewise_poly_eval(struct PiecewisePoly * poly, double x){
     }
     return out;
 }
+
+/********************************************************//**
+*   Scale a piecewise polynomial
+*
+*   \param a [in] - scale factors
+*   \param poly [inout] - pw poly
+
+*************************************************************/
+void piecewise_poly_scale(double a, struct PiecewisePoly * poly){
+    
+    if (poly->leaf == 1){
+        orth_poly_expansion_scale(a,poly->ope);
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < poly->nbranches; ii++){
+            piecewise_poly_scale(a,poly->branches[ii]);
+        }
+    }
+}
+
 
 /********************************************************//**
 *   Differentiate a piecewise polynomial
@@ -734,11 +891,96 @@ piecewise_poly_flip_sign(struct PiecewisePoly * p)
 /////////////////////////////////////////////////////////////////////////
 
 /********************************************************//**
+*   Create a PW-Poly array of copies of each leaf
+*
+*   \param p [in] - pw poly whose leaves to copy
+*   \param branches [in] - list of references to leaves
+*   \param onbranch [inout] - location of branches
+*
+*************************************************************/
+void piecewise_poly_copy_leaves(struct PiecewisePoly * p,
+        struct PiecewisePoly ** branches, size_t * onbranch)
+{
+
+    if (p->leaf == 1){
+        branches[*onbranch] = piecewise_poly_copy(p);
+        (*onbranch) = (*onbranch) + 1;
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < p->nbranches; ii++){
+            piecewise_poly_copy_leaves(p->branches[ii],branches,onbranch);
+        }
+    }
+}
+
+/********************************************************//**
+*   Create a PW-Poly array of references to each leaf
+*
+*   \param p [in] - pw poly whose leaves to copy
+*   \param branches [in] - list of references to leaves
+*   \param onbranch [inout] - location of branches
+*
+*************************************************************/
+void piecewise_poly_ref_leaves(struct PiecewisePoly * p,
+        struct PiecewisePoly ** branches, size_t * onbranch)
+{
+
+    if (p->leaf == 1){
+        branches[*onbranch] = p;
+        (*onbranch) = (*onbranch) + 1;
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < p->nbranches; ii++){
+            piecewise_poly_ref_leaves(p->branches[ii],branches,onbranch);
+        }
+    }
+}
+
+
+/********************************************************//**
+*   Flatten a piecewise polynomial (make it so each branch is a leaf)
+*
+*   \param p [inout] - pw poly whose leaves to copy
+*
+*   \note
+*       Should figure out how to do this without copying the leaves
+*       but just referencing them. When I did just reference them I had
+*       memory leaks
+*************************************************************/
+void piecewise_poly_flatten(struct PiecewisePoly * p)
+{
+    int isflat = piecewise_poly_isflat(p);
+    if (isflat == 0){
+        size_t nregions = piecewise_poly_nregions(p);
+        struct PiecewisePoly ** newbranches = 
+            piecewise_poly_array_alloc(nregions);
+    
+        size_t onregion = 0;
+        size_t ii;
+        for (ii = 0; ii < p->nbranches; ii++){
+            piecewise_poly_copy_leaves(p->branches[ii],
+                                        newbranches,&onregion);
+            //piecewise_poly_ref_leaves(p->branches[ii],
+            //                            newbranches,&onregion);
+        }
+
+        piecewise_poly_array_free(p->branches,p->nbranches);
+        //free(p->branches); p->branches = NULL;
+        p->nbranches = nregions;
+        p->branches = newbranches;
+        p->ope = NULL;
+        p->leaf = 0;
+    }
+}
+
+/********************************************************//**
 *   Reapproximate a piecewise poly on a finer grid.
 *
 *   \param a [in] - pw polynomial to reapproximate
 *   \param N [in] - number of nodes (including lb,ub)
-*   \param nodes [in] - nodes at which to approximate (includes lb,ub);
+*   \param nodes [in] - nodes defining boundaries of each region
 *
 *   \note
 *       Each of the new pieces must be fully encompassed by an old piece
@@ -840,7 +1082,35 @@ piecewise_poly_inner(struct PiecewisePoly * a, struct PiecewisePoly * b)
     return out;
 }
 
-
+/********************************************************//**
+*   Add two piecewise polynomials \f$ y \leftarrow ax + y \f$
+*
+*   \param a [in] - scaling of first function
+*   \param x [inout] - first function (potentially it is flattened or split)
+*   \param y [inout] - second function
+*
+*   \return 0 if successful, 1 if error
+*
+************************************************************/
+int piecewise_poly_axpy(double a, struct PiecewisePoly * x, 
+            struct PiecewisePoly * y)
+{   
+    
+    //piecewise_poly_match1(x,y);
+    piecewise_poly_flatten(x);
+    piecewise_poly_flatten(y);
+    
+    int success = 1;
+    fprintf(stderr, "piecewise_poly_axpy not implemented yet\n");
+    size_t ii;
+    for (ii = 0; ii < y->nbranches; ii++){
+        success = orth_poly_expansion_axpy(a,x->branches[ii]->ope,y->branches[ii]->ope);
+        if (success == 1){
+            return success;
+        }
+    }
+    return success;
+}
 
 /********************************************************//**
 *   Multiply by scalar and add two PwPolynomials
@@ -998,6 +1268,50 @@ piecewise_poly_matched_prod(struct PiecewisePoly * a,struct PiecewisePoly * b)
     return c;
 }
 
+/********************************************************//**
+*   Match the discretizations of two pw polys
+*
+*   \param a [inout] - poly1 to match
+*   \param b [inout] - poly2 to match
+*
+*************************************************************/
+
+/*
+void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b)
+{
+    fprintf(stderr, "piecewise_poly_match1 implementation not complete\n");
+    exit(1);
+    double lba = piecewise_poly_lb(a);
+    double lbb = piecewise_poly_lb(b);
+    assert(fabs(lba-lbb) == 0);
+    double uba = piecewise_poly_ub(a);
+    double ubb = piecewise_poly_ub(b);
+    assert(fabs(uba-ubb) == 0);
+
+    if ( (a->leaf == 1) && (b->leaf == 0) )
+    {
+        double * bounds = NULL;
+        size_t nbounds;
+        piecewise_poly_boundaries(b,&nbounds,&bounds,NULL);
+        piecewise_poly_splitn(a,nbounds,bounds);
+        free(bounds); bounds = NULL;
+    }
+    else if ( (a->leaf == 0) && (b->leaf == 1) )
+    {
+        double * bounds = NULL;
+        size_t nbounds;
+        piecewise_poly_boundaries(a,&nbounds,&bounds,NULL);
+        piecewise_poly_splitn(b,nbounds,bounds);
+        free(bounds); bounds = NULL;
+    }
+    else if ( (a->leaf == 0) && (b->leaf == 0)) {
+        
+        size_t onbrancha = 0;
+        size_t onbranchb = 0;
+
+    }
+}
+*/
 
 
 /********************************************************//**

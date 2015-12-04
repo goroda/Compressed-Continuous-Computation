@@ -1,5 +1,3 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -45,7 +43,8 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
-#define ZEROTHRESH  2e0 * DBL_EPSILON
+#define ZEROTHRESH  1e0 * DBL_EPSILON
+//#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
 
@@ -54,6 +53,7 @@
 #include "polynomials.h"
 #include "quadrature.h"
 #include "linalg.h"
+#include "legtens.h"
 
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
@@ -74,8 +74,68 @@ double chebortho(size_t n) {
         return M_PI/2.0;
     }
 }
+
+static const double legorthoarr[201] =
+            {1.000000000000000e+00, 3.333333333333333e-01,2.000000000000000e-01,
+            1.428571428571428e-01,1.111111111111111e-01,9.090909090909091e-02,7.692307692307693e-02,
+            6.666666666666667e-02,5.882352941176471e-02,5.263157894736842e-02,4.761904761904762e-02,
+            4.347826086956522e-02,4.000000000000000e-02,3.703703703703703e-02,3.448275862068965e-02,
+            3.225806451612903e-02,3.030303030303030e-02,2.857142857142857e-02,2.702702702702703e-02,
+            2.564102564102564e-02,2.439024390243903e-02,2.325581395348837e-02,2.222222222222222e-02,
+            2.127659574468085e-02,2.040816326530612e-02,1.960784313725490e-02,1.886792452830189e-02,
+            1.818181818181818e-02,1.754385964912281e-02,1.694915254237288e-02,1.639344262295082e-02
+            ,1.587301587301587e-02,1.538461538461539e-02,1.492537313432836e-02,1.449275362318841e-02
+            ,1.408450704225352e-02,1.369863013698630e-02,1.333333333333333e-02,1.298701298701299e-02
+            ,1.265822784810127e-02,1.234567901234568e-02,1.204819277108434e-02,1.176470588235294e-02
+            ,1.149425287356322e-02,1.123595505617977e-02,1.098901098901099e-02,1.075268817204301e-02
+            ,1.052631578947368e-02,1.030927835051546e-02,1.010101010101010e-02,9.900990099009901e-03
+            ,9.708737864077669e-03,9.523809523809525e-03,9.345794392523364e-03,9.174311926605505e-03
+            ,9.009009009009009e-03,8.849557522123894e-03,8.695652173913044e-03,8.547008547008548e-03
+            ,8.403361344537815e-03,8.264462809917356e-03,8.130081300813009e-03,8.000000000000000e-03
+            ,7.874015748031496e-03,7.751937984496124e-03,7.633587786259542e-03,7.518796992481203e-03
+            ,7.407407407407408e-03,7.299270072992700e-03,7.194244604316547e-03,7.092198581560284e-03
+            ,6.993006993006993e-03,6.896551724137931e-03,6.802721088435374e-03,6.711409395973154e-03
+            ,6.622516556291391e-03,6.535947712418301e-03,6.451612903225806e-03,6.369426751592357e-03
+            ,6.289308176100629e-03,6.211180124223602e-03,6.134969325153374e-03,6.060606060606061e-03
+            ,5.988023952095809e-03,5.917159763313609e-03,5.847953216374269e-03,5.780346820809248e-03
+            ,5.714285714285714e-03,5.649717514124294e-03,5.586592178770950e-03,5.524861878453038e-03
+            ,5.464480874316940e-03,5.405405405405406e-03,5.347593582887700e-03,5.291005291005291e-03
+            ,5.235602094240838e-03,5.181347150259068e-03,5.128205128205128e-03,5.076142131979695e-03
+            ,5.025125628140704e-03,4.975124378109453e-03,4.926108374384237e-03,4.878048780487805e-03
+            ,4.830917874396135e-03,4.784688995215311e-03,4.739336492890996e-03,4.694835680751174e-03
+            ,4.651162790697674e-03,4.608294930875576e-03,4.566210045662100e-03,4.524886877828055e-03
+            ,4.484304932735426e-03,4.444444444444444e-03,4.405286343612335e-03,4.366812227074236e-03
+            ,4.329004329004329e-03,4.291845493562232e-03,4.255319148936170e-03,4.219409282700422e-03
+            ,4.184100418410041e-03,4.149377593360996e-03,4.115226337448560e-03,4.081632653061225e-03
+            ,4.048582995951417e-03,4.016064257028112e-03,3.984063745019920e-03,3.952569169960474e-03
+            ,3.921568627450980e-03,3.891050583657588e-03,3.861003861003861e-03,3.831417624521073e-03
+            ,3.802281368821293e-03,3.773584905660377e-03,3.745318352059925e-03,3.717472118959108e-03
+            ,3.690036900369004e-03,3.663003663003663e-03,3.636363636363636e-03,3.610108303249098e-03
+            ,3.584229390681004e-03,3.558718861209964e-03,3.533568904593640e-03,3.508771929824561e-03
+            ,3.484320557491289e-03,3.460207612456748e-03,3.436426116838488e-03,3.412969283276451e-03
+            ,3.389830508474576e-03,3.367003367003367e-03,3.344481605351171e-03,3.322259136212625e-03
+            ,3.300330033003300e-03,3.278688524590164e-03,3.257328990228013e-03,3.236245954692557e-03
+            ,3.215434083601286e-03,3.194888178913738e-03,3.174603174603175e-03,3.154574132492113e-03
+            ,3.134796238244514e-03,3.115264797507788e-03,3.095975232198143e-03,3.076923076923077e-03
+            ,3.058103975535168e-03,3.039513677811550e-03,3.021148036253776e-03,3.003003003003003e-03
+            ,2.985074626865672e-03,2.967359050445104e-03,2.949852507374631e-03,2.932551319648094e-03
+            ,2.915451895043732e-03,2.898550724637681e-03,2.881844380403458e-03,2.865329512893983e-03
+            ,2.849002849002849e-03,2.832861189801700e-03,2.816901408450704e-03,2.801120448179272e-03
+            ,2.785515320334262e-03,2.770083102493075e-03,2.754820936639119e-03,2.739726027397260e-03
+            ,2.724795640326975e-03,2.710027100271003e-03,2.695417789757413e-03,2.680965147453083e-03
+            ,2.666666666666667e-03,2.652519893899204e-03,2.638522427440633e-03,2.624671916010499e-03
+            ,2.610966057441253e-03,2.597402597402597e-03,2.583979328165375e-03,2.570694087403599e-03
+            ,2.557544757033248e-03,2.544529262086514e-03,2.531645569620253e-03,2.518891687657431e-03
+            ,2.506265664160401e-03,2.493765586034913e-03};
+
 double legortho(size_t n){
-    return (1.0 / (2.0 * (double) n + 1.0));
+    if (n < 201){
+        return legorthoarr[n];
+    }
+    else{
+       // printf("here?! n=%zu\n",n);
+        return (1.0 / (2.0 * (double) n + 1.0));
+    }
 }
 
 // Helper functions
@@ -101,7 +161,7 @@ struct lin_func
 };
 
 double eval_lin_func(double x, void * args)
-{   
+{
     struct lin_func * lf = args;
     double m = lf->slope;
     double b = lf->offset;
@@ -115,7 +175,7 @@ struct quad_func
 };
 
 double eval_quad_func(double x, void * args)
-{   
+{
     struct quad_func * qf = args;
     double m = qf->scale;
     double b = qf->offset;
@@ -599,7 +659,9 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
     }
 
     p->num_poly = num_poly;
-    p->coeff = calloc_double(num_poly);
+    p->nalloc = num_poly+OPECALLOC;
+    p->coeff = calloc_double(p->nalloc);
+    //p->coeff = calloc_double(num_poly);
     p->lower_bound = lb;
     p->upper_bound = ub;
 
@@ -637,7 +699,9 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
     }
 
     p->num_poly = pin->num_poly;
-    p->coeff = calloc_double(p->num_poly);
+    p->nalloc = pin->nalloc;
+    //p->coeff = calloc_double(p->num_poly);
+    p->coeff = calloc_double(pin->nalloc);
     memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
     p->lower_bound = pin->lower_bound;
     p->upper_bound = pin->upper_bound;
@@ -761,12 +825,18 @@ orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, dou
 struct OrthPolyExpansion *
 orth_poly_expansion_genorder(enum poly_type ptype, size_t order, double lb, double ub)
 {
+    //printf("whhhh\n");
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(ptype, order+1, lb, ub);
+    //printf("wherhhh\n");
     
     double m = (p->upper_bound - p->lower_bound) / 
                     (p->p->upper - p->p->lower);
+    //printf("here \n");
+    //printf("order = %zu\n",order);
+    //printf("nalloc = %zu\n",p->nalloc);
     p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+    //printf("there \n");
     return p;
 }
 
@@ -925,6 +995,7 @@ deserialize_orth_poly_expansion(unsigned char * ser,
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
+    (*poly)->nalloc = OPECALLOC;
     (*poly)->p = p;
     
     return ptr;
@@ -1137,36 +1208,47 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
     if (0 == 0){
         double thresh = ZEROTHRESH;
+        //printf("thresh = %G\n",thresh);
         size_t jj = 0;
         //
+        int allzero = 1;
 	    for (jj = 0; jj < (*p)->num_poly;jj++){
 	       if (fabs((*p)->coeff[jj]) < thresh){
                (*p)->coeff[jj] = 0.0;
-            }
+           }
+           else{
+               allzero = 0;
+           }
 	    }
-	    jj = 0;
-        size_t end = (*p)->num_poly;
-        if ((*p)->num_poly > 2){
-            while (fabs((*p)->coeff[end-1]) < thresh){
-                end-=1;
-                if (end == 0){
-                    break;
+        if (allzero == 1){
+            (*p)->num_poly = 1;
+        }
+        else {
+            jj = 0;
+            size_t end = (*p)->num_poly;
+            if ((*p)->num_poly > 2){
+                while (fabs((*p)->coeff[end-1]) < thresh){
+                    end-=1;
+                    if (end == 0){
+                        break;
+                    }
+                }
+                
+                if (end > 0){
+                    //printf("SHOULD NOT BE HERE\n");
+                    size_t num_poly = end;
+                    //
+                    //double * new_coeff = calloc_double(num_poly);
+                    //for (jj = 0; jj < num_poly; jj++){
+                    //    new_coeff[jj] = (*p)->coeff[jj];
+                   // }
+                    //free((*p)->coeff); (*p)->coeff=NULL;
+                    //(*p)->coeff = new_coeff;
+                    (*p)->num_poly = num_poly;
                 }
             }
-            
-            if (end > 0){
-                //printf("SHOULD NOT BE HERE\n");
-                size_t num_poly = end;
-                //
-                //double * new_coeff = calloc_double(num_poly);
-                //for (jj = 0; jj < num_poly; jj++){
-                //    new_coeff[jj] = (*p)->coeff[jj];
-               // }
-                //free((*p)->coeff); (*p)->coeff=NULL;
-                //(*p)->coeff = new_coeff;
-                (*p)->num_poly = num_poly;
-            }
         }
+        //orth_poly_expansion_roundt(p,thresh);
     }
 }
 
@@ -1181,6 +1263,7 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 *************************************************************/
 void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 {   
+    
     size_t jj = 0;
     double sum = 0.0;
 	for (jj = 0; jj < (*p)->num_poly;jj++){
@@ -1207,6 +1290,7 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     memmove(new_coeff,(*p)->coeff, keep * sizeof(double));
     free((*p)->coeff);
     (*p)->num_poly = keep;
+    (*p)->nalloc = OPECALLOC;
     (*p)->coeff = new_coeff;
 }
 
@@ -1220,7 +1304,6 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 *  \param args [in] - arguments to function
 *  \param poly [inout] - orthogonal polynomial expansion
 *
-*   
 *  \note
 *       Wont work for polynomial expansion with only the constant 
 *       term.
@@ -1319,6 +1402,8 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
 *   \param lower [in] - lower bound of input
 *   \param upper [in] - upper bound of input
 *   \param aoptsin [in] - approximation options
+*   
+*   \return poly
 *
 *   \note 
 *       Follows general scheme that trefethan outlines about 
@@ -1349,7 +1434,7 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     size_t N = aopts->start_num;
     
     //printf("pre ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
-    if (ptype > 10){
+    if ((int)ptype > 10){
         printf("Warning: for some reason ptype is\n");
         printf("specified to be %d, reverting to 0\n",ptype);
         ptype = 0;
@@ -1447,6 +1532,29 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
 }
 
 /********************************************************//**
+*   Generate an orthonormal polynomial with pseudorandom coefficients
+*   between [-1,1]
+*
+*   \param ptype [in] - polynomial type
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+*
+*   \return poly
+*************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder, double lower, double upper)
+{
+    struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
+                                        maxorder+1, lower, upper);
+    size_t ii;
+    for (ii = 0; ii < poly->num_poly; ii++){
+        poly->coeff[ii] = randu()*2.0-1.0;
+    }
+    return poly;
+}
+
+/********************************************************//**
 *   Integrate a Chebyshev approximation
 *
 *   \param poly [in] - polynomial to integrate
@@ -1503,51 +1611,70 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
 {
 
     struct OrthPolyExpansion * c = NULL;
+    double lb = a->lower_bound;
+    double ub = a->upper_bound;
 
     enum poly_type p = a->p->ptype;
-    double lb = a->lower_bound;
-    double ub = b->upper_bound;
+    if ( (p == LEGENDRE) && (a->num_poly < 25) && (b->num_poly < 25)){
+        //printf("in special prod\n");
+        //double lb = a->lower_bound;
+        //double ub = b->upper_bound;
+            
+        size_t ii,jj;
+        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+        double * allprods = calloc_double(a->num_poly * b->num_poly);
+        for (ii = 0; ii < a->num_poly; ii++){
+            for (jj = 0; jj < b->num_poly; jj++){
+                allprods[jj + ii * b->num_poly] = a->coeff[ii] * b->coeff[jj];
+            }
+        }
+        
+        //printf("A = \n");
+        //print_orth_poly_expansion(a,1,NULL);
 
-    struct OrthPolyExpansion * comb[2];
-    comb[0] = a;
-    comb[1] = b;
-   
-    //printf("num poly = %zu\n",a->num_poly+b->num_poly);
-    double norma = 0.0, normb = 0.0;
-    size_t ii;
-    for (ii = 0; ii < a->num_poly; ii++){
-        norma += pow(a->coeff[ii],2);
-    }
-    for (ii = 0; ii < b->num_poly; ii++){
-        normb += pow(b->coeff[ii],2);
-    }
-    
-    if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
-        c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+        //printf("B = \n");
+        //print_orth_poly_expansion(b,1,NULL);
+
+        //dprint2d_col(b->num_poly, a->num_poly, allprods);
+
+        size_t kk;
+        for (kk = 0; kk < c->num_poly; kk++){
+            for (ii = 0; ii < a->num_poly; ii++){
+                for (jj = 0; jj < b->num_poly; jj++){
+                    c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] * 
+                                        allprods[jj+ii*b->num_poly];
+                }
+            }
+            //printf("c coeff[%zu]=%G\n",kk,c->coeff[kk]);
+        }
+        orth_poly_expansion_round(&c);
+        free(allprods); allprods=NULL;
     }
     else{
-        //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
-        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
-        orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
-        orth_poly_expansion_round(&c);
+        struct OrthPolyExpansion * comb[2];
+        comb[0] = a;
+        comb[1] = b;
+        
+        double norma = 0.0, normb = 0.0;
+        size_t ii;
+        for (ii = 0; ii < a->num_poly; ii++){
+            norma += pow(a->coeff[ii],2);
+        }
+        for (ii = 0; ii < b->num_poly; ii++){
+            normb += pow(b->coeff[ii],2);
+        }
+        
+        if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
+            //printf("in here \n");
+            c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+        }
+        else{
+            //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
+            c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+            orth_poly_expansion_round(&c);
+        }
     }
-
-    //orth_poly_expansion_roundt(&c,sqrt(norma*normb));
-
-    /*
-    size_t ii;
-    printf("coeffs after rounding \n");
-    for (ii = 0; ii < c->num_poly; ii++){
-        printf("%3.15G ",c->coeff[ii]);
-    }
-    printf("\n");
-    */
-    //dprint(c->num_poly,c->coeff);
-    //printf(" num polys after = %zu \n", c->num_poly);
-    //printf("\n");
-    /*
-    dprint(d->num_poly,d->coeff);
-    */
     
     //*
     //printf("compute product\n");
@@ -1563,6 +1690,138 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     //*/
     return c;
 }
+
+/********************************************************//**
+*   Compute the sum of the product between the functions in two arraysarrays
+*
+*   \param n [in] - number of functions
+*   \param lda [in] - stride of first array
+*   \param a [in] - array of orthonormal polynomial expansions
+*   \param ldb [in] - stride of second array
+*   \param b [in] - array of orthonormal polynomial expansions
+*
+*   \return c - polynomial expansion
+*
+*   \note 
+*       If both arrays do not consist of only LEGENDRE polynomials
+*       return NULL. All the functions need to have the same lower 
+*       and upper bounds
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_sum_prod(size_t n, size_t lda, 
+        struct OrthPolyExpansion ** a, size_t ldb,
+        struct OrthPolyExpansion ** b)
+{
+
+    struct OrthPolyExpansion * c = NULL;
+    double lb = a[0]->lower_bound;
+    double ub = a[0]->upper_bound;
+
+    size_t ii;
+    size_t maxordera = 0;
+    size_t maxorderb = 0;
+    size_t maxorder = 0;
+    //int legen = 1;
+    for (ii = 0; ii < n; ii++){
+        if ((a[ii*lda]->p->ptype != LEGENDRE) || (b[ii*ldb]->p->ptype != LEGENDRE)){
+            //legen = 0;
+            return c; // cant do it
+        }
+        size_t neworder = a[ii*lda]->num_poly + b[ii*ldb]->num_poly;
+        if (neworder > maxorder){
+            maxorder = neworder;
+        }
+        if (a[ii*lda]->num_poly > maxordera){
+            maxordera = a[ii*lda]->num_poly;
+        }
+        if (b[ii*ldb]->num_poly > maxorderb){
+            maxorderb = b[ii*ldb]->num_poly;
+        }
+    }
+    if (maxorder > 50){
+        fprintf(stderr, "Cant multiply functions of greater than 25 together. Increase size of legtenscoeffs\n");
+        exit(1);
+    }
+    
+    enum poly_type p = LEGENDRE;
+    c = orth_poly_expansion_init(p, maxorder, lb, ub);
+    size_t kk,jj,ll;
+    double * allprods = calloc_double( maxorderb * maxordera);
+    for (kk = 0; kk < n; kk++){
+        for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
+            for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
+                allprods[jj + ii * maxorderb] += 
+                        a[kk*lda]->coeff[ii] * b[kk*ldb]->coeff[jj];
+            }
+        }
+    }
+
+    for (ll = 0; ll < c->num_poly; ll++){
+        for (ii = 0; ii < maxordera; ii++){
+            for (jj = 0; jj < maxorderb; jj++){
+                c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
+                                    allprods[jj+ii*maxorderb];
+            }
+        }
+    }
+    free(allprods); allprods=NULL;
+    orth_poly_expansion_round(&c);
+    return c;
+}
+
+/********************************************************//**
+*   Compute a linear combination of generic functions
+*
+*   \param n [in] - number of functions
+*   \param ldx [in] - stride of first array
+*   \param x [in] - functions
+*   \param ldc [in] - stride of coefficients
+*   \param c [in] - scaling coefficients
+*
+*   \return  out  = \f$sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*
+*   \note 
+*       If both arrays do not consist of only LEGENDRE polynomials
+*       return NULL. All the functions need to have the same lower 
+*       and upper bounds
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_lin_comb(size_t n, size_t ldx, 
+        struct OrthPolyExpansion ** x, size_t ldc,
+        double * c )
+{
+
+    struct OrthPolyExpansion * out = NULL;
+    double lb = x[0]->lower_bound;
+    double ub = x[0]->upper_bound;
+
+    size_t ii;
+    size_t maxorder = 0;
+    //int legen = 1;
+    for (ii = 0; ii < n; ii++){
+        if (x[ii*ldx]->p->ptype != LEGENDRE){
+            //legen = 0;
+            return out; // cant do it
+        }
+        size_t neworder = x[ii*ldx]->num_poly;
+        if (neworder > maxorder){
+            maxorder = neworder;
+        }
+    }
+    
+    enum poly_type p = LEGENDRE;
+    out = orth_poly_expansion_init(p, maxorder, lb, ub);
+    size_t kk;
+    for (kk = 0; kk < n; kk++){
+        for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
+            out->coeff[ii] +=  c[kk*ldc]*x[kk*ldx]->coeff[ii];
+        }
+    }
+    orth_poly_expansion_round(&out);
+    return out;
+}
+
+
 
 /********************************************************//**
 *   Integrate an orthogonal polynomial expansion 
@@ -1780,7 +2039,221 @@ void orth_poly_expansion_scale(double a, struct OrthPolyExpansion * x)
     for (ii = 0; ii < x->num_poly; ii++){
         x->coeff[ii] *= a;
     }
+    orth_poly_expansion_round(&x);
 }
+
+/********************************************************//**
+*   Multiply and add 3 expansions \f$ z \leftarrow ax + by + cz \f$
+*
+*   \param a [in] - scaling factor for first polynomial
+*   \param x [in] - first polynomial
+*   \param b [in] - scaling factor for second polynomial
+*   \param y [in] - second polynomial
+*   \param c [in] - scaling factor for third polynomial
+*   \param z [in] - third polynomial
+*
+*************************************************************/
+void
+orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
+                           double b, struct OrthPolyExpansion * y,
+                           double c, struct OrthPolyExpansion * z)
+{
+    assert (x->p->ptype == y->p->ptype);
+    assert (y->p->ptype == z->p->ptype);
+    
+    assert ( x != NULL );
+    assert ( y != NULL );
+    assert ( z != NULL );
+    
+    size_t ii;
+    if ( (z->num_poly >= x->num_poly) && (z->num_poly >= y->num_poly) ){
+        
+        if (x->num_poly > y->num_poly){
+            for (ii = 0; ii < y->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = y->num_poly; ii < x->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < z->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii];
+            }
+        }
+        else{
+            for (ii = 0; ii < x->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < y->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii] + b*y->coeff[ii];
+            }
+            for (ii = x->num_poly; ii < z->num_poly; ii++){
+                z->coeff[ii] = c*z->coeff[ii];
+            }
+        }
+    }
+    else if ((z->num_poly >= x->num_poly) && ( z->num_poly < y->num_poly)) {
+        double * temp = realloc(z->coeff, (y->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        else{
+            z->coeff = temp;
+        }
+        for (ii = 0; ii < x->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = x->num_poly; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = b*y->coeff[ii];
+        }
+        z->num_poly = y->num_poly;
+    }
+    else if ( (z->num_poly < x->num_poly) && ( z->num_poly >= y->num_poly) ){
+        double * temp = realloc(z->coeff, (x->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        else{
+            z->coeff = temp;
+        }
+        for (ii = 0; ii < y->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = y->num_poly; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii] + a*x->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii];
+        }
+        z->num_poly = x->num_poly;
+    }
+    else if ( x->num_poly <= y->num_poly){
+        double * temp = realloc(z->coeff, (y->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        for (ii = 0; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = x->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = b*y->coeff[ii];
+        }
+        z->num_poly = y->num_poly;
+    }
+    else if (y->num_poly <= x->num_poly) {
+        double * temp = realloc(z->coeff, (x->num_poly)*sizeof(double));
+        if (temp == NULL){
+            fprintf(stderr,"cannot allocate new size fo z-coeff in sum3_up\n");
+            exit(1);
+        }
+        for (ii = 0; ii < z->num_poly; ii++){
+            z->coeff[ii] = c*z->coeff[ii]+a*x->coeff[ii]+b*y->coeff[ii];
+        }
+        for (ii = z->num_poly; ii < y->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii] + b*y->coeff[ii];
+        }
+        for (ii = y->num_poly; ii < x->num_poly; ii++){
+            z->coeff[ii] = a*x->coeff[ii];
+        }
+        z->num_poly = x->num_poly;
+    }
+    else{
+        fprintf(stderr,"Haven't accounted for anything else?! %zu %zu %zu\n", 
+                x->num_poly, y->num_poly, z->num_poly);
+        exit(1);
+    }
+    orth_poly_expansion_round(&z);
+}
+
+/********************************************************//**
+*   Multiply by scalar and add two orthgonal 
+*   expansions of the same family together \f[ y \leftarrow ax + y /f]
+*
+*   \param a [in] - scaling factor for first polynomial
+*   \param x [in] - first polynomial
+*   \param y [in] - second polynomial
+*
+*   \return 0 if successfull 1 if error with allocating more space for y
+*
+*   \note 
+*       Computes z=ax+by, where x and y are polynomial expansionx
+*       Requires both polynomials to have the same upper 
+*       and lower bounds
+*   
+*************************************************************/
+int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
+                        struct OrthPolyExpansion * y)
+{
+        
+    assert (y != NULL);
+    assert (x != NULL);
+    assert (x->p->ptype == y->p->ptype);
+    assert ( fabs(x->lower_bound - y->lower_bound) < DBL_EPSILON );
+    assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON );
+    
+    if (x->num_poly < y->num_poly){
+        // shouldnt need rounding here
+        size_t ii;
+        for (ii = 0; ii < x->num_poly; ii++){
+            y->coeff[ii] += a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
+        }
+    }
+    else{
+        size_t ii;
+        if (x->num_poly > y->nalloc){
+            //printf("hereee\n");
+            y->nalloc = x->num_poly+10;
+            double * temp = realloc(y->coeff, (y->nalloc)*sizeof(double));
+            if (temp == NULL){
+                return 0;
+            }
+            else{
+                y->coeff = temp;
+                for (ii = y->num_poly; ii < y->nalloc; ii++){
+                    y->coeff[ii] = 0.0;
+                }
+            }
+            //printf("finished\n");
+        }
+        for (ii = y->num_poly; ii < x->num_poly; ii++){
+            y->coeff[ii] = a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
+        }
+        for (ii = 0; ii < y->num_poly; ii++){
+            y->coeff[ii] += a * x->coeff[ii];
+            if (fabs(y->coeff[ii]) < ZEROTHRESH){
+                y->coeff[ii] = 0.0;
+            }
+        }
+        y->num_poly = x->num_poly;
+        size_t nround = y->num_poly;
+        for (ii = 0; ii < y->num_poly-1;ii++){
+            if (fabs(y->coeff[y->num_poly-1-ii]) > ZEROTHRESH){
+                break;
+            }
+            else{
+                nround = nround-1;
+            }
+        }
+        y->num_poly = nround;
+
+    }
+    return 0;
+}
+
 
 /********************************************************//**
 *   Multiply by scalar and add two orthgonal 
@@ -1810,23 +2283,39 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
     printf("y=\n");
     print_orth_poly_expansion(y,0,NULL);
     */
+    
+    //double diffa = fabs(a-ZEROTHRESH);
+    //double diffb = fabs(b-ZEROTHRESH);
     size_t ii;
     struct OrthPolyExpansion * p ;
-    if (x == NULL && y != NULL){
-        p = orth_poly_expansion_init(y->p->ptype,
-                    y->num_poly, y->lower_bound, y->upper_bound);
-        for (ii = 0; ii < y->num_poly; ii++){
-            p->coeff[ii] = y->coeff[ii] * b;
-        }
+    //if ( (x == NULL && y != NULL) || ((diffa <= ZEROTHRESH) && (y != NULL))){
+    if ( (x == NULL && y != NULL)){
+        //printf("b = %G\n",b);
+        //if (diffb <= ZEROTHRESH){
+        //    p = orth_poly_expansion_init(y->p->ptype,1,y->lower_bound, y->upper_bound);
+       // }
+       // else{    
+            p = orth_poly_expansion_init(y->p->ptype,
+                        y->num_poly, y->lower_bound, y->upper_bound);
+            for (ii = 0; ii < y->num_poly; ii++){
+                p->coeff[ii] = y->coeff[ii] * b;
+            }
+        //}
         orth_poly_expansion_round(&p);
         return p;
     }
-    else if (y == NULL && x != NULL){
-        p = orth_poly_expansion_init(x->p->ptype,
-                    x->num_poly, x->lower_bound, x->upper_bound);
-        for (ii = 0; ii < x->num_poly; ii++){
-            p->coeff[ii] = x->coeff[ii] * a;
-        }
+    //if ( (y == NULL && x != NULL) || ((diffb <= ZEROTHRESH) && (x != NULL))){
+    if ( (y == NULL && x != NULL)){
+        //if (a <= ZEROTHRESH){
+        //    p = orth_poly_expansion_init(x->p->ptype,1, x->lower_bound, x->upper_bound);
+       // }
+        //else{
+            p = orth_poly_expansion_init(x->p->ptype,
+                        x->num_poly, x->lower_bound, x->upper_bound);
+            for (ii = 0; ii < x->num_poly; ii++){
+                p->coeff[ii] = x->coeff[ii] * a;
+            }
+        //}
         orth_poly_expansion_round(&p);
         return p;
     }
@@ -1839,20 +2328,36 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
     size_t xN = x->num_poly;
     size_t yN = y->num_poly;
 
+    //printf("diffa = %G, x==NULL %d\n",diffa,x==NULL);
+    //printf("diffb = %G, y==NULL %d\n",diffb,y==NULL);
+   // assert(diffa > ZEROTHRESH);
+   // assert(diffb > ZEROTHRESH);
     if (xN > yN){
         for (ii = 0; ii < yN; ii++){
             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
         for (ii = yN; ii < xN; ii++){
             p->coeff[ii] = x->coeff[ii]*a;
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
     }
     else{
         for (ii = 0; ii < xN; ii++){
             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+           // }
         }
         for (ii = xN; ii < yN; ii++){
             p->coeff[ii] = y->coeff[ii]*b;
+            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
+            //    p->coeff[ii] = 0.0;
+            //}
         }
     }
 
@@ -2049,12 +2554,15 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
             (p->p->upper - p->p->lower);
     double off = p->upper_bound - m * p->p->upper;
 
-    //printf("coeffs are \n");
-    //dprint(p->num_poly, p->coeff);
+    orth_poly_expansion_round(&p);
+   // print_orth_poly_expansion(p,3,NULL);
     //printf("last 2 = %G\n",p->coeff[p->num_poly-1]);
     size_t N = p->num_poly-1;
     //printf("N = %zu\n",N);
-    if (N == 1){
+    if (N == 0){
+        return real_roots;
+    }
+    else if (N == 1){
         if (fabs(p->coeff[N]) <= ZEROTHRESH){
             return real_roots;
         }
@@ -2095,7 +2603,10 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         //*
         //Balance
         size_t ILO, IHI;
+        //printf("am I here? N=%zu \n",N);
+        //dprint(N*N,nscompanion);
         dgebal_("S", &N, nscompanion, &N,&ILO,&IHI,scale,&info);
+        //printf("yep\n");
         if (info < 0){
             fprintf(stderr, "Calling dgebl had error in %d-th input in the legendre_expansion_real_roots function\n",info);
             exit(1);
@@ -2395,7 +2906,7 @@ void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec,
                 printf("%3.15f ", p->coeff[ii]);
             }
             else{
-                printf("%E ", p->coeff[ii]);
+                printf("%3.15E ", p->coeff[ii]);
             }
         }
         printf("\n");

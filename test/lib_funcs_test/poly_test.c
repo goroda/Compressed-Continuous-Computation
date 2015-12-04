@@ -152,7 +152,7 @@ void Test_cheb_approx_adapt(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err =err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-13);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -183,7 +183,7 @@ void Test_cheb_approx_adapt_weird(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -338,7 +338,7 @@ void Test_legendre_approx_adapt(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -369,7 +369,7 @@ void Test_legendre_approx_adapt_weird(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
@@ -425,7 +425,7 @@ void Test_legendre_derivative(CuTest * tc){
         //printf("pt= %G err = %G \n",xtest[ii], err);
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
-    err = sqrt(err) / errNorm;
+    err = err / errNorm;
     //printf("err = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-12);
     FREE_CHEB(cpoly);
@@ -506,6 +506,88 @@ void Test_legendre_norm_w(CuTest * tc){
     FREE_CHEB(cpoly);
 }
 
+void Test_legendre_product(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_product with legendre poly \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    struct counter c;
+    c.N = 0;
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    struct counter c2;
+    c2.N = 0;
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    opoly_t * cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly3,pts[ii]);
+        double eval2 = orth_poly_expansion_eval(cpoly,pts[ii]) * 
+                        orth_poly_expansion_eval(cpoly2,pts[ii]);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+    FREE_CHEB(cpoly3);
+}
+
+void Test_legendre_axpy(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_axpy with legendre poly \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    struct counter c;
+    c.N = 0;
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    struct counter c2;
+    c2.N = 0;
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
+                            LEGENDRE,lb,ub, &opts);
+    
+    int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
+    CuAssertIntEquals(tc,0,success);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly,pts[ii]);
+        double eval2 = 2.0 * func3(pts[ii],&c2) + func2(pts[ii],&c);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+}
+
+
 void Test_legendre_norm(CuTest * tc){
     
     printf("Testing function: orth_poly_expansion_norm with legendre poly\n");
@@ -555,6 +637,8 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_inner);
     SUITE_ADD_TEST(suite, Test_legendre_norm_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm);
+    SUITE_ADD_TEST(suite, Test_legendre_product);
+    SUITE_ADD_TEST(suite, Test_legendre_axpy);
 
     return suite;
 }
@@ -748,10 +832,13 @@ void Test_maxmin_poly_expansion(CuTest * tc){
     double min = orth_poly_expansion_min(pl, &loc);
     double absmax = orth_poly_expansion_absmax(pl, &loc);
 
-    
-    CuAssertDblEquals(tc, 1.0, max, 1e-10);
-    CuAssertDblEquals(tc, -1.0, min, 1e-10);
-    CuAssertDblEquals(tc, 1.0, absmax, 1e-10);
+    double diff;
+
+    diff = fabs(1.0-max);
+    //printf("diff =%G\n",diff);
+    CuAssertDblEquals(tc,0.0, diff, 1e-9);
+    CuAssertDblEquals(tc, -1.0, min, 1e-9);
+    CuAssertDblEquals(tc, 1.0, absmax, 1e-9);
 
     orth_poly_expansion_free(pl);
 }
@@ -1129,7 +1216,7 @@ void Test_pw_approx_adapt_weird(CuTest * tc){
     }
     //printf("num polys adapted=%zu\n",cpoly->num_poly);
     err = sqrt(err / errNorm);
-    printf("error = %G\n",err);
+    //printf("error = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-9);
     piecewise_poly_free(p);
     free(xtest);
@@ -1194,6 +1281,54 @@ void Test_pw_approx1(CuTest * tc){
     free(xtest); xtest = NULL;
 }
 
+void Test_pw_flatten(CuTest * tc){
+   
+    printf("Testing functions: piecewise_poly_flatten \n");
+    
+    double lb = -5.0;
+    double ub = 1.0;
+
+    struct PwPolyAdaptOpts aopts;
+    aopts.ptype = LEGENDRE;
+    aopts.maxorder = 7;
+    aopts.minsize = 1e-2;
+    aopts.coeff_check = 2;
+    aopts.epsilon = 1e-3;
+    aopts.nregions = 5;
+    aopts.pts = NULL;
+
+
+    struct PiecewisePoly * p = 
+            piecewise_poly_approx1_adapt(pw_disc, NULL, lb, ub, &aopts);
+    
+    size_t nregions = piecewise_poly_nregions(p);
+    int isflat = piecewise_poly_isflat(p);
+    CuAssertIntEquals(tc,0,isflat);
+    piecewise_poly_flatten(p);
+    CuAssertIntEquals(tc,nregions,p->nbranches);
+    isflat = piecewise_poly_isflat(p);
+    CuAssertIntEquals(tc,1,isflat);
+    
+    size_t N = 100;
+    double * xtest = linspace(lb,ub,N);
+    double err = 0.0;
+    double errNorm = 0.0;
+    double diff;
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        diff = piecewise_poly_eval(p,xtest[ii]) - pw_disc(xtest[ii],NULL);
+        err += pow(diff,2);
+        errNorm += pow(pw_disc(xtest[ii],NULL),2);
+
+        //printf("x=%G, terr=%G\n",xtest[ii],terr);
+    }
+    err = sqrt(err / errNorm);
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
+    piecewise_poly_free(p); p = NULL;
+    free(xtest); xtest = NULL;
+}
+
 double pw_disc2(double x, void * args){
     
     assert ( args == NULL );
@@ -1205,7 +1340,6 @@ double pw_disc2(double x, void * args){
         return pow(x,2) + 2.0 * x;
     }
 }
-
 
 void Test_pw_integrate(CuTest * tc){
    
@@ -1536,8 +1670,8 @@ void Test_pw_real_roots(CuTest * tc){
     size_t nroots;
     double * roots = piecewise_poly_real_roots(pl, &nroots);
     
-    printf("roots are: (double roots in piecewise_poly)\n");
-    dprint(nroots, roots);
+    //printf("roots are: (double roots in piecewise_poly)\n");
+    //dprint(nroots, roots);
     
     CuAssertIntEquals(tc, 1, 1);
     /*
@@ -1641,8 +1775,7 @@ void Test_poly_match(CuTest * tc){
     struct PiecewisePoly * a = 
             piecewise_poly_approx1(pw_disc2, NULL, lb, ub, NULL);
 
-    size_t npa = 0;
-    piecewise_poly_nregions(&npa,a);
+    size_t npa = piecewise_poly_nregions(a);
     piecewise_poly_boundaries(a,&Na, &nodesa, NULL);
     CuAssertIntEquals(tc, npa, Na-1);
     CuAssertDblEquals(tc,-2.0,nodesa[0],1e-15);
@@ -1652,8 +1785,7 @@ void Test_poly_match(CuTest * tc){
             piecewise_poly_approx1(pw_disc, NULL, lb, ub, NULL);
     
     printf("got both\n");
-    size_t npb = 0;
-    piecewise_poly_nregions(&npb, b);
+    size_t npb = piecewise_poly_nregions(b);
     piecewise_poly_boundaries(b,&Nb, &nodesb, NULL);
     printf("got boundaries\n");
     CuAssertIntEquals(tc, npb, Nb-1);
@@ -1666,10 +1798,8 @@ void Test_poly_match(CuTest * tc){
     piecewise_poly_match(a,&aa,b,&bb);
     printf("matched\n");
 
-    size_t npaa = 0;
-    piecewise_poly_nregions(&npaa,aa);
-    size_t npbb = 0;
-    piecewise_poly_nregions(&npbb,bb);
+    size_t npaa = piecewise_poly_nregions(aa);
+    size_t npbb = piecewise_poly_nregions(bb);
     CuAssertIntEquals(tc,npaa,npbb);
 
     size_t Naa, Nbb;
@@ -1709,11 +1839,12 @@ CuSuite * PiecewisePolyGetSuite(){
     
     SUITE_ADD_TEST(suite, Test_pw_linear);
     SUITE_ADD_TEST(suite, Test_pw_quad);
-    SUITE_ADD_TEST(suite,Test_pw_approx);
-    SUITE_ADD_TEST(suite,Test_pw_approx_nonnormal);
-    SUITE_ADD_TEST(suite,Test_pw_approx1_adapt);
-    SUITE_ADD_TEST(suite,Test_pw_approx_adapt_weird);
+    SUITE_ADD_TEST(suite, Test_pw_approx);
+    SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_pw_approx1_adapt);
+    SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird);
     SUITE_ADD_TEST(suite, Test_pw_approx1);
+    SUITE_ADD_TEST(suite, Test_pw_flatten);
     SUITE_ADD_TEST(suite, Test_pw_integrate);
     SUITE_ADD_TEST(suite, Test_pw_integrate2);
     SUITE_ADD_TEST(suite, Test_pw_inner);
@@ -1764,7 +1895,7 @@ void Test_pap1(CuTest * tc){
     size_t nbounds;
     double * bounds = NULL;
     piecewise_poly_boundaries(cpoly,&nbounds,&bounds,NULL);
-    printf("nregions = %zu \n",nbounds-1);
+   // printf("nregions = %zu \n",nbounds-1);
     //dprint(nbounds,bounds);
     free(bounds);
 
@@ -1781,7 +1912,7 @@ void Test_pap1(CuTest * tc){
         errNorm += pow(val,2);
         //printf("x=%G,diff=%G\n",xtest[ii],diff/val);
     }
-    err = sqrt(err / errNorm);
+    err = err / errNorm;
     //printf("error = %G\n",err);
     CuAssertDblEquals(tc, 0.0, err, 1e-10);
     piecewise_poly_free(cpoly);

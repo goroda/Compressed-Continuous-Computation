@@ -148,6 +148,8 @@ double orth_poly_eval(const struct OrthPoly *, size_t, double);
  * upper bound of input space
  * \var OrthPolyExpansion::coeff
  * coefficients of basis functions
+ * \var OrthPolyExpansion::nalloc
+ * size of double allocated
  */
 struct OrthPolyExpansion{
 
@@ -158,7 +160,11 @@ struct OrthPolyExpansion{
     double lower_bound; 
     double upper_bound; 
     double * coeff;
+
+    size_t nalloc; // number of coefficients allocated for efficiency
 };
+
+#define OPECALLOC 50;
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
@@ -214,6 +220,9 @@ struct OpeAdaptOpts{
 struct OrthPolyExpansion * orth_poly_expansion_approx_adapt(double (*A)(double,void *), 
         void *, enum poly_type, double, double, struct OpeAdaptOpts *);
 
+struct OrthPolyExpansion * 
+orth_poly_expansion_randu(enum poly_type, size_t, double, double);
+
 
 double cheb_integrate2(struct OrthPolyExpansion *);
 double legendre_integrate(struct OrthPolyExpansion *);
@@ -222,6 +231,10 @@ double legendre_integrate(struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_prod(struct OrthPolyExpansion *,
                          struct OrthPolyExpansion *);
+struct OrthPolyExpansion *
+orth_poly_expansion_sum_prod(size_t, size_t, 
+        struct OrthPolyExpansion **, size_t,
+        struct OrthPolyExpansion **);
 
 double orth_poly_expansion_integrate(struct OrthPolyExpansion *);
 double orth_poly_expansion_inner_w(struct OrthPolyExpansion *,
@@ -237,6 +250,18 @@ void orth_poly_expansion_scale(double, struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_daxpby(double, struct OrthPolyExpansion *,
                            double, struct OrthPolyExpansion *);
+
+int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
+                        struct OrthPolyExpansion * y);
+void
+orth_poly_expansion_sum3_up(double, struct OrthPolyExpansion *,
+                           double, struct OrthPolyExpansion *,
+                           double, struct OrthPolyExpansion *);
+
+struct OrthPolyExpansion *
+orth_poly_expansion_lin_comb(size_t, size_t, 
+        struct OrthPolyExpansion **, size_t,
+        double *);
 
 
 /////////////////////////////////////////////////////////////

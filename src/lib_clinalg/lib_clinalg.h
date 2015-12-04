@@ -44,5 +44,6 @@
 #include "elements.h"
 #include "algs.h"
 #include "dmrg.h"
+#include "qmarray_qr.h"
 
 #endif

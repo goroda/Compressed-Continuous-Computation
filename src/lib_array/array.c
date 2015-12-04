@@ -213,6 +213,21 @@ double * dones(const size_t N)
 }
 
 /*************************************************************//**
+    Create a pseudorandom double array with each element between [-1,1]
+        
+    \param N [in] - Number of elements
+
+    \return arrp - pointer to array
+****************************************************************/
+double * drandu(const size_t N)
+{
+    double * arrp = calloc_double(N);
+    size_t ii = 0;
+    for (ii = 0; ii < N; ii++) arrp[ii]=randu()*2.0-1.0;
+    return arrp;
+}
+
+/*************************************************************//**
     Create a double array consisting of the same value in each element
         
     \param N [in] - Number of elements
@@ -553,7 +568,7 @@ darray_save(size_t rows, size_t cols, double * arr, char * filename, int type)
         fprintf(fp,"\n");
         for (ii = 0; ii < rows; ii++){
             for (jj = 0; jj < cols; jj++){
-                fprintf(fp,"%3.16f ",arr[jj*rows+ii]);
+                fprintf(fp,"%3.16g ",arr[jj*rows+ii]);
             }
             fprintf(fp,"\n");
         }
@@ -614,5 +629,83 @@ darray_load(char * filename, int type)
     }
     return value;
 }
+
+// UTILITIES
+
+//random numbers
+
+// uniform in 0, 1
+double randu(void)
+{
+    int temp_val = rand();
+    double val = (double)temp_val / (double) RAND_MAX;
+    return val;
+}
+
+// standard normal
+//kbox-mueller
+static int generate = -1;
+double randn(void)
+{
+    const double epsilon = pow(2,-32);
+    const double two_pi = 2.0*3.14159265358979323846;
+         
+    static double z0, z1;
+    if (generate == 0){
+        generate = 1;
+    }
+    else if (generate == 1){
+        generate = 0;
+    }
+    else if (generate == -1){
+        generate = 1;
+    }
+    //generate = !generate;
+                     
+    if (!generate) {
+        return z1;
+    }
+                        
+    double u1, u2;
+    do
+    {
+        u1 = rand() * (1.0 / RAND_MAX);
+        u2 = rand() * (1.0 / RAND_MAX);
+    } while ( u1 <= epsilon );
+             
+    z0 = sqrt(-2.0 * log(u1)) * cos(two_pi * u2);
+    z1 = sqrt(-2.0 * log(u1)) * sin(two_pi * u2);
+    return z0;
+}
+
+// poisson
+size_t poisson(double mean)
+{   
+    double lleft = mean;
+    size_t k = 0; 
+    double p = 1.0;
+    double u;
+    double STEP = 500;
+    do { 
+        k++;
+        u = randu();
+        p = p * u;
+        if ((p < exp(1)) && lleft > 0){
+            if (lleft > STEP){
+                p = p * exp(STEP);
+                lleft = lleft - STEP;
+            }
+            else{
+                p = p * exp(lleft);
+                lleft -= 1;
+            }
+        }
+
+    } while (p > 1.0);
+    
+    return k-1;
+
+}
+
 
 

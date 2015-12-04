@@ -7,6 +7,7 @@ lib/*
 *.swo
 *~
 *#
+*.pdf
 
 doc/html/*
 doc/latex/*
@@ -14,6 +15,10 @@ doc/c3doc/*
 doc/*
 
 bin/*
+benchmarks/fastmkron/bin/*
+benchmarks/dmrgprod/bin/*
+benchmarks/dmrgprod/dat/*
+benchmarks/qrdecomp/bin/*
 
 fileheaders.txt
 update_file_headers.py

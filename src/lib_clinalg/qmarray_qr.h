@@ -33,32 +33,17 @@
 
 //Code
 
-/** \file twodfunctions.h
- * Header file for two dimensional function routines
+/** \file qmarray_qr.h
+ * Header files for qmarray_qr.c
  */
 
-#ifndef FUNCTIONS2D_H
-#define FUNCTIONS2D_H
+#ifndef QMARRAY_QR_H
+#define QMARRAY_QR_H
 
-#include "lib_funcs.h"
-#include "lib_clinalg.h"
+#include "elements.h"
+int qmarray_qr(struct Qmarray *, struct Qmarray **, double **);
+int qmarray_lq(struct Qmarray *, struct Qmarray **, double **);
 
-/** \struct GenericFunction2D
- * \brief Interface for two dimensional generic functions
- * \var GenericFunction::xfuncs
- * Set of functions of the first variable
- * \var GenericFunction::yfuncs
- * Set of functions of the second variable
- * weights associated with the combinations
- */
-struct GenericFunction2D {
-  
-    size_t nbasis;
-    struct Quasimatrix * xfuncs;
-    struct Quasimatrix * yfuncs;
-    double * weights;
-    
-};
-
+#endif
 
 

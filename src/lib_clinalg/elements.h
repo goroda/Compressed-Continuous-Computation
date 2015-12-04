@@ -66,6 +66,8 @@ struct Quasimatrix *
 quasimatrix_approx1d(size_t, double (**)(double, void *),
                     void **, enum function_class, void *, double,
                     double, void *);
+struct Qmarray *
+qmarray_poly_randu(size_t, size_t, size_t, double, double);
 
 struct Quasimatrix * 
 quasimatrix_approx_from_fiber_cuts(size_t, double (*)(double, void *),
@@ -158,6 +160,7 @@ qmarray_orth1d_rows(enum function_class, void *, size_t,
 struct Qmarray * qmarray_copy(struct Qmarray *);
 
 struct Quasimatrix * qmarray_extract_column(struct Qmarray *, size_t);
+struct Qmarray * qmarray_extract_ncols(struct Qmarray *, size_t);
 struct Quasimatrix * qmarray_extract_row(struct Qmarray *, size_t);
 
 void qmarray_set_column(struct Qmarray *, size_t, struct Quasimatrix *);
@@ -239,6 +242,9 @@ struct BoundingBox * function_train_bds(struct FunctionTrain *);
 struct FunctionTrain * function_train_alloc(size_t); 
 struct FunctionTrain * function_train_copy(struct FunctionTrain *);
 void function_train_free(struct FunctionTrain *);
+
+struct FunctionTrain *
+function_train_poly_randu(struct BoundingBox *, size_t *, size_t);
 
 struct FunctionTrain * function_train_initsum(size_t, 
         double (**)(double, void *), void **, struct BoundingBox *,

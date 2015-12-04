@@ -44,12 +44,15 @@
 #include <assert.h>
 #include <float.h>
 
+#include "qmarray_qr.h"
 #include "lib_funcs.h"
 #include "algs.h"
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e3*DBL_EPSILON
+#define ZEROTHRESH 1e4*DBL_EPSILON
+//#define ZEROTHRESH  1e-14
+//#define ZEROTHRESH 1e-20
 
 #ifndef VQMALU
     #define VQMALU 0
@@ -253,11 +256,11 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
     double rho, sigma, alpha;
     double temp1;
     for (ii = 0; ii < A->n; ii++){
-        printf(" On iter (%zu / %zu) \n", ii,A->n);
+       // printf(" On iter (%zu / %zu) \n", ii,A->n);
         e = E->funcs[ii];    
         x = A->funcs[ii];
         rho = generic_function_norm(x);
-        printf(" \t ... rho = %3.15G\n",rho);
+       // printf(" \t ... rho = %3.15G\n",rho);
 
         /*
         printf("X+==================================\n");
@@ -270,7 +273,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
         R[ii * A->n + ii] = rho;
         //printf("pre alpha------------------------------------\n");
         alpha = generic_function_inner(e,x);
-        printf(" \t ... alpha = %3.15G\n",alpha);
+        //printf(" \t ... alpha = %3.15G\n",alpha);
         if (alpha >= ZEROTHRESH){
             //printf("flip sign\n");
             generic_function_flip_sign(e);
@@ -288,7 +291,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
 
         //print_generic_function(v,3,NULL);
         sigma = generic_function_norm(v);
-        printf(" \t ... sigma = %3.15G\n",sigma);
+        //printf(" \t ... sigma = %3.15G\n",sigma);
 
         //printf("v2pre = \n");
         //print_generic_function(v,3,NULL);
@@ -306,7 +309,7 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
         //print_generic_function(v2,3,NULL);
 
         for (jj = ii+1; jj < A->n; jj++){
-            printf("\t On sub-iter %zu\n", jj);
+         //   printf("\t On sub-iter %zu\n", jj);
             //printf("Aqm = \n");
             //print_generic_function(A->funcs[jj],3,NULL);
             temp1 = generic_function_inner(v2,A->funcs[jj]);
@@ -314,11 +317,11 @@ quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E,
             if (fabs(temp1) < ZEROTHRESH){
                 temp1 = 0.0;
             }
-            printf("\t\t temp1= %3.15G\n", temp1);
+          //  printf("\t\t temp1= %3.15G\n", temp1);
 
             atemp = generic_function_daxpby(1.0, A->funcs[jj], -2.0 * temp1, v2);
             R[jj * A->n + ii] = generic_function_inner(e, atemp);
-            printf("\t\t e^T atemp= %3.15G\n", R[jj*A->n+ii]);
+          //  printf("\t\t e^T atemp= %3.15G\n", R[jj*A->n+ii]);
             generic_function_free(A->funcs[jj]);
 
             A->funcs[jj] = generic_function_daxpby(1.0, atemp, -R[jj * A->n + ii], e);
@@ -861,16 +864,16 @@ qmav(struct Qmarray * Q, double * v)
 
     \return B - qmarray
 ***************************************************************/
-struct Qmarray *
-qmam(struct Qmarray * Q, double * R, size_t b)
+struct Qmarray * qmam(struct Qmarray * Q, double * R, size_t b)
 {
-    struct Qmarray * B = qmarray_alloc(Q->nrows,b);
+    size_t nrows = Q->nrows;
+    struct Qmarray * B = qmarray_alloc(nrows,b);
     size_t ii,jj;
-    for (jj = 0; jj < Q->nrows; jj++){
+    for (jj = 0; jj < nrows; jj++){
         for (ii = 0; ii < b; ii++){
-            B->funcs[ii*B->nrows+jj] = // Q[jj,:]B[:,ii]
-                generic_function_lin_comb2(Q->ncols, Q->nrows, Q->funcs + jj, 
-                                            1, R + ii*Q->ncols);
+            B->funcs[ii*nrows+jj] = // Q[jj,:]B[:,ii]
+                generic_function_lin_comb2(Q->ncols,
+                    Q->nrows, Q->funcs + jj, 1, R + ii*Q->ncols);
         }
     }
     return B;
@@ -964,8 +967,9 @@ qmatqma(struct Qmarray * a, struct Qmarray * b)
     size_t ii,jj;
     for (jj = 0; jj < b->ncols; jj++){
         for (ii = 0; ii < a->ncols; ii++){
+            //printf("computing c[%zu,%zu] \n",ii,jj);
             // c[jj*a->ncols+ii] = a[:,ii]^T b[:,jj]
-            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(b->nrows, 1, 
+            c->funcs[jj*c->nrows+ii] =  generic_function_sum_prod(b->nrows, 1, 
                     a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
         }
     }
@@ -988,7 +992,7 @@ qmaqmat(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < b->nrows; jj++){
         for (ii = 0; ii < a->nrows; ii++){
             // c[jj*c->ncols+ii] = a[ii,:]^T b[jj,:]^T
-            c->funcs[jj*c->ncols+ii] =  generic_function_sum_prod(a->ncols, a->nrows, 
+            c->funcs[jj*c->nrows+ii] =  generic_function_sum_prod(a->ncols, a->nrows, 
                     a->funcs + ii, b->nrows, b->funcs + jj);
         }
     }
@@ -1012,12 +1016,64 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < b->nrows; jj++){
         for (ii = 0; ii < a->ncols; ii++){
             // c[jj*a->ncols+ii] = a[:,ii]^T b[jj,:]
-            c->funcs[ii*c->ncols+jj] =  generic_function_sum_prod(b->ncols, 1, 
+            c->funcs[ii*c->nrows+jj] =  generic_function_sum_prod(b->ncols, 1, 
                     a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
         }
     }
     return c;
 }
+
+/***********************************************************//**
+    Integral of Transpose qmarray - qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
+***************************************************************/
+double *
+qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->ncols*b->ncols);
+    size_t nrows = a->ncols;
+    size_t ncols = b->ncols;
+    size_t ii,jj;
+    for (jj = 0; jj < ncols; jj++){
+        for (ii = 0; ii < nrows; ii++){
+            // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
+            c[jj*nrows+ii] =  generic_function_inner_sum(b->nrows, 1, 
+                    a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
+    Integral of qmarray - transpose qmarray mutliplication
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c - array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
+***************************************************************/
+double *
+qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->nrows*b->nrows);
+    size_t nrows = a->nrows;
+    size_t ncols = b->nrows;
+    size_t ii,jj;
+    for (jj = 0; jj < ncols; jj++){
+        for (ii = 0; ii < nrows; ii++){
+            // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
+            c[jj*nrows+ii] =  generic_function_inner_sum(a->ncols, a->nrows, 
+                    a->funcs + ii, b->nrows, b->funcs + jj);
+        }
+    }
+    return c;
+}
+
+
 
 /***********************************************************//**
     Integral of Transpose qmarray - transpose qmarray mutliplication
@@ -1078,6 +1134,38 @@ struct Qmarray * qmarray_kron(struct Qmarray * a, struct Qmarray * b)
 }
 
 /***********************************************************//**
+    Kronecker product between two qmarrays
+
+    \param a [in] - qmarray 1
+    \param b [in] - qmarray 2
+
+    \return c -  qmarray kron(a,b)
+***************************************************************/
+double * qmarray_kron_integrate(struct Qmarray * a, struct Qmarray * b)
+{
+    double * c = calloc_double(a->nrows*b->nrows * a->ncols*b->ncols);
+
+    size_t ii,jj,kk,ll,column,row, totrows;
+
+    totrows = a->nrows * b->nrows;
+
+    for (ii = 0; ii < a->ncols; ii++){
+        for (jj = 0; jj < a->nrows; jj++){
+            for (kk = 0; kk < b->ncols; kk++){
+                for (ll = 0; ll < b->nrows; ll++){
+                    column = ii*b->ncols+kk;
+                    row = jj*b->nrows + ll;
+                    c[column*totrows + row] = generic_function_inner(
+                        a->funcs[ii*a->nrows+jj],b->funcs[kk*b->nrows+ll]);
+                }
+            }
+        }
+    }
+    return c;
+}
+
+
+/***********************************************************//**
     If a is vector, b and c are quasimatrices then computes
              a^T kron(b,c)
 
@@ -1104,7 +1192,7 @@ qmarray_vec_kron(double * a, struct Qmarray * b, struct Qmarray * c)
     If a is vector, b and c are quasimatrices then computes
             \f$ \int a^T kron(b(x),c(x)) dx  \f$
 
-    \param a [in] - vector,array (b->ncols * c->ncols);
+    \param a [in] - vector,array (b->nrows * c->nrows);
     \param b [in] - qmarray 1
     \param c [in] - qmarray 2
 
@@ -1119,6 +1207,99 @@ qmarray_vec_kron_integrate(double * a, struct Qmarray * b, struct Qmarray * c)
     //printf("got qmatm\n");
     //d = qmaqma(temp,c);
     d = qmatqmat_integrate(c,temp);
+    qmarray_free(temp); temp = NULL;
+    return d;
+}
+
+/***********************************************************//**
+    If a is a matrix, b and c are qmarrays then computes
+             a kron(b,c) fast
+    
+    \param r [in] - number of rows of a
+    \param a [in] - array (k, b->nrows * c->nrows);
+    \param b [in] - qmarray 1
+    \param c [in] - qmarray 2
+
+    \return d - qmarray  (k, b->ncols * c->ncols)
+
+    \note
+        Do not touch this!! Who knows how it happens to be right...
+        but it is tested (dont touch the test either. and it seems to be right
+***************************************************************/
+struct Qmarray *
+qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
+{
+    struct Qmarray * d = qmarray_alloc(r, b->ncols * c->ncols);
+    
+    size_t ii,jj,kk;
+    struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
+        //struct Qmarray * temp = qmarray_alloc(b->nrows,c->ncols);
+    for (kk = 0; kk < c->ncols; kk++){
+        for (jj = 0; jj < b->nrows; jj++){
+            for (ii = 0; ii < r; ii++){
+                temp->funcs[kk * temp->nrows + jj*r + ii] = 
+                    generic_function_lin_comb2(
+                        c->nrows,1,c->funcs + kk*c->nrows,
+                        r, a + ii + jj*c->nrows*r);
+            }
+        }
+    }
+    for (jj = 0; jj < b->ncols; jj++){
+        for (kk = 0; kk < c->ncols; kk++){
+            for (ii = 0; ii < r; ii++){
+                d->funcs[ii + kk*r + jj*r*c->ncols] =
+                 generic_function_sum_prod(b->nrows, 1, 
+                    b->funcs + jj*b->nrows, r, temp->funcs + ii + kk*temp->nrows);
+            }
+        }
+    }
+    qmarray_free(temp); temp = NULL;
+    return d;
+}
+
+/***********************************************************//**
+    If a is a matrix, b and c are qmarrays then computes
+             kron(b,c)a fast
+    
+    \param r [in] - number of rows of a
+    \param a [in] - array (b->ncols * c->ncols, a);
+    \param b [in] - qmarray 1
+    \param c [in] - qmarray 2
+
+    \return d - qmarray  (b->nrows * c->nrows , k)
+
+    \note
+        Do not touch this!! Who knows how it happens to be right...
+        but it is tested (dont touch the test either. and it seems to be right
+***************************************************************/
+struct Qmarray *
+qmarray_kron_mat(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
+{
+    struct Qmarray * d = qmarray_alloc(b->nrows * c->nrows,r);
+    
+    size_t ii,jj,kk;
+    struct Qmarray * temp = qmarray_alloc(c->nrows,b->ncols*r);
+    for (ii = 0; ii < r; ii++){
+        for (jj = 0; jj < c->nrows; jj++){
+            for (kk = 0; kk < b->ncols; kk++){
+                temp->funcs[jj +  kk * c->nrows + ii*c->nrows*b->ncols] = 
+                    generic_function_lin_comb2(
+                        c->ncols,c->nrows,c->funcs + jj,
+                        1, a + kk*c->ncols + ii*c->ncols*b->ncols);
+            }
+        }
+    }
+    
+    for (ii = 0; ii < r; ii++){
+        for (jj = 0; jj < b->nrows; jj++){
+            for (kk = 0; kk < c->nrows; kk++){
+                d->funcs[kk + jj*c->nrows + ii*b->nrows*c->nrows] =
+                 generic_function_sum_prod(b->ncols, b->nrows, 
+                    b->funcs + jj, c->nrows,
+                            temp->funcs + kk + ii*b->ncols*c->nrows);
+            }
+        }
+    }
     qmarray_free(temp); temp = NULL;
     return d;
 }
@@ -1144,6 +1325,30 @@ double * qmarray_integrate(struct Qmarray * a)
     
     return out;
 }
+
+/***********************************************************//**
+    Norm of a qmarray
+
+    \param a [in] - first qmarray
+
+    \return out - 2 norm
+***************************************************************/
+double qmarray_norm2(struct Qmarray * a)
+{
+    double out = 0.0;
+    size_t ii;
+    for (ii = 0; ii < a->ncols * a->nrows; ii++){
+        out += generic_function_inner(a->funcs[ii],a->funcs[ii]);
+    }
+    if (out < 0){
+        fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
+        exit(1);
+        //return 0.0;
+    }
+
+    return sqrt(fabs(out));
+}
+
 /***********************************************************//**
     Two norm difference between two functions
 
@@ -1162,7 +1367,9 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
         out += generic_function_inner(temp[ii],temp[ii]);
     }
     if (out < 0){
-        return 0.0;
+        fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
+        exit(1);
+        //return 0.0;
     }
     generic_function_array_free(a->ncols*a->nrows,temp);
     //free(temp);
@@ -1223,7 +1430,19 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
     //this line is critical!!
     size_t amind;
     double xval;
+    if (VQMALU){
+        printf("inside of creatin g any L \n");
+        printf("nrows = %zu \n",nrows);
+        for (ii = 0; ii < nrows; ii++){
+            print_generic_function(L[ii],3,NULL);
+        }
+    }
+
     double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval);
+    if (VQMALU){
+        printf("got new val = %G\n", val);
+    }
+
     px[upto] = xval;
     piv[upto] = amind;
     assert (val > ZEROTHRESH);
@@ -1283,9 +1502,16 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         //assert(fabs(val) > ZEROTHRESH); // dont deal with zero functions yet
         if (fabs(val) <= ZEROTHRESH) {
             // THIS IS STILL INCORRECT BECAUSE A CONSTANT L DOES NOT SATISFY THE REQUIRED CONDITIONS
+            if (VQMALU){
+                printf("creating any L\n");
+            }
             create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub);
             amind = piv[kk];
             amloc = px[kk];
+
+            if (VQMALU){
+                printf("done creating any L\n");
+            }
             //print_generic_function(L->funcs[kk*L->nrows],0,NULL);
             //print_generic_function(L->funcs[kk*L->nrows+1],0,NULL);
             //printf("in here\n");
@@ -1577,7 +1803,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
     double temp1;
     
     //printf("ORTHONORMAL QMARRAY IS \n");
-    //print_qmarray(E,3,NULL);
+    //print_qmarray(E,0,NULL);
     //printf("qm array\n");
     for (ii = 0; ii < A->ncols; ii++){
         if (VQMAHOUSEHOLDER){
@@ -1588,8 +1814,9 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
 
         rho = generic_function_array_norm(A->nrows,1,A->funcs+ii*A->nrows);
         
-        if (rho < ZEROTHRESH)
+        if (rho < ZEROTHRESH){
            rho = 0.0;
+        }
 
         if (VQMAHOUSEHOLDER){
             printf(" \t ... rho = %3.15G ZEROTHRESH=%3.15G\n",
@@ -1660,6 +1887,8 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             printf(" \t ... sigma = %3.15G ZEROTHRESH=%3.15G\n",
                             sigma,ZEROTHRESH);
         }
+            //printf(" \t ... sigma = %3.15G ZEROTHRESH=%3.15G\n",
+            //                sigma,ZEROTHRESH);
         
         //printf("v2preqma = \n");
         //print_generic_function(v->funcs[0],3,NULL);
@@ -1673,6 +1902,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
         }
         else {
             //printf("quasi daxpby\n");
+            //printf("sigma = %G\n",sigma);
             v2 = quasimatrix_daxpby(1.0/sigma, v, 0.0, NULL);
             //printf("quasi got it daxpby\n");
         }
@@ -1845,8 +2075,9 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
 
         rho = generic_function_array_norm(A->ncols,A->nrows,A->funcs+ii);
 
-        if (rho < ZEROTHRESH)
+        if (rho < ZEROTHRESH){
             rho = 0.0;
+        }
 
         if (VQMAHOUSEHOLDER){
             printf(" \t ... rho = %3.15G ZEROTHRESH=%3.15G\n",
@@ -1857,7 +2088,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
         alpha = generic_function_inner_sum(A->ncols,E->nrows,E->funcs+ii,
                                             A->nrows, A->funcs+ii);
         if (fabs(alpha) < ZEROTHRESH){
-            alpha = 0.0;
+           alpha = 0.0;
         }
 
         if (VQMAHOUSEHOLDER)
@@ -1874,7 +2105,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
                     E->funcs+ii, -1.0, A->nrows, A->funcs+ii);
     
         // improve orthogonality
-        /*
+        //*
         if (ii > 1){
             struct Quasimatrix * tempv = NULL;
             for (jj = 0; jj < ii-1; jj++){
@@ -1887,7 +2118,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
                 quasimatrix_free(tempv);
             }
         }
-        */
+        //*/
         sigma = generic_function_array_norm(v->n, 1, v->funcs);
         if (sigma < ZEROTHRESH){
             sigma = 0.0;
@@ -1993,7 +2224,6 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     return info;
 }
 
-
 /***********************************************************//**
     Compute the householder triangularization of a 
     qmarray. whose elements consist of
@@ -2024,32 +2254,20 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
    
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
+        
+        // This version does not yet work with piecewise functions
+        //free(R); R = NULL;
+        //int out = qmarray_qr(A,&Q,&R);
+        //assert (out == 0);
+
         Q = qmarray_orth1d_columns(POLYNOMIAL, 
                         &ptype, A->nrows, ncols, lb, ub); 
-
         struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-        
-        //printf("here\n");
         int out = 0;
-
-        
-        //printf("orth=\n");
-        //print_qmarray(Q, 0, NULL);
         out = qmarray_householder(A,Q,V,R);
         assert(out == 0);
-        //printf("R=\n");
-        //dprint2d_col(A->ncols, A->ncols,R);
-        
-        //printf("there!\n");
-        /*
-        printf("V=\n");
-        print_qmarray(V, 0, NULL);
-        printf("orth after =\n");
-        print_qmarray(Q, 0, NULL);
-        */
         out = qmarray_qhouse(Q,V);
         assert(out == 0);
-
         qmarray_free(V);
     }
     else if (strcmp(dir, "LQ") == 0){
@@ -2406,28 +2624,23 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
     size_t ii = 1;
     size_t core = a->dim-ii;  
     L = calloc_double(a->cores[core]->nrows * a->cores[core]->nrows);
-    ftrl->ranks[0] = 1;
-    ftrl->ranks[1] = a->ranks[1];
+    memmove(ftrl->ranks,a->ranks,(a->dim+1)*sizeof(size_t));
+
+
     // update last core
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L);
     for (ii = 2; ii < a->dim; ii++){
-        ftrl->ranks[ii] = a->ranks[ii];
-
-        core = a->dim-ii;  
-
-        temp = qmam(a->cores[core],L,a->cores[core+1]->nrows);  
+        core = a->dim-ii;
+        //printf("on core %zu\n",core);
+        temp = qmam(a->cores[core],L,ftrl->ranks[core+1]);
         free(L); L = NULL;
-        L = calloc_double(a->ranks[core] * a->ranks[core]);
-
+        L = calloc_double(ftrl->ranks[core]*ftrl->ranks[core]);
         ftrl->cores[core] = qmarray_householder_simple("LQ",temp,L);
         qmarray_free(temp); temp = NULL;
+        
     }
-    // ends with core = a->dim-(a->dim-1) = 1
-    core = 0;
-    ftrl->cores[core] = qmam(a->cores[core],L,a->ranks[core+1]);
-    ftrl->ranks[a->dim] = a->ranks[a->dim];
-
-    free(L); L=NULL;
+    ftrl->cores[0] = qmam(a->cores[0],L,ftrl->ranks[1]);
+    free(L); L = NULL;
     return ftrl;
 }
 
@@ -2435,14 +2648,15 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 /********************************************************//**
     Rounding of a function train
 
-    \param a [inout] - FT (overwritten)
+    \param ain [in] - FT 
     \param epsilon [in] - threshold
 
     \return ft - rounded function train
 ***********************************************************/
 struct FunctionTrain * 
-function_train_round(struct FunctionTrain * a, double epsilon)
+function_train_round(struct FunctionTrain * ain, double epsilon)
 {
+    struct FunctionTrain * a = function_train_copy(ain);
     size_t ii, core;
     struct Qmarray * temp = NULL;
 
@@ -2508,6 +2722,8 @@ function_train_round(struct FunctionTrain * a, double epsilon)
     for (ii = 0; ii < ft->dim; ii++){
         qmarray_roundt(&ft->cores[ii], epsilon);
     }
+
+    function_train_free(a); a = NULL;
     return ft;
 }
 
@@ -2676,13 +2892,22 @@ function_train_integrate(struct FunctionTrain * ft)
     \param b [in] - Function train 2
 
     \return out - int a(x)b(x) dx
+
+    \note
+        //This is a slow version, I cant seem to get fast version to be accurate
 ***********************************************************/
 double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 {
     double out = 0.123456789;
-    struct Qmarray * c1 = qmarray_kron(b->cores[0],a->cores[0]);
-    double * temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
-    qmarray_free(c1); c1 = NULL;
+    size_t ii;
+    //struct Qmarray * c1 = qmarray_kron(b->cores[0],a->cores[0]);
+   // double * temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
+   // qmarray_free(c1); c1 = NULL;
+
+    ///*
+    //double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
+    double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
+
         
     /*
     printf("in function_train_inner\n");
@@ -2692,23 +2917,35 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
     iprint_sz(b->dim+1,b->ranks);
     */
     double * temp2 = NULL;
-    size_t ii;
+
+    //size_t ii;
     for (ii = 1; ii < a->dim; ii++){
         //printf("ii=%zu/%zu\n",ii,a->dim);
         //print_qmarray(a->cores[ii],3,NULL);
         //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
-        //c1 = qmarray_vec_kron(temp, a->cores[ii],b->cores[ii]);
-        //printf(" nrows = %zu, ncols=%zu\n",c1->nrows,c1->ncols);
-        //free(temp);temp=NULL;
-        //temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
-        //qmarray_free(c1);c1=NULL;
-        
-        
+       
+        //temp2 = qmarray_kron_integrate(a->cores[ii],b->cores[ii]);
+        //printf("got kron integrate\n");
+        //size_t nrows = a->cores[ii]->nrows * b->cores[ii]->nrows;
+        //size_t ncols = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        //double * temp3 = calloc_double(ncols);
+        //printf("do dgemv\n");
+        //cblas_dgemv(CblasColMajor,CblasTrans,nrows,ncols,1.0,temp2,nrows,temp,1,0.0,temp3,1);
+        //printf("did dgemv\n");
+        //free(temp); temp = NULL;
+        //free(temp2); temp2 = NULL;
+        //temp = calloc_double(ncols);
+        //memmove(temp,temp3,ncols*sizeof(double));
+        //free(temp3); temp3 = NULL;
+
+        //*
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);
         memmove(temp, temp2,stemp*sizeof(double));
+        //*/
+        
         free(temp2); temp2 = NULL;
     }
     
@@ -2727,22 +2964,13 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 ***********************************************************/
 double function_train_norm2(struct FunctionTrain * a)
 {
+    //printf("in norm2\n");
     double out = function_train_inner(a,a);
-    
-    //*
-    if (out < 0.0){
-        out = 0.0;
-    }
-    //*/
-    //if (out < -1e-13){
-    if (out <  -ZEROTHRESH){
-        fprintf(stderr, "inner product of item with itself should not be neg %G \n",out);
+    if (out < -ZEROTHRESH){
+        fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
         exit(1);
     }
-    else if (out < 0.0){
-        return sqrt(fabs(out));
-    }
-    return sqrt(out);
+    return sqrt(fabs(out));
 }
 
 /********************************************************//**
@@ -2755,16 +2983,51 @@ double function_train_norm2(struct FunctionTrain * a)
 ***********************************************************/
 double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
 {   
-    //printf("in function_train_norm2diff\n");
     
     struct FunctionTrain * c = function_train_copy(b);
     function_train_scale(c,-1.0);
     struct FunctionTrain * d = function_train_sum(a,c);
+    //printf("in function_train_norm2diff\n");
     double val = function_train_norm2(d);
     function_train_free(c);
     function_train_free(d);
     return val;
 }
+
+/********************************************************//**
+    Compute the L2 norm of the difference between two functions
+
+    \param a [in] -Function train 
+    \param b [in] - function train 2
+
+    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / ||b(x)||\f$
+***********************************************************/
+double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
+{   
+    
+    struct FunctionTrain * c = function_train_copy(b);
+    function_train_scale(c,-1.0);
+
+    double den = function_train_inner(c,c);
+
+    struct FunctionTrain * d = function_train_sum(a,c);
+    double num = function_train_inner(d,d);
+    
+    double val = num;
+    if (fabs(den) > ZEROTHRESH){
+        val /= den;
+    }
+    if (val < -ZEROTHRESH){
+        fprintf(stderr, "relative error between two FT should not be neg %G<-%G \n",val,-ZEROTHRESH);
+        exit(1);
+    }
+    val = sqrt(fabs(val));
+
+    function_train_free(c); c = NULL;
+    function_train_free(d); d = NULL;
+    return val;
+}
+
 
 /********************************************************//**
     Compute the gradient of a function train 
@@ -3139,13 +3402,17 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             function_train_free(tprod);
 
         }
-        den = function_train_norm2(ft);
-        diff = function_train_norm2diff(ft,fti);
-        if (den > ZEROTHRESH){
-            diff /= den;
-        }
+
+        diff = function_train_relnorm2diff(ft,fti);
+
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
         if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
             printf("...... Error L/R Sweep = %E\n",diff);
         }
@@ -3232,14 +3499,18 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,cargs,apargs,-1);
         if (cargs->verbose > 1)
             printf(" ............. done with right left sweep\n");
+    
 
-        den = function_train_norm2(ft);
-        diff = function_train_norm2diff(ft,fti);
-        if (den > ZEROTHRESH){
-            diff /= den;
-        }
+        diff = function_train_relnorm2diff(ft,fti);
+
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
         if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
             printf("...... New FT norm R/L Sweep = %E\n",den);
             printf("...... Error R/L Sweep = %E\n",diff);
         }
@@ -3327,7 +3598,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
         temp.ranks = init_ranks;
         temp.epsilon = 1e-5;
         temp.maxiter = 5;
-        temp.verbose = 2;
+        temp.verbose = 0;
         
         temp.epsround = 1e-10;
         temp.kickrank = 10;

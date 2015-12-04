@@ -1,0 +1,18 @@
+This benchmark tests how the fast mat-kron algorithm performs compared to the direct method. Specifically
+we are computing A(kron(B,C)) where
+
+A is a matrix 
+B,C are matrix-valued functions
+
+the direct method first computes kron(B,C) then it premultiplies this matrix-valued function by A.
+The fast method takes a different approach (see associated documentation and papers for this approach).
+
+
+The tests are performed on 50 randomly sampled qmarrays for each test point
+
+The data output files have columns
+x0 = independent axis
+x1 = time for the direct kron first and then matrix-mvf multiplication
+x2 = time for the fast version
+
+Also, for each randomly sampled matrix the final results are asserted to be equivalent
