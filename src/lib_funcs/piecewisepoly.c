@@ -1095,11 +1095,13 @@ piecewise_poly_inner(struct PiecewisePoly * a, struct PiecewisePoly * b)
 int piecewise_poly_axpy(double a, struct PiecewisePoly * x, 
             struct PiecewisePoly * y)
 {   
-    piecewise_poly_match1(x,y);
+    
+    //piecewise_poly_match1(x,y);
     piecewise_poly_flatten(x);
     piecewise_poly_flatten(y);
     
     int success = 1;
+    fprintf(stderr, "piecewise_poly_axpy not implemented yet\n");
     size_t ii;
     for (ii = 0; ii < y->nbranches; ii++){
         success = orth_poly_expansion_axpy(a,x->branches[ii]->ope,y->branches[ii]->ope);
@@ -1273,9 +1275,12 @@ piecewise_poly_matched_prod(struct PiecewisePoly * a,struct PiecewisePoly * b)
 *   \param b [inout] - poly2 to match
 *
 *************************************************************/
-void
-piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b);
+
+/*
+void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b)
 {
+    fprintf(stderr, "piecewise_poly_match1 implementation not complete\n");
+    exit(1);
     double lba = piecewise_poly_lb(a);
     double lbb = piecewise_poly_lb(b);
     assert(fabs(lba-lbb) == 0);
@@ -1303,10 +1308,10 @@ piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b);
         
         size_t onbrancha = 0;
         size_t onbranchb = 0;
-        if (a->branches[
 
     }
 }
+*/
 
 
 /********************************************************//**

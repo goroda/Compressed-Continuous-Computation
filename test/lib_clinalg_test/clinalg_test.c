@@ -2863,7 +2863,6 @@ void Test_dmrg_approx(CuTest * tc)
     function_train_free(start); start = NULL;
     function_train_free(finish); finish = NULL;
 }
- 
 
 void Test_fast_mat_kron(CuTest * tc)
 {
@@ -2953,7 +2952,6 @@ void Test_dmrg_prod(CuTest * tc)
     struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
     //struct FunctionTrain * start = function_train_copy(a);
     struct FunctionTrain * finish = dmrg_product(start,a,a,1e-10,10,1e-12,0);
-    //printf("final ranks\n");
     //iprint_sz(dim+1,finish->ranks);
 
     double diff = function_train_relnorm2diff(finish,fcopy);

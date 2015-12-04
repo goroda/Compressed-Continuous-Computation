@@ -64,20 +64,21 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
         fprintf(stderr, "failed to allocate memory for QR decomposition.\n");
         exit(1);
     }
-    
+    qr->mat = NULL;
+    qr->Q = NULL;
     if (type == 0){
         qr->right = 0;
         qr->mr = a->nrows;
         qr->mc = a->nrows;
         int success = qmarray_lq(ac,&(qr->Q),&(qr->mat));
-        assert (success == 1);
+        assert (success == 0);
     }
     else if (type == 1){
         qr->right = 1;
         qr->mc = a->ncols;
         qr->mr = a->ncols;
         int success = qmarray_qr(ac,&(qr->Q),&(qr->mat));
-        assert (success == 1);
+        assert (success == 0);
     }
     else{
         fprintf(stderr, "Can't take reduced qr decomposition of type %d\n",type);
