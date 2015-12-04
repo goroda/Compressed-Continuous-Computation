@@ -1063,13 +1063,13 @@ generic_function_sum3_up(double a, struct GenericFunction * x,
 }
 
 /********************************************************//**
-*   Add two generic functions \f$ y \leftarrow  = ax + y
+*   Add two generic functions \f$ y \leftarrow ax + y \f$
 *
 *   \param a [in] - scaling of first function
 *   \param x [in] - first function
 *   \param y [inout] - second function
 *
-*   \param 0 if successfull, 1 if error
+*   \return 0 if successfull, 1 if error
 *
 *   \note
 *       Handling the function class of the output is not very smart
@@ -1450,7 +1450,7 @@ generic_function_lin_comb(size_t n, struct GenericFunction ** gfarray,
 *   \param ldc [in] - stride of coefficents
 *   \param c [in] - scaling coefficients
 *
-*   \return out  = \f$sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*   \return out  = \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 ************************************************************/
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 

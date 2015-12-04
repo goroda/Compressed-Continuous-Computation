@@ -44,14 +44,14 @@
 
 /** \struct PiecewisePoly
  * \brief Tree structure to represent piecewise polynomials
- * \var PiecewisePoly::split
- * Node which splits into left and right components
- * \var PiecewisePoly::left
- * Left piecewise polynomial (null if leaf)
- * \var PiecewisePoly::right
- * Right piecewise polynomial (null if leaf)
+ * \var PiecewisePoly::leaf
+ * 1 if leaf 0 otherwise
+ * \var PiecewisePoly::nbranches
+ * number of branches extending from current root. may be unspecified if leaf=1
+ * \var PiecewisePoly::branches
+ * branches from root. If it is a leaf then branches=NULL
  * \var PiecewisePoly::ope
- * Polynomial if leaf, NULL if still branching
+ * Polynomial if leaf, NULL otherwise
 */
 struct PiecewisePoly
 {   

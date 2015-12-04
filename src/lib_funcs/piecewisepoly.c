@@ -1275,7 +1275,6 @@ piecewise_poly_matched_prod(struct PiecewisePoly * a,struct PiecewisePoly * b)
 *   \param b [inout] - poly2 to match
 *
 *************************************************************/
-
 /*
 void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b)
 {
@@ -1312,7 +1311,6 @@ void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b)
     }
 }
 */
-
 
 /********************************************************//**
 *   Convert two piecewise polynomials to ones with matching
@@ -1455,7 +1453,6 @@ piecewise_poly_trim_left(struct PiecewisePoly ** a)
     return poly;
 }
 */
-
 
 /********************************************************//**
 *   Check if discontinuity exists between two neighboring

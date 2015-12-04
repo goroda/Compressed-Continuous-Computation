@@ -3000,7 +3000,7 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
     \param a [in] -Function train 
     \param b [in] - function train 2
 
-    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / ||b(x)||\f$
+    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / \lVert b(x) \rVert \f$
 ***********************************************************/
 double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
 {   
@@ -3035,7 +3035,6 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
     \param ft [in] - Function train 
 
     \return ftg - gradient
-
 ***********************************************************/
 struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 {
@@ -3063,7 +3062,6 @@ struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
     \param fta [in] - Function train array
 
     \return jac - jacobian
-
 ***********************************************************/
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 {
@@ -3088,7 +3086,6 @@ struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
     \param fta [in] - Function train 
 
     \return fth - hessian of a function train
-
 ***********************************************************/
 struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 {

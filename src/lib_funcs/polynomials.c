@@ -1778,7 +1778,7 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
 *   \param ldc [in] - stride of coefficients
 *   \param c [in] - scaling coefficients
 *
-*   \return  out  = \f$sum_i=1^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*   \return  out  = \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 *
 *   \note 
 *       If both arrays do not consist of only LEGENDRE polynomials
@@ -1865,7 +1865,7 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 *   \return out - inner product
 *
 *   \note 
-*          int_{lb}^ub  a(x)b(x) w(x) dx
+*         \f$  \int_{lb}^ub  a(x)b(x) w(x) dx \f$
 *************************************************************/
 double
 orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
@@ -1896,7 +1896,7 @@ orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
 *   \return out - inner product
 *
 *   Notes: 
-*          Computes int_{lb}^ub  a(x)b(x) dx by first
+*          Computes  \f$ \int_{lb}^ub  a(x)b(x) dx \f$ by first
 *          converting each polynomial to a Legendre polynomial
 *************************************************************/
 double
@@ -1962,7 +1962,7 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 *   \return out - norm of function
 *
 *   \note
-*        Computes sqrt(int f(x)^2 w(x) dx)
+*        Computes  \f$ \sqrt(\int f(x)^2 w(x) dx) \f$
 *************************************************************/
 double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
     size_t ii;
@@ -1986,7 +1986,7 @@ double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
 *   \return out - norm of function
 *
 *   \note
-*        Computes sqrt(int_a^b f(x)^2 dx)
+*        Computes \f$ \sqrt(\int_a^b f(x)^2 dx) \f$
 *************************************************************/
 double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
 
@@ -2175,7 +2175,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 
 /********************************************************//**
 *   Multiply by scalar and add two orthgonal 
-*   expansions of the same family together \f[ y \leftarrow ax + y /f]
+*   expansions of the same family together \f[ y \leftarrow ax + y \f]
 *
 *   \param a [in] - scaling factor for first polynomial
 *   \param x [in] - first polynomial

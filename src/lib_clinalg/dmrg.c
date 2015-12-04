@@ -129,6 +129,8 @@ struct QR ** qr_array_alloc(size_t n)
     Free memory allocated to array of QR structures
 
     \param qr [inout] - array to free
+    \param n [in] - number of QR structures
+
 ***************************************************************/
 void qr_array_free(struct QR ** qr, size_t n)
 {
@@ -708,12 +710,6 @@ dmrg_sweep_lrl2(struct FunctionTrain * a, struct FunctionTrain * b,
     return na;
 }
 
-/***********************************************************//**
-    Find an approximation of an FT with another FT through dmrg sweeps
-
-    \param z [inout] - initial guess (destroyed);
-    \param y [in] - desired ft
-***************************************************************/
 struct FunctionTrain * dmrg_approx2(struct FunctionTrain * z, struct FunctionTrain * y,
             double delta, size_t max_sweeps, int verbose, double epsilon)
 {
