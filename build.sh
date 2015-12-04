@@ -39,6 +39,10 @@ then
     make clean
 fi
 
+rm -f benchmarks/dmrgprod/bin/dmrgprodbench
+rm -f benchmarks/fastmkron/bin/fmkronbench
+rm -f benchmarks/qrdecomp/bin/qrbench
+
 cmake ..
 
 make
