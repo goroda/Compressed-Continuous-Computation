@@ -33,18 +33,9 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file operators.h
+ * Provides header files and structure definitions for functions in operators.c
  */
 
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "elements.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "qmarray_qr.h"
-#include "operators.h"
-
-#endif
+#include "lib_clinalg.h"

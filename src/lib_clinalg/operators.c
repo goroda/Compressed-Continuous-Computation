@@ -33,18 +33,24 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file operators.c
+ * Provides routines for applying various operators on vector-valued functions
  */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <math.h>
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
+#include "array.h"
+#include "lib_linalg.h"
+#include "lib_clinalg.h"
 
-#include "elements.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "qmarray_qr.h"
-#include "operators.h"
+void grad_inner_core(struct Qmarray * core, struct Qmarray * corederiv, 
+        struct FT1DArray * y, size_t k)
+{
+    if ( (k > 0) && (k < y->size) ){
 
-#endif
+    }
+}
+
+
