@@ -1706,6 +1706,9 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
 *       If both arrays do not consist of only LEGENDRE polynomials
 *       return NULL. All the functions need to have the same lower 
 *       and upper bounds
+*
+*       If the maximum order of the polynomials is greater than 25 then this is
+*       inefficient because I haven't precomputed triple product rules
 *************************************************************/
 struct OrthPolyExpansion *
 orth_poly_expansion_sum_prod(size_t n, size_t lda, 
@@ -1738,34 +1741,42 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
             maxorderb = b[ii*ldb]->num_poly;
         }
     }
-    if (maxorder > 50){
-        fprintf(stderr, "Cant multiply functions of greater than 25 together. Increase size of legtenscoeffs\n");
-        exit(1);
-    }
-    
-    enum poly_type p = LEGENDRE;
-    c = orth_poly_expansion_init(p, maxorder, lb, ub);
-    size_t kk,jj,ll;
-    double * allprods = calloc_double( maxorderb * maxordera);
-    for (kk = 0; kk < n; kk++){
-        for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
-            for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
-                allprods[jj + ii * maxorderb] += 
-                        a[kk*lda]->coeff[ii] * b[kk*ldb]->coeff[jj];
-            }
-        }
-    }
 
-    for (ll = 0; ll < c->num_poly; ll++){
-        for (ii = 0; ii < maxordera; ii++){
-            for (jj = 0; jj < maxorderb; jj++){
-                c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
-                                    allprods[jj+ii*maxorderb];
-            }
+    if (maxorder > 50){
+        c = orth_poly_expansion_prod(a[0],b[0]);
+        for (ii = 1; ii< n; ii++){
+            struct OrthPolyExpansion * temp = 
+                orth_poly_expansion_prod(a[ii*lda],b[ii*ldb]);
+            orth_poly_expansion_axpy(1.0,temp,c);
+            orth_poly_expansion_free(temp); 
+            temp = NULL;
         }
     }
-    free(allprods); allprods=NULL;
-    orth_poly_expansion_round(&c);
+    else{
+        enum poly_type p = LEGENDRE;
+        c = orth_poly_expansion_init(p, maxorder, lb, ub);
+        size_t kk,jj,ll;
+        double * allprods = calloc_double( maxorderb * maxordera);
+        for (kk = 0; kk < n; kk++){
+            for (ii = 0; ii < a[kk*lda]->num_poly; ii++){
+                for (jj = 0; jj < b[kk*ldb]->num_poly; jj++){
+                    allprods[jj + ii * maxorderb] += 
+                            a[kk*lda]->coeff[ii] * b[kk*ldb]->coeff[jj];
+                }
+            }
+        }
+
+        for (ll = 0; ll < c->num_poly; ll++){
+            for (ii = 0; ii < maxordera; ii++){
+                for (jj = 0; jj < maxorderb; jj++){
+                    c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
+                                        allprods[jj+ii*maxorderb];
+                }
+            }
+        }
+        free(allprods); allprods=NULL;
+        orth_poly_expansion_round(&c);
+    }
     return c;
 }
 
