@@ -1553,6 +1553,60 @@ double generic_function_absmax(struct GenericFunction * f, double * x)
 }
 
 /********************************************************//**
+    Helper function for computing the first part of
+    \f[
+       a kron(\cdot,c)
+    \f]
+    if transpose=0 otherwise
+    \f[
+       kron(\cdot,c)a
+    \f]
+    
+    \param transpose [in]
+    \param r [in]
+    \param m [in]
+    \param n [in]
+    \param l [in]
+    \param a [in] - (r, m * n) if transpose = 0 otherwise (l * m,r)
+    \param c [in] - (n,l)
+    \param ldc [in] - stride length of c
+    \param d [inout] - (rm,l)
+
+************************************************************/
+void generic_function_kronh(int transpose,
+                            size_t r, size_t m, size_t n, size_t l, 
+                            double * a,
+                            struct GenericFunction ** c, size_t ldc,
+                            struct genericFunction ** d)
+{
+    size_t ii,jj,kk;
+    if (transpose == 0){
+        for (ii = 0; ii < l; ii++){
+            for (jj = 0; jj < m; jj++){
+                for (kk = 0; kk < r; kk++){
+                    d[ii*r*m + jj*r + kk] =
+                        generic_function_lin_comb2(
+                            n, 1, c + ldc*ii, r, a + kk + jj*n*r);
+                }
+            }
+        }
+    }
+    else{
+        for (ii = 0; ii < r; ii++){
+            for (jj = 0; jj < n; jj++){
+                for (kk = 0; kk < m; kk++){
+                    d[jj +  kk*n + ii*n*m] = 
+                        generic_function_lin_comb2(
+                            l, ldc, c + jj, 1, a + kk*l + ii*l*m);
+                }
+            }
+        }
+    }
+}
+
+
+
+/********************************************************//**
     Compute the index, location and value of the maximum, in absolute value, element of a generic function array
 
     \param n [in] - number of functions
