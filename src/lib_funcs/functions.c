@@ -166,6 +166,28 @@ struct GenericFunction * generic_function_alloc_base(size_t dim)
     return out;
 }
 
+/********************************************************//**
+    Allocate memory for a generic function array
+    
+    \param size [in] - size of array
+
+    \return out - generic function
+************************************************************/
+struct GenericFunction ** generic_function_array_alloc(size_t size)
+{
+    struct GenericFunction ** out;
+    if (NULL == ( out = malloc( size * sizeof(struct GenericFunction *)))){
+        fprintf(stderr, "failed to allocate a generic function array.\n");
+        exit(1);
+    }
+    size_t ii;
+    for (ii = 0; ii < size; ii++){
+        out[ii] = NULL;
+    }
+    return out;
+}
+
+
 
 /********************************************************//**
     Allocate memory for a generic function of a particular
@@ -589,6 +611,31 @@ double generic_function_norm2diff(struct GenericFunction * f1,
     generic_function_free(f3); f3 = NULL;
     return out;
 }
+
+/********************************************************//**
+*   Compute the norm of the difference between two generic function arrays
+*   
+*   \param n [in] - number of elements
+*   \param f1 [in] - generic function array
+*   \param inca [in] - incremenent of first array
+*   \param f2 [in] - generic function array
+*   \param incb [in] - incremenent of second array
+*
+*   \return out - norm of difference
+************************************************************/
+double generic_function_array_norm2diff(
+                size_t n, struct GenericFunction ** f1, size_t inca,
+                struct GenericFunction ** f2, size_t incb)
+{
+    double out = 0.0;
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        out += pow(generic_function_norm2diff(f1[ii*inca],f2[ii*incb]),2);
+    }
+    assert (out >= 0.0);
+    return sqrt(out);
+}
+
 
 
 /********************************************************//**
@@ -1552,57 +1599,6 @@ double generic_function_absmax(struct GenericFunction * f, double * x)
     return out;
 }
 
-/********************************************************//**
-    Helper function for computing the first part of
-    \f[
-       a kron(\cdot,c)
-    \f]
-    if transpose=0 otherwise
-    \f[
-       kron(\cdot,c)a
-    \f]
-    
-    \param transpose [in]
-    \param r [in]
-    \param m [in]
-    \param n [in]
-    \param l [in]
-    \param a [in] - (r, m * n) if transpose = 0 otherwise (l * m,r)
-    \param c [in] - (n,l)
-    \param ldc [in] - stride length of c
-    \param d [inout] - (rm,l)
-
-************************************************************/
-void generic_function_kronh(int transpose,
-                            size_t r, size_t m, size_t n, size_t l, 
-                            double * a,
-                            struct GenericFunction ** c, size_t ldc,
-                            struct genericFunction ** d)
-{
-    size_t ii,jj,kk;
-    if (transpose == 0){
-        for (ii = 0; ii < l; ii++){
-            for (jj = 0; jj < m; jj++){
-                for (kk = 0; kk < r; kk++){
-                    d[ii*r*m + jj*r + kk] =
-                        generic_function_lin_comb2(
-                            n, 1, c + ldc*ii, r, a + kk + jj*n*r);
-                }
-            }
-        }
-    }
-    else{
-        for (ii = 0; ii < r; ii++){
-            for (jj = 0; jj < n; jj++){
-                for (kk = 0; kk < m; kk++){
-                    d[jj +  kk*n + ii*n*m] = 
-                        generic_function_lin_comb2(
-                            l, ldc, c + jj, 1, a + kk*l + ii*l*m);
-                }
-            }
-        }
-    }
-}
 
 
 
@@ -1677,6 +1673,89 @@ void generic_function_array_scale(double a, struct GenericFunction ** gf,
     }
 }
 
+/********************************************************//**
+    Helper function for computing the first part of
+    \f[
+       a kron(\cdot,c)
+    \f]
+    if left = 1,
+    otherwise
+    \f[
+       kron(\cdot,c)a
+    \f]
+    
+    \param left [in]
+    \param r [in]
+    \param m [in]
+    \param n [in]
+    \param l [in]
+    \param a [in] - if left = 1 (r, m * n) otherwise (l * m,r)
+    \param c [in] - (n,l)
+    \param ldc [in] - stride length of c
+    \param d [inout] - (rm,l)
+
+************************************************************/
+void generic_function_kronh(int left,
+                            size_t r, size_t m, size_t n, size_t l, 
+                            double * a,
+                            struct GenericFunction ** c, size_t ldc,
+                            struct GenericFunction ** d)
+{
+    size_t ii,jj,kk;
+    if (left == 1){
+        for (kk = 0; kk < l; kk++){
+            for (jj = 0; jj < m; jj++){
+                for (ii = 0; ii < r; ii++){
+                    //printf("(%zu/%zu,%zu/%zu,%zu/%zu)\n",jj,m-1,kk,l-1,ii,r-1);
+                    d[kk*r*m + jj*r + ii] =
+                        generic_function_lin_comb2(
+                            n, 1, c + n*kk, r, a + ii + jj*n*r);
+                }
+            }
+        }
+    }
+    else{
+        for (ii = 0; ii < r; ii++){
+            for (jj = 0; jj < n; jj++){
+                for (kk = 0; kk < m; kk++){
+                    d[jj +  kk*n + ii*n*m] = 
+                        generic_function_lin_comb2(
+                            l, n, c + jj, 1, a + kk*l + ii*l*m);
+                }
+            }
+        }
+    }
+}
+
+void generic_function_kronh2(int left, size_t r, size_t m, size_t n, size_t l,
+        struct GenericFunction ** b, struct GenericFunction ** t,
+        struct GenericFunction ** out)
+{
+    if (left == 1){
+        size_t ii,jj, kk;
+        for (jj = 0; jj < l; jj++){
+            for (kk = 0; kk < m; kk++){
+                for (ii = 0; ii < r; ii++){
+                    out[ii + kk*r + jj*r*m] =
+                        generic_function_sum_prod(
+                                n, 1, b + jj*n, r, t + ii + kk*r*n);
+                }
+            }
+        }
+    }
+    else {
+        size_t ii,jj, kk;
+        for (ii = 0; ii < r; ii++){
+            for (jj = 0; jj < n; jj++){
+                for (kk = 0; kk < m; kk++){
+                    out[kk + jj*m + ii*n*m] =
+                         generic_function_sum_prod(
+                                 l, n, b + jj, m, t + kk + ii * l * m);
+                }
+            }
+        }
+    }
+}
 
 /********************************************************//**
     Return a constant function

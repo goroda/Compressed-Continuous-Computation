@@ -1229,30 +1229,14 @@ qmarray_vec_kron_integrate(double * a, struct Qmarray * b, struct Qmarray * c)
 struct Qmarray *
 qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
 {
-    struct Qmarray * d = qmarray_alloc(r, b->ncols * c->ncols);
-    
-    size_t ii,jj,kk;
     struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
-        //struct Qmarray * temp = qmarray_alloc(b->nrows,c->ncols);
-    for (kk = 0; kk < c->ncols; kk++){
-        for (jj = 0; jj < b->nrows; jj++){
-            for (ii = 0; ii < r; ii++){
-                temp->funcs[kk * temp->nrows + jj*r + ii] = 
-                    generic_function_lin_comb2(
-                        c->nrows,1,c->funcs + kk*c->nrows,
-                        r, a + ii + jj*c->nrows*r);
-            }
-        }
-    }
-    for (jj = 0; jj < b->ncols; jj++){
-        for (kk = 0; kk < c->ncols; kk++){
-            for (ii = 0; ii < r; ii++){
-                d->funcs[ii + kk*r + jj*r*c->ncols] =
-                 generic_function_sum_prod(b->nrows, 1, 
-                    b->funcs + jj*b->nrows, r, temp->funcs + ii + kk*temp->nrows);
-            }
-        }
-    }
+    generic_function_kronh(1, r, b->nrows, c->nrows, c->ncols, a,
+                            c->funcs,c->nrows,temp->funcs);
+
+    struct Qmarray * d = qmarray_alloc(r, b->ncols * c->ncols);
+    generic_function_kronh2(1,r, c->ncols, b->nrows,b->ncols,
+                        b->funcs,temp->funcs, d->funcs);
+
     qmarray_free(temp); temp = NULL;
     return d;
 }
@@ -1275,34 +1259,76 @@ qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
 struct Qmarray *
 qmarray_kron_mat(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
 {
-    struct Qmarray * d = qmarray_alloc(b->nrows * c->nrows,r);
-    
-    size_t ii,jj,kk;
     struct Qmarray * temp = qmarray_alloc(c->nrows,b->ncols*r);
-    for (ii = 0; ii < r; ii++){
-        for (jj = 0; jj < c->nrows; jj++){
-            for (kk = 0; kk < b->ncols; kk++){
-                temp->funcs[jj +  kk * c->nrows + ii*c->nrows*b->ncols] = 
-                    generic_function_lin_comb2(
-                        c->ncols,c->nrows,c->funcs + jj,
-                        1, a + kk*c->ncols + ii*c->ncols*b->ncols);
-            }
-        }
-    }
-    
-    for (ii = 0; ii < r; ii++){
-        for (jj = 0; jj < b->nrows; jj++){
-            for (kk = 0; kk < c->nrows; kk++){
-                d->funcs[kk + jj*c->nrows + ii*b->nrows*c->nrows] =
-                 generic_function_sum_prod(b->ncols, b->nrows, 
-                    b->funcs + jj, c->nrows,
-                            temp->funcs + kk + ii*b->ncols*c->nrows);
-            }
-        }
-    }
+    generic_function_kronh(0, r, b->ncols, c->nrows, c->ncols, a,
+                            c->funcs,c->nrows,temp->funcs);
+
+    struct Qmarray * d = qmarray_alloc(b->nrows * c->nrows,r);
+    generic_function_kronh2(0,r, c->nrows, b->nrows,b->ncols,
+                        b->funcs,temp->funcs, d->funcs);
+
     qmarray_free(temp); temp = NULL;
     return d;
 }
+
+/*
+void qmarray_block_kron_mat(int left, size_t nlblocks,
+        struct Qmarray ** lblocks, struct Qmarray * right, size_t r,
+        double * mat, struct Qmarray * out)
+{   
+    if (left == 1)
+    {
+        size_t totrows = 0;
+        size_t ii;
+        for (ii = 0; ii < nlblocks; ii++){
+            totrows += lblocks[ii]->nrows;    
+        }
+        //struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
+        struct GenericFunction ** gfarray = 
+            generic_function_array_alloc(r * right->ncols * totrows);
+        
+        //printf("first part \n");
+
+        //generic_function_kronh(1, r, b->nrows, c->nrows, c->ncols, a,
+        //                    c->funcs,c->nrows,temp->funcs);
+        generic_function_kronh(1, r, totrows, right->nrows, right->ncols,
+                mat, right->funcs, right->nrows, gfarray);
+        
+       // printf("end first part \n");
+
+        //generic_function_kronh2(1,r, c->ncols, b->nrows,b->ncols,
+        //                b->funcs,temp->funcs, d->funcs);
+
+        int width = 0;
+        int runrows = 0;
+        //for (ii = 0; ii < nlblocks; ii++){
+        for (ii = 0; ii < 2; ii++){
+            //printf(" ii = %zu\n", ii);
+            //struct Qmarray * temp =
+            //    qmarray_alloc(r, lblocks[ii]->ncols * right->ncols);
+            generic_function_kronh2(1,r,right->ncols, 
+                    lblocks[ii]->nrows, lblocks[ii]->ncols,
+                    lblocks[ii]->funcs, gfarray + , // THIS IS THE ERROR
+                    out->funcs + width * out->nrows);
+            width += lblocks[ii]->ncols * right->ncols;
+        }
+        generic_function_array_free(r * right->ncols * totrows,gfarray);
+        //printf("end of teh second part\n");
+    }
+    else{
+        size_t totcols = 0;
+        size_t ii;
+        for (ii = 0; ii < nlblocks; ii++){
+            totcols += lblocks[ii]->ncols;    
+        }
+        struct GenericFunction ** gfarray = 
+            generic_function_array_alloc(r * right->ncols * totcols);
+
+        generic_function_kronh(0, r, totcols, right->nrows, right->ncols,
+                mat, right->funcs, right->nrows, gfarray);
+    }
+}
+*/
 
 
 /***********************************************************//**

@@ -109,6 +109,7 @@ struct GenericFunction {
 };
 
 struct GenericFunction * generic_function_alloc_base(size_t);
+struct GenericFunction ** generic_function_array_alloc(size_t);
 struct GenericFunction * generic_function_alloc(size_t, enum function_class, void *);
 void generic_function_roundt(struct GenericFunction **, double);
 
@@ -142,6 +143,10 @@ double * generic_function_1darray_eval(size_t, struct GenericFunction **,
 double generic_function_norm(struct GenericFunction *);
 double generic_function_norm2diff(struct GenericFunction *, 
                                   struct GenericFunction *);
+double generic_function_array_norm2diff(
+                size_t, struct GenericFunction **, size_t,
+                struct GenericFunction **, size_t);
+
 double generic_function_integral(struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
@@ -192,10 +197,18 @@ struct GenericFunction * generic_function_lin_comb2(size_t, size_t,
 double generic_function_absmax(struct GenericFunction *, double *);
 double generic_function_array_absmax(size_t, size_t, 
         struct GenericFunction **, size_t *, double *);
-
-// more complicated operations
 void generic_function_scale(double, struct GenericFunction *);
 void generic_function_array_scale(double, struct GenericFunction **, size_t);
+void generic_function_kronh(int,
+                            size_t, size_t, size_t, size_t, 
+                            double *, 
+                            struct GenericFunction **, size_t,
+                            struct GenericFunction **);
+void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
+        struct GenericFunction **, struct GenericFunction **,
+        struct GenericFunction **);
+
+// more complicated operations
 struct GenericFunction * 
 generic_function_constant(double, enum function_class, void *,
             double, double, void *);
