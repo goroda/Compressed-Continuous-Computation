@@ -2964,7 +2964,7 @@ void Test_block_kron_mat(CuTest * tc)
     double * mat = drandu(k*sum_rl1*r21);
 
     struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
-    qmarray_block_kron_mat(1,nblocks,mat1,mat2,k,mat,is);
+    //qmarray_block_kron_mat(1,nblocks,mat1,mat2,k,mat,is);
 
 
     struct Qmarray * big1 = qmarray_blockdiag(mat1[0],mat1[1]);
