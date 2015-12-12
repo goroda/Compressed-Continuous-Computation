@@ -2932,25 +2932,25 @@ void Test_fast_kron_mat(CuTest * tc)
     qmarray_free(is); is = NULL;
 }
 
-void Test_block_kron_mat(CuTest * tc)
+void Test_block_kron_mat1(CuTest * tc)
 {
-    printf("Testing Function: block_kron_mat \n");
+    printf("Testing Function: block_kron_mat (1/6) \n");
 
     double lb = -1.0;
     double ub = 1.0;
     size_t maxorder = 10;
 
-    size_t nblocks = 2;
-    size_t rl1[2] = {2, 2};//, 2, 2, 2};
-    size_t rl2[2] = {2, 2};//, 2, 2, 2};
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
     size_t sum_rl1 = 0;
     size_t sum_rl2 = 0;
-    struct Qmarray * mat1[2];
+    struct Qmarray * mat1[5];
     
 
     size_t r21 = 7;
     size_t r22 = 3;
-    size_t k = 2;
+    size_t k = 8;
     double diff; 
     
 
@@ -2964,39 +2964,363 @@ void Test_block_kron_mat(CuTest * tc)
     double * mat = drandu(k*sum_rl1*r21);
 
     struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
-    //qmarray_block_kron_mat(1,nblocks,mat1,mat2,k,mat,is);
+    qmarray_block_kron_mat('D',1,nblocks,mat1,mat2,k,mat,is);
 
 
     struct Qmarray * big1 = qmarray_blockdiag(mat1[0],mat1[1]);
-    //struct Qmarray * big2 = qmarray_blockdiag(big1,mat1[2]);
-    //struct Qmarray * big3 = qmarray_blockdiag(big2,mat1[3]);
-    //struct Qmarray * big4 = qmarray_blockdiag(big3,mat1[4]);
+    struct Qmarray * big2 = qmarray_blockdiag(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_blockdiag(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_blockdiag(big3,mat1[4]);
 
-    
-    struct Qmarray * mid = qmarray_kron(big1, mat2);
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
     struct Qmarray * shouldbe = mqma(mat,mid,k);
 
-    struct Qmarray * is2 = qmarray_mat_kron(k,mat,big1,mat2);
+    struct Qmarray * is2 = qmarray_mat_kron(k,mat,big4,mat2);
     diff = qmarray_norm2diff(shouldbe,is2);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
-
-    for (ii = 0; ii < is->nrows*is->ncols; ii++){
-        diff = generic_function_norm2diff(shouldbe->funcs[ii],is->funcs[ii]);
-        printf("diff = %G\n",diff);
-    }
-    //diff = generic_function_array_norm2diff(
-    //        k*mat1[0]->ncols*mat2->ncols,shouldbe->funcs,1,
-    //        is->funcs,1);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
 
-   // diff = qmarray_norm2diff(shouldbe,is);
-
     qmarray_free(big1);
-    //qmarray_free(big2);
-    //qmarray_free(big3);
-    //qmarray_free(big4);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
     qmarray_free(mid);
     qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+void Test_block_kron_mat2(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (2/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {4, 4, 4, 4, 4};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
+    size_t sum_rl1 = 4;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl1*r21);
+
+    struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
+    qmarray_block_kron_mat('R',1,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_stackh(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackh(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackh(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackh(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = mqma(mat,mid,k);
+
+    //struct Qmarray * is2 = qmarray_mat_kron(k,mat,big4,mat2);
+    //diff = qmarray_norm2diff(shouldbe,is2);
+    //CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    //qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+void Test_block_kron_mat3(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (3/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {4, 4, 4, 4, 4};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 4;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl1*r21);
+
+    struct Qmarray * is = qmarray_alloc(k, sum_rl2 * r22);
+    qmarray_block_kron_mat('C',1,nblocks,mat1,mat2,k,mat,is);
+    
+    struct Qmarray * big1 = qmarray_stackv(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackv(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackv(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackv(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = mqma(mat,mid,k);
+
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+}
+
+void Test_block_kron_mat4(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (4/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 4, 6, 5, 3};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('D',0,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_blockdiag(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_blockdiag(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_blockdiag(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_blockdiag(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+
+void Test_block_kron_mat5(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (5/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {2, 2, 2, 2, 2};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
+    size_t sum_rl1 = 2;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('R',0,nblocks,mat1,mat2,k,mat,is);
+
+    struct Qmarray * big1 = qmarray_stackh(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackh(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackh(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackh(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+void Test_block_kron_mat6(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (6/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 2, 2, 2, 2};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 2;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('C',0,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_stackv(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackv(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackv(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackv(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
 
     free(mat); mat = NULL;
     for (ii = 0; ii < nblocks; ii++){
@@ -3054,7 +3378,12 @@ CuSuite * CLinalgDMRGGetSuite()
     SUITE_ADD_TEST(suite, Test_dmrg_approx);
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     SUITE_ADD_TEST(suite,Test_fast_kron_mat);
-    //SUITE_ADD_TEST(suite,Test_block_kron_mat);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat1);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat2);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat3);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat4);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat5);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat6);
     SUITE_ADD_TEST(suite,Test_dmrg_prod);
     return suite;
 }
@@ -3072,10 +3401,10 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    //CuSuiteAddSuite(suite, clin);
-    //CuSuiteAddSuite(suite, qma);
-    //CuSuiteAddSuite(suite, ftr);
-    //CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, qma);
+    CuSuiteAddSuite(suite, ftr);
+    CuSuiteAddSuite(suite, fta);
     CuSuiteAddSuite(suite, dmrg);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

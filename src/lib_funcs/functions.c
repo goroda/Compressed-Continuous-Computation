@@ -442,10 +442,10 @@ void generic_function_free(struct GenericFunction * gf){
 /********************************************************//**
     Free memory for generic function array
 
-    \param n [in] - number of generic functions in the array
     \param gf [inout] - generic function array
+    \param n [in] - number of generic functions in the array
 ************************************************************/
-void generic_function_array_free(size_t n, struct GenericFunction ** gf){
+void generic_function_array_free(struct GenericFunction ** gf, size_t n){
     if (gf != NULL){
         size_t ii;
         for (ii = 0; ii < n; ii++){
@@ -1149,6 +1149,39 @@ int generic_function_axpy(double a, struct GenericFunction * x,
 }
 
 /********************************************************//**
+*   Add generic functions \f$ y[i] \leftarrow a x[i] + y[i] \f$
+*
+*   \param n [in] - number of functions
+*   \param a [in] - scaling of the first functions
+*   \param x [in] - first function array
+*   \param y [inout] - second function array
+*
+*   \return 0 if successfull, 1 if error
+*
+*   \note
+*       Handling the function class of the output is not very smart
+************************************************************/
+int generic_function_array_axpy(size_t n, double a, struct GenericFunction ** x, 
+            struct GenericFunction ** y)
+{
+    //printf("in here! a =%G b = %G\n",a,b);
+
+    assert (y != NULL);
+    assert (x != NULL);
+
+    int success = 1;
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        success = generic_function_axpy(a,x[ii],y[ii]);
+        if (success == 1){
+            break;
+        }
+    }
+    
+    return success;
+}
+
+/********************************************************//**
 *   Add two generic functions z = ax + by
 *
 *   \param a [in] - scaling of first function
@@ -1698,7 +1731,7 @@ void generic_function_array_scale(double a, struct GenericFunction ** gf,
 void generic_function_kronh(int left,
                             size_t r, size_t m, size_t n, size_t l, 
                             double * a,
-                            struct GenericFunction ** c, size_t ldc,
+                            struct GenericFunction ** c,
                             struct GenericFunction ** d)
 {
     size_t ii,jj,kk;

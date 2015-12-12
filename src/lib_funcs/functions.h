@@ -126,7 +126,7 @@ struct GenericFunction * generic_function_copy(struct GenericFunction *);
 void generic_function_copy_pa(struct GenericFunction *, struct GenericFunction *);
 
 void generic_function_free(struct GenericFunction *);
-void generic_function_array_free(size_t, struct GenericFunction **);
+void generic_function_array_free(struct GenericFunction **, size_t);
 unsigned char * serialize_generic_function(unsigned char *, 
                     struct GenericFunction *, size_t *);
 unsigned char *
@@ -178,6 +178,8 @@ generic_function_sum3_up(double, struct GenericFunction *,
                          double, struct GenericFunction *);
 
 int generic_function_axpy(double, struct GenericFunction *, struct GenericFunction *);
+int generic_function_array_axpy(size_t, double, struct GenericFunction **, 
+            struct GenericFunction **);
 
 struct GenericFunction **
 generic_function_array_daxpby(size_t, double, size_t, 
@@ -202,10 +204,10 @@ void generic_function_array_scale(double, struct GenericFunction **, size_t);
 void generic_function_kronh(int,
                             size_t, size_t, size_t, size_t, 
                             double *, 
-                            struct GenericFunction **, size_t,
+                            struct GenericFunction **,
                             struct GenericFunction **);
 void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
-        struct GenericFunction **, struct GenericFunction **,
+        struct GenericFunction **, struct GenericFunction **, 
         struct GenericFunction **);
 
 // more complicated operations

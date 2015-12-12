@@ -1231,7 +1231,7 @@ qmarray_mat_kron(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
 {
     struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
     generic_function_kronh(1, r, b->nrows, c->nrows, c->ncols, a,
-                            c->funcs,c->nrows,temp->funcs);
+                            c->funcs,temp->funcs);
 
     struct Qmarray * d = qmarray_alloc(r, b->ncols * c->ncols);
     generic_function_kronh2(1,r, c->ncols, b->nrows,b->ncols,
@@ -1261,7 +1261,7 @@ qmarray_kron_mat(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
 {
     struct Qmarray * temp = qmarray_alloc(c->nrows,b->ncols*r);
     generic_function_kronh(0, r, b->ncols, c->nrows, c->ncols, a,
-                            c->funcs,c->nrows,temp->funcs);
+                            c->funcs,temp->funcs);
 
     struct Qmarray * d = qmarray_alloc(b->nrows * c->nrows,r);
     generic_function_kronh2(0,r, c->nrows, b->nrows,b->ncols,
@@ -1271,64 +1271,286 @@ qmarray_kron_mat(size_t r, double * a, struct Qmarray * b, struct Qmarray * c)
     return d;
 }
 
-/*
-void qmarray_block_kron_mat(int left, size_t nlblocks,
+// The algorithms below really are not cache-aware and might be slow ...
+void qmarray_block_kron_mat(char type, int left, size_t nlblocks,
         struct Qmarray ** lblocks, struct Qmarray * right, size_t r,
         double * mat, struct Qmarray * out)
 {   
     if (left == 1)
     {
-        size_t totrows = 0;
+
         size_t ii;
-        for (ii = 0; ii < nlblocks; ii++){
-            totrows += lblocks[ii]->nrows;    
-        }
-        //struct Qmarray * temp = qmarray_alloc(r*b->nrows,c->ncols);
-        struct GenericFunction ** gfarray = 
-            generic_function_array_alloc(r * right->ncols * totrows);
+        if (type == 'D'){
+            size_t totrows = 0;
+            for (ii = 0; ii < nlblocks; ii++){
+                totrows += lblocks[ii]->nrows;    
+            }
+            struct GenericFunction ** gfarray = 
+                generic_function_array_alloc(r * right->ncols * totrows);
+            
+            generic_function_kronh(1, r, totrows, right->nrows, right->ncols,
+                    mat, right->funcs, gfarray);
         
-        //printf("first part \n");
 
-        //generic_function_kronh(1, r, b->nrows, c->nrows, c->ncols, a,
-        //                    c->funcs,c->nrows,temp->funcs);
-        generic_function_kronh(1, r, totrows, right->nrows, right->ncols,
-                mat, right->funcs, right->nrows, gfarray);
-        
-       // printf("end first part \n");
+            size_t width = 0;
+            size_t  runrows = 0;
+            size_t jj,kk,ll;
+            for (ii = 0; ii < nlblocks; ii++){
+                struct GenericFunction ** temp = 
+                    generic_function_array_alloc(right->ncols * r * lblocks[ii]->nrows);
 
-        //generic_function_kronh2(1,r, c->ncols, b->nrows,b->ncols,
-        //                b->funcs,temp->funcs, d->funcs);
-
-        int width = 0;
-        int runrows = 0;
-        //for (ii = 0; ii < nlblocks; ii++){
-        for (ii = 0; ii < 2; ii++){
-            //printf(" ii = %zu\n", ii);
-            //struct Qmarray * temp =
-            //    qmarray_alloc(r, lblocks[ii]->ncols * right->ncols);
-            generic_function_kronh2(1,r,right->ncols, 
-                    lblocks[ii]->nrows, lblocks[ii]->ncols,
-                    lblocks[ii]->funcs, gfarray + , // THIS IS THE ERROR
-                    out->funcs + width * out->nrows);
-            width += lblocks[ii]->ncols * right->ncols;
+                for (jj = 0; jj < right->ncols; jj++){
+                    for (kk = 0; kk < lblocks[ii]->nrows; kk++){
+                        for (ll = 0; ll < r; ll++){
+                            temp[ll + kk*r + jj * lblocks[ii]->nrows*r] =
+                                gfarray[runrows + ll + kk*r + jj*totrows*r];
+                        }
+                    }
+                }
+                generic_function_kronh2(1,r,right->ncols, 
+                        lblocks[ii]->nrows, lblocks[ii]->ncols,
+                        lblocks[ii]->funcs, temp, 
+                        out->funcs + width * out->nrows);
+                width += lblocks[ii]->ncols * right->ncols;
+                runrows += r * lblocks[ii]->nrows;
+                free(temp); temp = NULL;
+            }
+            generic_function_array_free(gfarray, r * right->ncols * totrows);
         }
-        generic_function_array_free(r * right->ncols * totrows,gfarray);
-        //printf("end of teh second part\n");
+        else if (type == 'R'){
+            size_t row1 = lblocks[0]->nrows;
+            for (ii = 1; ii < nlblocks; ii++){
+                assert( row1 == lblocks[ii]->nrows );
+            }
+            
+            struct GenericFunction ** gfarray = 
+                generic_function_array_alloc(r * right->ncols * row1);
+
+            generic_function_kronh(1,r, row1, right->nrows, right->ncols,
+                    mat, right->funcs, gfarray);
+
+            
+            size_t width = 0;
+            for (ii = 0; ii < nlblocks; ii++){
+                generic_function_kronh2(1,r, right->ncols, row1,
+                        lblocks[ii]->ncols, lblocks[ii]->funcs, gfarray,
+                        out->funcs + width * out->nrows);
+                width += lblocks[ii]->ncols * right->ncols;        
+            }
+            generic_function_array_free(gfarray,r * right->ncols * row1);
+        }
+        else if (type == 'C'){
+            
+            size_t col1 = lblocks[0]->ncols;
+            size_t totrows = 0;
+            for (ii = 1; ii < nlblocks; ii++){
+                assert( col1 == lblocks[ii]->ncols );
+                totrows += lblocks[ii]->nrows;    
+            }
+
+            struct Qmarray * temp = qmarray_alloc(r, col1*nlblocks*right->ncols);
+            qmarray_block_kron_mat('D',1,nlblocks,lblocks,right,r,mat,temp);
+            
+            size_t ii,jj,kk,ll;
+            size_t startelem = 0;
+            for (ii = 0; ii < col1; ii++){
+                for (jj = 0; jj < right->ncols; jj++){
+                    for (kk = 0; kk < r; kk++){
+                        out->funcs[kk + jj*r + ii * r*right->ncols] =
+                            generic_function_copy(
+                                temp->funcs[startelem + kk + jj*r + ii * r*right->ncols]);
+
+                    }
+                }
+            }
+            startelem += r * right->ncols * col1;
+            for (ll = 1; ll < nlblocks; ll++){
+                for (ii = 0; ii < col1; ii++){
+                    for (jj = 0; jj < right->ncols; jj++){
+                        for (kk = 0; kk < r; kk++){
+                            generic_function_axpy(1.0,
+                                temp->funcs[startelem + kk + jj*r + ii * r*right->ncols],
+                                out->funcs[kk + jj*r + ii * r*right->ncols]);
+
+                        }
+                    }
+                }
+                startelem += r * right->ncols * col1;
+            }
+
+            qmarray_free(temp); temp = NULL;
+
+        }
     }
     else{
-        size_t totcols = 0;
         size_t ii;
-        for (ii = 0; ii < nlblocks; ii++){
-            totcols += lblocks[ii]->ncols;    
-        }
-        struct GenericFunction ** gfarray = 
-            generic_function_array_alloc(r * right->ncols * totcols);
+        if (type == 'D'){
+            size_t totcols = 0;
+            size_t totrows = 0;
+            for (ii = 0; ii < nlblocks; ii++){
+                totcols += lblocks[ii]->ncols;    
+                totrows += lblocks[ii]->nrows;
+            }
 
-        generic_function_kronh(0, r, totcols, right->nrows, right->ncols,
-                mat, right->funcs, right->nrows, gfarray);
+
+            struct GenericFunction ** gfarray = 
+                generic_function_array_alloc(r * right->nrows * totcols);
+            
+            generic_function_kronh(0, r, totcols, right->nrows, right->ncols,
+                    mat, right->funcs, gfarray);
+        
+           // printf("number of elements in gfarray is %zu\n",r * right->nrows * totcols);
+            size_t runcols = 0;
+            size_t runrows = 0;
+            size_t jj,kk,ll;
+           // printf("done with computing kronh1\n");
+            for (ii = 0; ii < nlblocks; ii++){
+
+                size_t st1a = right->nrows;
+                size_t st1b = lblocks[ii]->ncols;
+                size_t st = st1a * st1b * r; 
+                struct GenericFunction ** temp = generic_function_array_alloc(st);
+                
+                size_t rga = right->nrows;;
+                size_t lastind = right->nrows * totcols;
+
+                for (jj = 0; jj < r; jj++){
+                    for (kk = 0; kk < st1b; kk++){
+                        for (ll = 0; ll < st1a; ll++){
+                            temp [ll + kk*st1a + jj*st1a*st1b] =
+                                gfarray[ll + (kk+runcols)*rga  + jj*lastind];
+                        }
+                    }
+                }
+                
+                
+                size_t st2a = right->nrows;
+                size_t st2b = lblocks[ii]->nrows;
+                size_t st2 = st2a * st2b * r;
+
+                struct GenericFunction ** temp2 = 
+                    generic_function_array_alloc(st2);
+
+                generic_function_kronh2(0,r,st2a, st2b, st1b,
+                        lblocks[ii]->funcs, temp, temp2);
+                
+                for (jj = 0; jj < st2a; jj++){
+                    for (kk = 0; kk < st2b; kk++){
+                        for (ll = 0; ll < r; ll++){
+                            out->funcs[jj + (runrows + kk)*st2a + ll*totrows* st2a] =
+                                temp2[jj + kk*st2a + ll*st2a*st2b];
+                        }
+                    }
+                }
+
+                runcols += lblocks[ii]->ncols;
+                runrows += lblocks[ii]->nrows;
+                free(temp); temp = NULL;
+                free(temp2); temp2 = NULL;
+            }
+            generic_function_array_free(gfarray, r*right->nrows*totcols);
+        }
+        else if (type == 'R')
+        {
+
+            size_t totcols = lblocks[0]->ncols;
+            size_t row1 = lblocks[0]->nrows;
+            for (ii = 1; ii < nlblocks; ii++){
+                totcols += lblocks[ii]->ncols;    
+                assert ( lblocks[ii]->nrows == row1);
+            }
+
+            struct Qmarray * temp = 
+                qmarray_alloc(row1*nlblocks*right->nrows, r);
+            qmarray_block_kron_mat('D',0,nlblocks,lblocks,right,r,mat,temp);
+
+            size_t jj,kk,ll;
+            size_t ind1,ind2;
+            size_t runrows = 0;
+            for (ii = 0; ii < nlblocks; ii++){
+                //printf(" on block %zu\n",ii);
+                if (ii == 0){
+                    for (jj = 0; jj < r; jj++){
+                        for (kk = 0; kk < row1; kk++){
+                            for (ll = 0; ll < right->nrows; ll++){
+                                ind1 = ll + kk * right->nrows + 
+                                        jj * row1 * right->nrows;
+                                ind2 = ll + kk * right->nrows + 
+                                        jj * row1*nlblocks * right->nrows;
+                                out->funcs[ind1] = 
+                                    generic_function_copy(temp->funcs[ind2]);
+                            }
+                        }
+                    }
+                }
+                else{
+                    for (jj = 0; jj < r; jj++){
+                        for (kk = 0; kk < row1; kk++){
+                            for (ll = 0; ll < right->nrows; ll++){
+                                ind1 = ll + kk * right->nrows + 
+                                            jj * row1 * right->nrows;
+                                ind2 = ll + (kk+runrows) * right->nrows + 
+                                            jj * row1 *nlblocks* right->nrows;
+                                generic_function_axpy(
+                                        1.0,
+                                        temp->funcs[ind2],
+                                        out->funcs[ind1]);
+                            }
+                        }
+                    }
+                }
+                runrows += row1;
+            }
+            qmarray_free(temp); temp = NULL;
+        }
+        else if (type == 'C'){
+            size_t totrows = lblocks[0]->nrows;
+            size_t col1 = lblocks[0]->ncols;
+            for (ii = 1; ii < nlblocks; ii++){
+                totrows += lblocks[ii]->nrows;    
+                assert ( lblocks[ii]->ncols == col1);
+            }
+
+            struct GenericFunction ** gfarray = 
+                generic_function_array_alloc(r * right->nrows * col1);
+            
+            generic_function_kronh(0, r, col1, right->nrows, right->ncols,
+                    mat, right->funcs, gfarray);
+            
+            size_t jj,kk,ll,ind1,ind2;
+            size_t runrows = 0;
+            for (ii = 0; ii < nlblocks; ii++){
+                size_t st2a = right->nrows;
+                size_t st2b = lblocks[ii]->nrows;
+                size_t st2 = st2a * st2b * r;
+
+                struct GenericFunction ** temp2 = 
+                    generic_function_array_alloc(st2);
+
+                generic_function_kronh2(0,r,st2a, st2b, lblocks[ii]->ncols,
+                        lblocks[ii]->funcs, gfarray, temp2);
+
+                for (jj = 0; jj < r; jj++){
+                    for (kk = 0; kk < st2b; kk++){
+                        for (ll = 0; ll < right->nrows; ll++){
+                            ind2 = ll + kk * right->nrows + 
+                                jj * st2b * right->nrows;
+                            ind1 = ll + (kk + runrows)*right->nrows + 
+                                jj* totrows * right->nrows;
+                            out->funcs[ind1] = temp2[ind2];
+                        }
+                    }
+                }
+                runrows += lblocks[ii]->nrows;
+                free(temp2); temp2 = NULL;
+            }
+            
+            generic_function_array_free(gfarray,
+                                    r * right->nrows * col1);
+
+        }
     }
 }
-*/
 
 
 /***********************************************************//**
@@ -1397,7 +1619,7 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
         exit(1);
         //return 0.0;
     }
-    generic_function_array_free(a->ncols*a->nrows,temp);
+    generic_function_array_free(temp, a->ncols*a->nrows);
     //free(temp);
     temp = NULL;
     return sqrt(out);
@@ -1579,7 +1801,7 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
             qmarray_set_column_gf(A,ii,temp);
             if (VQMALU)
                 printf("norm post=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
-            generic_function_array_free(A->nrows,temp);
+            generic_function_array_free(temp,A->nrows);
         }
     }
     //printf("done?\n");
@@ -1893,7 +2115,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
                 temp1 =  generic_function_inner_sum(A->nrows,1,tempv->funcs,1,
                                                 E->funcs + jj*E->nrows);
                 //printf("temp1= %G\n",temp1);
-                generic_function_array_free(A->nrows, v->funcs);
+                generic_function_array_free(v->funcs,A->nrows);
                 v->funcs = generic_function_array_daxpby(A->nrows,1.0,1,tempv->funcs,
                                                 -temp1, 1, E->funcs+jj*E->nrows);
                 //printf("k ok= %G\n",temp1);
@@ -2138,7 +2360,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
                 tempv = quasimatrix_copy(v);
                 temp1 =  generic_function_inner_sum(A->ncols,1,tempv->funcs,E->nrows,
                                                 E->funcs + jj);
-                generic_function_array_free(A->ncols, v->funcs);
+                generic_function_array_free(v->funcs,A->ncols);
                 v->funcs = generic_function_array_daxpby(A->ncols,1.0,1,tempv->funcs,
                                         -temp1, E->nrows, E->funcs+jj);
                 quasimatrix_free(tempv);
@@ -2833,8 +3055,8 @@ void function_train_scale(struct FunctionTrain * x, double a)
 {
     struct GenericFunction ** temp = generic_function_array_daxpby(
         x->cores[0]->nrows*x->cores[0]->ncols,a,1,x->cores[0]->funcs,0.0,1,NULL);
-    generic_function_array_free(x->cores[0]->nrows * x->cores[0]->ncols, 
-                                        x->cores[0]->funcs);
+    generic_function_array_free(x->cores[0]->funcs,
+                x->cores[0]->nrows * x->cores[0]->ncols);
     x->cores[0]->funcs = temp;
 }
 
