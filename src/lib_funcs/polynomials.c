@@ -1875,8 +1875,8 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 *
 *   \return out - inner product
 *
-*   \note 
-*         \f$  \int_{lb}^ub  a(x)b(x) w(x) dx \f$
+*   \note \f$  \int_{lb}^ub  a(x)b(x) w(x) dx \f$
+
 *************************************************************/
 double
 orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,

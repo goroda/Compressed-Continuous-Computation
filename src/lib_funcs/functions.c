@@ -1724,7 +1724,6 @@ void generic_function_array_scale(double a, struct GenericFunction ** gf,
     \param l [in]
     \param a [in] - if left = 1 (r, m * n) otherwise (l * m,r)
     \param c [in] - (n,l)
-    \param ldc [in] - stride length of c
     \param d [inout] - (rm,l)
 
 ************************************************************/
