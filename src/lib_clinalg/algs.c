@@ -1351,7 +1351,7 @@ void qmarray_block_kron_mat(char type, int left, size_t nlblocks,
             struct Qmarray * temp = qmarray_alloc(r, col1*nlblocks*right->ncols);
             qmarray_block_kron_mat('D',1,nlblocks,lblocks,right,r,mat,temp);
             
-            size_t ii,jj,kk,ll;
+            size_t jj,kk,ll;
             size_t startelem = 0;
             for (ii = 0; ii < col1; ii++){
                 for (jj = 0; jj < right->ncols; jj++){
