@@ -33,7 +33,6 @@
 
 //Code
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -3388,6 +3387,72 @@ CuSuite * CLinalgDMRGGetSuite()
     return suite;
 }
 
+void Test_diffusion_midleft(CuTest * tc)
+{
+    printf("Testing Function: dmrg_diffusion_midleft \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    
+    size_t r11 = 2;
+    size_t r12 = 4;
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+
+    size_t r = 8;
+    double diff; 
+    
+    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * da = qmarray_deriv(a);
+
+    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * df = qmarray_deriv(f);
+    struct Qmarray * ddf = qmarray_deriv(df);
+ 
+    double * mat = drandu(r*r11*r21*2);
+
+    struct Qmarray * af = qmarray_kron(a,f);
+    struct Qmarray * af2a = qmarray_kron(da,df);
+    struct Qmarray * af2b = qmarray_kron(a,ddf);
+    
+    qmarray_axpy(1.0,af2a, af2b);
+    struct Qmarray * comb = qmarray_blockdiag(af,af2b);
+    struct Qmarray * shouldbe = mqma(mat,comb,r);
+
+    struct Qmarray * is = qmarray_alloc(r,2*r12 * r22);
+    dmrg_diffusion_midleft(da,a,ddf,df,f,mat,r,is);
+    
+    size_t ii;
+    for (ii = 0; ii < is->nrows * is->ncols; ii++){
+        diff = generic_function_norm2diff(is->funcs[ii],shouldbe->funcs[ii]);
+        CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+        //printf("diff = %G\n",diff);
+    }
+    diff = qmarray_norm2diff(is,shouldbe);
+    //printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(is); is = NULL;
+    qmarray_free(a); a = NULL;
+    qmarray_free(da); da = NULL;
+    qmarray_free(f); f = NULL;
+    qmarray_free(df); df = NULL;
+    qmarray_free(ddf); ddf = NULL;
+    qmarray_free(comb); comb = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    free(mat); mat = NULL;
+}
+
+
+CuSuite * CLinalgDiffusionGetSuite()
+{
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_diffusion_midleft);
+    return suite;
+}
+
 void RunAllTests(void) {
     
     printf("Running Test Suite: lib_clinalg\n");
@@ -3401,11 +3466,13 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
+    CuSuite * diff = CLinalgDiffusionGetSuite();
+    //CuSuiteAddSuite(suite, clin);
+    //CuSuiteAddSuite(suite, qma);
+    //CuSuiteAddSuite(suite, ftr);
+    //CuSuiteAddSuite(suite, fta);
+    //CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, diff);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
@@ -3416,6 +3483,7 @@ void RunAllTests(void) {
     CuSuiteDelete(ftr);
     CuSuiteDelete(fta);
     CuSuiteDelete(dmrg);
+    CuSuiteDelete(diff);
     CuStringDelete(output);
     free(suite);
 }

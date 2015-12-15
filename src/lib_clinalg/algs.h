@@ -157,6 +157,7 @@ void qmarray_block_kron_mat(char, int, size_t,
 double * qmarray_integrate(struct Qmarray *);
 double qmarray_norm2diff(struct Qmarray *, struct Qmarray *);
 double qmarray_norm2(struct Qmarray *);
+void qmarray_axpy(double,struct Qmarray *, struct Qmarray *);
 
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 

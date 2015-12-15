@@ -33,9 +33,15 @@
 
 //Code
 
-/** \file laplace.h
- * Provides header files and structure definitions for functions in laplce.c
+/** \file diffusion.h
+ * Provides header files and structure definitions for functions in diffusion.c
  */
 
+#ifndef DIFFUSION_H
+#define DIFFUSION_H
 
-#include "lib_clinalg.h"
+void dmrg_diffusion_midleft(struct Qmarray *, struct Qmarray *,
+                 struct Qmarray *, struct Qmarray *, struct Qmarray *,
+                 double *, size_t, struct Qmarray *);
+
+#endif

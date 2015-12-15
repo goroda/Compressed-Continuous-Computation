@@ -1625,6 +1625,24 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
     return sqrt(out);
 }
 
+/***********************************************************//**
+    Compute \f[ y \leftarrow ax + y \f]
+
+    \param a [in] - scale for first qmarray
+    \param x [in] - first qmarray
+    \param y [inout] - second qmarray
+***************************************************************/
+void qmarray_axpy(double a, struct Qmarray * x, struct Qmarray * y)
+{
+    assert (x->nrows == y->nrows );
+    assert (x->ncols == y->ncols );
+    
+    size_t ii;
+    for (ii = 0; ii < x->nrows * x->ncols; ii++){
+        generic_function_axpy(a,x->funcs[ii],y->funcs[ii]);
+    }
+}
+
 struct Zeros {
     double * zeros;
     size_t N;
