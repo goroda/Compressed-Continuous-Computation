@@ -1423,7 +1423,6 @@ void qmarray_block_kron_mat(char type, int left, size_t nlblocks,
                     }
                 }
                 
-                
                 size_t st2a = right->nrows;
                 size_t st2b = lblocks[ii]->nrows;
                 size_t st2 = st2a * st2b * r;
