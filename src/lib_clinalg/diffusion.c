@@ -92,7 +92,7 @@ void dmrg_diffusion_lastleft(struct Qmarray * dA, struct Qmarray * A,
                      struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
                      double * mat, size_t r, struct Qmarray * out)
 {
-
+    
 }
 
 
