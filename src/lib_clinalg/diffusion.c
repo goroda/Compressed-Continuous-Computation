@@ -223,4 +223,3 @@ void dmrg_diffusion_firstright(struct Qmarray * dA, struct Qmarray * A,
     qmarray_free(temp); temp = NULL;
 
 }
-

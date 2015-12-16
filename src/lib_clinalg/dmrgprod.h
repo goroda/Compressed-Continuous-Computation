@@ -33,19 +33,24 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
- */
+/** \file dmrgprod.h
+ * Provides header file and structure definitions for functions in dmrg.c
+*/
 
+#ifndef DMRGPROD_H
+#define DMRGPROD_H
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
+#include "lib_clinalg.h"
 
-#include "elements.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "dmrgprod.h"
-#include "qmarray_qr.h"
-#include "diffusion.h"
+struct DmProd
+{
+    struct FunctionTrain * a;
+    struct FunctionTrain * b;
+};
+
+struct FunctionTrain * dmrg_product(struct FunctionTrain *,
+            struct FunctionTrain *, struct FunctionTrain *,
+            double, size_t, double, int);
 
 #endif
+ 
