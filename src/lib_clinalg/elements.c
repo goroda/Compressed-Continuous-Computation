@@ -647,6 +647,88 @@ struct Qmarray * qmarray_alloc(size_t nrows, size_t ncols){
     return qm;
 }
 
+/***********************************************************//**
+    Create a Qmarray of zero functions
+
+    \param nrows [in] - number of rows of quasimatrix
+    \param ncols [in] - number of cols of quasimatrix
+    \param lb [in] - lower bound of functions
+    \param ub [in] - upper bound of functions
+
+    \return qm - qmarray
+***************************************************************/
+struct Qmarray * qmarray_zeros(size_t nrows, size_t ncols,double lb, double ub){
+    
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    size_t ii;
+    enum poly_type ptype = LEGENDRE;
+    for (ii = 0; ii < nrows*ncols; ii++){
+        qm->funcs[ii] = generic_function_constant(0.0,POLYNOMIAL,&ptype,lb,ub,NULL);
+    }
+    return qm;
+}
+
+/********************************************************//**
+*    Create a qmarray consisting of pseudo-random orth poly expansion
+*   
+*   \param nrows [in] - number of rows
+*   \param ncols [in] - number of columns
+*   \param maxorder [in] - maximum order of the polynomial
+*   \param lower [in] - lower bound of input
+*   \param upper [in] - upper bound of input
+*
+*   \return qm - qmarray
+************************************************************/
+struct Qmarray *
+qmarray_poly_randu(size_t nrows, size_t ncols, 
+    size_t maxorder, double lower, double upper)
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    size_t ii;
+    for (ii = 0; ii < nrows*ncols; ii++){
+        qm->funcs[ii] = generic_function_poly_randu(maxorder,lower,upper);
+    }
+    return qm;
+}
+
+
+
+/***********************************************************//**
+    copy qmarray
+
+    \param qm [in] - qmarray
+
+    \return qmo [out] 
+***************************************************************/
+struct Qmarray * qmarray_copy(struct Qmarray * qm)
+{
+    struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
+    size_t ii;
+    for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
+        qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
+    }
+
+    return qmo;
+}
+
+
+/***********************************************************//**
+    Free memory allocated to qmarray 
+
+    \param qm (IN) - qmarray
+***************************************************************/
+void qmarray_free(struct Qmarray * qm){
+    
+    if (qm != NULL){
+        size_t ii = 0;
+        for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
+            generic_function_free(qm->funcs[ii]);
+        }
+        free(qm->funcs);
+        free(qm);qm=NULL;
+    }
+}
+
 
 /***********************************************************//**
     Create a qmarray by approximating 1d functions
@@ -678,28 +760,6 @@ qmarray_approx1d(size_t nrows, size_t ncols,
     return qm;
 }
 
-/********************************************************//**
-*    Create a qmarray consisting of pseudo-random orth poly expansion
-*   
-*   \param nrows [in] - number of rows
-*   \param ncols [in] - number of columns
-*   \param maxorder [in] - maximum order of the polynomial
-*   \param lower [in] - lower bound of input
-*   \param upper [in] - upper bound of input
-*
-*   \return qm - qmarray
-************************************************************/
-struct Qmarray *
-qmarray_poly_randu(size_t nrows, size_t ncols, 
-    size_t maxorder, double lower, double upper)
-{
-    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
-    size_t ii;
-    for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_poly_randu(maxorder,lower,upper);
-    }
-    return qm;
-}
 
 
 /***********************************************************//**
@@ -869,41 +929,6 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
 }
 
 
-/***********************************************************//**
-    copy qmarray
-
-    \param qm [in] - qmarray
-
-    \return qmo [out] 
-***************************************************************/
-struct Qmarray * qmarray_copy(struct Qmarray * qm)
-{
-    struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
-    size_t ii;
-    for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
-        qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
-    }
-
-    return qmo;
-}
-
-
-/***********************************************************//**
-    Free memory allocated to qmarray 
-
-    \param qm (IN) - qmarray
-***************************************************************/
-void qmarray_free(struct Qmarray * qm){
-    
-    if (qm != NULL){
-        size_t ii = 0;
-        for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
-            generic_function_free(qm->funcs[ii]);
-        }
-        free(qm->funcs);
-        free(qm);qm=NULL;
-    }
-}
 
 /***********************************************************//**
     Serialize a qmarray

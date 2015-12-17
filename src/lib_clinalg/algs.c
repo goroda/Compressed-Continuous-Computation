@@ -3232,8 +3232,10 @@ double function_train_norm2(struct FunctionTrain * a)
     //printf("in norm2\n");
     double out = function_train_inner(a,a);
     if (out < -ZEROTHRESH){
-        fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
-        exit(1);
+        if (out * out > ZEROTHRESH){
+            fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
+            exit(1);
+        }
     }
     return sqrt(fabs(out));
 }

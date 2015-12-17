@@ -55,4 +55,28 @@ void dmrg_diffusion_midright(struct Qmarray *, struct Qmarray *,
 void dmrg_diffusion_firstright(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
+
+struct DmDiff
+{
+    struct FunctionTrain * A;
+    struct FunctionTrain * F;
+    struct Qmarray ** dA;
+    struct Qmarray ** dF;
+    struct Qmarray ** ddF;
+};
+
+
+struct FunctionTrain * dmrg_diffusion(
+    struct FunctionTrain *,
+    struct FunctionTrain *,
+    struct FunctionTrain *,
+    struct Qmarray **, 
+    struct Qmarray **,
+    struct Qmarray **,
+    double, size_t, double, int);
+
+struct FunctionTrain * exact_diffusion(
+    struct FunctionTrain *, struct FunctionTrain *,
+    struct Qmarray **, struct Qmarray **, struct Qmarray **);
+
 #endif

@@ -44,53 +44,52 @@
 #include "array.h"
 
 void dmrg_diffusion_midleft(struct Qmarray * dA, struct Qmarray * A,
-                     struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
-                     double * mat, size_t r, struct Qmarray * out)
+                 struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
+                 double * mat, size_t r, struct Qmarray * out)
 {
     assert (out != NULL);
     
     size_t sgfa = r * F->ncols * A->nrows;
     size_t offset = r * A->nrows * F->nrows;
-
-    struct GenericFunction ** gfa1 =
-        generic_function_array_alloc(sgfa);
-
-    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat,F->funcs,gfa1);
-
-
-    struct GenericFunction ** gfa2 = generic_function_array_alloc(sgfa);
-    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat + offset,dF->funcs,gfa2);
-
-    struct GenericFunction ** gfa3 = generic_function_array_alloc(sgfa);
-    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat + offset,ddF->funcs,gfa3);
-
-    generic_function_kronh2(1,r,F->ncols,
-        A->nrows, A->ncols, A->funcs, gfa1, out->funcs);
-
     size_t width = r * A->ncols * F->ncols;
 
-    generic_function_kronh2(1,r,F->ncols,
-        A->nrows, A->ncols, dA->funcs, gfa2, out->funcs + width);
-    
-    struct GenericFunction ** temp = generic_function_array_alloc(width);
-    generic_function_kronh2(1,r,F->ncols,
-        A->nrows, A->ncols, A->funcs, gfa3, temp);
+    struct GenericFunction ** gfa1 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa2 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa3 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa4 = generic_function_array_alloc(sgfa);
 
+    struct GenericFunction ** temp1 = generic_function_array_alloc(width);
+    struct GenericFunction ** temp2 = generic_function_array_alloc(width);
+
+    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat,F->funcs,gfa1);
+    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,dF->funcs,gfa2);
+    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,ddF->funcs,gfa3);
+    generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,F->funcs,gfa4);
+
+
+    generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,A->funcs,gfa1,out->funcs);
+    generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,dA->funcs,gfa2,temp1);
+    generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,A->funcs,gfa3,temp2);
+
+    generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,A->funcs,gfa4,out->funcs+width);
     size_t ii;
     for (ii = 0; ii < width; ii++){
-        generic_function_axpy(1.0,temp[ii],out->funcs[width+ii]);
+        generic_function_axpy(1.0,temp1[ii],out->funcs[ii]);
+        generic_function_axpy(1.0,temp2[ii],out->funcs[ii]);
     }
 
     generic_function_array_free(gfa1,sgfa); gfa1 = NULL;
     generic_function_array_free(gfa2,sgfa); gfa2 = NULL;
     generic_function_array_free(gfa3,sgfa); gfa3 = NULL;
-    generic_function_array_free(temp,width); temp = NULL;
+    generic_function_array_free(gfa4,sgfa); gfa4 = NULL;
+    generic_function_array_free(temp1,width); temp1 = NULL;
+    generic_function_array_free(temp2,width); temp2 = NULL;
 }
 
 
 void dmrg_diffusion_lastleft(struct Qmarray * dA, struct Qmarray * A,
-                     struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
-                     double * mat, size_t r, struct Qmarray * out)
+                 struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
+                 double * mat, size_t r, struct Qmarray * out)
 {
 
     assert (out != NULL );
@@ -140,6 +139,7 @@ void dmrg_diffusion_midright(struct Qmarray * dA, struct Qmarray * A,
     struct GenericFunction ** gfa1 = generic_function_array_alloc(sgfa);
     struct GenericFunction ** gfa2 = generic_function_array_alloc(sgfa);
     struct GenericFunction ** gfa3 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa4 = generic_function_array_alloc(sgfa);
     
     size_t ms = r * A->ncols * F->ncols;
     double * mat1 = calloc_double(ms);
@@ -157,17 +157,20 @@ void dmrg_diffusion_midright(struct Qmarray * dA, struct Qmarray * A,
     }
 
     generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat1,F->funcs,gfa1);
-    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat2,dF->funcs,gfa2);
-    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat2,ddF->funcs,gfa3);
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat1,dF->funcs,gfa2);
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat1,ddF->funcs,gfa3);
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat2,F->funcs,gfa4);
 
     size_t s2 = r * A->nrows * F->nrows;
     struct GenericFunction ** t1 = generic_function_array_alloc(s2);
     struct GenericFunction ** t2 = generic_function_array_alloc(s2);
     struct GenericFunction ** t3 = generic_function_array_alloc(s2);
+    struct GenericFunction ** t4 = generic_function_array_alloc(s2);
  
     generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,A->funcs,gfa1,t1);
     generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,dA->funcs,gfa2,t2);
     generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,A->funcs,gfa3,t3);
+    generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,A->funcs,gfa4,t4);
 
     for (ii = 0; ii < r; ii++){
         for (jj = 0; jj < A->nrows; jj++){
@@ -178,7 +181,10 @@ void dmrg_diffusion_midright(struct Qmarray * dA, struct Qmarray * A,
                     t2[kk + jj*F->nrows + ii*F->nrows*A->nrows];
                 generic_function_axpy(1.0,
                     t3[kk + jj*F->nrows + ii*F->nrows*A->nrows],
-                out->funcs[kk + (jj+A->nrows)*F->nrows + ii*2*A->nrows*F->nrows]);
+                    out->funcs[kk + (jj+A->nrows)*F->nrows + ii*2*A->nrows*F->nrows]);
+                generic_function_axpy(1.0,
+                    t4[kk + jj*F->nrows + ii*F->nrows*A->nrows],
+                    out->funcs[kk + (jj+A->nrows)*F->nrows + ii*2*A->nrows*F->nrows]);
 
             }
         }
@@ -187,9 +193,11 @@ void dmrg_diffusion_midright(struct Qmarray * dA, struct Qmarray * A,
     generic_function_array_free(gfa1,sgfa); gfa1 = NULL;
     generic_function_array_free(gfa2,sgfa); gfa2 = NULL;
     generic_function_array_free(gfa3,sgfa); gfa3 = NULL;
+    generic_function_array_free(gfa4,sgfa); gfa4 = NULL;
     free(t1); t1 = NULL;
     free(t2); t2 = NULL;
     generic_function_array_free(t3,s2); t3 = NULL;
+    generic_function_array_free(t4,s2); t4 = NULL;
     free(mat1); mat1 = NULL;
     free(mat2); mat2 = NULL;
 }
@@ -202,24 +210,246 @@ void dmrg_diffusion_firstright(struct Qmarray * dA, struct Qmarray * A,
     assert (A->nrows == F->nrows);
     assert (out != NULL);
 
-    struct Qmarray * temp = qmarray_alloc(2*A->nrows*F->nrows,r);
-    dmrg_diffusion_midright(dA,A,ddF,dF,F,mat,r,temp);
-
+    size_t ms = r * A->ncols * F->ncols;
+    double * mat1 = calloc_double(ms);
+    double * mat2 = calloc_double(ms);
     size_t ii,jj,kk;
     for (ii = 0; ii < r; ii++){
-        for (jj = 0; jj < A->nrows; jj++){
-            for (kk = 0; kk < F->nrows; kk++){
-                out->funcs[kk + jj*F->nrows + ii*F->nrows*A->nrows] = 
-                    generic_function_copy(
-                        temp->funcs[kk + jj*F->nrows + ii*2*F->nrows*A->nrows]);
-                generic_function_axpy(1.0,
-                    temp->funcs[kk + (jj+A->nrows)*F->nrows + ii*2*F->nrows*A->nrows],
-                    out->funcs[kk + jj*F->nrows + ii*F->nrows*A->nrows]);
-
+        for (jj = 0; jj < A->ncols; jj++){
+            for (kk = 0; kk < F->ncols; kk++){
+                mat1[kk + jj*F->ncols + ii * A->ncols*F->ncols] =
+                    mat[kk + jj*F->ncols + ii * (2*A->ncols*F->ncols)];
+                mat2[kk + jj*F->ncols + ii * A->ncols*F->ncols] =
+                    mat[kk + (jj+A->ncols)*F->ncols + ii * (2*A->ncols*F->ncols)];
             }
         }
     }
 
-    qmarray_free(temp); temp = NULL;
+    size_t sgfa = r * F->nrows * A->ncols;
+    struct GenericFunction ** gfa1 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa2 = generic_function_array_alloc(sgfa);
+    struct GenericFunction ** gfa3 = generic_function_array_alloc(sgfa);
+
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat2,F->funcs,gfa1);
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat1,dF->funcs,gfa2);
+    generic_function_kronh(0,r,A->ncols,F->nrows,F->ncols,mat1,ddF->funcs,gfa3);
+
+    size_t s2 = r * A->nrows * F->nrows;
+    struct GenericFunction ** t2 = generic_function_array_alloc(s2);
+    struct GenericFunction ** t3 = generic_function_array_alloc(s2);
+ 
+    generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,A->funcs,gfa1,out->funcs);
+    generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,dA->funcs,gfa2,t2);
+    generic_function_kronh2(0,r,F->nrows,A->nrows,A->ncols,A->funcs,gfa3,t3);
+
+    for (ii = 0; ii < r; ii++){
+        for (jj = 0; jj < A->nrows; jj++){
+            for (kk = 0; kk < F->nrows; kk++){
+                generic_function_axpy(1.0,
+                    t2[kk + jj*F->nrows + ii*F->nrows*A->nrows],
+                    out->funcs[kk + jj*F->nrows + ii*A->nrows*F->nrows]);
+                generic_function_axpy(1.0,
+                    t3[kk + jj*F->nrows + ii*F->nrows*A->nrows],
+                    out->funcs[kk + jj*F->nrows + ii*A->nrows*F->nrows]);
+            }
+        }
+    }
+
+    generic_function_array_free(gfa1,sgfa); gfa1 = NULL;
+    generic_function_array_free(gfa2,sgfa); gfa2 = NULL;
+    generic_function_array_free(gfa3,sgfa); gfa3 = NULL;
+    generic_function_array_free(t2,s2); t2 = NULL;
+    generic_function_array_free(t3,s2); t3 = NULL;
+    free(mat1); mat1 = NULL;
+    free(mat2); mat2 = NULL;
 
 }
+
+void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
+                        struct Qmarray ** out, void * args)
+{
+    assert (*out == NULL);
+    struct DmDiff * dd = args;
+    size_t dim = dd->A->dim;
+    //printf("in \n");
+    if (type == 'L'){
+        if (core == 0){
+            struct Qmarray * t1 = qmarray_kron(dd->A->cores[0], dd->F->cores[0]);
+            struct Qmarray * t2 = qmarray_kron(dd->dA[0],dd->dF[0]);
+            struct Qmarray * t3 = qmarray_kron(dd->A->cores[0],dd->ddF[0]);
+            qmarray_axpy(1.0,t3,t2);
+            *out = qmarray_stackh(t2,t1);
+            qmarray_free(t1); t1 = NULL;
+            qmarray_free(t2); t2 = NULL;
+            qmarray_free(t3); t3 = NULL;
+        }
+        else if (core < dim-1){
+            size_t ra = dd->A->cores[core]->ncols;
+            size_t rf = dd->F->cores[core]->ncols;
+            *out = qmarray_alloc(r,2*ra*rf);
+            dmrg_diffusion_midleft(dd->dA[core],
+                                   dd->A->cores[core],
+                                   dd->ddF[core],
+                                   dd->dF[core],
+                                   dd->F->cores[core],mat,r,*out);
+        }
+        else { //core dim-1
+            size_t ra = dd->A->cores[core]->ncols;
+            size_t rf = dd->F->cores[core]->ncols;
+            *out = qmarray_alloc(r,ra*rf);
+            dmrg_diffusion_lastleft(dd->dA[core],
+                                    dd->A->cores[core],
+                                    dd->ddF[core],
+                                    dd->dF[core],
+                                    dd->F->cores[core],
+                                    mat,r,*out);
+        }
+    }
+    else if (type == 'R'){
+        if (core == dim-1){
+            struct Qmarray * t1 = qmarray_kron(dd->A->cores[core],dd->F->cores[core]);
+            struct Qmarray * t2 = qmarray_kron(dd->dA[core],dd->dF[core]);
+            struct Qmarray * t3 = qmarray_kron(dd->A->cores[core],dd->ddF[core]);
+            qmarray_axpy(1.0,t3,t2);
+            *out = qmarray_stackv(t1,t2);
+            qmarray_free(t1); t1 = NULL;
+            qmarray_free(t2); t2 = NULL;
+            qmarray_free(t3); t3 = NULL;
+        }
+        else if (core > 0){
+            size_t ra = dd->A->cores[core]->nrows;
+            size_t rf = dd->F->cores[core]->nrows;
+            *out = qmarray_alloc(2*ra*rf,r);
+            dmrg_diffusion_midright(dd->dA[core],
+                                    dd->A->cores[core],
+                                    dd->ddF[core],
+                                    dd->dF[core],
+                                    dd->F->cores[core],
+                                    mat,r,*out);
+        }
+        else{ // core == 0
+            size_t ra = dd->A->cores[core]->nrows;
+            size_t rf = dd->F->cores[core]->nrows;
+            *out = qmarray_alloc(ra*rf,r);
+            dmrg_diffusion_firstright(dd->dA[core],
+                                      dd->A->cores[core],
+                                      dd->ddF[core],
+                                      dd->dF[core],
+                                      dd->F->cores[core],mat,r,*out);
+        }
+    }
+}
+
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] using ALS+DMRG
+
+    \param z [inout] - initial guess (destroyed);
+    \param a [in] - scalar coefficients
+    \param f [in] - input to diffusion operator
+    \param da [in] - array of derivatives of each core of a
+    \param df [in] - array of derivatives of each core of f
+    \param ddf [in] - array of second derivatives of each core of f
+    \param delta [in] - threshold to stop iterating
+    \param max_sweeps [in] - maximum number of left-right-left sweeps 
+    \param epsilon [in] - SVD tolerance for rank determination
+    \param verbose [in] - verbosity level 0 or >0
+
+    \return na - approximate application of diffusion operator
+***************************************************************/
+struct FunctionTrain * dmrg_diffusion(struct FunctionTrain * z,
+    struct FunctionTrain * a,
+    struct FunctionTrain * f,
+    struct Qmarray ** da, 
+    struct Qmarray ** df,
+    struct Qmarray ** ddf,
+    double delta, size_t max_sweeps, double epsilon, int verbose)
+{
+    struct DmDiff dd;
+
+    dd.A = a;
+    dd.F = f;
+
+    dd.dA = da;
+    dd.dF = df;
+    dd.ddF = ddf;
+    
+    struct FunctionTrain * na =
+        dmrg_approx(z,dmrg_diffusion_support,&dd,delta,max_sweeps,epsilon,verbose);
+    return na;
+}
+
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] exactly
+
+    \param a [in] - scalar coefficients
+    \param f [in] - input to diffusion operator
+    \param f [in] - input to diffusion operator
+    \param da [in] - array of derivatives of each core of a
+    \param df [in] - array of derivatives of each core of f
+    \param ddf [in] - array of second derivatives of each core of f
+
+    \return out - exact application of diffusion operator 
+    
+    \note 
+        Result is not rounded. Might want to perform rounding afterwards
+***************************************************************/
+struct FunctionTrain * exact_diffusion(
+    struct FunctionTrain * a,
+    struct FunctionTrain * f,
+    struct Qmarray ** da, 
+    struct Qmarray ** df,
+    struct Qmarray ** ddf)
+{
+    size_t dim = a->dim;
+    struct FunctionTrain * out = function_train_alloc(dim);
+    out->ranks[0] = 1;
+    out->ranks[dim] = 1;
+
+    struct Qmarray * l1 = qmarray_kron(a->cores[0],ddf[0]);
+    struct Qmarray * l2 = qmarray_kron(da[0],df[0]);
+    qmarray_axpy(1.0,l1,l2);
+    struct Qmarray * l3 = qmarray_kron(a->cores[0],f->cores[0]);
+    out->cores[0] = qmarray_stackh(l2,l3);
+    out->ranks[1] = out->cores[0]->ncols;
+    qmarray_free(l1); l1 = NULL;
+    qmarray_free(l2); l2 = NULL;
+    qmarray_free(l3); l3 = NULL;
+    
+    size_t ii;
+    for (ii = 1; ii < dim-1; ii++){
+        double lb = generic_function_get_lower_bound(f->cores[ii]->funcs[0]);
+        double ub = generic_function_get_upper_bound(f->cores[ii]->funcs[0]);
+        struct Qmarray * addf = qmarray_kron(a->cores[ii],ddf[ii]);
+        struct Qmarray * dadf = qmarray_kron(da[ii],df[ii]);
+        qmarray_axpy(1.0,addf,dadf);
+        struct Qmarray * af = qmarray_kron(a->cores[ii],f->cores[ii]);
+        struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+        struct Qmarray * l3l1 = qmarray_stackv(af,dadf);
+        struct Qmarray * zl3 = qmarray_stackv(zer,af);
+        out->cores[ii] = qmarray_stackh(l3l1,zl3);
+        out->ranks[ii+1] = out->cores[ii]->ncols;
+        qmarray_free(addf); addf = NULL;
+        qmarray_free(dadf); dadf = NULL;
+        qmarray_free(af); af = NULL;
+        qmarray_free(zer); zer = NULL;
+        qmarray_free(l3l1); l3l1 = NULL;
+        qmarray_free(zl3); zl3 = NULL;
+    }
+    ii = dim-1;
+    l1 = qmarray_kron(a->cores[ii],ddf[ii]);
+    l2 = qmarray_kron(da[ii],df[ii]);
+    qmarray_axpy(1.0,l1,l2);
+    l3 = qmarray_kron(a->cores[ii],f->cores[ii]);
+    out->cores[ii] = qmarray_stackv(l3,l2);
+    out->ranks[ii+1] = out->cores[ii]->ncols;
+    qmarray_free(l1); l1 = NULL;
+    qmarray_free(l2); l2 = NULL;
+    qmarray_free(l3); l3 = NULL;
+
+    return out;
+}
+
+
+
+
+
