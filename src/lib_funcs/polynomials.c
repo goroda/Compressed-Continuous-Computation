@@ -1615,7 +1615,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     double ub = a->upper_bound;
 
     enum poly_type p = a->p->ptype;
-    if ( (p == LEGENDRE) && (a->num_poly < 25) && (b->num_poly < 25)){
+    if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
         //printf("in special prod\n");
         //double lb = a->lower_bound;
         //double ub = b->upper_bound;
@@ -1641,7 +1641,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         for (kk = 0; kk < c->num_poly; kk++){
             for (ii = 0; ii < a->num_poly; ii++){
                 for (jj = 0; jj < b->num_poly; jj++){
-                    c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] * 
+                    c->coeff[kk] +=  lpolycoeffs[ii+jj*200+kk*40000] * 
                                         allprods[jj+ii*b->num_poly];
                 }
             }
@@ -1651,6 +1651,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         free(allprods); allprods=NULL;
     }
     else{
+        printf("OrthPolyExpansion product greater than order 100 is slow\n");
         struct OrthPolyExpansion * comb[2];
         comb[0] = a;
         comb[1] = b;
@@ -1742,7 +1743,8 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         }
     }
 
-    if (maxorder > 50){
+    if ( (maxordera > 99) || (maxorderb > 99)){
+        printf("OrthPolyExpansion sum_product greater than order 100 is slow\n");
         c = orth_poly_expansion_prod(a[0],b[0]);
         for (ii = 1; ii< n; ii++){
             struct OrthPolyExpansion * temp = 
@@ -1769,7 +1771,7 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         for (ll = 0; ll < c->num_poly; ll++){
             for (ii = 0; ii < maxordera; ii++){
                 for (jj = 0; jj < maxorderb; jj++){
-                    c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 
+                    c->coeff[ll] +=  lpolycoeffs[ii+jj*200+ll*40000] * 
                                         allprods[jj+ii*maxorderb];
                 }
             }
@@ -1875,8 +1877,9 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 *
 *   \return out - inner product
 *
-*   \note \f$  \int_{lb}^ub  a(x)b(x) w(x) dx \f$
-
+*   \note
+*       Computes \f[ \int_{lb}^ub  a(x)b(x) w(x) dx \f]
+*
 *************************************************************/
 double
 orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,

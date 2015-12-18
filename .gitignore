@@ -14,6 +14,8 @@ doc/latex/*
 doc/c3doc/*
 doc/*
 
+src/lib_funcs/legpolytens/legtens.h
+
 bin/*
 benchmarks/fastmkron/bin/*
 benchmarks/dmrgprod/bin/*

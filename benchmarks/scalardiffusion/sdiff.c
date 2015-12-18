@@ -71,22 +71,31 @@ int main(int argc, char * argv[])
         }
     } while (next_option != -1);
 
-    int type = 1;
+    int type = 2;
     
     if (benchmark == 0){
-        printf("Running Benchmark for full DMRG \n");
+        printf("Running Benchmark for Full DMRG \n");
+        if (type == 0){
+            printf("\t Determining Scaling with Dimension\n");
+        }
+        else if (type == 1){
+            printf("\t Determining Scaling with Rank of 'a' (DOESNT WORK YET) \n");
+        }
+        else if (type == 2){
+            printf("\t Determining Scaling with Polynomial Order \n");
+        }
     }
     else{
-        printf("Running Benchmark for a core DMRG \n");
+        printf("Running Benchmark for a Core DMRG \n");
     }
 
     if (benchmark == 0)
     {
-        size_t nrepeat = 10;
         double delta = 1e-8;
         size_t max_sweeps = 5;
         double epsilon = 1e-10;
         if (type == 0){
+            size_t nrepeat = 10;
 
             size_t ndims = 30;
             size_t dimstep = 5;
@@ -126,12 +135,7 @@ int main(int argc, char * argv[])
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        size_t kk;
-                        for (kk = 1; kk < dim; kk++){
-                            if (sol->ranks[kk] > maxrank){
-                                maxrank = sol->ranks[kk];
-                            }
-                        }
+                        maxrank = function_train_maxrank(sol);
                         if (verbose > 0){
                             struct FunctionTrain * exact = exact_diffusion(a,f);
                             double diff = function_train_relnorm2diff(sol,exact);
@@ -162,12 +166,13 @@ int main(int argc, char * argv[])
         }
         if (type == 1){
 
-            size_t nranks = 14; // something is wrong with 15th
+            size_t nrepeat = 1;
+            size_t nranks = 14; 
             size_t rankstep = 5;
             size_t rankstart = 2;
             size_t dim = 5;
             size_t frank = 2;
-            size_t maxorder = 5;
+            size_t maxorder = 10;
 
             double * results = calloc_double(nranks*3);
             struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
@@ -176,6 +181,80 @@ int main(int argc, char * argv[])
             size_t arank = rankstart;
             size_t ii,jj;
             for (ii = 0; ii < nranks; ii++){
+                size_t * aranks = calloc_size_t(dim+1);
+                size_t * franks = calloc_size_t(dim+1);
+                aranks[0] = 1;
+                franks[0] = 1;
+                for (jj = 1; jj < dim; jj++){
+                    aranks[jj] = arank;
+                    franks[jj] = frank;
+                }
+                aranks[dim] = 1;
+                franks[dim] = 1;
+                
+                size_t maxrank = 1;
+                double aroundrank = 1.0;
+                time = 0.0;
+                for (jj = 0; jj < nrepeat; jj++){
+                    struct FunctionTrain * a = function_train_poly_randu(bds,aranks,maxorder);
+                    struct FunctionTrain * f = function_train_poly_randu(bds,franks,maxorder);
+                    
+                    clock_t tic = clock();
+                    struct FunctionTrain * sol = dmrg_diffusion(a,f,
+                                            delta/(double) dim,max_sweeps,epsilon,0);
+                    clock_t toc = clock();
+                    time += (double)(toc - tic) / CLOCKS_PER_SEC;
+                    
+                    if (jj == 0){
+                        maxrank = function_train_maxrank(sol);
+                        struct FunctionTrain * at = function_train_round(a,1e-17);
+                        aroundrank = function_train_avgrank(at);
+                        function_train_free(at); at = NULL;
+                        if (verbose > 0){
+                            struct FunctionTrain * exact = exact_diffusion(a,f);
+                            double diff = function_train_relnorm2diff(sol,exact);
+                            printf("diff = %G\n",diff*diff);
+                            function_train_free(exact); exact = NULL;
+                        }
+                    }
+
+                    function_train_free(a); a = NULL;
+                    function_train_free(f); f = NULL;
+                    function_train_free(sol); sol = NULL;
+                }
+                time /= (double) nrepeat;
+                printf("Average time for rank of a %zu is (%G). Maxrank is %zu. Rounded ranks of a are %G\n",arank,time,maxrank,aroundrank);
+                free(aranks); aranks = NULL;
+                free(franks); franks = NULL;
+                
+                results[ii] = arank;
+                results[nranks+ii] = time;
+                results[2*nranks+ii] = maxrank;
+
+                arank = arank + rankstep;
+            }
+
+            bounding_box_free(bds); bds = NULL;
+            darray_save(nranks,3,results,"time_vs_arank.dat",1);
+            free(results); results = NULL;
+        }
+        if (type == 2){
+
+            size_t nrepeat = 10;
+            size_t nPs = 20; 
+            size_t pstep = 2;
+            size_t pstart = 2;
+            size_t dim = 5;
+            size_t frank = 2;
+            size_t arank = 2;
+
+            double * results = calloc_double(nPs*3);
+            struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+            
+            double time = 0.0;
+            size_t ii,jj;
+            size_t maxorder = pstart;
+            for (ii = 0; ii < nPs; ii++){
                 size_t * aranks = calloc_size_t(dim+1);
                 size_t * franks = calloc_size_t(dim+1);
                 aranks[0] = 1;
@@ -200,12 +279,7 @@ int main(int argc, char * argv[])
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        size_t kk;
-                        for (kk = 1; kk < dim; kk++){
-                            if (sol->ranks[kk] > maxrank){
-                                maxrank = sol->ranks[kk];
-                            }
-                        }
+                        maxrank = function_train_maxrank(sol);
                         if (verbose > 0){
                             struct FunctionTrain * exact = exact_diffusion(a,f);
                             double diff = function_train_relnorm2diff(sol,exact);
@@ -219,21 +293,22 @@ int main(int argc, char * argv[])
                     function_train_free(sol); sol = NULL;
                 }
                 time /= (double) nrepeat;
-                printf("Average time for rank of a %zu is (%G)\n",arank,time);
+                printf("Average time for P=%zu is (%G). Maxrank is %zu. \n",maxorder,time,maxrank);
                 free(aranks); aranks = NULL;
                 free(franks); franks = NULL;
                 
-                results[ii] = arank;
-                results[nranks+ii] = time;
-                results[2*nranks+ii] = maxrank;
+                results[ii] = maxorder;
+                results[nPs+ii] = time;
+                results[2*nPs+ii] = maxrank;
 
-                arank = arank + rankstep;
+                maxorder = maxorder + pstep;
             }
 
             bounding_box_free(bds); bds = NULL;
-            darray_save(nranks,3,results,"time_vs_arank.dat",1);
+            darray_save(nPs,3,results,"time_vs_order.dat",1);
             free(results); results = NULL;
         }
+
 
     }
     

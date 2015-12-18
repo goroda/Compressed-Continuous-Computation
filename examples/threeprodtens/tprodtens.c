@@ -12,10 +12,10 @@ int main()
 {
     // generate a sequence of quadrature tables
     
-    size_t maxorder = 50;
+    size_t maxorder = 200;
     size_t ii,jj,kk,ll;
     
-    double * coeffs = calloc_double(125000);
+    double * coeffs = calloc_double(200*200*200);
     struct OrthPoly * leg = init_leg_poly();
 
     size_t nquad = 3*maxorder+1;

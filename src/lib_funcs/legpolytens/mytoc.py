@@ -8,7 +8,7 @@ dat = np.loadtxt(name,skiprows=1,dtype=str)
 print dat
 w = dat
 
-w  = "static const double lpolycoeffs[125000] = {" + ",".join(w) + "};"
+w  = "static const double lpolycoeffs[8000000] = {" + ",".join(w) + "};"
 
 totstring = totstring + "\n" + w
     #print wts
@@ -18,7 +18,7 @@ totstring = totstring + "\n" + w
 
 totstring = totstring + "\n \n \n" 
 
-text_file  = open("legtens.c","w")
+text_file  = open("legtens.h","w")
 text_file.write("%s" % totstring)
 text_file.close()
 
