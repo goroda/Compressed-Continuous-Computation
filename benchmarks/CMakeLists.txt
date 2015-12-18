@@ -6,3 +6,5 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/dmrgprod/bin
 add_subdirectory(dmrgprod)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/qrdecomp/bin)
 add_subdirectory(qrdecomp)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/scalardiffusion/bin)
+add_subdirectory(scalardiffusion)

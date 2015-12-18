@@ -3622,7 +3622,7 @@ void Test_diffusion_op_struct(CuTest * tc)
 void Test_diffusion_dmrg(CuTest * tc)
 {
     
-    printf("Testing Function: dmrg_diffusion)\n");
+    printf("Testing Function: dmrg_diffusion\n");
     size_t dim = 4;
     size_t ranks[5] = {1,2,2,2,1};
     size_t maxorder = 10;
@@ -3633,42 +3633,14 @@ void Test_diffusion_dmrg(CuTest * tc)
     struct FunctionTrain * f = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
     struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
 
-
-    struct Qmarray * da[dim];
-    struct Qmarray * df[dim];
-    struct Qmarray * ddf[dim];
-    da[0] = qmarray_deriv(a->cores[0]);
-    df[0] = qmarray_deriv(f->cores[0]);
-    ddf[0] = qmarray_deriv(df[0]);
-    
-    size_t ii;
-    for (ii = 1; ii < dim; ii++){
-        da[ii] = qmarray_deriv(a->cores[ii]);
-        df[ii] = qmarray_deriv(f->cores[ii]);
-        ddf[ii] = qmarray_deriv(df[ii]);
-    }
-    
-    struct FunctionTrain * shouldbe = exact_diffusion(a,f,da,df,ddf);
-    struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
-    struct FunctionTrain * is = dmrg_diffusion(start,a,f,da,df,ddf,1e-5,5,1e-10,0);
-    
-    //printf("should be ranks ");
-    //iprint_sz(dim+1,shouldbe->ranks);
-    //printf("is ranks ");
-    //iprint_sz(dim+1,is->ranks);
+    struct FunctionTrain * is = dmrg_diffusion(a,f,1e-5,5,1e-10,0);
+    struct FunctionTrain * shouldbe = exact_diffusion(a,f);
     
     double diff = function_train_norm2diff(is,shouldbe);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-11);
 
-    for (ii = 0; ii < dim; ii++){
-        qmarray_free(da[ii]);
-        qmarray_free(df[ii]);
-        qmarray_free(ddf[ii]);
-    }
-    
     function_train_free(shouldbe); shouldbe = NULL;
     function_train_free(is); is = NULL;
-    function_train_free(start); start = NULL;
     bounding_box_free(bds); bds = NULL;
     function_train_free(f); f = NULL;
     function_train_free(a); a = NULL;
@@ -3700,11 +3672,11 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-    //CuSuiteAddSuite(suite, clin);
-    //CuSuiteAddSuite(suite, qma);
-    //CuSuiteAddSuite(suite, ftr);
-    //CuSuiteAddSuite(suite, fta);
-    //CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, qma);
+    CuSuiteAddSuite(suite, ftr);
+    CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, dmrg);
     CuSuiteAddSuite(suite, diff);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

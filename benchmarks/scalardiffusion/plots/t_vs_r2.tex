@@ -1,0 +1,57 @@
+\documentclass[border={0pt 0pt 40pt 30pt}]{standalone}
+%\documentclass[]{article}
+
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8in}
+
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{colormaps}
+
+
+\pgfkeys
+{
+    /tikz/.cd,
+    myvar/.store in=\myvar,
+    %#adjust 1
+    myvar={../dat/time_vs_r2.dat},
+}
+
+\begin{document}
+
+    \begin{tikzpicture}
+		\begin{loglogaxis}[ 
+            %cycle list name=black white,
+            title={$\mathbf{A}:[-1,1] \to \mathbb{R}^{25 \times r_2}$},
+			xlabel={$r_2$},
+			ylabel={Time},
+			%width={0.3\textwidth},
+            grid=major,
+			enlargelimits=true,
+			%colorbar,
+        ]
+        \addplot table [x=x0,y=x1] {\myvar};
+        \addplot[no marks] table [ 
+            x=x0,
+            y={create col/linear regression={y=x1,
+                variance list={1000,800,600,500,400,200,100}}}] {\myvar}
+            coordinate [pos=0.03] (A)
+            coordinate [pos=0.15]  (B)
+            ;
+
+        \xdef\slope{\pgfplotstableregressiona}
+        \draw (A) -| (B)
+         node [pos=0.75,anchor=west]
+          {\pgfmathprintnumber{\slope}};
+
+		\end{loglogaxis}
+	\end{tikzpicture}
+
+\end{document}

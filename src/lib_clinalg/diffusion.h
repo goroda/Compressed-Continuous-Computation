@@ -69,14 +69,9 @@ struct DmDiff
 struct FunctionTrain * dmrg_diffusion(
     struct FunctionTrain *,
     struct FunctionTrain *,
-    struct FunctionTrain *,
-    struct Qmarray **, 
-    struct Qmarray **,
-    struct Qmarray **,
     double, size_t, double, int);
 
 struct FunctionTrain * exact_diffusion(
-    struct FunctionTrain *, struct FunctionTrain *,
-    struct Qmarray **, struct Qmarray **, struct Qmarray **);
+        struct FunctionTrain *, struct FunctionTrain *);
 
 #endif

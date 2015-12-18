@@ -19,6 +19,8 @@ benchmarks/fastmkron/bin/*
 benchmarks/dmrgprod/bin/*
 benchmarks/dmrgprod/dat/*
 benchmarks/qrdecomp/bin/*
+benchmarks/scalardiffusion/dat/*
+benchmarks/scalardiffusion/bin/*
 
 fileheaders.txt
 update_file_headers.py

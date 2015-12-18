@@ -343,12 +343,8 @@ void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
 /***********************************************************//**
     Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] using ALS+DMRG
 
-    \param z [inout] - initial guess (destroyed);
     \param a [in] - scalar coefficients
     \param f [in] - input to diffusion operator
-    \param da [in] - array of derivatives of each core of a
-    \param df [in] - array of derivatives of each core of f
-    \param ddf [in] - array of second derivatives of each core of f
     \param delta [in] - threshold to stop iterating
     \param max_sweeps [in] - maximum number of left-right-left sweeps 
     \param epsilon [in] - SVD tolerance for rank determination
@@ -356,25 +352,51 @@ void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
 
     \return na - approximate application of diffusion operator
 ***************************************************************/
-struct FunctionTrain * dmrg_diffusion(struct FunctionTrain * z,
+struct FunctionTrain * dmrg_diffusion(
     struct FunctionTrain * a,
     struct FunctionTrain * f,
-    struct Qmarray ** da, 
-    struct Qmarray ** df,
-    struct Qmarray ** ddf,
     double delta, size_t max_sweeps, double epsilon, int verbose)
 {
+    
+    size_t dim = f->dim;
+
     struct DmDiff dd;
 
     dd.A = a;
     dd.F = f;
 
-    dd.dA = da;
-    dd.dF = df;
-    dd.ddF = ddf;
+    dd.dA = malloc(dim * sizeof(struct Qmarray *));
+    dd.dF = malloc(dim * sizeof(struct Qmarray *));
+    dd.ddF = malloc(dim * sizeof(struct Qmarray *));
     
-    struct FunctionTrain * na =
-        dmrg_approx(z,dmrg_diffusion_support,&dd,delta,max_sweeps,epsilon,verbose);
+    if (dd.dA == NULL || dd.dF == NULL || dd.ddF == NULL){
+        fprintf(stderr, "Could not allocate memory in dmrg_diffusion\n");
+        return NULL;
+    }
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        dd.dA[ii] = qmarray_deriv(a->cores[ii]);
+        dd.dF[ii] = qmarray_deriv(f->cores[ii]);
+        dd.ddF[ii] = qmarray_deriv(dd.dF[ii]);
+    }
+
+    struct FunctionTrain * guess = function_train_copy(f);
+    struct FunctionTrain * na = dmrg_approx(guess,dmrg_diffusion_support,&dd,
+                                            delta,max_sweeps,epsilon,verbose);
+
+    for (ii = 0; ii < dim; ii++){
+        qmarray_free(dd.dA[ii]); dd.dA[ii] = NULL;
+        qmarray_free(dd.dF[ii]); dd.dF[ii] = NULL;
+        qmarray_free(dd.ddF[ii]); dd.ddF[ii] = NULL;
+    }
+
+    free(dd.dA); dd.dA = NULL;
+    free(dd.dF); dd.dF = NULL;
+    free(dd.ddF); dd.ddF = NULL;
+
+    function_train_free(guess); guess = NULL;
+
     return na;
 }
 
@@ -383,10 +405,6 @@ struct FunctionTrain * dmrg_diffusion(struct FunctionTrain * z,
 
     \param a [in] - scalar coefficients
     \param f [in] - input to diffusion operator
-    \param f [in] - input to diffusion operator
-    \param da [in] - array of derivatives of each core of a
-    \param df [in] - array of derivatives of each core of f
-    \param ddf [in] - array of second derivatives of each core of f
 
     \return out - exact application of diffusion operator 
     
@@ -394,16 +412,28 @@ struct FunctionTrain * dmrg_diffusion(struct FunctionTrain * z,
         Result is not rounded. Might want to perform rounding afterwards
 ***************************************************************/
 struct FunctionTrain * exact_diffusion(
-    struct FunctionTrain * a,
-    struct FunctionTrain * f,
-    struct Qmarray ** da, 
-    struct Qmarray ** df,
-    struct Qmarray ** ddf)
+    struct FunctionTrain * a, struct FunctionTrain * f)
 {
     size_t dim = a->dim;
     struct FunctionTrain * out = function_train_alloc(dim);
     out->ranks[0] = 1;
     out->ranks[dim] = 1;
+
+    struct Qmarray ** da = malloc(dim * sizeof(struct Qmarray *));
+    struct Qmarray ** df = malloc(dim * sizeof(struct Qmarray *));
+    struct Qmarray ** ddf = malloc(dim * sizeof(struct Qmarray *));
+    
+    if (da == NULL || df == NULL || ddf == NULL){
+        fprintf(stderr, "Could not allocate memory in dmrg_diffusion\n");
+        return NULL;
+    }
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        da[ii] = qmarray_deriv(a->cores[ii]);
+        df[ii] = qmarray_deriv(f->cores[ii]);
+        ddf[ii] = qmarray_deriv(df[ii]);
+    }
 
     struct Qmarray * l1 = qmarray_kron(a->cores[0],ddf[0]);
     struct Qmarray * l2 = qmarray_kron(da[0],df[0]);
@@ -415,7 +445,6 @@ struct FunctionTrain * exact_diffusion(
     qmarray_free(l2); l2 = NULL;
     qmarray_free(l3); l3 = NULL;
     
-    size_t ii;
     for (ii = 1; ii < dim-1; ii++){
         double lb = generic_function_get_lower_bound(f->cores[ii]->funcs[0]);
         double ub = generic_function_get_upper_bound(f->cores[ii]->funcs[0]);
@@ -445,6 +474,15 @@ struct FunctionTrain * exact_diffusion(
     qmarray_free(l1); l1 = NULL;
     qmarray_free(l2); l2 = NULL;
     qmarray_free(l3); l3 = NULL;
+
+    for (ii = 0; ii < dim; ii++){
+        qmarray_free(da[ii]); da[ii] = NULL;
+        qmarray_free(df[ii]); df[ii] = NULL;
+        qmarray_free(ddf[ii]); ddf[ii] = NULL;
+    }
+    free(da); da = NULL;
+    free(df); df = NULL;
+    free(ddf); ddf = NULL;
 
     return out;
 }
