@@ -21,7 +21,7 @@
     /tikz/.cd,
     myvar/.store in=\myvar,
     %#adjust 1
-    myvar={../dat/time_vs_order.dat},
+    myvar={../dat/time_vs_dim.dat},
 }
 
 \begin{document}
@@ -29,8 +29,8 @@
     \begin{tikzpicture}
 		\begin{loglogaxis}[ 
             %cycle list name=black white,
-            title={$\mathbf{A}:[-1,1] \to \mathbb{R}^{25 \times 25}$},
-			xlabel={Polynomial Order},
+            %title={$\mathbf{A}:[-1,1] \to \mathbb{R}^{25 \times 25}$},
+			xlabel={Dimension},
 			ylabel={Time},
 			%width={0.3\textwidth},
             grid=major,
