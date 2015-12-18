@@ -4030,6 +4030,54 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     return ftr;
 }
 
+/***********************************************************//**
+    Computes the maximum rank of a FT
+    
+    \param ft [in] 
+
+    \return maxrank
+***************************************************************/
+size_t function_train_maxrank(struct FunctionTrain * ft)
+{
+    
+    size_t maxrank = 1;
+    size_t ii;
+    for (ii = 0; ii < ft->dim+1; ii++){
+        if (ft->ranks[ii] > maxrank){
+            maxrank = ft->ranks[ii];
+        }
+    }
+    
+    return maxrank;
+}
+
+/***********************************************************//**
+    Computes the average rank of a FT. Doesn't cound first and last ranks
+    
+    \param ft [in] 
+
+    \return avgrank
+***************************************************************/
+double function_train_avgrank(struct FunctionTrain * ft)
+{
+    
+    double avg = 0;
+    if (ft->dim == 1){
+        return 1.0;
+    }
+    else if (ft->dim == 2){
+        return (double) ft->ranks[1];
+    }
+    else{
+        size_t ii;
+        for (ii = 1; ii < ft->dim; ii++){
+            avg += (double)ft->ranks[ii];
+        }
+    }
+    return (avg / (ft->dim - 1.0));
+}
+
+
 //////////////////////////////////////////////////////////////////////
 // Blas type interface 1
 //
@@ -4321,6 +4369,7 @@ void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
             c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon);
         }
     }
-
-    
 }
+
+
+

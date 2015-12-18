@@ -240,6 +240,9 @@ ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
                 );
 
 
+size_t function_train_maxrank(struct FunctionTrain *);
+double function_train_avgrank(struct FunctionTrain *);
+
 //////////////////////////////////////////////////////////////////////
 // Blas type interface 1
 void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double);

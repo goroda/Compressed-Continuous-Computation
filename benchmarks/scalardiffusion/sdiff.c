@@ -82,7 +82,7 @@ int main(int argc, char * argv[])
 
     if (benchmark == 0)
     {
-        size_t nrepeat = 10;
+        size_t nrepeat = 1;
         double delta = 1e-8;
         size_t max_sweeps = 5;
         double epsilon = 1e-10;
@@ -126,12 +126,7 @@ int main(int argc, char * argv[])
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        size_t kk;
-                        for (kk = 1; kk < dim; kk++){
-                            if (sol->ranks[kk] > maxrank){
-                                maxrank = sol->ranks[kk];
-                            }
-                        }
+                        maxrank = function_train_maxrank(sol);
                         if (verbose > 0){
                             struct FunctionTrain * exact = exact_diffusion(a,f);
                             double diff = function_train_relnorm2diff(sol,exact);
@@ -188,6 +183,7 @@ int main(int argc, char * argv[])
                 franks[dim] = 1;
                 
                 size_t maxrank = 1;
+                double aroundrank = 1.0;
                 time = 0.0;
                 for (jj = 0; jj < nrepeat; jj++){
                     struct FunctionTrain * a = function_train_poly_randu(bds,aranks,maxorder);
@@ -200,12 +196,10 @@ int main(int argc, char * argv[])
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        size_t kk;
-                        for (kk = 1; kk < dim; kk++){
-                            if (sol->ranks[kk] > maxrank){
-                                maxrank = sol->ranks[kk];
-                            }
-                        }
+                        maxrank = function_train_maxrank(sol);
+                        struct FunctionTrain * at = function_train_round(a,1e-14);
+                        aroundrank = function_train_avgrank(at);
+                        function_train_free(at); at = NULL;
                         if (verbose > 0){
                             struct FunctionTrain * exact = exact_diffusion(a,f);
                             double diff = function_train_relnorm2diff(sol,exact);
@@ -219,7 +213,7 @@ int main(int argc, char * argv[])
                     function_train_free(sol); sol = NULL;
                 }
                 time /= (double) nrepeat;
-                printf("Average time for rank of a %zu is (%G)\n",arank,time);
+                printf("Average time for rank of a %zu is (%G). Maxrank is %zu. Rounded ranks of a are %G\n",arank,time,maxrank,aroundrank);
                 free(aranks); aranks = NULL;
                 free(franks); franks = NULL;
                 

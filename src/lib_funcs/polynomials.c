@@ -1651,6 +1651,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         free(allprods); allprods=NULL;
     }
     else{
+        printf("OrthPolyExpansion product greater than order 25 is slow\n");
         struct OrthPolyExpansion * comb[2];
         comb[0] = a;
         comb[1] = b;
@@ -1875,8 +1876,9 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 *
 *   \return out - inner product
 *
-*   \note \f$  \int_{lb}^ub  a(x)b(x) w(x) dx \f$
-
+*   \note
+*       Computes \f[ \int_{lb}^ub  a(x)b(x) w(x) dx \f]
+*
 *************************************************************/
 double
 orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
