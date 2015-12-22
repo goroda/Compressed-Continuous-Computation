@@ -53,7 +53,9 @@
 #include "polynomials.h"
 #include "quadrature.h"
 #include "linalg.h"
-#include "legtens.h"
+//#include "legtens.h"
+
+const double lpolycoeffs[200];
 
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
