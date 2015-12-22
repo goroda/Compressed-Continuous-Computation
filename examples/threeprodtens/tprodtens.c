@@ -66,7 +66,7 @@ int main()
     printf("done and printing\n");
     printf("density level = %G\n", (double) nonzero/total);
     int success = darray_save(maxorder*maxorder*maxorder/4,1,coeffs,"legpolytens.dat",1);
-    //assert ( success == 1);
+    assert ( success == 1);
     free_orth_poly(leg);
     free(pt);
     free(wt);

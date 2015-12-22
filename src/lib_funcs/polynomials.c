@@ -53,9 +53,8 @@
 #include "polynomials.h"
 #include "quadrature.h"
 #include "linalg.h"
-//#include "legtens.h"
+#include "legtens.h"
 
-const double lpolycoeffs[200];
 
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
@@ -1643,7 +1642,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         for (kk = 0; kk < c->num_poly; kk++){
             for (ii = 0; ii < a->num_poly; ii++){
                 for (jj = 0; jj < b->num_poly; jj++){
-                    c->coeff[kk] +=  lpolycoeffs[ii+jj*200+kk*40000] * 
+                    c->coeff[kk] +=  lpolycoeffs[ii+jj*100+kk*10000] * 
                                         allprods[jj+ii*b->num_poly];
                 }
             }
@@ -1773,7 +1772,7 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         for (ll = 0; ll < c->num_poly; ll++){
             for (ii = 0; ii < maxordera; ii++){
                 for (jj = 0; jj < maxorderb; jj++){
-                    c->coeff[ll] +=  lpolycoeffs[ii+jj*200+ll*40000] * 
+                    c->coeff[ll] +=  lpolycoeffs[ii+jj*100+ll*10000] * 
                                         allprods[jj+ii*maxorderb];
                 }
             }
