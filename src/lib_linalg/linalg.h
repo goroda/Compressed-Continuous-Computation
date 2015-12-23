@@ -98,6 +98,14 @@
             ( dgeev_( X, Y, (__CLPK_integer *)Z, A, \
                    (__CLPK_integer *) B, C, D, E, (__CLPK_integer *) F, G, (__CLPK_integer *) H, \
                    I, (__CLPK_integer *) J, (__CLPK_integer *)K ) )
+
+    #define dstegr_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q) \
+            ( dstegr_(X,Y,(__CLPK_integer *)Z,A,B,C,D,\
+                   (__CLPK_integer *)E,(__CLPK_integer *)F,G,(__CLPK_integer *)H, \
+                   I,J,(__CLPK_integer *)K,(__CLPK_integer *)L,M,(__CLPK_integer *)N, \
+                   (__CLPK_integer *)O,(__CLPK_integer *)P,(__CLPK_integer *)Q))
+
+                   
 #else
     #include <gsl/gsl_cblas.h>
     #include "f2c.h" // this is worrysome because it redfines ints and such 
@@ -162,6 +170,14 @@
     #define dgesv_(X,Y,Z,A,B,C,D,E) \
             ( dgesv_((integer *)X, (integer *)Y, Z, (integer *) A, (integer *) B, \
                 C, (integer *) D, (integer *) E))
+
+    #define dstegr_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q) \
+            ( dstegr_(X,Y,(integer *)Z,A,B,C,D,\
+                   (integer *)E,(integer *)F,G,(integer *)H, \
+                   I,J,(integer *)K,(integer *)L,M,(integer *)N, \
+                   (integer *)O,(integer *)P,(integer *)Q))
+
+
 #endif
 
 #include "matrix_util.h"
