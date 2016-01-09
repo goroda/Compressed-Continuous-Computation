@@ -1423,7 +1423,6 @@ void qmarray_block_kron_mat(char type, int left, size_t nlblocks,
                     }
                 }
                 
-                
                 size_t st2a = right->nrows;
                 size_t st2b = lblocks[ii]->nrows;
                 size_t st2 = st2a * st2b * r;
@@ -1623,6 +1622,24 @@ double qmarray_norm2diff(struct Qmarray * a, struct Qmarray * b)
     //free(temp);
     temp = NULL;
     return sqrt(out);
+}
+
+/***********************************************************//**
+    Compute \f[ y \leftarrow ax + y \f]
+
+    \param a [in] - scale for first qmarray
+    \param x [in] - first qmarray
+    \param y [inout] - second qmarray
+***************************************************************/
+void qmarray_axpy(double a, struct Qmarray * x, struct Qmarray * y)
+{
+    assert (x->nrows == y->nrows );
+    assert (x->ncols == y->ncols );
+    
+    size_t ii;
+    for (ii = 0; ii < x->nrows * x->ncols; ii++){
+        generic_function_axpy(a,x->funcs[ii],y->funcs[ii]);
+    }
 }
 
 struct Zeros {
@@ -2698,7 +2715,7 @@ struct Qmarray * qmarray_stackv(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < a->ncols; jj++){
         for (ii = 0; ii < a->nrows; ii++){
             c->funcs[jj*c->nrows+ii] = 
-                            generic_function_copy(a->funcs[jj*a->nrows+ii]);
+                generic_function_copy(a->funcs[jj*a->nrows+ii]);
         }
         for (ii = 0; ii < b->nrows; ii++){
             c->funcs[jj*c->nrows+ii+a->nrows] = 
@@ -2994,11 +3011,11 @@ struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
     // middle cores
     size_t ii;
     for (ii = 1; ii < ft->dim-1; ii++){
-    
         ft->cores[ii] = qmarray_blockdiag(a->cores[ii], b->cores[ii]);
         ft->ranks[ii] = a->ranks[ii] + b->ranks[ii];
     }
     ft->ranks[ft->dim-1] = a->ranks[a->dim-1] + b->ranks[b->dim-1];
+
     // last core
     ft->cores[ft->dim-1] = qmarray_stackv(a->cores[a->dim-1],
                                 b->cores[b->dim-1]);
@@ -3215,8 +3232,10 @@ double function_train_norm2(struct FunctionTrain * a)
     //printf("in norm2\n");
     double out = function_train_inner(a,a);
     if (out < -ZEROTHRESH){
-        fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
-        exit(1);
+        if (out * out >  ZEROTHRESH){
+            fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
+            exit(1);
+        }
     }
     return sqrt(fabs(out));
 }
@@ -3257,8 +3276,10 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
     function_train_scale(c,-1.0);
 
     double den = function_train_inner(c,c);
-
+    
+    //printf("compute sum \n");
     struct FunctionTrain * d = function_train_sum(a,c);
+    //printf("computed \n");
     double num = function_train_inner(d,d);
     
     double val = num;
@@ -3647,9 +3668,12 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             function_train_free(tprod);
 
         }
-
+        
+        //printf("compute difference \n");
+        //printf("norm fti = %G\n",function_train_norm2(fti));
+        //printf("norm ft = %G\n",function_train_norm2(ft));
         diff = function_train_relnorm2diff(ft,fti);
-
+        //printf("diff = %G\n",diff);
         //den = function_train_norm2(ft);
         //diff = function_train_norm2diff(ft,fti);
         //if (den > ZEROTHRESH){
@@ -3930,7 +3954,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     size_t kickrank = fca->kickrank;
 
     struct FunctionTrain * ft = NULL;
-    ft = ftapprox_cross(f, args,bds,ftref, isl, isr, fca,apargs);
+
+    ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
+
     //return ft;
     if (fca->verbose > 0){
         printf("done with first cross... rounding\n");
@@ -4010,6 +4036,54 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     free(ranks_found);
     return ftr;
 }
+
+/***********************************************************//**
+    Computes the maximum rank of a FT
+    
+    \param ft [in] 
+
+    \return maxrank
+***************************************************************/
+size_t function_train_maxrank(struct FunctionTrain * ft)
+{
+    
+    size_t maxrank = 1;
+    size_t ii;
+    for (ii = 0; ii < ft->dim+1; ii++){
+        if (ft->ranks[ii] > maxrank){
+            maxrank = ft->ranks[ii];
+        }
+    }
+    
+    return maxrank;
+}
+
+/***********************************************************//**
+    Computes the average rank of a FT. Doesn't cound first and last ranks
+    
+    \param ft [in] 
+
+    \return avgrank
+***************************************************************/
+double function_train_avgrank(struct FunctionTrain * ft)
+{
+    
+    double avg = 0;
+    if (ft->dim == 1){
+        return 1.0;
+    }
+    else if (ft->dim == 2){
+        return (double) ft->ranks[1];
+    }
+    else{
+        size_t ii;
+        for (ii = 1; ii < ft->dim; ii++){
+            avg += (double)ft->ranks[ii];
+        }
+    }
+    return (avg / (ft->dim - 1.0));
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // Blas type interface 1
@@ -4302,6 +4376,7 @@ void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
             c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon);
         }
     }
-
-    
 }
+
+
+

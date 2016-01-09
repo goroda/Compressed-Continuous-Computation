@@ -1135,7 +1135,6 @@ int generic_function_axpy(double a, struct GenericFunction * x,
         case PIECEWISE:
             fprintf(stderr,"Error: axpy not implemented for piecewise polynomials\n");
             exit(1);
-            break;
         case POLYNOMIAL:
             success = orth_poly_expansion_axpy(a,x->f,y->f);
             break;    

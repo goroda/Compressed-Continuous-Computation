@@ -36,7 +36,7 @@ int main(int argc, char * argv[])
     size_t nrepeats = 50;
     
     if (strcmp(argv[1],"0") == 0){
-        size_t nOrders = 20;
+        size_t nOrders = 40;
         double * results = calloc_double(nOrders*3);
         size_t ii,jj;
         for (ii = 0; ii < nOrders; ii++){

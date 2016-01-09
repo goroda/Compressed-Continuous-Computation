@@ -44,7 +44,8 @@
 #include "elements.h"
 #include "algs.h"
 #include "dmrg.h"
+#include "dmrgprod.h"
 #include "qmarray_qr.h"
-#include "operators.h"
+#include "diffusion.h"
 
 #endif

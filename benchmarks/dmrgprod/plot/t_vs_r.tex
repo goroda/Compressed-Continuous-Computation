@@ -14,7 +14,6 @@
 \pgfplotsset{compat=newest}
 \usepgfplotslibrary{colormaps}
 
-
 \pgfkeys
 {
     /tikz/.cd,
@@ -24,26 +23,25 @@
 }
 
 \begin{document}
-	\begin{tikzpicture}
-		\begin{loglogaxis}[ 
-            %cycle list name=black white,
-			xlabel={rank($a$)},
-			ylabel={Time},
-			%width={0.3\textwidth},
-            grid=major,
-			enlargelimits=true,
-            legend entries={direct, fast},
-            legend style={
-                legend pos = north west,
-            },
-			%colorbar,
+    \begin{tikzpicture}
+      \begin{loglogaxis}[ 
+	  %\begin{axis}[ 
+          %cycle list name=black white,
+	  xlabel={$\textrm{rank}(a)$},
+          ylabel={$\textrm{rank}(a^2)$},
+          grid=major,
+	  enlargelimits=true,
+          legend entries={direct, fast},
+          legend style={
+            legend pos = north west,
+          },
+	  %colorbar,
         ]
-        \addplot table [x=x0,y=x1] {\myvar};
-        \addplot table [x=x0,y=x2] {\myvar};
+        \addplot table [x=x0,y=x3] {\myvar};
         \addplot[no marks] table [ 
             x=x0,
-            y={create col/linear regression={y=x1,
-                variance list={800,600,400,400,400,400}}}] {\myvar}
+            y={create col/linear regression={y=x3,
+                variance list={1000,800,250,100,50,25}}}] {\myvar}
             coordinate [pos=0.03] (A)
             coordinate [pos=0.15]  (B)
             ;
@@ -52,24 +50,56 @@
         \draw (A) -| (B)
          node [pos=0.75,anchor=west]
           {\pgfmathprintnumber{\slope}};
+      \end{loglogaxis}
+      %\end{axis}
+    \end{tikzpicture}
 
-        \addplot[dashed] table [
-            x=x0,
-            y={create col/linear regression={y=x2,
-                variance list={800,600,400,400,400,400}}}] {\myvar}
-            coordinate [pos=0.7] (C)
-            coordinate [pos=0.85]  (D)
-            ;
+	%%\begin{tikzpicture}
+	%% 	\begin{loglogaxis}[ 
+        %%     %cycle list name=black white,
+	%% 		xlabel={rank($a$)},
+	%% 		ylabel={Time},
+	%% 		%width={0.3\textwidth},
+        %%     grid=major,
+	%% 		enlargelimits=true,
+        %%     legend entries={direct, fast},
+        %%     legend style={
+        %%         legend pos = north west,
+        %%     },
+	%% 		%colorbar,
+        %% ]
+        %% \addplot table [x=x0,y=x1] {\myvar};
+        %% \addplot table [x=x0,y=x2] {\myvar};
+        %% \addplot[no marks] table [ 
+        %%     x=x0,
+        %%     y={create col/linear regression={y=x1,
+        %%         variance list={800,600,400,400,400,400}}}] {\myvar}
+        %%     coordinate [pos=0.03] (A)
+        %%     coordinate [pos=0.15]  (B)
+        %%     ;
 
-        \xdef\slopeb{\pgfplotstableregressiona}
-        \draw (C) -| (D)
-         node [pos=0.75,anchor=west]
-          {\pgfmathprintnumber{\slopeb}};
+        %% \xdef\slope{\pgfplotstableregressiona}
+        %% \draw (A) -| (B)
+        %%  node [pos=0.75,anchor=west]
+        %%   {\pgfmathprintnumber{\slope}};
 
-		\end{loglogaxis}
-	\end{tikzpicture}
+        %% \addplot[dashed] table [
+        %%     x=x0,
+        %%     y={create col/linear regression={y=x2,
+        %%         variance list={800,600,400,400,400,400}}}] {\myvar}
+        %%     coordinate [pos=0.7] (C)
+        %%     coordinate [pos=0.85]  (D)
+        %%     ;
 
-    \begin{tikzpicture}
+        %% \xdef\slopeb{\pgfplotstableregressiona}
+        %% \draw (C) -| (D)
+        %%  node [pos=0.75,anchor=west]
+        %%   {\pgfmathprintnumber{\slopeb}};
+
+	%% 	\end{loglogaxis}
+	%% \end{tikzpicture}
+
+          \begin{tikzpicture}
 		\begin{loglogaxis}[ 
             %cycle list name=black white,
 			xlabel={rank($a^2$)},
@@ -115,36 +145,5 @@
 		\end{loglogaxis}
 	\end{tikzpicture}
 
-    \begin{tikzpicture}
-	    \begin{loglogaxis}[ 
-		%\begin{axis}[ 
-            %cycle list name=black white,
-			xlabel={$r$},
-            ylabel={$\textrm{rank}(a^2)$},
-            grid=major,
-			enlargelimits=true,
-            legend entries={direct, fast},
-            legend style={
-                legend pos = north west,
-            },
-			%colorbar,
-        ]
-        \addplot table [x=x0,y=x3] {\myvar};
-        \addplot[no marks] table [ 
-            x=x0,
-            y={create col/linear regression={y=x3,
-                variance list={1000,800,250,100,50,25}}}] {\myvar}
-            coordinate [pos=0.03] (A)
-            coordinate [pos=0.15]  (B)
-            ;
-
-        \xdef\slope{\pgfplotstableregressiona}
-        \draw (A) -| (B)
-         node [pos=0.75,anchor=west]
-          {\pgfmathprintnumber{\slope}};
-
-		\end{loglogaxis}
-		%\end{axis}
-	\end{tikzpicture}
 
 \end{document}

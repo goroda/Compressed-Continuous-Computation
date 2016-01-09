@@ -33,7 +33,6 @@
 
 //Code
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -2732,138 +2731,6 @@ double funcCheck3(double * x, void * args){
     return out;
 }
 
-void Test_dmrglr(CuTest * tc)
-{
-
-    printf("Testing Function: dmrg_sweep_lr\n");
-    size_t dim = 4;
-    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-
-    double diff;
-
-    struct FunctionTrain * ft = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
-
-    //printf("true ranks\n");
-    //iprint_sz(dim+1,ft->ranks);
-    struct FunctionTrain * fcopy = function_train_copy(ft);
-    struct FunctionTrain * ao = function_train_orthor(fcopy);
-    struct QR ** psir = dmrg_update_right2_all(ft,ao);
-    struct QR ** phil = qr_array_alloc(dim-1);
-
-    diff = function_train_relnorm2diff(ao,ft);
-    //printf("difference = %G\n",diff);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-    
-    //printf("start sweep\n");
-    struct FunctionTrain * new = dmrg_sweep_lr2(ao,ft,phil,psir,0.0);
-    
-    //printf("new ranks are \n");
-    //iprint_sz(dim+1,new->ranks);
-
-    size_t ii,jj,kk;
-    for (ii = 0; ii < dim-1; ii++){
-        double * intmat = qmatqma_integrate(new->cores[ii],new->cores[ii]);
-        for (jj = 0; jj < new->cores[ii]->ncols; jj++){
-            for (kk = 0; kk < new->cores[ii]->ncols; kk++){
-                if (jj == kk){
-                    CuAssertDblEquals(tc,1.0,intmat[jj*new->cores[ii]->ncols+kk],1e-14);
-                }
-                else{
-                    CuAssertDblEquals(tc,0.0,intmat[jj*new->cores[ii]->ncols+kk],1e-14);
-                }
-            }
-        }
-        free(intmat); intmat = NULL;
-    }
-
-    diff = function_train_relnorm2diff(new,ft);
-    //printf("difference = %G\n",diff);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    
-    qr_array_free(psir,dim-1);
-    qr_array_free(phil,dim-1);
-    function_train_free(ft); ft = NULL;
-    function_train_free(fcopy); fcopy = NULL;
-    function_train_free(ao); ao = NULL;
-    function_train_free(new); new = NULL;
-    bounding_box_free(bds); bds = NULL;
-}
-
-void Test_dmrgrl(CuTest * tc)
-{
-
-    printf("Testing Function: dmrg_sweep_rl\n");
-    size_t dim = 4;
-    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-
-    double diff;
-
-    struct FunctionTrain * ft = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
-
-    //printf("true ranks\n");
-    //iprint_sz(dim+1,ft->ranks);
-    struct FunctionTrain * fcopy = function_train_copy(ft);
-    struct FunctionTrain * ao = function_train_orthor(fcopy);
-    struct QR ** psir = dmrg_update_right2_all(ft,ao);
-    struct QR ** phil = qr_array_alloc(dim-1);
-    struct FunctionTrain * new = dmrg_sweep_lr2(ao,ft,phil,psir,0.0);
-    struct FunctionTrain * new2 = dmrg_sweep_rl2(new,ft,phil,psir,0.0);
-
-    size_t ii,jj,kk;
-    for (ii = dim-1; ii > 0 ; ii--){
-        double * intmat = qmaqmat_integrate(new2->cores[ii],new2->cores[ii]);
-        for (jj = 0; jj < new2->cores[ii]->nrows; jj++){
-            for (kk = 0; kk < new2->cores[ii]->nrows; kk++){
-                if (jj == kk){
-                    CuAssertDblEquals(tc,1.0,intmat[jj*new2->cores[ii]->nrows+kk],1e-14);
-                }
-                else{
-                    CuAssertDblEquals(tc,0.0,intmat[jj*new2->cores[ii]->nrows+kk],1e-14);
-                }
-            }
-        }
-        free(intmat); intmat = NULL;
-    }
-
-    diff = function_train_relnorm2diff(new2,ft);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
-
-    qr_array_free(psir,dim-1);
-    qr_array_free(phil,dim-1);
-    function_train_free(ft); ft = NULL;
-    function_train_free(fcopy); fcopy = NULL;
-    function_train_free(ao); ao = NULL;
-    function_train_free(new); new = NULL;
-    function_train_free(new2); new2 = NULL;
-    bounding_box_free(bds); bds = NULL;
-}
-
-
-void Test_dmrg_approx(CuTest * tc)
-{
-
-    printf("Testing Function: dmrg_approx\n");
-    size_t dim = 4;
-    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-    struct FunctionTrain * ft = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
-    struct FunctionTrain * fcopy = function_train_copy(ft);
-
-    struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
-
-    struct FunctionTrain * finish = dmrg_approx2(start,ft,1e-10,10,0,1e-12);
-
-    double diff = function_train_relnorm2diff(finish,fcopy);
-    
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-10);
-
-    bounding_box_free(bds); bds = NULL;
-    function_train_free(ft); ft = NULL;
-    function_train_free(fcopy); fcopy = NULL;
-    function_train_free(start); start = NULL;
-    function_train_free(finish); finish = NULL;
-}
-
 void Test_fast_mat_kron(CuTest * tc)
 {
 
@@ -2999,7 +2866,6 @@ void Test_block_kron_mat1(CuTest * tc)
 
     //qmarray_free(mat3); mat3 = NULL;
     //qmarray_free(shouldbe); shouldbe = NULL;
-
 }
 
 void Test_block_kron_mat2(CuTest * tc)
@@ -3343,21 +3209,13 @@ void Test_dmrg_prod(CuTest * tc)
     struct FunctionTrain * a = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
     struct FunctionTrain * ft = function_train_product(a,a);
 
-    //printf("exact ranks\n");
-    //iprint_sz(dim+1,ft->ranks);
     struct FunctionTrain * fcopy = function_train_copy(ft);
-
     struct FunctionTrain * rounded = function_train_round(ft,1e-12);
-    //printf("rounded ranks\n");
-    //iprint_sz(dim+1,rounded->ranks);
 
     struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
-    //struct FunctionTrain * start = function_train_copy(a);
     struct FunctionTrain * finish = dmrg_product(start,a,a,1e-10,10,1e-12,0);
-    //iprint_sz(dim+1,finish->ranks);
 
     double diff = function_train_relnorm2diff(finish,fcopy);
-    //printf("difference = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
     
     bounding_box_free(bds); bds = NULL;
@@ -3373,9 +3231,6 @@ CuSuite * CLinalgDMRGGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_rightorth);
-    SUITE_ADD_TEST(suite, Test_dmrglr);
-    SUITE_ADD_TEST(suite, Test_dmrgrl);
-    SUITE_ADD_TEST(suite, Test_dmrg_approx);
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     SUITE_ADD_TEST(suite,Test_fast_kron_mat);
     SUITE_ADD_TEST(suite,Test_block_kron_mat1);
@@ -3385,6 +3240,421 @@ CuSuite * CLinalgDMRGGetSuite()
     SUITE_ADD_TEST(suite,Test_block_kron_mat5);
     SUITE_ADD_TEST(suite,Test_block_kron_mat6);
     SUITE_ADD_TEST(suite,Test_dmrg_prod);
+    return suite;
+}
+
+void Test_diffusion_midleft(CuTest * tc)
+{
+    printf("Testing Function: dmrg_diffusion_midleft \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    
+    size_t r11 = 2;
+    size_t r12 = 4;
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+
+    size_t r = 8;
+    double diff; 
+    
+    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * da = qmarray_deriv(a);
+
+    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * df = qmarray_deriv(f);
+    struct Qmarray * ddf = qmarray_deriv(df);
+ 
+    double * mat = drandu(r*r11*r21*2);
+
+    struct Qmarray * af = qmarray_kron(a,f);
+    struct Qmarray * af2a = qmarray_kron(da,df);
+    struct Qmarray * af2b = qmarray_kron(a,ddf);
+
+    qmarray_axpy(1.0,af2a, af2b);
+
+    struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+    struct Qmarray * c1 = qmarray_stackv(af,af2b);
+    struct Qmarray * c2 = qmarray_stackv(zer,af);
+    struct Qmarray * comb = qmarray_stackh(c1,c2);
+
+    struct Qmarray * shouldbe = mqma(mat,comb,r);
+
+    struct Qmarray * is = qmarray_alloc(r,2*r12 * r22);
+    dmrg_diffusion_midleft(da,a,ddf,df,f,mat,r,is);
+    
+    size_t ii;
+    for (ii = 0; ii < is->nrows * is->ncols; ii++){
+        diff = generic_function_norm2diff(is->funcs[ii],shouldbe->funcs[ii]);
+        CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+        //printf("diff = %G\n",diff);
+    }
+    diff = qmarray_norm2diff(is,shouldbe);
+    //printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(a); a = NULL;
+    qmarray_free(da); da = NULL;
+    qmarray_free(f); f = NULL;
+    qmarray_free(af); af = NULL;
+    qmarray_free(af2a); af2a = NULL;
+    qmarray_free(af2b); af2b = NULL;
+    qmarray_free(zer); zer = NULL;
+    qmarray_free(df); df = NULL;
+    qmarray_free(ddf); ddf = NULL;
+    qmarray_free(is); is = NULL;
+    qmarray_free(c1); c1 = NULL;
+    qmarray_free(c2); c2 = NULL;
+    qmarray_free(comb); comb = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    free(mat); mat = NULL;
+}
+
+void Test_diffusion_lastleft(CuTest * tc)
+{
+    printf("Testing Function: dmrg_diffusion_lastleft \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    
+    size_t r11 = 9;
+    size_t r12 = 4;
+
+    size_t r21 = 7;
+    size_t r22 = 4;
+
+    size_t r = 8;
+    double diff; 
+    
+    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * da = qmarray_deriv(a);
+
+    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * df = qmarray_deriv(f);
+    struct Qmarray * ddf = qmarray_deriv(df);
+ 
+    double * mat = drandu(r*r11*r21*2);
+
+    struct Qmarray * af = qmarray_kron(a,f);
+    struct Qmarray * af2a = qmarray_kron(da,df);
+    struct Qmarray * af2b = qmarray_kron(a,ddf);
+    
+    qmarray_axpy(1.0,af2a, af2b);
+    struct Qmarray * comb = qmarray_stackv(af,af2b);
+    struct Qmarray * shouldbe = mqma(mat,comb,r);
+    
+    struct Qmarray * is = qmarray_alloc(r,r22*r22);
+    dmrg_diffusion_lastleft(da,a,ddf,df,f,mat,r,is);
+    
+    size_t ii;
+    for (ii = 0; ii < is->nrows * is->ncols; ii++){
+        diff = generic_function_norm2diff(is->funcs[ii],shouldbe->funcs[ii]);
+        CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+        //printf("diff = %G\n",diff);
+    }
+    diff = qmarray_norm2diff(is,shouldbe);
+    //printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(is); is = NULL;
+    qmarray_free(a); a = NULL;
+    qmarray_free(da); da = NULL;
+    qmarray_free(f); f = NULL;
+    qmarray_free(df); df = NULL;
+    qmarray_free(ddf); ddf = NULL;
+    qmarray_free(af); af = NULL;
+    qmarray_free(af2a); af2a = NULL;
+    qmarray_free(af2b); af2b = NULL;
+    qmarray_free(comb); comb = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    free(mat); mat = NULL;
+}
+
+void Test_diffusion_midright(CuTest * tc)
+{
+    printf("Testing Function: dmrg_diffusion_midright \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    
+    size_t r11 = 2;
+    size_t r12 = 4;
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+
+    size_t r = 8;
+    double diff; 
+    
+    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * da = qmarray_deriv(a);
+
+    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * df = qmarray_deriv(f);
+    struct Qmarray * ddf = qmarray_deriv(df);
+ 
+    double * mat = drandu(r*r12*r22*2);
+
+    struct Qmarray * af = qmarray_kron(a,f);
+    struct Qmarray * af2a = qmarray_kron(da,df);
+    struct Qmarray * af2b = qmarray_kron(a,ddf);
+    qmarray_axpy(1.0,af2a, af2b);
+
+    struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+    struct Qmarray * c1 = qmarray_stackv(af,af2b);
+    struct Qmarray * c2 = qmarray_stackv(zer,af);
+    struct Qmarray * comb = qmarray_stackh(c1,c2);
+
+    struct Qmarray * shouldbe = qmam(comb,mat,r);
+
+    struct Qmarray * is = qmarray_alloc(2*r11 * r21,r);
+    dmrg_diffusion_midright(da,a,ddf,df,f,mat,r,is);
+    
+    size_t ii;
+    for (ii = 0; ii < is->nrows * is->ncols; ii++){
+        diff = generic_function_norm2diff(is->funcs[ii],shouldbe->funcs[ii]);
+        CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+        //printf("diff = %G\n",diff);
+    }
+    diff = qmarray_norm2diff(is,shouldbe);
+    //printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(a); a = NULL;
+    qmarray_free(da); da = NULL;
+    qmarray_free(f); f = NULL;
+    qmarray_free(af); af = NULL;
+    qmarray_free(af2a); af2a = NULL;
+    qmarray_free(af2b); af2b = NULL;
+    qmarray_free(df); df = NULL;
+    qmarray_free(ddf); ddf = NULL;
+    qmarray_free(is); is = NULL;
+    qmarray_free(comb); comb = NULL;
+    qmarray_free(c1); c1 = NULL;
+    qmarray_free(c2); c2 = NULL;
+    qmarray_free(zer); zer = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    free(mat); mat = NULL;
+}
+
+void Test_diffusion_firstright(CuTest * tc)
+{
+    printf("Testing Function: dmrg_diffusion_firstright \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    
+    size_t r11 = 7;
+    size_t r12 = 4;
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+
+    size_t r = 6;
+    double diff; 
+    
+    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * da = qmarray_deriv(a);
+
+    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * df = qmarray_deriv(f);
+    struct Qmarray * ddf = qmarray_deriv(df);
+ 
+    double * mat = drandu(r*r12*r22*2);
+
+    struct Qmarray * af = qmarray_kron(a,f);
+    struct Qmarray * af2a = qmarray_kron(da,df);
+    struct Qmarray * af2b = qmarray_kron(a,ddf);
+    
+    qmarray_axpy(1.0,af2a, af2b);
+    struct Qmarray * comb = qmarray_stackh(af2b,af);
+    struct Qmarray * shouldbe = qmam(comb,mat,r);
+
+    struct Qmarray * is = qmarray_alloc(r11 * r21,r);
+    dmrg_diffusion_firstright(da,a,ddf,df,f,mat,r,is);
+    
+    size_t ii;
+    for (ii = 0; ii < is->nrows * is->ncols; ii++){
+        diff = generic_function_norm2diff(is->funcs[ii],shouldbe->funcs[ii]);
+        CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+        //printf("diff = %G\n",diff);
+    }
+    diff = qmarray_norm2diff(is,shouldbe);
+    //printf("diff = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(a); a = NULL;
+    qmarray_free(da); da = NULL;
+    qmarray_free(f); f = NULL;
+    qmarray_free(af); af = NULL;
+    qmarray_free(af2a); af2a = NULL;
+    qmarray_free(af2b); af2b = NULL;
+    qmarray_free(df); df = NULL;
+    qmarray_free(ddf); ddf = NULL;
+    qmarray_free(is); is = NULL;
+    qmarray_free(comb); comb = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    free(mat); mat = NULL;
+}
+
+void Test_diffusion_op_struct(CuTest * tc)
+{
+    
+    printf("Testing Function: diffusion operator structure (not really a function)\n");
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,2,2,1};
+    size_t maxorder = 10;
+    double lb = -1.0;
+    double ub = 1.0;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+
+    struct FunctionTrain * f = 
+        function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
+    struct FunctionTrain * a = 
+        function_train_poly_randu(bds,ranks,maxorder);
+
+    struct FT1DArray * fgrad = function_train_gradient(f);
+   
+    struct FT1DArray * temp1 = ft1d_array_alloc(dim);
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        temp1->ft[ii] = function_train_product(a,fgrad->ft[ii]);
+    }
+
+    struct FunctionTrain * ftsum = function_train_copy(temp1->ft[0]);
+    qmarray_free(ftsum->cores[0]); ftsum->cores[0] = NULL;
+    ftsum->cores[0] = qmarray_deriv(temp1->ft[0]->cores[0]);
+
+    struct FunctionTrain * is = function_train_alloc(dim);
+    is->ranks[0] = 1;
+    is->ranks[dim] = 1;
+
+    struct Qmarray * da[dim];
+    struct Qmarray * df[dim];
+    struct Qmarray * ddf[dim];
+    da[0] = qmarray_deriv(a->cores[0]);
+    df[0] = qmarray_deriv(f->cores[0]);
+    ddf[0] = qmarray_deriv(df[0]);
+    
+    struct Qmarray * l1 = qmarray_kron(a->cores[0],ddf[0]);
+    struct Qmarray * l2 = qmarray_kron(da[0],df[0]);
+    qmarray_axpy(1.0,l1,l2);
+    struct Qmarray * l3 = qmarray_kron(a->cores[0],f->cores[0]);
+    is->cores[0] = qmarray_stackh(l2,l3);
+    is->ranks[1] = is->cores[0]->ncols;
+    qmarray_free(l1); l1 = NULL;
+    qmarray_free(l2); l2 = NULL;
+    qmarray_free(l3); l3 = NULL;
+
+    for (ii = 1; ii < dim; ii++){
+        struct FunctionTrain * t = function_train_copy(temp1->ft[ii]);
+        qmarray_free(t->cores[ii]); t->cores[ii] = NULL;
+        t->cores[ii] = qmarray_deriv(temp1->ft[ii]->cores[ii]);
+
+        struct FunctionTrain * t2 = 
+            function_train_sum(ftsum,t);
+
+        function_train_free(ftsum); ftsum = NULL;
+        ftsum = function_train_copy(t2);
+        function_train_free(t2); t2 = NULL;
+        function_train_free(t); t = NULL;
+
+        da[ii] = qmarray_deriv(a->cores[ii]);
+        df[ii] = qmarray_deriv(f->cores[ii]);
+        ddf[ii] = qmarray_deriv(df[ii]);
+    
+        if (ii < dim-1){
+            struct Qmarray * addf = qmarray_kron(a->cores[ii],ddf[ii]);
+            struct Qmarray * dadf = qmarray_kron(da[ii],df[ii]);
+            qmarray_axpy(1.0,addf,dadf);
+            struct Qmarray * af = qmarray_kron(a->cores[ii],f->cores[ii]);
+            struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+            struct Qmarray * l3l1 = qmarray_stackv(af,dadf);
+            struct Qmarray * zl3 = qmarray_stackv(zer,af);
+            is->cores[ii] = qmarray_stackh(l3l1,zl3);
+            is->ranks[ii+1] = is->cores[ii]->ncols;
+            qmarray_free(addf); addf = NULL;
+            qmarray_free(dadf); dadf = NULL;
+            qmarray_free(af); af = NULL;
+            qmarray_free(zer); zer = NULL;
+            qmarray_free(l3l1); l3l1 = NULL;
+            qmarray_free(zl3); zl3 = NULL;
+        }
+    }
+    ii = dim-1;
+    l1 = qmarray_kron(a->cores[ii],ddf[ii]);
+    l2 = qmarray_kron(da[ii],df[ii]);
+    qmarray_axpy(1.0,l1,l2);
+    l3 = qmarray_kron(a->cores[ii],f->cores[ii]);
+    is->cores[ii] = qmarray_stackv(l3,l2);
+    is->ranks[ii+1] = is->cores[ii]->ncols;
+    qmarray_free(l1); l1 = NULL;
+    qmarray_free(l2); l2 = NULL;
+    qmarray_free(l3); l3 = NULL;
+
+    struct FunctionTrain * shouldbe = function_train_copy(ftsum);
+    
+
+    double diff = function_train_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-11);
+
+    for (ii = 0; ii  < dim; ii++){
+        qmarray_free(da[ii]);
+        qmarray_free(df[ii]);
+        qmarray_free(ddf[ii]);
+    }
+    
+    function_train_free(shouldbe); shouldbe = NULL;
+    function_train_free(is); is = NULL;
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(f); f = NULL;
+    function_train_free(a); a = NULL;
+    ft1d_array_free(fgrad); fgrad = NULL;
+    ft1d_array_free(temp1); temp1 = NULL;
+    function_train_free(ftsum); ftsum = NULL;
+}
+
+void Test_diffusion_dmrg(CuTest * tc)
+{
+    
+    printf("Testing Function: dmrg_diffusion\n");
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,2,2,1};
+    size_t maxorder = 10;
+    double lb = -1.0;
+    double ub = 1.0;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+
+    struct FunctionTrain * f = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
+    struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
+
+    struct FunctionTrain * is = dmrg_diffusion(a,f,1e-5,5,1e-10,0);
+    struct FunctionTrain * shouldbe = exact_diffusion(a,f);
+    
+    double diff = function_train_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-11);
+
+    function_train_free(shouldbe); shouldbe = NULL;
+    function_train_free(is); is = NULL;
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(f); f = NULL;
+    function_train_free(a); a = NULL;
+}
+
+CuSuite * CLinalgDiffusionGetSuite()
+{
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_diffusion_midleft);
+    SUITE_ADD_TEST(suite, Test_diffusion_lastleft);
+    SUITE_ADD_TEST(suite, Test_diffusion_midright);
+    SUITE_ADD_TEST(suite, Test_diffusion_firstright);
+    SUITE_ADD_TEST(suite, Test_diffusion_op_struct);
+    SUITE_ADD_TEST(suite, Test_diffusion_dmrg);
     return suite;
 }
 
@@ -3401,11 +3671,13 @@ void RunAllTests(void) {
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
+    CuSuite * diff = CLinalgDiffusionGetSuite();
     CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, fta);
     CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, diff);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
@@ -3416,6 +3688,7 @@ void RunAllTests(void) {
     CuSuiteDelete(ftr);
     CuSuiteDelete(fta);
     CuSuiteDelete(dmrg);
+    CuSuiteDelete(diff);
     CuStringDelete(output);
     free(suite);
 }
