@@ -51,9 +51,8 @@ double stress(double * x, void * args)
     return out;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-    
     size_t dim = 2;
     struct BoundingBox * bds = bounding_box_init(dim,0.01,.99);
 
