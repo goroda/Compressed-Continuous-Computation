@@ -2715,7 +2715,7 @@ struct Qmarray * qmarray_stackv(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < a->ncols; jj++){
         for (ii = 0; ii < a->nrows; ii++){
             c->funcs[jj*c->nrows+ii] = 
-                            generic_function_copy(a->funcs[jj*a->nrows+ii]);
+                generic_function_copy(a->funcs[jj*a->nrows+ii]);
         }
         for (ii = 0; ii < b->nrows; ii++){
             c->funcs[jj*c->nrows+ii+a->nrows] = 
@@ -3011,11 +3011,11 @@ struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
     // middle cores
     size_t ii;
     for (ii = 1; ii < ft->dim-1; ii++){
-    
         ft->cores[ii] = qmarray_blockdiag(a->cores[ii], b->cores[ii]);
         ft->ranks[ii] = a->ranks[ii] + b->ranks[ii];
     }
     ft->ranks[ft->dim-1] = a->ranks[a->dim-1] + b->ranks[b->dim-1];
+
     // last core
     ft->cores[ft->dim-1] = qmarray_stackv(a->cores[a->dim-1],
                                 b->cores[b->dim-1]);
@@ -3276,8 +3276,10 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
     function_train_scale(c,-1.0);
 
     double den = function_train_inner(c,c);
-
+    
+    //printf("compute sum \n");
     struct FunctionTrain * d = function_train_sum(a,c);
+    //printf("computed \n");
     double num = function_train_inner(d,d);
     
     double val = num;
@@ -3666,9 +3668,12 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             function_train_free(tprod);
 
         }
-
+        
+        //printf("compute difference \n");
+        //printf("norm fti = %G\n",function_train_norm2(fti));
+        //printf("norm ft = %G\n",function_train_norm2(ft));
         diff = function_train_relnorm2diff(ft,fti);
-
+        //printf("diff = %G\n",diff);
         //den = function_train_norm2(ft);
         //diff = function_train_norm2diff(ft,fti);
         //if (den > ZEROTHRESH){
@@ -3949,7 +3954,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     size_t kickrank = fca->kickrank;
 
     struct FunctionTrain * ft = NULL;
-    ft = ftapprox_cross(f, args,bds,ftref, isl, isr, fca,apargs);
+
+    ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
+
     //return ft;
     if (fca->verbose > 0){
         printf("done with first cross... rounding\n");

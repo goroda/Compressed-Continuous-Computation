@@ -42,13 +42,13 @@
             x=x0,
             y={create col/linear regression={y=x1,
                 variance list={1000,800,600,500,400,200,100}}}] {\myvar}
-            coordinate [pos=0.03] (A)
-            coordinate [pos=0.15]  (B)
+            coordinate [pos=0.08] (A)
+            coordinate [pos=0.2]  (B)
             ;
 
         \xdef\slope{\pgfplotstableregressiona}
-        \draw (A) -| (B)
-         node [pos=0.75,anchor=west]
+        \draw (B) -| (A)
+        node [pos=0.7,anchor=east]
           {\pgfmathprintnumber{\slope}};
 
 		\end{loglogaxis}

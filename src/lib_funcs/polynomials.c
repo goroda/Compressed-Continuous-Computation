@@ -679,14 +679,16 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
 struct OrthPolyExpansion * 
 orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
 {
+    struct OrthPolyExpansion * p = NULL;
+    if (pin != NULL){
+        assert (pin->nalloc >= pin->num_poly);
 
-    struct OrthPolyExpansion * p;
-    if ( NULL == (p = malloc(sizeof(struct OrthPolyExpansion)))){
-        fprintf(stderr, "failed to allocate memory for poly exp.\n");
-        exit(1);
-    }
+        if ( NULL == (p = malloc(sizeof(struct OrthPolyExpansion)))){
+            fprintf(stderr, "failed to allocate memory for poly exp.\n");
+            exit(1);
+        }
     
-    switch (pin->p->ptype) {
+        switch (pin->p->ptype) {
         case LEGENDRE:
             p->p = init_leg_poly();
             break;
@@ -695,18 +697,20 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
             break;
         case STANDARD:
             break;
-        //default:
-        //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
+            //default:
+            //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
+        }
+    
+        //   printf("copying polynomial\n");
+        //printf("pin->num_poly = %zu, pin->nalloc = %zu\n",pin->num_poly,pin->nalloc);
+        p->num_poly = pin->num_poly;
+        p->nalloc = pin->nalloc;
+        //p->coeff = calloc_double(p->num_poly);
+        p->coeff = calloc_double(pin->nalloc);
+        memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
+        p->lower_bound = pin->lower_bound;
+        p->upper_bound = pin->upper_bound;
     }
-
-    p->num_poly = pin->num_poly;
-    p->nalloc = pin->nalloc;
-    //p->coeff = calloc_double(p->num_poly);
-    p->coeff = calloc_double(pin->nalloc);
-    memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
-    p->lower_bound = pin->lower_bound;
-    p->upper_bound = pin->upper_bound;
-
     return p;
 }
 
@@ -996,7 +1000,7 @@ deserialize_orth_poly_expansion(unsigned char * ser,
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
-    (*poly)->nalloc = OPECALLOC;
+    (*poly)->nalloc = num_poly+OPECALLOC;
     (*poly)->p = p;
     
     return ptr;
@@ -1291,7 +1295,7 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     memmove(new_coeff,(*p)->coeff, keep * sizeof(double));
     free((*p)->coeff);
     (*p)->num_poly = keep;
-    (*p)->nalloc = OPECALLOC;
+    (*p)->nalloc = (*p)->num_poly + OPECALLOC;
     (*p)->coeff = new_coeff;
 }
 
@@ -1463,7 +1467,8 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         //N = N * 2 + 1; // 
         //N = N + 5;
         poly->num_poly = N;
-        poly->coeff = calloc_double(N);
+        poly->nalloc = N + OPECALLOC;
+        poly->coeff = calloc_double(poly->nalloc);
         //printf("Number of coefficients to check = %zu\n",aopts->coeffs_check);
         orth_poly_expansion_approx(A, args, poly);
 	    double sum_coeff_squared = 0.0;
@@ -2185,6 +2190,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
                 x->num_poly, y->num_poly, z->num_poly);
         exit(1);
     }
+    //   z->nalloc = z->num_poly + OPECALLOC;
     orth_poly_expansion_round(&z);
 }
 
@@ -2202,8 +2208,8 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 *       Computes z=ax+by, where x and y are polynomial expansionx
 *       Requires both polynomials to have the same upper 
 *       and lower bounds
-*   
-*************************************************************/
+*       
+**************************************************************/
 int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
                         struct OrthPolyExpansion * y)
 {
@@ -2264,8 +2270,8 @@ int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
             }
         }
         y->num_poly = nround;
-
     }
+    
     return 0;
 }
 
