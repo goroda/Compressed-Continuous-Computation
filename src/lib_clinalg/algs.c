@@ -74,7 +74,6 @@
     #define VFTCROSS 0
 #endif
 
-
 /***********************************************************//**
     Quasimatrix - vector multiplication
 
@@ -2922,7 +2921,8 @@ struct FunctionTrain *
 function_train_round(struct FunctionTrain * ain, double epsilon)
 {
     struct FunctionTrain * a = function_train_copy(ain);
-    size_t ii, core;
+//    size_t ii;
+    size_t core;
     struct Qmarray * temp = NULL;
 
     double delta = function_train_norm2(a);
@@ -2984,9 +2984,11 @@ function_train_round(struct FunctionTrain * ain, double epsilon)
     ft->ranks[a->dim] = 1;
     
     function_train_free(ftrl);
+    /*
     for (ii = 0; ii < ft->dim; ii++){
         qmarray_roundt(&ft->cores[ii], epsilon);
     }
+    */
 
     function_train_free(a); a = NULL;
     return ft;
@@ -3691,9 +3693,8 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             break;
         }
         
-        function_train_free(fti); fti=NULL;
-        //printf("copy \n");
-        fti = function_train_copy(ft);
+//        function_train_free(fti); fti=NULL;
+//        fti = function_train_copy(ft);
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
         //print_index_set_array(dim,left_ind);
@@ -4083,6 +4084,57 @@ double function_train_avgrank(struct FunctionTrain * ft)
     }
     return (avg / (ft->dim - 1.0));
 }
+
+struct vfdata
+{   
+    double (*f)(double *,size_t,void *);
+    size_t ind;
+    void * args;
+};
+
+double vfunc_eval(double * x, void * args)
+{
+    struct vfdata * data = args;
+    double out = data->f(x,data->ind,data->args);
+    return out;
+}
+
+/***********************************************************//**
+    An interface for cross approximation of a vector-valued function
+
+    \param f [in] - function
+    \param args [in] - function arguments
+    \param nfuncs [in] - function arguments
+    \param bds [in] - bounding box 
+    \param xstart [in] - location for first fibers (if null then middle of domain)
+    \param fca [in] - cross approximation args, if NULL then default exists
+    \param apargs [in] - function approximation arguments (if null then defaults)
+
+    \return fta - function train decomposition of f
+
+    \note
+        Nested indices both left and right
+***************************************************************/
+struct FT1DArray *
+ft1d_array_cross(double (*f)(double *, size_t, void *), void * args, 
+                size_t nfuncs,
+                struct BoundingBox * bds,
+                double * xstart,
+                struct FtCrossArgs * fca,
+                struct FtApproxArgs * apargs)
+{   
+    struct vfdata data;
+    data.f = f;
+    data.args = args;
+
+    struct FT1DArray * fta = ft1d_array_alloc(nfuncs);
+    for (size_t ii = 0; ii < nfuncs; ii++){
+        data.ind = ii;
+        fta->ft[ii] = function_train_cross(vfunc_eval,&data,bds,xstart,fca,apargs);
+    }
+    return fta;
+}
+
 
 
 //////////////////////////////////////////////////////////////////////

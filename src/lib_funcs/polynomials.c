@@ -51,7 +51,7 @@
 #include "stringmanip.h"
 #include "array.h"
 #include "polynomials.h"
-#include "quadrature.h"
+#include "lib_quadrature.h"
 #include "linalg.h"
 #include "legtens.h"
 
@@ -1315,12 +1315,11 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
 *************************************************************/
 void
 orth_poly_expansion_approx(double (*A)(double,void *), void *args, 
-            struct OrthPolyExpansion * poly)
+                           struct OrthPolyExpansion * poly)
 {
     size_t ii, jj;
     double p[2];
     double pnew;
-
 
     double m = (poly->upper_bound - poly->lower_bound) / 
                 (poly->p->upper - poly->p->lower);
@@ -1344,9 +1343,12 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
             //nquad = poly->num_poly*2.0-1.0;//*2.0;
             pt = calloc_double(nquad);
             wt = calloc_double(nquad);
-            gauss_legendre(poly->num_poly,pt,wt);
+            
+            // uncomment next two for cc
             //clenshaw_curtis(nquad,pt,wt);
             //for (ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;}
+
+            gauss_legendre(poly->num_poly,pt,wt);
             break;
         case STANDARD:
             fprintf(stderr, "Cannot call orth_poly_expansion_approx for STANDARD type\n");
@@ -1363,7 +1365,6 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
         fvals[ii] = A(pt_un[ii],args)  * wt[ii];
     }
     
-
     if (poly->num_poly > 1){
         for (ii = 0; ii < nquad; ii++){ // loop over all points
             p[0] = poly->p->const_term;
@@ -1397,6 +1398,99 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     free(pt_un);
     
 }
+/********************************************************//**
+*  Approximating a function that can take a vector of points as
+*  input
+*  
+*  \param[in]     A - function to approximate (can take multiple inputs)
+*  \param[in]     args - arguments to function
+*  \param[in,out] poly - orthogonal polynomial expansion
+*
+*  \return 0 - no problems, > 0 problem
+*
+*  \note  Maximum quadrature limited to 200 nodes
+*************************************************************/
+int
+orth_poly_expansion_approx_vec(
+    int (*A)(size_t, double *,double *,void *), void *args,
+    struct OrthPolyExpansion * poly)
+
+{
+    size_t nquad = poly->num_poly+1;
+    if (nquad < 1 || nquad > 200){
+        return 1;
+    }
+
+    double m = (poly->upper_bound - poly->lower_bound) / (poly->p->upper - poly->p->lower);
+    double off = poly->upper_bound - m * poly->p->upper;
+
+    double fvals[200];
+    double pt_un[200]; // nodes appropriate for bounds of A
+    
+    double * quadpt = NULL;
+    double * quadwt = NULL;
+    int return_val = 0;
+    switch (poly->p->ptype) { 
+        case CHEBYSHEV: 
+            fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for CHEBYSHEV type\n");
+            return 1;
+        case LEGENDRE: 
+            return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
+            if (return_val != 0){
+                return return_val;
+            }
+            break; 
+        case STANDARD: 
+            fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for STANDARD type\n");
+            return 1;
+    } 
+    for (size_t ii = 0; ii < nquad; ii++){ 
+        pt_un[ii] =  m * quadpt[ii] + off; 
+//        fvals[ii] = A(pt_un[ii],args)  * wt[ii]; 
+    }
+    
+    // Evaluate functions
+    return_val = A(nquad,pt_un,fvals,args);
+    if (return_val != 0){
+        return return_val;
+    }
+    for (size_t ii = 0; ii < nquad; ii++){
+        fvals[ii] *= quadwt[ii];
+    }
+    double p[2];
+    double pnew;
+    size_t ii,jj;
+    if (poly->num_poly > 1){
+        for (ii = 0; ii < nquad; ii++){ // loop over all points
+            p[0] = poly->p->const_term;
+            poly->coeff[0] += fvals[ii] * poly->p->const_term;
+            p[1] = poly->p->lin_const + poly->p->lin_coeff * quadpt[ii];
+            poly->coeff[1] += fvals[ii] * p[1] ;
+            // loop over all coefficients
+            for (jj = 2; jj < poly->num_poly; jj++){
+                pnew = eval_orth_poly_wp(poly->p, p[0], p[1], jj, quadpt[ii]);
+                poly->coeff[jj] += fvals[ii] * pnew;
+                p[0] = p[1];
+                p[1] = pnew;
+            }
+        }
+
+        for (ii = 0; ii < poly->num_poly; ii++){
+            poly->coeff[ii] /= poly->p->norm(ii);
+        }
+
+    }
+    else{
+        for (ii = 0; ii < nquad; ii++){
+            poly->coeff[0] += fvals[ii] * poly->p->const_term;
+        }
+        poly->coeff[0] /= poly->p->norm(0);
+    }
+
+    return return_val;
+}
+
+
 
 /********************************************************//**
 *   Create an approximation adaptively

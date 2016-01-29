@@ -1912,6 +1912,7 @@ struct PiecewisePoly *
 piecewise_poly_approx1(double (*f)(double, void *), void * args, double lb,
                         double ub, struct PwPolyAdaptOpts * aoptsin)
 {
+    //printf("start approx\n");
     struct PwPolyAdaptOpts * aopts = NULL;
     if (aoptsin != NULL){
         aopts = aoptsin;
@@ -1978,6 +1979,7 @@ piecewise_poly_approx1(double (*f)(double, void *), void * args, double lb,
         aopts = NULL;
     }
 
+    //printf("end approx\n");
     return poly;
 }
 

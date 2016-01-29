@@ -85,14 +85,25 @@ struct FunctionTrain * dmrg_product(struct FunctionTrain * z,
             struct FunctionTrain * a, struct FunctionTrain * b,
             double delta, size_t max_sweeps, double epsilon, int verbose)
 {
+    assert(a != NULL);
+    assert(b != NULL);
     struct DmProd dm;
     dm.a = a;
     dm.b = b;
-
     
+    struct FunctionTrain * zin;
+    if (z == NULL){
+        zin = function_train_copy(a);    
+    }
+    else{
+        zin = z;
+    }
     struct FunctionTrain * na =
-        dmrg_approx(z,dmrg_prod_support,&dm,delta,max_sweeps,epsilon,verbose);
+        dmrg_approx(zin,dmrg_prod_support,&dm,delta,max_sweeps,epsilon,verbose);
+
+    if (z == NULL){
+        function_train_free(zin);
+    }
     return na;
 }
-
 

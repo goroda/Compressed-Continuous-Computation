@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
-void getPtsWts(size_t, double *, double *);
+void getLegPtsWts(size_t, double *, double *);
+int getLegPtsWts2(size_t, double **, double **);
 
 #endif

@@ -10,12 +10,12 @@
 #include "lib_funcs.h"
 #include "lib_probability.h"
 
-const double w = 4.0; // width
-const double t = 2.0; // thickness
-const double L = 100.0; // length
-const double D_0 = 2.2535; // Displacement tolerance
-const double E = 2.9e7;
-const double R = 40000.0;
+static const double w = 4.0; // width
+static const double t = 2.0; // thickness
+static const double L = 100.0; // length
+static const double D_0 = 2.2535; // Displacement tolerance
+static const double E = 2.9e7;
+static const double R = 40000.0;
 
 double displacement(double * x, void * args)
 {

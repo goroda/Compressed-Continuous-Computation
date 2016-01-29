@@ -1,7 +1,8 @@
 #ifndef PROBABILITY_H
 #define PROBABILITY_H
 
-#include "lib_clinalg.h"
+#include "../lib_clinalg/lib_clinalg.h"
+//#include "lib_clinalg.h"
 
 enum lt_matrix_type {LT, SYMMETRIC, GEN};
 enum pdf_type {GAUSSIAN, GENERAL};
