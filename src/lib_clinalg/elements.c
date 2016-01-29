@@ -2242,6 +2242,149 @@ struct FT1DArray * ft1d_array_alloc(size_t dimout)
     
     return fta;
 }
+
+/***********************************************************//**
+    Serialize a function train array
+
+    \param ser [inout] - stream to serialize to
+    \param ft [in] - function train array
+    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+
+    \return ptr - ser shifted by number of bytes
+***************************************************************/
+unsigned char * 
+ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
+                size_t *totSizeIn)
+{
+
+    // size -> ft1 -> ft2 -> ... ->ft[size]
+
+    // size
+    size_t totSize = sizeof(size_t);
+    size_t size_temp;
+    for (size_t ii = 0; ii < ft->size; ii++){
+        function_train_serialize(NULL,ft->ft[ii],&size_temp);
+        totSize += size_temp;
+    }
+    if (totSizeIn != NULL){
+        *totSizeIn = totSize;
+        return ser;
+    }
+
+    // serialize the size
+    unsigned char * ptr = ser;
+    ptr = serialize_size_t(ptr, ft->size);
+    
+    // serialize each function train
+    for (size_t ii = 0; ii < ft->size; ii++){
+        ptr = function_train_serialize(ptr,ft->ft[ii],NULL);
+    }
+    
+    return ptr;
+}
+
+/***********************************************************//**
+    Deserialize a function train array
+
+    \param ser [inout] - serialized function train array
+    \param ft [inout] - function_train array
+
+    \return ptr - shifted ser after deserialization
+***************************************************************/
+unsigned char *
+ft1d_array_deserialize(unsigned char * ser, struct FT1DArray ** ft)
+{
+    unsigned char * ptr = ser;
+
+    // deserialize the number of fts in the array
+    size_t size;
+    ptr = deserialize_size_t(ptr, &size);
+    *ft = ft1d_array_alloc(size);
+
+    // deserialize each function train
+    for (size_t ii = 0; ii < size; ii++){
+        ptr = function_train_deserialize(ptr, &((*ft)->ft[ii]));
+    }
+    return ptr;
+}
+
+/***********************************************************//**
+    Save a function train array to file
+    
+    \param ft [in] - function train array to save
+    \param filename [in] - name of file to save to
+
+    \return success (1) or failure (0) of opening the file
+***************************************************************/
+int ft1d_array_save(struct FT1DArray * ft, char * filename)
+{
+
+    FILE *fp;
+    fp = fopen(filename, "w");
+    if (fp == NULL){
+        fprintf(stderr, "cat: can't open %s\n", filename);
+        return 0;
+    }
+    
+    size_t totsize;
+    ft1d_array_serialize(NULL,ft, &totsize);
+
+    unsigned char * data = malloc(totsize+sizeof(size_t));
+    if (data == NULL){
+        fprintf(stderr, "can't allocate space for saving density\n");
+        return 0;
+    }
+    
+    // serialize size first!
+    unsigned char * ptr = serialize_size_t(data,totsize);
+    ptr = ft1d_array_serialize(ptr,ft,NULL);
+
+    fwrite(data,sizeof(unsigned char),totsize+sizeof(size_t),fp);
+
+    free(data); data = NULL;
+    fclose(fp);
+    return 1;
+}
+
+/***********************************************************//**
+    Load a function train array from a file
+    
+    \param filename [in] - filename of file to load
+
+    \return ft if successfull NULL otherwise
+***************************************************************/
+struct FT1DArray * ft1d_array_load(char * filename)
+{
+    FILE *fp;
+    fp =  fopen(filename, "r");
+    if (fp == NULL){
+        fprintf(stderr, "cat: can't open %s\n", filename);
+        return NULL;
+    }
+
+    size_t totsize;
+    size_t k = fread(&totsize,sizeof(size_t),1,fp);
+    if ( k != 1){
+        printf("error reading file %s\n",filename);
+        return NULL;
+    }
+
+    unsigned char * data = malloc(totsize);
+    if (data == NULL){
+        fprintf(stderr, "can't allocate space for loading density\n");
+        return NULL;
+    }
+
+    k = fread(data,sizeof(unsigned char),totsize,fp);
+
+    struct FT1DArray * ft = NULL;
+    ft1d_array_deserialize(data,&ft);
+    
+    free(data); data = NULL;
+    fclose(fp);
+    return ft;
+}
+
 /***********************************************************//**
     Copy an array of function trains
 

@@ -243,6 +243,14 @@ ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
 size_t function_train_maxrank(struct FunctionTrain *);
 double function_train_avgrank(struct FunctionTrain *);
 
+struct FT1DArray *
+ft1d_array_cross(double (*f)(double *, size_t, void *), void *, 
+                size_t,
+                struct BoundingBox *,
+                double *,
+                struct FtCrossArgs *,
+                struct FtApproxArgs *);
+
 //////////////////////////////////////////////////////////////////////
 // Blas type interface 1
 void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double);

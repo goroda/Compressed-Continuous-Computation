@@ -267,7 +267,7 @@ void gauss_legendre(size_t N, double * pts, double * weights){
         weights[0] = 1.0;
     }
     else if (N < 200){
-        getPtsWts(N,pts,weights);
+        getLegPtsWts(N,pts,weights);
         //size_t ii;
         //for (ii = 0; ii < N; ii++){
         //    weights[ii] /= 2.0;

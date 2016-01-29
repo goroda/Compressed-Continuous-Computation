@@ -39,6 +39,7 @@
 
 #include "lib_clinalg.h"
 
+/*
 void c3_lanczos(void (*f)(struct FunctionTrain *, struct FunctionTrain **,void *), void * args,
                 double epsilon, struct FT1DArray * out, 
                 double * alpha, double * beta,  size_t niters)
@@ -71,7 +72,13 @@ void c3_lanczos(void (*f)(struct FunctionTrain *, struct FunctionTrain **,void *
     function_train_free(new);
     
     //need to call dstegr next
+    double waste;
+    size_t wastei;
+    double * eigs = calloc_double(niters);
+    double * evecs = calloc_double(niters*niters);
+    //dstegr_('V','A',niters,alpha,beta,waste,waste,wasti,wasti,waste,niters,eigs,evecs,niters)
 }
+*/
 
 
 

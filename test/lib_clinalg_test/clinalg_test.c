@@ -2591,6 +2591,46 @@ void Test_ftapprox_grad(CuTest * tc)
     bounding_box_free(bds); bds = NULL;
 }
 
+void Test_ft1d_array_serialize(CuTest * tc)
+{
+    printf("Testing Function: ft1d_array_(de)serialize\n");
+     
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+
+    struct FunctionTrain * ft = 
+        function_train_cross(funcGrad,NULL,bds,NULL,NULL,NULL);
+    struct FT1DArray * ftgg = function_train_gradient(ft);
+
+
+    unsigned char * text = NULL;
+    size_t size;
+    ft1d_array_serialize(NULL,ftgg,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    ft1d_array_serialize(text,ftgg,NULL);
+
+    struct FT1DArray * ftg = NULL;
+    //printf("derserializing ft\n");
+    ft1d_array_deserialize(text, &ftg);
+
+    double pt[4] = {2.0, -3.1456, 1.0, 0.0};
+    double * grad = ft1d_array_eval(ftg,pt);
+
+    CuAssertDblEquals(tc, pt[1], grad[0],1e-12);
+    CuAssertDblEquals(tc, pt[0], grad[1],1e-12);
+    CuAssertDblEquals(tc, pt[3], grad[2],1e-12);
+    CuAssertDblEquals(tc, pt[2], grad[3],1e-12);
+    
+    free(grad); grad = NULL;
+    function_train_free(ft); ft = NULL; 
+    ft1d_array_free(ftgg); ftgg = NULL;
+    ft1d_array_free(ftg); ftg = NULL;
+    bounding_box_free(bds); bds = NULL;
+    free(text);
+}
+
+
 double funcHess(double * x, void * args){
     assert (args == NULL);
     //double out = 2.0*x[0] + x[1]*pow(x[2],4) + x[3]*pow(x[0],2);
@@ -2677,6 +2717,7 @@ CuSuite * CLinalgFuncTrainArrayGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_ftapprox_grad);
+    SUITE_ADD_TEST(suite,Test_ft1d_array_serialize);
     SUITE_ADD_TEST(suite, Test_ftapprox_hess);
     return suite;
 }
@@ -3534,9 +3575,9 @@ void Test_diffusion_op_struct(CuTest * tc)
     is->ranks[0] = 1;
     is->ranks[dim] = 1;
 
-    struct Qmarray * da[dim];
-    struct Qmarray * df[dim];
-    struct Qmarray * ddf[dim];
+    struct Qmarray * da[4];
+    struct Qmarray * df[4];
+    struct Qmarray * ddf[4];
     da[0] = qmarray_deriv(a->cores[0]);
     df[0] = qmarray_deriv(f->cores[0]);
     ddf[0] = qmarray_deriv(df[0]);

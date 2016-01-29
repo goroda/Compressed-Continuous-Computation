@@ -39,6 +39,7 @@
 #ifndef LIB_QUADRATURE_H
 #define LIB_QUADRATURE_H
 
+#include "legquadrules.h"
 #include "quadrature.h"
 
 #endif

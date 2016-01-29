@@ -597,7 +597,7 @@ static const double pts199[199] = {-0.9999273483982206,-0.9996172228249907,-0.99
 
  
  
-void getPtsWts(size_t n, double * pts, double * wts)
+void getLegPtsWts(size_t n, double * pts, double * wts)
  {  
 	 switch (n){
 		 case 2:

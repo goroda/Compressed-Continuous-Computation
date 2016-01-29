@@ -297,7 +297,12 @@ struct FT1DArray{
     struct FunctionTrain ** ft;
 };
 
-struct FT1DArray * ft1d_array_alloc(size_t); 
+struct FT1DArray * ft1d_array_alloc(size_t);
+unsigned char * ft1d_array_serialize(unsigned char *, struct FT1DArray *, size_t *);
+unsigned char * ft1d_array_deserialize(unsigned char *, struct FT1DArray ** );
+int ft1d_array_save(struct FT1DArray *, char *);
+struct FT1DArray * ft1d_array_load(char *);
+
 struct FT1DArray * ft1d_array_copy(struct FT1DArray *);
 void ft1d_array_free(struct FT1DArray *);
 

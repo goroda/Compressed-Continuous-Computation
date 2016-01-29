@@ -12,9 +12,9 @@
 #include "lib_funcs.h"
  
 
-const char * program_name;
+static const char * program_name;
 
-void print_usage (FILE * stream, int exit_code)
+void print_usage2 (FILE * stream, int exit_code)
 {
     fprintf (stream, "Usage: %s options [type side]\n", program_name);
     fprintf(stream,
@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
         switch (next_option)
         {
             case 'h': 
-                print_usage(stdout, 0);
+                print_usage2(stdout, 0);
             case 'o':
                 output_filename = optarg;
                 break;
@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
                 verbose = 1;
                 break;
             case '?':  // invalid option
-                print_usage (stderr,1);
+                print_usage2 (stderr,1);
             case -1: //done with options
                 break;
             default:

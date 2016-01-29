@@ -209,6 +209,10 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);
 
 void orth_poly_expansion_approx (double (*)(double,void *), void *, 
                        struct OrthPolyExpansion *);
+int
+orth_poly_expansion_approx_vec(
+    int (*A)(size_t, double *,double *,void *), void *,
+    struct OrthPolyExpansion *);
 
 struct OpeAdaptOpts{
     

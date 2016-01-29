@@ -34,9 +34,6 @@
 //Code
 
 
-
-
-//Copyright (c) 2015, Alex Gorodetsky
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -45,6 +42,10 @@
 #include "array.h"
 
 #include "linalg.h"
+
+#ifndef LAPACKWARN
+    #define LAPACKWARN 0
+#endif
 
 double maxabselem(const double * a, size_t * elem, size_t N){
     
@@ -245,7 +246,14 @@ void svd(size_t m, size_t n, size_t lda, double *a, double *u, double *s,
 
     // do actual computation
     dgesdd_("A",&m,&n,a,&lda,s,u,&m,vt,&n,work,&lwork,iwork,&info);
-    if (info) printf("error in SVD computation  %d\n ",info);
+    if (info > 0){
+        if (LAPACKWARN == 1){
+            if (info) printf("error in SVD computation  %d\n ",info);
+        }
+    }
+    else if (info < 0){
+        if (info) printf("error in SVD computation  %d\n ",info);
+    }
 
     free(work);
     free(iwork);

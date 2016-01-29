@@ -62,6 +62,14 @@ double func(double x, void * args){
     //return pow(x,2);
 }
 
+int func_vec(size_t N, double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = func(x[ii],args);
+    }
+    return 0;
+}
+
 double funcderiv(double x, void * args){
     assert ( args == NULL );
     return 3.0 * cos(3.0 * x) + 2.0 * x;
@@ -375,6 +383,56 @@ void Test_legendre_approx_adapt_weird(CuTest * tc){
     free(xtest);
 }
 
+void Test_legendre_approx_vec(CuTest * tc){
+
+    printf("Testing function: legendre_approx_vec\n");
+    size_t N = 50;
+    opoly_t * cpoly = orth_poly_expansion_init(LEGENDRE,N,-1.0,1.0);
+
+    struct counter c;
+    c.N = 0;
+    orth_poly_expansion_approx_vec(func_vec,&c, cpoly);
+
+    double * xtest = linspace(-1,1,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(CHEB_EVAL(cpoly,xtest[ii]) - func(xtest[ii],&c),2);
+        errNorm += pow(func(xtest[ii],&c),2);
+    }
+    err = sqrt(err) / errNorm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
+    FREE_CHEB(cpoly);
+    free(xtest);
+}
+
+void Test_legendre_approx_nonnormal_vec(CuTest * tc){
+
+    printf("Testing function: legendre_approx_vec on (a,b)\n");
+    size_t N = 50;
+    double lb = -2;
+    double ub = 3;
+    opoly_t * cpoly = orth_poly_expansion_init(LEGENDRE,N,lb,ub);
+
+    struct counter c;
+    c.N = 0;
+    orth_poly_expansion_approx_vec(func_vec,&c, cpoly);
+    
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(CHEB_EVAL(cpoly,xtest[ii]) - func(xtest[ii],&c),2);
+        errNorm += pow(func(xtest[ii],&c),2);
+    }
+    err = sqrt(err) / errNorm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    FREE_CHEB(cpoly);
+    free(xtest);
+}
+
 void Test_legendre_derivative_consistency(CuTest * tc)
 {
     printf("Testing functions: legen_deriv and legen_deriv_upto  on (a,b)\n");
@@ -629,6 +687,8 @@ CuSuite * LegGetSuite(){
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_legendre_approx);
     SUITE_ADD_TEST(suite, Test_legendre_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_legendre_approx_vec);
+    SUITE_ADD_TEST(suite, Test_legendre_approx_nonnormal_vec);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt_weird);
     SUITE_ADD_TEST(suite, Test_legendre_derivative);
