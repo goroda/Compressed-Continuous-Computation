@@ -48,7 +48,9 @@ cmake ..
 make
 cd .. 
 
-#ln -t /usr/lib lib/libc3.*
+#sudo rm /usr/lib/libc3*
+#sudo ln -t /usr/lib lib/libc3.*
+
 #sudo rm /usr/lib/libc3.*dylib
 #sudo ln -F lib/libc3.dylib /usr/lib/libc3.dylib # for mac
 

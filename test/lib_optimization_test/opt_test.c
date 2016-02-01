@@ -128,11 +128,83 @@ void Test_newton(CuTest * tc)
     free(start); start = NULL;
 }
 
+double f_grad_desc(double * x, void * args)
+{
+    assert(args == NULL);
+    double out =  pow(x[0]-3.0,2.0) + pow(x[1]-2.0,2.0);
+    return out;
+}
+
+int g_grad_desc(double * x, double * out, void * args)
+{
+    assert(args == NULL);
+//    dprint(2,x);
+    out[0] = 2.0 * (x[0] - 3.0);
+    out[1] = 2.0 * (x[1] - 2.0);
+    return 0;
+}
+
+
+void Test_grad_descent(CuTest * tc)
+{
+    printf("Testing Function: gradient descent with inexact backtrack \n");
+
+    size_t dim = 2;
+    double start[2] = {0.0,0.0};
+    double grad[2];
+    double space[4];
+    double tol = 1e-15;
+    double alpha = 0.4;
+    double beta = 0.9;
+    int verbose = 0;
+
+    double val = quad2d(start,NULL);    
+    int res = gradient_descent(dim,start,&val,grad,space,f_grad_desc,NULL,
+                               g_grad_desc,NULL,tol,10000,10000,alpha,beta,
+                               verbose);
+
+//    printf("diff = %G\n",start[0]-3.0);
+    CuAssertDblEquals(tc,3.0,start[0],1e-13);
+    CuAssertDblEquals(tc,2.0,start[1],1e-13);
+    CuAssertDblEquals(tc,0.0,val,1e-13);
+    CuAssertIntEquals(tc,0,res);
+
+}
+
+void Test_box_grad_descent(CuTest * tc)
+{
+    printf("Testing Function: box-constrained gradient descent \n");
+
+    size_t dim = 2;
+    double lb[2] = {-1.0,-1.0};
+    double ub[2] = {1.0,0.5};
+    double start[2] = {0.0,0.0};
+    double grad[2];
+    double space[4];
+    double tol = 1e-15;
+    double alpha = 0.4;
+    double beta = 0.9;
+    int verbose = 1;
+
+    double val = quad2d(start,NULL);    
+    int res = box_pg_descent(dim,lb,ub,start,&val,grad,space,f_grad_desc,NULL,
+                               g_grad_desc,NULL,tol,10000,10000,alpha,beta,
+                               verbose);
+
+//    printf("diff = %G\n",start[0]-3.0);
+    CuAssertDblEquals(tc,1.0,start[0],1e-13);
+    CuAssertDblEquals(tc,0.5,start[1],1e-13);
+    CuAssertIntEquals(tc,0,res);
+
+}
+
 
 CuSuite * OptGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_newton);
+    SUITE_ADD_TEST(suite, Test_grad_descent);
+    SUITE_ADD_TEST(suite, Test_box_grad_descent);
     return suite;
 }

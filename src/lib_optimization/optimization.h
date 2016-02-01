@@ -40,5 +40,29 @@ newton(double **, size_t, double, double,
         double * (*)(double *, void *),
         double * (*)(double *, void *), void *);
 
+int backtrack_line_search(size_t, double *, double, double *, double *,
+                          double *, double *, double, double, 
+                          double (*)(double *, void *), void *, 
+                          size_t);
+
+int backtrack_line_search_bc(size_t, double *, double *, double *, double, 
+                          double *, double *,
+                          double *, double *, double, double, 
+                          double (*)(double *, void *), void *, 
+                          size_t);
+
+
+int gradient_descent(size_t, double *, double *, double *,
+                     double *,
+                     double (*)(double *,void*),void *,
+                     int (*)(double *,double*,void*), void *,
+                     double,size_t, size_t, double, double,int);
+
+int box_pg_descent(size_t, double *, double *,
+                   double *, double *, double *,
+                   double *, double (*)(double *,void*),void *,
+                   int (*g)(double *,double*,void*), void *,
+                   double,size_t, size_t,
+                   double, double, int);
 #endif
 
