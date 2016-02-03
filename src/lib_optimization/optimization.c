@@ -109,6 +109,139 @@ newton(double ** start, size_t dim, double step_size, double tol,
     free(p); p = NULL;
 }
 
+/***********************************************************//**
+    Projected Gradient damped newton
+
+    \param[in]     d          - dimension
+    \param[in]     lb         - lower bounds of box constraints
+    \param[in]     ub         - upper bounds of box constraints
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+    \param[in,out] grad       - gradient at final point
+    \param[in,out] hess       - hessian at final point
+    \param[in,out] space      - allocated space for computation 
+                                (size (2*d) array)
+    \param[in]     f          - objective function
+    \param[in]     fargs      - arguments to object function
+    \param[in]     g          - gradient of objective function
+    \param[in]     gargs      - arguments to gradient function
+    \param[in]     h          - hessian 
+    \param[in]     hargs      - arguments to hessian
+    \param[in]     tol        - convergence tolerance for 
+                                distance between iterates \f$x\f$
+    \param[in]     maxiter    - maximum number of iterations
+    \param[in]     maxsubiter - maximum number of backtrack
+                                iterations
+    \param[in]     alpha      - backtrack parameter (0,0.5)
+    \param[in]     beta       - backtrack paremeter (0,1.0)
+    \param[in]     verbose    - 0: np output, 1: output
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+            -30+? - failure in hessian (hessian outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+    \note See Convex Optimization 
+          (boyd and Vandenberghe) page 466
+***************************************************************/
+int box_damp_newton(size_t d, double * lb, double * ub,
+                    double * x, double * fval, double * grad,
+                    double * hess,
+                    double * space,
+                    double (*f)(double*,void*),void * fargs,
+                    int (*g)(double*,double*,void*),void* gargs,
+                    int (*h)(double*,double*,void*),void* hargs,
+                    double tol,size_t maxiter,size_t maxsubiter,
+                    double alpha, double beta, int verbose)
+{
+    *fval = f(x,fargs);
+    
+    int res = g(x,grad,gargs);
+    if (res != 0){
+        return -20+res;
+    }
+    res = h(x,hess,hargs);
+    if (res !=0 ){
+        return -30+res;
+    }
+    
+//    printf("here here\n");
+    int one=1,info;
+    size_t * piv = calloc_size_t(d);
+    memmove(space+d,grad,d*sizeof(double));
+    dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+    assert(info == 0);
+    
+
+    double eta = cblas_ddot(d,grad,1,space+d,1);
+//    printf("eta = %G\n",eta);
+    if ( (eta*eta/2.0) < tol){
+        return 0;
+    }
+
+    size_t iter = 1;
+    double fvaltemp;
+    while (eta > tol){
+        memmove(space,x,d*sizeof(double));
+        for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
+        
+        fvaltemp = *fval;
+        res = backtrack_line_search_bc(d,lb,ub,space,
+                                       fvaltemp,space+d,
+                                       x,fval,grad,alpha,
+                                       beta,f,fargs,maxsubiter);
+//        printf("%G,%G\n",x[0],x[1]);
+        
+        if (res != 0){
+            free(piv); piv = NULL;
+            return res;
+        }
+        iter += 1;
+        if (iter > maxiter){
+            printf("Warning: max iter in newton method reached\n");
+            return 1;
+        }
+        res = g(x,grad,gargs);
+        if (res != 0){
+            free(piv); piv = NULL;
+            return -20 + res;
+        }
+        res = h(x,hess,hargs);
+        if (res != 0){
+            free(piv); piv = NULL;
+            return -30 + res;
+        }
+
+        memmove(space+d,grad,d*sizeof(double));
+        dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+        assert(info == 0);
+
+        eta = cblas_ddot(d,grad,1,space+d,1);
+        int onbound = 0;
+        for (size_t ii = 0; ii < d; ii++){
+            if ((x[ii] == lb[ii]) || (x[ii] == ub[ii])){
+                onbound = 1;
+                break;
+            }
+        }
+        if (onbound == 1){
+            eta = 0.0;
+            for (size_t ii = 0; ii < d; ii++){
+                eta += pow(x[ii]-space[ii],2);
+            }
+        }
+
+        if (verbose > 0){
+            printf("Iteration:%zu (fval,||g||) = (%G,%G)\n",iter,*fval,eta);
+        }
+        
+    }
+    free(piv); piv = NULL;
+    return 0;
+}
+
+
 
 /***********************************************************//**
     Gradient descent (with inexact backtracking)
@@ -165,7 +298,8 @@ int gradient_descent(size_t d, double * x, double * fval, double * grad,
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
         
         fvaltemp = *fval;
-        res = backtrack_line_search(d,space,fvaltemp,space+d,x,fval,grad,alpha,
+        res = backtrack_line_search(d,space,fvaltemp,space+d,
+                                    x,fval,grad,alpha,
                                     beta,f,fargs,maxsubiter);
 
         if (res != 0){
@@ -178,7 +312,7 @@ int gradient_descent(size_t d, double * x, double * fval, double * grad,
         }
         res = g(x,grad,gargs);
         if (res != 0){
-            return -1;
+            return -20 + res;
         }
         eta = sqrt(cblas_ddot(d,grad,1,grad,1));
         if (verbose > 0){
@@ -249,8 +383,9 @@ int box_pg_descent(size_t d, double * lb, double * ub,
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
         
         fvaltemp = *fval;
-        res = backtrack_line_search_bc(d,lb,ub,space,fvaltemp,space+d,x,fval,grad,alpha,
-                                    beta,f,fargs,maxsubiter);
+        res = backtrack_line_search_bc(d,lb,ub,space,fvaltemp,
+                                       space+d,x,fval,grad,alpha,
+                                       beta,f,fargs,maxsubiter);
 
 //        printf("newx = (%G,%G)\n",x[0],x[1]);
 

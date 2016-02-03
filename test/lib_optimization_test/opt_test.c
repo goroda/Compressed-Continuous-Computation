@@ -63,6 +63,15 @@ double * quad2dGrad(double * x, void * args)
     return grad;
 }
 
+int quad2dGrad2(double * x, double * grad, void * args)
+{
+    assert(args == NULL);
+    grad[0] = 2.0 * (x[0] - 3.0);
+    grad[1] = 2.0 * (x[1] - 2.0);
+    
+    return 0;
+}
+
 double * quad2dHess(double * x, void * args)
 {
     assert(args == NULL);
@@ -75,11 +84,24 @@ double * quad2dHess(double * x, void * args)
     return hess;
 }
 
+int quad2dHess2(double * x, double * hess, void * args)
+{
+    assert(args == NULL);
+    
+    hess[0] = 2.0 + 0.0 * x[0];
+    hess[1] = 0.0;
+    hess[2] = 0.0;
+    hess[3] = 2.0;
+    return 0;
+}
+
+
 double rosen2d(double * x, void * args)
 {
     assert(args == NULL);
 
-    double out = pow(1.0-x[0],2.0) + 100.0*pow(x[1]-pow(x[0],2.0),2.0);
+    double out = pow(1.0-x[0],2.0) + 
+                 100.0*pow(x[1]-pow(x[0],2.0),2.0);
     return out;
 }
 
@@ -87,10 +109,20 @@ double * rosen2dGrad(double * x, void * args)
 {
     assert(args == NULL);
     double * grad = calloc_double(2);
-    grad[0] = -2.0 * (1.0 - x[0]) + 100.0 * 2.0 * (x[1] - pow(x[0],2.0)) * (-2.0 * x[0]);
+    grad[0] = -2.0 * (1.0 - x[0]) + 
+              100.0*2.0*(x[1] - pow(x[0],2.0)) * (-2.0 * x[0]);
     grad[1] = 100.0 * 2.0 * (x[1] - pow(x[0],2.0));
     return grad;
 }
+
+int rosen2dGrad2(double * x,double* grad,void* args)
+{
+    assert(args == NULL);
+    grad[0] = -2.0 * (1.0 - x[0]) + 100.0 * 2.0 * (x[1] - pow(x[0],2.0)) * (-2.0 * x[0]);
+    grad[1] = 100.0 * 2.0 * (x[1] - pow(x[0],2.0));
+    return 0;
+}
+
 
 double * rosen2dHess(double * x, void * args)
 {
@@ -102,6 +134,18 @@ double * rosen2dHess(double * x, void * args)
     hess[2] = 100.0 * 2.0 * (-2.0 * x[0]); // d / dx (df / dy)
     hess[3] = 100.0 * 2.0;
     return hess;
+}
+
+int rosen2dHess2(double * x, double * hess, void * args)
+{
+    assert(args == NULL);
+    
+    hess[0] = 1200*x[0]*x[0] - 400*x[1] + 2;
+    hess[1] = -400*x[0]; //d / dy ( df / dx)
+    hess[2] = -400*x[0];
+    hess[3] = 200;
+    
+    return 0;
 }
 
 void Test_newton(CuTest * tc)
@@ -126,6 +170,54 @@ void Test_newton(CuTest * tc)
 
 
     free(start); start = NULL;
+}
+
+void Test_pg_newton(CuTest * tc)
+{
+    printf("Testing Function: newton projected gradient \n");
+    
+    size_t dim = 2;
+    double tol = 1e-12;
+    size_t maxiter = 1000;
+    size_t maxsubiter = 1000;
+    double alpha = 0.3;
+    double beta = 0.7;
+    int verbose = 0;
+    
+    double lb[2] = {-5.0,-5.0};
+    double ub[2] = {5.0,5.0};
+    double start[2] = {2.0,1.0};
+    double grad[2];
+    double hess[4];
+    double space[4];
+
+    double val;
+    
+    int res = box_damp_newton(dim,lb,ub,start,&val,grad,hess,
+                              space,rosen2d,NULL,rosen2dGrad2,
+                              NULL,rosen2dHess2,NULL, 
+                              tol,maxiter,maxsubiter, 
+                              alpha,beta,verbose); 
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,1.0,start[0],1e-3);
+    CuAssertDblEquals(tc,1.0,start[1],1e-3);
+    CuAssertDblEquals(tc,0.0,val,1e-14);
+
+
+    start[0] = 1.0;
+    start[1] = -2.0;
+    ub[0] = 2.0;
+    ub[1] = 1.0;
+    res = box_damp_newton(dim,lb,ub,start,&val,grad,hess,
+                          space,quad2d,NULL,quad2dGrad2,
+                          NULL,quad2dHess2,NULL,
+                          tol,maxiter,maxsubiter,
+                          alpha,beta,verbose);
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,2,start[0],1e-3);
+    CuAssertDblEquals(tc,1,start[1],1e-3);
+    CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);
+
 }
 
 double f_grad_desc(double * x, void * args)
@@ -159,9 +251,10 @@ void Test_grad_descent(CuTest * tc)
     int verbose = 0;
 
     double val = quad2d(start,NULL);    
-    int res = gradient_descent(dim,start,&val,grad,space,f_grad_desc,NULL,
-                               g_grad_desc,NULL,tol,10000,10000,alpha,beta,
-                               verbose);
+    int res = gradient_descent(dim,start,&val,grad,space,
+                               f_grad_desc,NULL,g_grad_desc,
+                               NULL,tol,10000,
+                               10000,alpha,beta,verbose);
 
 //    printf("diff = %G\n",start[0]-3.0);
     CuAssertDblEquals(tc,3.0,start[0],1e-13);
@@ -184,7 +277,7 @@ void Test_box_grad_descent(CuTest * tc)
     double tol = 1e-15;
     double alpha = 0.4;
     double beta = 0.9;
-    int verbose = 1;
+    int verbose = 0;
 
     double val = quad2d(start,NULL);    
     int res = box_pg_descent(dim,lb,ub,start,&val,grad,space,f_grad_desc,NULL,
@@ -204,6 +297,7 @@ CuSuite * OptGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_newton);
+    SUITE_ADD_TEST(suite, Test_pg_newton);
     SUITE_ADD_TEST(suite, Test_grad_descent);
     SUITE_ADD_TEST(suite, Test_box_grad_descent);
     return suite;

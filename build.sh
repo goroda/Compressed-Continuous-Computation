@@ -2,10 +2,10 @@
 
 TESTING=0
 CLEAN=0
+INSTALL=0
 while [[ $# > 1 ]]
 do
     key="$1"
-
     case $key in 
         -t|--test)
         TESTING="$2"
@@ -13,6 +13,10 @@ do
         ;;
         -c|--clean)
         CLEAN="$2"
+        shift
+        ;;
+        -i|--install)
+        INSTALL="$2"
         shift
         ;;
         --default)
@@ -48,11 +52,20 @@ cmake ..
 make
 cd .. 
 
-#sudo rm /usr/lib/libc3*
-#sudo ln -t /usr/lib lib/libc3.*
+#install on linux
+if [ $INSTALL -eq 1 ]
+then
+    sudo rm /usr/lib/libc3*
+    sudo ln -t /usr/lib lib/libc3.*
+fi
+#install on mac
+if [ $INSTALL -eq 2 ]
+then
+    sudo rm /usr/lib/libc3.*dylib
+    sudo ln -F lib/libc3.dylib /usr/lib/libc3.dylib # for mac
+fi
 
-#sudo rm /usr/lib/libc3.*dylib
-#sudo ln -F lib/libc3.dylib /usr/lib/libc3.dylib # for mac
+
 
 # add command line options to do this in the future
 
