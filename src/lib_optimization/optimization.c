@@ -221,7 +221,8 @@ int box_pg_descent(size_t d, double * lb, double * ub,
                    double * x, double * fval, double * grad,
                    double * space,
                    double (*f)(double *,void*),void * fargs,
-                   int (*g)(double *,double*,void*), void * gargs,
+                   int (*g)(double *,double*,void*), 
+                   void * gargs,
                    double tol,size_t maxiter, size_t maxsubiter,
                    double alpha, double beta, int verbose)
 {
@@ -251,7 +252,7 @@ int box_pg_descent(size_t d, double * lb, double * ub,
         res = backtrack_line_search_bc(d,lb,ub,space,fvaltemp,space+d,x,fval,grad,alpha,
                                     beta,f,fargs,maxsubiter);
 
-        printf("newx = (%G,%G)\n",x[0],x[1]);
+//        printf("newx = (%G,%G)\n",x[0],x[1]);
 
         if (res != 0){
             printf("Warning: backtrack return %d\n",res);
