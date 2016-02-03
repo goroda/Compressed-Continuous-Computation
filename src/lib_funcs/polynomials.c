@@ -443,7 +443,6 @@ double
 eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
                     size_t n, double x)
 {   
-
     double out;
     if (rec->ptype == LEGENDRE){
         double nt = (double) n;
@@ -1398,6 +1397,53 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     free(pt_un);
     
 }
+
+/********************************************************//**
+*  Construct an orthonormal polynomial expansion from (weighted) function 
+*  evaluations and quadrature nodes
+*  
+*  \param[in,out] poly      - orthogonal polynomial expansion
+*  \param[in]     num_nodes - number of nodes 
+*  \param[in]     fvals     - function values (multiplied by a weight if necessary)
+*  \param[in]     nodes     - locations of evaluations
+*************************************************************/
+static void
+orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
+                              size_t num_nodes, double * fvals,
+                              double * nodes)
+
+{
+    double p[2];
+    double pnew;
+    size_t ii,jj;
+    if (poly->num_poly > 1){
+        for (ii = 0; ii < num_nodes; ii++){ // loop over all points
+            p[0] = poly->p->const_term;
+            poly->coeff[0] += fvals[ii] * poly->p->const_term;
+            p[1] = poly->p->lin_const + poly->p->lin_coeff * nodes[ii];
+            poly->coeff[1] += fvals[ii] * p[1] ;
+            // loop over all coefficients
+            for (jj = 2; jj < poly->num_poly; jj++){
+                pnew = eval_orth_poly_wp(poly->p, p[0], p[1], jj, nodes[ii]);
+                poly->coeff[jj] += fvals[ii] * pnew;
+                p[0] = p[1];
+                p[1] = pnew;
+            }
+        }
+
+        for (ii = 0; ii < poly->num_poly; ii++){
+            poly->coeff[ii] /= poly->p->norm(ii);
+        }
+
+    }
+    else{
+        for (ii = 0; ii < num_nodes; ii++){
+            poly->coeff[0] += fvals[ii] * poly->p->const_term;
+        }
+        poly->coeff[0] /= poly->p->norm(0);
+    }
+}
+
 /********************************************************//**
 *  Approximating a function that can take a vector of points as
 *  input
@@ -1457,40 +1503,11 @@ orth_poly_expansion_approx_vec(
     for (size_t ii = 0; ii < nquad; ii++){
         fvals[ii] *= quadwt[ii];
     }
-    double p[2];
-    double pnew;
-    size_t ii,jj;
-    if (poly->num_poly > 1){
-        for (ii = 0; ii < nquad; ii++){ // loop over all points
-            p[0] = poly->p->const_term;
-            poly->coeff[0] += fvals[ii] * poly->p->const_term;
-            p[1] = poly->p->lin_const + poly->p->lin_coeff * quadpt[ii];
-            poly->coeff[1] += fvals[ii] * p[1] ;
-            // loop over all coefficients
-            for (jj = 2; jj < poly->num_poly; jj++){
-                pnew = eval_orth_poly_wp(poly->p, p[0], p[1], jj, quadpt[ii]);
-                poly->coeff[jj] += fvals[ii] * pnew;
-                p[0] = p[1];
-                p[1] = pnew;
-            }
-        }
-
-        for (ii = 0; ii < poly->num_poly; ii++){
-            poly->coeff[ii] /= poly->p->norm(ii);
-        }
-
-    }
-    else{
-        for (ii = 0; ii < nquad; ii++){
-            poly->coeff[0] += fvals[ii] * poly->p->const_term;
-        }
-        poly->coeff[0] /= poly->p->norm(0);
-    }
+    
+    orth_poly_expansion_construct(poly,nquad,fvals,quadpt);
 
     return return_val;
 }
-
-
 
 /********************************************************//**
 *   Create an approximation adaptively
@@ -1557,9 +1574,9 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         coeffs_too_big = 0;
 	
         free(poly->coeff);
-        N = N * 2 - 1; // for nested cc
+        //N = N * 2 - 1; // for nested cc
         //N = N * 2 + 1; // 
-        //N = N + 5;
+        N = N + 5;
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
         poly->coeff = calloc_double(poly->nalloc);
