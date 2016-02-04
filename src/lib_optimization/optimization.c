@@ -220,7 +220,7 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         eta = cblas_ddot(d,grad,1,space+d,1);
         int onbound = 0;
         for (size_t ii = 0; ii < d; ii++){
-            if ((x[ii] == lb[ii]) || (x[ii] == ub[ii])){
+            if ((x[ii] <= lb[ii]) || (x[ii] >= ub[ii])){
                 onbound = 1;
                 break;
             }
