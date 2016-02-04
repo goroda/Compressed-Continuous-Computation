@@ -64,5 +64,12 @@ int box_pg_descent(size_t, double *, double *,
                    int (*g)(double *,double*,void*), void *,
                    double,size_t, size_t,
                    double, double, int);
+int box_damp_newton(size_t, double *, double *,
+                   double *, double *, double *,double*,
+                   double *, double (*)(double *,void*),void *,
+                   int (*)(double *,double*,void*), void *,
+                   int (*)(double *,double*,void*), void *,
+                   double,size_t, size_t,
+                   double, double, int);
 #endif
 
