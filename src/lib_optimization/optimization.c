@@ -171,6 +171,7 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     size_t * piv = calloc_size_t(d);
     memmove(space+d,grad,d*sizeof(double));
     dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+    free(piv); piv = NULL;
     assert(info == 0);
     
 
@@ -194,7 +195,6 @@ int box_damp_newton(size_t d, double * lb, double * ub,
 //        printf("%G,%G\n",x[0],x[1]);
         
         if (res != 0){
-            free(piv); piv = NULL;
             return res;
         }
         iter += 1;
@@ -204,17 +204,17 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         }
         res = g(x,grad,gargs);
         if (res != 0){
-            free(piv); piv = NULL;
             return -20 + res;
         }
         res = h(x,hess,hargs);
         if (res != 0){
-            free(piv); piv = NULL;
             return -30 + res;
         }
 
         memmove(space+d,grad,d*sizeof(double));
+        piv = calloc_size_t(d);
         dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+        free(piv); piv = NULL;
         assert(info == 0);
 
         eta = cblas_ddot(d,grad,1,space+d,1);
