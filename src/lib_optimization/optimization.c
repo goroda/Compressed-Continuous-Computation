@@ -183,6 +183,7 @@ int box_damp_newton(size_t d, double * lb, double * ub,
 
     size_t iter = 1;
     double fvaltemp;
+    int onbound = 0;
     while (eta > tol){
         memmove(space,x,d*sizeof(double));
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
@@ -199,7 +200,8 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         }
         iter += 1;
         if (iter > maxiter){
-            printf("Warning: max iter in newton method reached\n");
+            //          printf("Warning: max iter in newton method reached\n");
+//            printf("on bound = %d\n",onbound);
             return 1;
         }
         res = g(x,grad,gargs);
@@ -218,7 +220,7 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         assert(info == 0);
 
         eta = cblas_ddot(d,grad,1,space+d,1);
-        int onbound = 0;
+        onbound = 0;
         for (size_t ii = 0; ii < d; ii++){
             if ((x[ii] <= lb[ii]) || (x[ii] >= ub[ii])){
                 onbound = 1;
@@ -230,10 +232,12 @@ int box_damp_newton(size_t d, double * lb, double * ub,
             for (size_t ii = 0; ii < d; ii++){
                 eta += pow(x[ii]-space[ii],2);
             }
+//            eta = sqrt(eta);
         }
 
         if (verbose > 0){
-            printf("Iteration:%zu (fval,||g||) = (%G,%G)\n",iter,*fval,eta);
+            printf("Iteration:%zu (fval,||g||) = (%3.5G,%3.5G)\n",iter,*fval,eta);
+            printf("\t Onbound = %d\n",onbound);
         }
         
     }
