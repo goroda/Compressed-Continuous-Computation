@@ -49,6 +49,193 @@
 #include "optimization.h"
 
 /***********************************************************//**
+    Projected Gradient damped BFGS
+
+    \param[in]     d          - dimension
+    \param[in]     lb         - lower bounds of box constraints
+    \param[in]     ub         - upper bounds of box constraints
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+    \param[in,out] grad       - gradient at final point
+    \param[in,out] invhess    - approx hessian at start and end
+                                only upper triangular part used
+    \param[in,out] space      - allocated space for computation 
+                                (size (3*d) array)
+    \param[in]     f          - objective function
+    \param[in]     fargs      - arguments to object function
+    \param[in]     g          - gradient of objective function
+    \param[in]     tol        - convergence tolerance for 
+                                distance between iterates \f$x\f$
+    \param[in]     maxiter    - maximum number of iterations
+    \param[in]     maxsubiter - maximum number of backtrack
+                                iterations
+    \param[in]     alpha      - backtrack parameter (0,0.5)
+    \param[in]     beta       - backtrack paremeter (0,1.0)
+    \param[in]     verbose    - 0: np output, 1: output
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+***************************************************************/
+int box_damp_bfgs(size_t d, 
+                  double * lb, double * ub,
+                  double * x, double * fval, double * grad,
+                  double * invhess,
+                  double * space,
+                  double (*f)(double*,void*),void * fargs,
+                  int (*g)(double*,double*,void*),
+                  double tol,size_t maxiter,size_t maxsubiter,
+                  double alpha, double beta, int verbose)
+{
+
+    *fval = f(x,fargs);
+    
+    int res = g(x,grad,fargs);
+    if (res != 0){
+        return -20+res;
+    }
+    
+    //   printf("grad = "); dprint(2,grad);
+    //compute search direction
+ 
+    cblas_dsymv(CblasColMajor,CblasUpper,
+                d,-1.0,invhess,d,grad,1,0.0,space+d,1);
+    
+//    dprint(2,space+d);
+    double eta = cblas_ddot(d,grad,1,space+d,1);
+    if (verbose > 0){
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);
+    }
+//    printf("eta = %G\n",eta);
+    if ( (eta*eta/2.0) < tol){
+        printf("returning \n");
+        return 0;
+    }
+
+//    printf("iverse hessian =\n");
+//    dprint2d_col(2,2,invhess);
+
+    size_t iter = 1;
+    double fvaltemp;
+    int onbound = 0;
+    int converged = 0;
+    while (converged == 0){
+        memmove(space,x,d*sizeof(double));
+        
+        fvaltemp = *fval;
+        // need a way to output alpha here
+        double sc = backtrack_line_search_bc(
+                        d,lb,ub,space,
+                        fvaltemp,space+d,
+                        x,fval,grad,alpha,
+                        beta,f,fargs,maxsubiter,
+                        &res);
+        
+//        printf("sc = %G\n",sc);
+//        printf("%G,%G\n",x[0],x[1]);
+        double * s = space+d;
+        cblas_dscal(d,sc,s,1);
+
+        if (res != 0){
+            return res;
+        }
+        iter += 1;
+        if (iter > maxiter){
+            return 1;
+        }
+        
+//        printf("x = "); dprint(2,x);
+        res = g(x,space+2*d,fargs);
+//        printf("gradient before "); dprint(2,space+2*d);
+        if (res != 0){
+            return -20 + res;
+        }
+        
+        // compute difference in gradients
+        cblas_daxpy(d,-1.0,grad,1,space+2*d,1); 
+        double * y = space+2*d;
+        
+        // combute BY;
+        cblas_dsymv(CblasColMajor,CblasUpper,
+                    d,1.0,invhess,d,y,1,0.0,space+3*d,1);
+        
+        double sty = cblas_ddot(d,s,1,y,1);        
+        double ytBy = cblas_ddot(d,y,1,space+3*d,1);
+        if (fabs(sty) > 1e-16){
+
+            double a1 = (sty + ytBy)/(sty * sty);
+        
+//        printf("s = "); dprint(2,s);
+//        printf("y = "); dprint(2,y);
+//        printf("By = "); dprint(2,space+3*d);
+//        printf("ytBy = %G\n", ytBy);
+//        printf("sty = %G\n",sty);
+
+            // rank 1 update
+            cblas_dsyr(CblasColMajor,CblasUpper,d,a1,
+                       s,1,invhess, d);
+        
+            //      printf("hessian after first update\n");
+//        dprint2d_col(2,2,invhess);
+
+            double a2 = -1.0/sty;
+            // symmetric rank 2 updatex
+            cblas_dsyr2(CblasColMajor,CblasUpper,d,a2,
+                        space+3*d,1,
+                        space+d,1,invhess,d);
+        }
+//        printf("hessian after second update\n");
+//        dprint2d_col(2,2,invhess);
+        // get new gradient
+        cblas_daxpy(d,1.0,y,1,grad,1);
+        //  printf("gradient after "); dprint(2,grad);
+        
+        // compute next search direction;
+        cblas_dsymv(CblasColMajor,CblasUpper,
+                d,-1.0,invhess,d,grad,1,0.0,space+d,1);
+
+        eta = cblas_ddot(d,grad,1,space+d,1);
+        onbound = 0;
+        for (size_t ii = 0; ii < d; ii++){
+            if ((x[ii] <= lb[ii]) || (x[ii] >= ub[ii])){
+                onbound = 1;
+                break;
+            }
+        }
+        double diff = fabs(*fval - fvaltemp);
+        if (onbound == 1){
+            eta = 0.0;
+            for (size_t ii = 0; ii < d; ii++){
+                eta += pow(x[ii]-space[ii],2);
+            }
+            if (eta < tol){
+                converged = 1;
+            }
+        }
+        else{
+            if (diff < tol){
+                converged = 1;
+            }
+        }
+        
+        
+        if (verbose > 0){
+            printf("Iteration:%zu\n",iter);
+            printf("\t f(x)          = %3.5G\n",*fval);
+            printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
+            printf("\t eta =         = %3.5G\n",eta);
+            printf("\t Onbound       = %d\n",onbound);
+        }
+        
+    }
+
+    return 0;
+}
+
+
+/***********************************************************//**
     Minimization using Newtons method
 
     \param[in,out] start - starting point and resulting solution
@@ -186,15 +373,17 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     size_t iter = 1;
     double fvaltemp;
     int onbound = 0;
-    while (eta > tol){
+    int converged = 0;
+    while (converged == 0){
         memmove(space,x,d*sizeof(double));
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
         
         fvaltemp = *fval;
-        res = backtrack_line_search_bc(d,lb,ub,space,
-                                       fvaltemp,space+d,
-                                       x,fval,grad,alpha,
-                                       beta,f,fargs,maxsubiter);
+        backtrack_line_search_bc(d,lb,ub,space,
+                                 fvaltemp,space+d,
+                                 x,fval,grad,alpha,
+                                 beta,f,fargs,maxsubiter,
+                                 &res);
 //        printf("%G,%G\n",x[0],x[1]);
         
         if (res != 0){
@@ -234,7 +423,14 @@ int box_damp_newton(size_t d, double * lb, double * ub,
             for (size_t ii = 0; ii < d; ii++){
                 eta += pow(x[ii]-space[ii],2);
             }
-//            eta = sqrt(eta);
+            if (eta < tol){
+                converged = 1;
+            }
+        }
+        else{
+            if ( (eta*eta/2.0) < tol){
+                converged = 1;
+            }
         }
 
         if (verbose > 0){
@@ -246,8 +442,6 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     free(piv); piv = NULL;
     return 0;
 }
-
-
 
 /***********************************************************//**
     Gradient descent (with inexact backtracking)
@@ -304,9 +498,9 @@ int gradient_descent(size_t d, double * x, double * fval, double * grad,
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
         
         fvaltemp = *fval;
-        res = backtrack_line_search(d,space,fvaltemp,space+d,
-                                    x,fval,grad,alpha,
-                                    beta,f,fargs,maxsubiter);
+        backtrack_line_search(d,space,fvaltemp,space+d,
+                              x,fval,grad,alpha,
+                              beta,f,fargs,maxsubiter,&res);
 
         if (res != 0){
             return res;
@@ -389,9 +583,10 @@ int box_pg_descent(size_t d, double * lb, double * ub,
         for (size_t ii = 0; ii <d; ii++){ space[d+ii] *= -1.0;}
         
         fvaltemp = *fval;
-        res = backtrack_line_search_bc(d,lb,ub,space,fvaltemp,
-                                       space+d,x,fval,grad,alpha,
-                                       beta,f,fargs,maxsubiter);
+        backtrack_line_search_bc(d,lb,ub,space,fvaltemp,
+                                 space+d,x,fval,grad,alpha,
+                                 beta,f,fargs,maxsubiter,
+                                 &res);
 
 //        printf("newx = (%G,%G)\n",x[0],x[1]);
 
@@ -437,26 +632,32 @@ int box_pg_descent(size_t d, double * lb, double * ub,
     \param[in]     f       - objective function
     \param[in]     fargs   - arguments to objective function
     \param[in]     maxiter - maximum number of iterations
-
-    \return  0 - success
-            -1 - alpha not within correct bounds
-            -2 - beta not within correct bounds
-             1 - maximum number of iterations reached
+    \param[in,out] info    - 0 - success
+                            -1 - alpha not within correct bounds
+                            -2 - beta not within correct bounds
+                             1 - maximum number of iter. reached
+                             
+    \return final scaling of search direction
     \note See Convex Optimization (boyd and Vandenberghe) page 464
 ***************************************************************/
-int backtrack_line_search(size_t d, double * x, double fx, double * p, double * newx, 
-                          double * fnx,
-                          double * grad, double alpha, double beta, 
-                          double (*f)(double * x, void * args), void * fargs, 
-                          size_t maxiter)
+double backtrack_line_search(size_t d, double * x, double fx, 
+                          double * p, double * newx, 
+                          double * fnx, double * grad, 
+                          double alpha, double beta, 
+                          double (*f)(double * x, void * args), 
+                          void * fargs, size_t maxiter, 
+                          int *info)
 {
+    *info = 0;
     if ((alpha <= 0.0) || (alpha >= 0.5)){
         printf("line search alpha (%G) is not (0,0.5)\n",alpha);
-        return -1;
+        *info = -1;
+        return 0.0;
     }
     if ((beta <= 0.0) && (beta >= 1.0)) {
         printf("line search beta (%G) is not (0,1)\n",beta);
-        return -2;
+        *info = -2;
+        return 0.0;
     }
 
     double t = 1.0;
@@ -471,10 +672,9 @@ int backtrack_line_search(size_t d, double * x, double fx, double * p, double * 
     iter += 1;
     
 //    printf("newx (%G,%G)\n",newx[0],newx[1]);
-    int res = 0;
     while (*fnx > checkval){
         if (iter >= maxiter){
-            res = 1;
+            *info = 1;
             printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
             break;
         }
@@ -488,7 +688,7 @@ int backtrack_line_search(size_t d, double * x, double fx, double * p, double * 
         iter += 1 ;
     }
     
-    return res;
+    return t;
 }
 
 /***********************************************************//**
@@ -508,36 +708,46 @@ int backtrack_line_search(size_t d, double * x, double fx, double * p, double * 
     \param[in]     f       - objective function
     \param[in]     fargs   - arguments to objective function
     \param[in]     maxiter - maximum number of iterations
-
-    \return  0 - success
-            -1 - alpha not within correct bounds
-            -2 - beta not within correct bounds
-             1 - maximum number of iterations reached
+    \param[in,out] info    -  0 - success
+                             -1 - alpha not within correct bounds
+                             -2 - beta not within correct bounds
+                              1 - maximum number of iter reached
+    
+    \return line search gradient scaling
     \note See Convex Optimization (boyd and Vandenberghe) page 464
 ***************************************************************/
-int backtrack_line_search_bc(size_t d, double * lb, double * ub,
-                             double * x, double fx, double * p, double * newx, 
-                             double * fnx,
-                             double * grad, double alpha, double beta, 
-                             double (*f)(double * x, void * args), void * fargs, 
-                             size_t maxiter)
+double backtrack_line_search_bc(size_t d, double * lb, 
+                                double * ub,
+                                double * x, double fx, 
+                                double * p, double * newx, 
+                                double * fnx,
+                                double * grad, double alpha, 
+                                double beta, 
+                                double (*f)(double *, void *), 
+                                void * fargs, 
+                                size_t maxiter, int *info)
 {
+    *info = 0;
     if ((alpha <= 0.0) || (alpha >= 0.5)){
         printf("line search alpha (%G) is not (0,0.5)\n",alpha);
-        return -1;
+        *info = -1;
+        return 0.0;
     }
     if ((beta <= 0.0) && (beta >= 1.0)) {
         printf("line search beta (%G) is not (0,1)\n",beta);
-        return -2;
+        *info = -2;
+        return 0.0;
     }
     for (size_t ii = 0; ii < d; ii++){
         if (x[ii] < lb[ii]){
             printf("line search starting point violates constraints\n");
-            return -3;
+            *info = -3;
+            return 0.0;
         }
         if (x[ii] > ub[ii]){
             printf("line search starting point violates constraints\n");
-            return -3;
+            *info = -3;
+            return 0.0;
         }
     }
 
@@ -561,10 +771,9 @@ int backtrack_line_search_bc(size_t d, double * lb, double * ub,
     iter += 1;
     
 //    printf("newx (%G,%G)\n",newx[0],newx[1]);
-    int res = 0;
     while (*fnx > checkval){
         if (iter >= maxiter){
-            res = 1;
+            *info = 1;
             printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
             break;
         }
@@ -586,5 +795,5 @@ int backtrack_line_search_bc(size_t d, double * lb, double * ub,
         iter += 1 ;
     }
     
-    return res;
+    return t*alpha;
 }

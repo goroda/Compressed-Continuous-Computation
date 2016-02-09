@@ -40,16 +40,22 @@ newton(double **, size_t, double, double,
         double * (*)(double *, void *),
         double * (*)(double *, void *), void *);
 
-int backtrack_line_search(size_t, double *, double, double *, double *,
-                          double *, double *, double, double, 
-                          double (*)(double *, void *), void *, 
-                          size_t);
+double backtrack_line_search(size_t, double *, double, double *, 
+                             double *,double *, double *,
+                             double, 
+                             double, 
+                             double (*)(double *, void *), 
+                             void *, 
+                             size_t, int *);
 
-int backtrack_line_search_bc(size_t, double *, double *, double *, double, 
-                          double *, double *,
-                          double *, double *, double, double, 
-                          double (*)(double *, void *), void *, 
-                          size_t);
+double backtrack_line_search_bc(size_t, double *, 
+                                double *, double *, double, 
+                                double *, double *,
+                                double *, double *, double, 
+                                double, 
+                                double (*)(double *, void *), 
+                                void *, 
+                                size_t,int *);
 
 
 int gradient_descent(size_t, double *, double *, double *,
@@ -71,5 +77,13 @@ int box_damp_newton(size_t, double *, double *,
                    int (*)(double *,double*,void*), void *,
                    double,size_t, size_t,
                    double, double, int);
+int box_damp_bfgs(size_t d, double * lb, double * ub,
+                  double * x, double * fval, double * grad,
+                  double * invhess,
+                  double * space,
+                  double (*f)(double*,void*),void * fargs,
+                  int (*g)(double*,double*,void*),
+                  double tol,size_t maxiter,size_t maxsubiter,
+                  double alpha, double beta, int verbose);
 #endif
 

@@ -201,7 +201,7 @@ void Test_pg_newton(CuTest * tc)
     CuAssertIntEquals(tc,0,res);
     CuAssertDblEquals(tc,1.0,start[0],1e-3);
     CuAssertDblEquals(tc,1.0,start[1],1e-3);
-    CuAssertDblEquals(tc,0.0,val,1e-14);
+    CuAssertDblEquals(tc,0.0,val,1e-3);
 
 
     start[0] = 1.0;
@@ -219,6 +219,58 @@ void Test_pg_newton(CuTest * tc)
     CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);
 
 }
+
+void Test_pg_bfgs(CuTest * tc)
+{
+    printf("Testing Function: bfgs projected gradient \n");
+    
+    size_t dim = 2;
+    double tol = 1e-12;
+    size_t maxiter = 100;
+    size_t maxsubiter = 1000;
+    double alpha = 0.4;
+    double beta = 0.9;
+    int verbose = 0;
+    
+    double lb[2] = {-5.0,-5.0};
+    double ub[2] = {5.0,5.0};
+    double start[2] = {2.0,1.0};
+    double grad[2];
+    double invhess[4] = {1.0,0.0,0.0,1.0};
+    double space[4*2];
+
+    double val;
+    
+    int res = box_damp_bfgs(dim,lb,ub,start,&val,grad,invhess,
+                            space,rosen2d,NULL,rosen2dGrad2,
+                            tol,maxiter,maxsubiter, 
+                            alpha,beta,verbose); 
+    
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,1.0,start[0],1e-3);
+    CuAssertDblEquals(tc,1.0,start[1],1e-3);
+    CuAssertDblEquals(tc,0.0,val,1e-4);
+
+    start[0] = 1.0;
+    start[1] = -2.0;
+    ub[0] = 2.0;
+    ub[1] = 1.0;
+    invhess[0] = 1.0;
+    invhess[1] = 0.0;
+    invhess[2] = 0.0;
+    invhess[3] = 1.0;
+    res = box_damp_bfgs(dim,lb,ub,start,&val,grad,invhess,
+                        space,quad2d,NULL,quad2dGrad2,
+                        tol,maxiter,maxsubiter,
+                        alpha,beta,verbose);
+
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,2,start[0],1e-3);
+    CuAssertDblEquals(tc,1,start[1],1e-3);
+    CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);
+
+}
+
 
 double f_grad_desc(double * x, void * args)
 {
@@ -298,6 +350,7 @@ CuSuite * OptGetSuite(){
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_newton);
     SUITE_ADD_TEST(suite, Test_pg_newton);
+    SUITE_ADD_TEST(suite, Test_pg_bfgs);
     SUITE_ADD_TEST(suite, Test_grad_descent);
     SUITE_ADD_TEST(suite, Test_box_grad_descent);
     return suite;
