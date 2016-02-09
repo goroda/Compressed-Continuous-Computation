@@ -173,9 +173,11 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
     free(piv); piv = NULL;
     assert(info == 0);
-    
 
     double eta = cblas_ddot(d,grad,1,space+d,1);
+    if (verbose > 0){
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);
+    }
 //    printf("eta = %G\n",eta);
     if ( (eta*eta/2.0) < tol){
         return 0;

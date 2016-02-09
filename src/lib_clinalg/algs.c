@@ -3733,7 +3733,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
             //printf("got maxvol\n");
             if (info < 0){
-                fprintf(stderr, "noinvertible submatrix in maxvol in rl cross");
+                fprintf(stderr, "noinvertible submatrix in maxvol in rl cross\n");
             }
 
             if (info > 0){
