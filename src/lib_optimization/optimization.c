@@ -110,7 +110,7 @@ int box_damp_bfgs(size_t d,
     }
 //    printf("eta = %G\n",eta);
     if ( (eta*eta/2.0) < tol){
-        printf("returning \n");
+//        printf("returning \n");
         return 0;
     }
 
