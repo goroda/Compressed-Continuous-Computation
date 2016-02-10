@@ -1339,13 +1339,13 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
             cheb_gauss(poly->num_poly,pt,wt);
             break;
         case LEGENDRE:
-            //nquad = poly->num_poly*2.0-1.0;//*2.0;
+//            nquad = poly->num_poly*2.0-1.0;//*2.0;
             pt = calloc_double(nquad);
             wt = calloc_double(nquad);
             
             // uncomment next two for cc
-            //clenshaw_curtis(nquad,pt,wt);
-            //for (ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;}
+            // clenshaw_curtis(nquad,pt,wt);
+//            for (ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;}
 
             gauss_legendre(poly->num_poly,pt,wt);
             break;

@@ -3290,7 +3290,7 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
     }
     if (val < -ZEROTHRESH){
         fprintf(stderr, "relative error between two FT should not be neg %G<-%G \n",val,-ZEROTHRESH);
-        exit(1);
+//        exit(1);
     }
     val = sqrt(fabs(val));
 
