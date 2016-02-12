@@ -1036,8 +1036,8 @@ double generic_function_get_upper_bound(struct GenericFunction * f){
 /********************************************************//**
 *   Evaluate a generic function
 *
-*   \param f [in] - function
-*   \param x [in] - location at which to evaluate
+*   \param[in] f  - function
+*   \param[in] x  - location at which to evaluate
 *
 *   \return out - evaluation
 ************************************************************/
@@ -1065,9 +1065,9 @@ double generic_function_1d_eval(struct GenericFunction * f, double x){
 /********************************************************//**
 *   Evaluate an array of generic functions
 *
-*   \param n [in] - number of functions
-*   \param f [in] - array of functions
-*   \param x [in] - location at which to evaluate
+*   \param[in] n - number of functions
+*   \param[in] f - array of functions
+*   \param[in] x - location at which to evaluate
 *
 *   \return out - array of values
 ************************************************************/
@@ -1080,6 +1080,48 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
         out[ii] = generic_function_1d_eval(f[ii],x);
     }
     return out;
+}
+
+/********************************************************//**
+*   Evaluate an array of generic functions
+*
+*   \param[in]     n   - number of functions
+*   \param[in]     f   - array of functions
+*   \param[in]     x   - location at which to evaluate
+*   \param[in,out] out - array of values
+
+************************************************************/
+void
+generic_function_1darray_eval2(size_t n, 
+                               struct GenericFunction ** f, 
+                               double x, double * out)
+{
+    int allpoly = 1;
+    struct OrthPolyExpansion * parr[1000];
+    for (size_t ii = 0; ii < n; ii++){
+        if (f[ii]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+        parr[ii] = f[ii]->f;
+    }
+    if ((allpoly == 1) && (n <= 1000)){
+        int res = legendre_poly_expansion_arr_eval(n,parr,x,out);
+        if (res == 1){ //something when wrong
+            size_t ii;
+            for (ii = 0; ii < n; ii++){
+                out[ii] = generic_function_1d_eval(f[ii],x);
+            }
+        }
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < n; ii++){
+            out[ii] = generic_function_1d_eval(f[ii],x);
+        }
+    }
+  
+
 }
 
 /********************************************************//**

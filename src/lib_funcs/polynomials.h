@@ -202,6 +202,9 @@ orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion *);
 
 
 double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
+int legendre_poly_expansion_arr_eval(size_t,
+                                     struct OrthPolyExpansion **, 
+                                     double, double *);
 double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);
 
 void orth_poly_expansion_round(struct OrthPolyExpansion **);

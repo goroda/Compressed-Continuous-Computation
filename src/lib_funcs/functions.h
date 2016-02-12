@@ -136,8 +136,12 @@ deserialize_generic_function(unsigned char *, struct GenericFunction ** );
 double generic_function_get_lower_bound(struct GenericFunction * f);
 double generic_function_get_upper_bound(struct GenericFunction * f);
 double generic_function_1d_eval(struct GenericFunction *, double);
-double * generic_function_1darray_eval(size_t, struct GenericFunction **, 
-                                double);
+double * generic_function_1darray_eval(size_t, 
+                                       struct GenericFunction **, 
+                                       double);
+void generic_function_1darray_eval2(size_t, 
+                                    struct GenericFunction **, 
+                                    double,double *);
 
 // generic operations
 double generic_function_norm(struct GenericFunction *);

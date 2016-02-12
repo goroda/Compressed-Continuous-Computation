@@ -1194,6 +1194,9 @@ struct FunctionTrain * function_train_alloc(size_t dim)
     for (ii = 0; ii < dim; ii++){
         ft->cores[ii] = NULL;
     }
+    ft->evalspace1 = NULL;
+    ft->evalspace2 = NULL;
+    ft->evalspace3 = NULL;
     return ft;
 }
 
@@ -1232,6 +1235,9 @@ void function_train_free(struct FunctionTrain * ft)
             qmarray_free(ft->cores[ii]);ft->cores[ii] = NULL;
         }
         free(ft->cores); ft->cores=NULL;
+        free(ft->evalspace1); ft->evalspace1 = NULL;
+        free(ft->evalspace2); ft->evalspace2 = NULL;
+        free(ft->evalspace3); ft->evalspace3 = NULL;
         free(ft); ft = NULL;
     }
 }
@@ -1710,12 +1716,12 @@ function_train_constant(size_t dim, double a, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a tensor train representation of \f$ x_1c_1 + x_2c_2 + .... + x_dc_d \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param coeffs [in] -  slope of the function in each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    dimension of function train
+    \param[in] bds    boundarys of each dimension
+    \param[in] coeffs slope of the function in each dimension
+    \param[in] ftargs parameters for computation
 
-    \return ft - function train
+    \return a function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs, 
@@ -1809,16 +1815,16 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param coeffs (IN): Q matrix
-    \param m [in] - m (dim,)
-    \param ftargs [in] - parameters for computation
+    \param[in] dim     dimension of function train
+    \param[in] bds     boundarys of each dimension
+    \param[in] Q       matrix (dim,dim)
+    \param[in] m       offset (dim,)
+    \param[in] ftargs  parameters for computation
 
-    \returns ft - function train
+    \returns a function train
 
     \note
-        Could be more efficient with a better distribution of ranks
+    Could be more efficient with a better distribution of ranks
 ***************************************************************/
 struct FunctionTrain * 
 function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs, 
@@ -1956,12 +1962,12 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a tensor train representation of \f$ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f$
 
-    \param bds [in] - boundarys of each dimension
-    \param coeffs [in] - coefficients for each dimension
-    \param m [in] - offset in each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] bds     boundarys of each dimension
+    \param[in] coeffs  coefficients for each dimension
+    \param[in] m       offset in each dimension
+    \param[in] ftargs  parameters for computation
 
-    \return ft - function train
+    \return a function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_quadratic_aligned(struct BoundingBox * bds, 

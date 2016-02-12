@@ -235,6 +235,11 @@ struct FunctionTrain {
     size_t dim;
     size_t * ranks;
     struct Qmarray ** cores;
+    
+    double * evalspace1;
+    double * evalspace2;
+    double * evalspace3;
+   
 };
 
 struct BoundingBox * function_train_bds(struct FunctionTrain *);
