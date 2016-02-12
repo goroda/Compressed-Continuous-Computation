@@ -210,6 +210,7 @@ struct FT1DArray * ft1d_array_jacobian(struct FT1DArray *);
 struct FT1DArray * function_train_hessian(struct FunctionTrain *);
 void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
 double * ft1d_array_eval(struct FT1DArray *, double *);
+void ft1d_array_eval2(struct FT1DArray *, double *, double *);
 
 struct FunctionTrain * 
 ft1d_array_sum_prod(size_t, double *, struct FT1DArray *, struct FT1DArray *, 

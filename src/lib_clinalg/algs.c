@@ -3404,6 +3404,22 @@ double * ft1d_array_eval(struct FT1DArray * fta, double * x)
 }
 
 /********************************************************//**
+    Evaluate a function train 1darray 
+
+    \param[in]     fta - Function train array to evaluate
+    \param[in]     x   - location at which to obtain evaluations
+    \param[in,out] out - evaluation
+***********************************************************/
+void ft1d_array_eval2(struct FT1DArray * fta, double * x, double * out)
+{
+    size_t ii; 
+    for (ii = 0; ii < fta->size; ii++){
+        out[ii] = function_train_eval(fta->ft[ii], x);
+    }
+
+}
+
+/********************************************************//**
     Multiply together and sum the elements of two function train arrays
     \f[ 
         out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x) 
