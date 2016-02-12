@@ -1133,7 +1133,8 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     double p [2];
     double pnew;
     
-    double m = (poly->p->upper - poly->p->lower) / (poly->upper_bound- poly->lower_bound);
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
     double off = poly->p->upper - m * poly->upper_bound;
     double x_norm =  m * x + off;
     
@@ -1156,6 +1157,74 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     }
     return out;
 }
+
+/********************************************************//**
+*   Evaluate each orthonormal polynomial expansion that is in an 
+*   array of generic functions 
+*
+*   \param[in]     n       - number of polynomials
+*   \param[in]     parr    - polynomial expansions
+*   \param[in]     x       - location at which to evaluate
+*   \param[in,out] out     - evaluations
+*
+*   \return 0 - successful
+*           1 - not all legendre polynomials
+*
+*   \note
+*   Assumes all functions have the same bounds
+*************************************************************/
+int legendre_poly_expansion_arr_eval(size_t n,
+                                     struct OrthPolyExpansion ** parr, 
+                                     double x, double * out)
+{
+    
+    size_t maxpoly = 0;
+    for (size_t ii = 0; ii < n; ii++){
+        if (parr[ii]->p->ptype != LEGENDRE){
+            return 1;
+        }
+        if (parr[ii]->num_poly > maxpoly){
+            maxpoly = parr[ii]->num_poly;
+        }
+        out[ii] = 0.0;
+    }
+
+    double m = (parr[0]->p->upper - parr[0]->p->lower) / 
+        (parr[0]->upper_bound- parr[0]->lower_bound);
+    double off = parr[0]->p->upper - m * parr[0]->upper_bound;
+    double x_norm =  m * x + off;
+
+    // double out = 0.0;
+    double p[2];
+    double pnew;
+    p[0] = 1.0;
+    size_t iter = 0;
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] += p[0] * parr[ii]->coeff[iter];
+    }
+    iter++;
+    p[1] = x_norm;
+    for (size_t ii = 0; ii < n; ii++){
+        if (parr[ii]->num_poly > iter){
+            out[ii] += p[1] * parr[ii]->coeff[iter];
+        }
+    }
+    iter++;
+    for (iter = 2; iter < maxpoly; iter++){
+        pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
+        pnew /= (double) iter;
+        for (size_t ii = 0; ii < n; ii++){
+            if (parr[ii]->num_poly > iter){
+                out[ii] += parr[ii]->coeff[iter] * pnew;
+            }
+        }
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    
+    return 0;
+}
+
 
 /********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 

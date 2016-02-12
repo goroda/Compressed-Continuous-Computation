@@ -2520,9 +2520,10 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
     if (strcmp(dir,"QR") == 0){
         
         // This version does not yet work with piecewise functions
-        //free(R); R = NULL;
-        //int out = qmarray_qr(A,&Q,&R);
-        //assert (out == 0);
+//        free(R); R = NULL;
+//        int out = qmarray_qr(A,&Q,&R);
+//        assert (out == 0);
+
 
         Q = qmarray_orth1d_columns(POLYNOMIAL, 
                         &ptype, A->nrows, ncols, lb, ub); 
@@ -2533,6 +2534,7 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         out = qmarray_qhouse(Q,V);
         assert(out == 0);
         qmarray_free(V);
+
     }
     else if (strcmp(dir, "LQ") == 0){
         Q = qmarray_orth1d_rows(POLYNOMIAL, 
@@ -2827,46 +2829,73 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
 ***************************************************************/
 double function_train_eval(struct FunctionTrain * ft, double * x)
 {
+    
     size_t dim = ft->dim;
-    size_t ii = 0;
-    double * t1 = generic_function_1darray_eval(
-            ft->cores[ii]->nrows * ft->cores[ii]->ncols, 
-            ft->cores[ii]->funcs, x[ii]);
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
 
-    double * t2 = NULL;
-    double * t3 = NULL;
+    size_t ii = 0;
+    size_t maxrank = function_train_maxrank(ft);
+    if (ft->evalspace1 == NULL){
+        ft->evalspace1 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace2 == NULL){
+        ft->evalspace2 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace3 == NULL){
+        ft->evalspace3 = calloc_double(maxrank*maxrank);
+    }
+
+    double * t1 = ft->evalspace1;
+    generic_function_1darray_eval2(
+        ft->cores[ii]->nrows * ft->cores[ii]->ncols, 
+        ft->cores[ii]->funcs, x[ii],t1);
+
+    double * t2 = ft->evalspace2;
+    double * t3 = ft->evalspace3;
+    int onsol = 1;
     for (ii = 1; ii < dim; ii++){
-        t2 = generic_function_1darray_eval(
+        generic_function_1darray_eval2(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols, 
-            ft->cores[ii]->funcs, x[ii]);
+            ft->cores[ii]->funcs, x[ii],t2);
             
         if (ii%2 == 1){
             // previous times new core
-            t3 = calloc_double(ft->ranks[ii+1]);
-            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
-                ft->ranks[ii+1], ft->ranks[ii], 1.0, t1, 1, t2,
-                ft->ranks[ii], 0.0, t3, 1);
-            free(t2); t2 = NULL;
-            free(t1); t1 = NULL;
+//            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
+//                ft->ranks[ii+1], ft->ranks[ii], 1.0, t1, 1, t2,
+//                ft->ranks[ii], 0.0, t3, 1);
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0, 
+                        t2, ft->ranks[ii],
+                        t1, 1, 0.0, t3, 1);
+            onsol = 2;
+
         }
         else {
-            t1 = calloc_double(ft->ranks[ii+1]);
-            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
-                ft->ranks[ii+1], ft->ranks[ii], 1.0, t3, 1, t2,
-                ft->ranks[ii], 0.0, t1, 1);
-            free(t2); t2 = NULL;
-            free(t3); t3 = NULL;
+//            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
+//                ft->ranks[ii+1], ft->ranks[ii], 1.0, t3, 1, t2,
+//                ft->ranks[ii], 0.0, t1, 1)
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0, 
+                        t2, ft->ranks[ii],
+                        t3,1,0.0,t1,1);
+            onsol = 1;
+
         }
     }
     
-    double out = 0.123456789;
-    if (t1 == NULL){
+    double out;// = 0.123456789;
+    if (onsol == 2){
         out = t3[0];
-        free(t3); t3 = NULL;
+//        free(t3); t3 = NULL;
     }
-    else if ( t3 == NULL){
+    else if ( onsol == 1){
         out = t1[0];
-        free(t1); t1 = NULL;
+//        free(t1); t1 = NULL;
+    }
+    else{
+        fprintf(stderr,"Weird error in function_train_val\n");
+        exit(1);
     }
     
     return out;
@@ -3401,6 +3430,22 @@ double * ft1d_array_eval(struct FT1DArray * fta, double * x)
         out[ii] = function_train_eval(fta->ft[ii], x);
     }
     return out;
+}
+
+/********************************************************//**
+    Evaluate a function train 1darray
+
+    \param[in]     fta - Function train array to evaluate
+    \param[in]     x   - location at which to obtain evaluations
+    \param[in,out] out - location to evaluate at
+
+***********************************************************/
+void ft1d_array_eval2(struct FT1DArray * fta, double * x, double * out)
+{
+    size_t ii; 
+    for (ii = 0; ii < fta->size; ii++){
+        out[ii] = function_train_eval(fta->ft[ii], x);
+    }
 }
 
 /********************************************************//**
