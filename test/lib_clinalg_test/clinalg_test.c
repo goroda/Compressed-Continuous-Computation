@@ -911,6 +911,58 @@ void Test_qmarray_householder4(CuTest * tc){
     free(R2);
 }
 
+void Test_qmarray_householder_linelm(CuTest * tc){
+
+    printf("Testing function: qmarray_householder for linelm\n");
+
+    double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    void * args[4] = {&c, &c2, &c3, &c4};
+
+
+    struct Qmarray * T = qmarray_orth1d_columns(LINELM,NULL,2,2,-1.0,1.0);
+    double * tmat= qmatqmat_integrate(T,T);
+    printf("tmat = \n");
+    dprint2d_col(2,2,tmat);
+    qmarray_free(T); T = NULL;
+    free(tmat);
+    
+    struct Qmarray * A = qmarray_approx1d(
+        2, 2, funcs, args, LINELM, NULL, -1.0, 1.0, NULL);
+    
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double R[4] = {0.0,0.0,0.0,0.0};
+    printf("lets go\n");
+    struct Qmarray * Q = qmarray_householder_simple("QR",Acopy,R);
+    printf("done\n");
+
+//    print_qmarray(A,0,NULL);
+    struct Qmarray * Anew = qmam(Q,R,2);
+
+    double * qmat = qmatqmat_integrate(Q,Q);
+    
+    printf("R is \n");
+    dprint2d_col(2,2,R);
+    printf("q is \n");
+//    print_qmarray(Q,0,NULL);
+    dprint2d_col(2,2,qmat);
+    
+    double diff1 = generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
+    printf("diff1 = %G\n",diff1);
+    assert (diff1 < 1e-5);
+//    print_qmarray(Anew,0,NULL);
+
+    free(qmat); qmat = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
+}
+
+
 void Test_qmarray_qr1(CuTest * tc)
 {
     printf("Testing function: qmarray_qr (1/3)\n");
@@ -1456,14 +1508,16 @@ void Test_qmarray_svd(CuTest * tc){
     enum poly_type p = LEGENDRE;
     struct Qmarray * A = qmarray_approx1d(
                         2, 2, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
-    
+
     struct Qmarray * Acopy = qmarray_copy(A);
 
     double * vt = calloc_double(2*2);
     double * s = calloc_double(2);
     struct Qmarray * Q = NULL;
 
+//    printf("compute SVD of qmarray\n");
     qmarray_svd(A,&Q,s,vt);
+//    printf("done computing!\n");
 
     CuAssertIntEquals(tc,2,Q->nrows);
     CuAssertIntEquals(tc,2,Q->ncols);
@@ -1497,6 +1551,7 @@ void Test_qmarray_svd(CuTest * tc){
     free(sdiag);
     free(vt);
 
+    //printf("on the quasimatrix portion\n");
     double diff;
     struct Qmarray * Anew = qmam(Q,comb,2);
     free(comb);
@@ -1607,6 +1662,7 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_householder2);
     SUITE_ADD_TEST(suite, Test_qmarray_householder3);
     SUITE_ADD_TEST(suite, Test_qmarray_householder4);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_qr1);
     SUITE_ADD_TEST(suite, Test_qmarray_qr2);
     SUITE_ADD_TEST(suite, Test_qmarray_qr3);
@@ -3640,9 +3696,8 @@ void Test_diffusion_op_struct(CuTest * tc)
 
     struct FunctionTrain * shouldbe = function_train_copy(ftsum);
     
-
     double diff = function_train_norm2diff(is,shouldbe);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-11);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-10);
 
     for (ii = 0; ii  < dim; ii++){
         qmarray_free(da[ii]);

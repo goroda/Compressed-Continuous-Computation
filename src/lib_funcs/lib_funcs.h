@@ -43,6 +43,7 @@
 
 #include "polynomials.h"
 #include "piecewisepoly.h"
+#include "linelm.h"
 #include "functions.h"
 #include "monitoring.h"
 

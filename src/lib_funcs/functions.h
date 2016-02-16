@@ -46,7 +46,7 @@
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
  * only POLYNOMIAL is implemented!!!
  */
-enum function_class {PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL};
+enum function_class {PIECEWISE, POLYNOMIAL, LINELM, RATIONAL, KERNEL};
 
 /** \struct Interval
  * \brief A pair of lower and upper bounds

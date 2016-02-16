@@ -827,7 +827,9 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
     for (ii = 0; ii < ncols; ii++){
         funcs[ii] = NULL;
     }
+//    printf("gen orthonormal\n");
     generic_function_array_orth(ncols, fc, st, funcs, &ob);
+//    printf("done\n");
     
     struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
     

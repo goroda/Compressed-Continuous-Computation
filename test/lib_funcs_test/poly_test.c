@@ -452,7 +452,6 @@ void Test_legendre_derivative_consistency(CuTest * tc)
     free(derivvals); derivvals = NULL;
 }
 
-
 void Test_legendre_derivative(CuTest * tc){
 
     printf("Testing function: orth_poly_expansion_deriv  on (a,b)\n");
@@ -700,6 +699,190 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_product);
     SUITE_ADD_TEST(suite, Test_legendre_axpy);
 
+    return suite;
+}
+
+void Test_linexp_approx(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_init\n");
+    size_t N = 50;
+    double * x = linspace(-1.0,1.0,N);
+    double f[50];
+    
+    struct counter c;
+    c.N = 0;
+
+    for (size_t ii = 0; ii < N; ii++){
+        f[ii] = func(x[ii],&c);
+    }
+
+//    printf("go\n");
+    struct LinElemExp * fa = lin_elem_exp_init(N,x,f);
+
+    double * xtest = linspace(-1,1,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+//    printf("went\n");
+    for (ii = 0; ii < 1000; ii++){
+
+        double eval1 = lin_elem_exp_eval(fa,xtest[ii]);
+        double evalt = func(xtest[ii],&c);
+        //printf("ii = %zu, err=%G\n",ii,evalt-eval1);
+        err += pow(eval1-evalt,2);
+        errNorm += pow(evalt,2);
+    }
+    err = sqrt(err) / errNorm;
+//    printf("err = %G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-2);
+
+    lin_elem_exp_free(fa);
+    free(xtest);
+}
+
+
+void Test_lin_elem_exp_integrate(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_integrate\n");
+    double lb = -2;
+    double ub = 3.0;
+
+    size_t N = 1000;
+    double * x = linspace(lb,ub,N);
+    double f[1000];
+    
+    struct counter c;
+    c.N = 0;
+
+    for (size_t ii = 0; ii < N; ii++){
+        f[ii] = func2(x[ii],&c);
+    }
+
+    struct LinElemExp * fa = lin_elem_exp_init(N,x,f);
+    
+    double intshould = (pow(ub,3) - pow(lb,3))/3;
+    double intis = lin_elem_exp_integrate(fa);
+    CuAssertDblEquals(tc, intshould, intis, 1e-4);
+
+    lin_elem_exp_free(fa);
+    free(x);
+}
+
+void Test_lin_elem_exp_inner(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_inner \n");
+    double lb = -2.0;
+    double ub = 3.0;
+
+    size_t N = 1000;
+    double * x = linspace(lb,ub,N);
+    double f[1000];
+    double g[1000];
+    
+    struct counter c;
+    c.N = 0;
+
+    for (size_t ii = 0; ii < N; ii++){
+        f[ii] = func2(x[ii],&c);
+        g[ii] = func3(x[ii],&c);
+    }
+
+    struct LinElemExp * fa = lin_elem_exp_init(N,x,f);
+    struct LinElemExp * fb = lin_elem_exp_init(N,x,g);
+        
+    double intshould = (pow(ub,6) - pow(lb,6))/3;
+    double intis = lin_elem_exp_inner(fa,fb);
+    double diff = fabs(intshould-intis)/fabs(intshould);
+    CuAssertDblEquals(tc, 0.0, diff, 1e-4);
+
+    lin_elem_exp_free(fa);
+    lin_elem_exp_free(fb);
+    free(x);
+}
+
+void Test_lin_elem_exp_norm(CuTest * tc){
+    
+    printf("Testing function: lin_elem_exp_norm\n");
+    double lb = -2.0;
+    double ub = 3.0;
+
+    size_t N = 1000;
+    double * x = linspace(lb,ub,N);
+    double f[1000];
+    
+    struct counter c = {0};
+
+    for (size_t ii = 0; ii < N; ii++){
+        f[ii] = func2(x[ii],&c);
+    }
+
+    struct LinElemExp * fa = lin_elem_exp_init(N,x,f);
+
+    double intshould = (pow(ub,5) - pow(lb,5))/5;
+    double intis = lin_elem_exp_norm(fa);
+    double diff = fabs(sqrt(intshould) - intis)/fabs(sqrt(intshould));
+//n    printf("diff = %G\n",diff)
+    CuAssertDblEquals(tc, 0.0, diff, 1e-4);
+
+    free(x); x = NULL;
+    lin_elem_exp_free(fa);
+}
+
+void Test_lin_elem_exp_axpy(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_axpy  \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    size_t N1 = 400;
+    size_t N2 = 200;
+
+    struct counter c1 = {0};
+    struct counter c2 = {0};
+    double * x1 = linspace(lb,ub,N1);
+    double * x2 = linspace(lb,ub,N2);
+    double f1[1000];
+    double f2[1000];
+    for (size_t ii = 0; ii < N1; ii++){
+        f1[ii] = func3(x1[ii],&c1);
+    }
+    for (size_t ii = 0; ii < N2; ii++){
+        f2[ii] = func2(x2[ii],&c2);
+    }
+    struct LinElemExp * le1 = lin_elem_exp_init(N1,x1,f1);
+    struct LinElemExp * le2 = lin_elem_exp_init(N2,x2,f2);
+
+    int success = lin_elem_exp_axpy(2.0,le1,le2);
+    CuAssertIntEquals(tc,0,success);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = lin_elem_exp_eval(le2,pts[ii]);
+        double eval2 = 2.0 * func3(pts[ii],&c2) + func2(pts[ii],&c1);
+        double diff= fabs(eval1-eval2);
+        //printf("diff = %G\n",diff);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-3);
+    }
+
+    free(pts); pts = NULL;
+    free(x1); x1 = NULL;
+    free(x2); x2 = NULL;
+    lin_elem_exp_free(le1);
+    lin_elem_exp_free(le2);
+}
+
+
+CuSuite * LelmGetSuite(){
+
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_linexp_approx);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy);
     return suite;
 }
 
@@ -1996,6 +2179,7 @@ void RunAllTests(void) {
     
     CuSuite * cheb = ChebGetSuite();
     CuSuite * leg = LegGetSuite();
+    CuSuite * lelm = LelmGetSuite();
     CuSuite * sp = StandardPolyGetSuite();
     CuSuite * alg = PolyAlgorithmsGetSuite();
     CuSuite * ser = PolySerializationGetSuite();
@@ -2005,6 +2189,7 @@ void RunAllTests(void) {
 	
     CuSuiteAddSuite(suite, cheb);
     CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, lelm);
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
@@ -2019,6 +2204,7 @@ void RunAllTests(void) {
     
     CuSuiteDelete(cheb);
     CuSuiteDelete(leg);
+    CuSuiteDelete(lelm);
     CuSuiteDelete(sp);
     CuSuiteDelete(alg);
     CuSuiteDelete(ser);

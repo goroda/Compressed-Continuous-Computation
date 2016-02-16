@@ -2515,48 +2515,89 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
     enum poly_type ptype = LEGENDRE;
     // generate two quasimatrices needed for householder
    
-   
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
-        
-        // This version does not yet work with piecewise functions
-        //free(R); R = NULL;
-        //int out = qmarray_qr(A,&Q,&R);
-        //assert (out == 0);
 
-        Q = qmarray_orth1d_columns(POLYNOMIAL, 
-                        &ptype, A->nrows, ncols, lb, ub); 
-        struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
         int out = 0;
-        out = qmarray_householder(A,Q,V,R);
-        assert(out == 0);
-        out = qmarray_qhouse(Q,V);
-        assert(out == 0);
-        qmarray_free(V);
+        int fastqr = 1;
+        int polyorth = 1;
+        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
+            if (A->funcs[ii]->fc == PIECEWISE){
+                fastqr = 0;
+            }
+            if (A->funcs[ii]->fc == LINELM){
+                polyorth = 0;
+                //fastqr = 0;
+            }
+        }
+
+        if (polyorth == 1){
+            Q = qmarray_orth1d_columns(POLYNOMIAL, 
+                                       &ptype, A->nrows,
+                                       ncols, lb, ub);                     
+        }
+        else{
+//            printf("gen orthonormal stuff\n");
+            Q = qmarray_orth1d_columns(LINELM,&ptype,A->nrows,ncols,lb,ub);
+//            print_qmarray(Q,0,NULL);
+//            printf("gened it!\n");
+        }
+        
+        if (fastqr == 1){
+            //free(R); R = NULL;
+//            printf("lets run\n");
+            out = qmarray_qr(A,&Q,&R);
+//            printf("ranned it\n");
+            assert (out == 0);
+        }
+        else if (fastqr == 0){
+            //printf("out = 0\n");
+
+            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+            out = qmarray_householder(A,Q,V,R);
+            assert(out == 0);
+            out = qmarray_qhouse(Q,V);
+            assert(out == 0);
+            qmarray_free(V);
+//            printf("computed!\n");
+        }
     }
     else if (strcmp(dir, "LQ") == 0){
         Q = qmarray_orth1d_rows(POLYNOMIAL, 
-                        &ptype, A->nrows, ncols, lb, ub); 
+                                &ptype, A->nrows, ncols,
+                                lb, ub); 
 
-        struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-        
-        //printf("here\n");
         int out = 0;
-        out = qmarray_householder_rows(A,Q,V,R);
+        int fastqr = 1;
+        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
+            if (A->funcs[ii]->fc == PIECEWISE){
+                fastqr = 0;
+                break;
+            }
+        }
         
-        //printf("there!\n");
-        assert(out == 0);
-        out = qmarray_qhouse_rows(Q,V);
-        assert(out == 0);
+        if (fastqr == 1){
+            //free(R); R = NULL;
+            out = qmarray_lq(A,&Q,&R);
+            assert (out == 0);
+        }
+        else{
 
-        qmarray_free(V);
-
+            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+            //printf("here\n");
+            out = qmarray_householder_rows(A,Q,V,R);
+            //printf("there!\n");
+            assert(out == 0);
+            out = qmarray_qhouse_rows(Q,V);
+            assert(out == 0);
+            qmarray_free(V); V = NULL;
+        }
     }
     else{
         fprintf(stderr, "No clear QR/LQ decomposition for type=%s\n",dir);
         exit(1);
     }
-    return  Q;
+    return Q;
 }
 
 /***********************************************************//**
