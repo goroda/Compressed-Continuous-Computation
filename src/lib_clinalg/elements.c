@@ -1009,15 +1009,17 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
     in the function train. Specifically, legendre polynomials
     for all dimensions
 
-    \param dim [in] - dimension of function train
-    \param ptype [in] - type of polynomial
-    \param aopts [in] - arguments for creating the approximation (could be NULL)
+    \param[in] dim   - dimension of function train
+    \param[in] ptype - type of polynomial
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
 
-    \return fargs -- approximation arguments
+    \return approximation arguments
 ***************************************************************/
-struct FtApproxArgs * ft_approx_args_createpoly(size_t dim, 
-            enum poly_type * ptype,
-            struct OpeAdaptOpts * aopts)
+struct FtApproxArgs * 
+ft_approx_args_createpoly(size_t dim, 
+                          enum poly_type * ptype,
+                          struct OpeAdaptOpts * aopts)
 {
     struct FtApproxArgs * fargs;
     if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
@@ -1040,15 +1042,17 @@ struct FtApproxArgs * ft_approx_args_createpoly(size_t dim,
     Create the arguments to give to use for approximation
     in the function train. Specifically, piecewise legendre polynomials
 
-    \param dim [in] - dimension of function train
-    \param ptype [in] - type of polynomial
-    \param aopts [in] - arguments for creating the approximation (could be NULL)
+    \param[in] dim   - dimension of function train
+    \param[in] ptype - type of polynomial
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
 
     \return fargs - approximation arguments
 ***************************************************************/
-struct FtApproxArgs * ft_approx_args_createpwpoly(size_t dim, 
-            enum poly_type * ptype,
-            struct PwPolyAdaptOpts * aopts)
+struct FtApproxArgs * 
+ft_approx_args_createpwpoly(size_t dim, 
+                            enum poly_type * ptype,
+                            struct PwPolyAdaptOpts * aopts)
 {
     struct FtApproxArgs * fargs;
     if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
@@ -1067,9 +1071,40 @@ struct FtApproxArgs * ft_approx_args_createpwpoly(size_t dim,
 }
 
 /***********************************************************//**
+    Create the linear element approximation args to sent to
+    function cross
+
+    \param[in] dim   - dimension of function train
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
+
+    \return fargs - approximation arguments
+***************************************************************/
+struct FtApproxArgs * 
+ft_approx_args_create_le(size_t dim, 
+                         struct LinElemExpAopts * aopts)
+{
+    struct FtApproxArgs * fargs;
+    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
+        fprintf(stderr,"failed to allocate memory for ft approx args.\n");
+        exit(1);
+    }
+    fargs->dim = dim;
+    fargs->targs = 0;
+    
+    enum function_class fc = LINELM;
+    fargs->fc.fc0 = fc;    
+    fargs->sub_type.st0 = 0;
+    fargs->approx_opts.ao0 = aopts;
+    
+    return fargs;
+}
+
+
+/***********************************************************//**
     Free memory allocated to FtApproxArgs
 
-    \param fargs [inout] - function train approximation arguments
+    \param[in,out] fargs - function train approximation arguments
 ***************************************************************/
 void ft_approx_args_free(struct FtApproxArgs * fargs)
 {
@@ -1086,13 +1121,12 @@ void ft_approx_args_free(struct FtApproxArgs * fargs)
     }
 }
 
-
 /***********************************************************//**
     Extract the function class to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return function_class of the approximation
 ***************************************************************/

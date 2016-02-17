@@ -90,7 +90,7 @@ int main( int argc, char *argv[])
     FILE *fp;
     fp =  fopen(evals, "w");
     if (fp == NULL){
-        fprintf(stderr, "cat: can't open %s\n", argv[1]);
+        fprintf(stderr, "cat: can't open %s\n",evals);
         return 0;
     }
     function_monitor_print_to_file(fm,fp);
@@ -99,7 +99,7 @@ int main( int argc, char *argv[])
     FILE *fp2;
     fp2 =  fopen(final_errs, "w");
     if (fp2 == NULL){
-        fprintf(stderr, "cat: can't open %s\n", argv[1]);
+        fprintf(stderr, "cat: can't open %s\n", final_errs);
         return 0;
     }
 

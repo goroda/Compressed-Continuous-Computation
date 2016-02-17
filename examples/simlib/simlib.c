@@ -340,7 +340,6 @@ int main( int argc, char *argv[])
     printf("RMSE = %G\n", sqrt(errnum / (double) nrand));
     printf("Relative RMSE = %G \n", sqrt(err));
 
-
     function_monitor_free(fm); fm = NULL;
     bounding_box_free(bds); bds = NULL;
     ft_approx_args_free(fapp); fapp = NULL;

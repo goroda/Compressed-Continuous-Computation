@@ -208,10 +208,15 @@ struct FtApproxArgs
     int targs; // type of args (0,1)
 };
 
-struct FtApproxArgs * ft_approx_args_createpoly(size_t, enum poly_type *,
-                struct OpeAdaptOpts * aopts);
-struct FtApproxArgs * ft_approx_args_createpwpoly(size_t, enum poly_type *,
-                struct PwPolyAdaptOpts * aopts);
+struct FtApproxArgs * 
+ft_approx_args_createpoly(size_t, enum poly_type *,
+                          struct OpeAdaptOpts *);
+struct FtApproxArgs * 
+ft_approx_args_createpwpoly(size_t, enum poly_type *,
+                            struct PwPolyAdaptOpts *);
+struct FtApproxArgs * 
+ft_approx_args_create_le(size_t, 
+                         struct LinElemExpAopts *);
 
 enum function_class 
 ft_approx_args_getfc(struct FtApproxArgs *, size_t);

@@ -1728,7 +1728,7 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     
     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
     // and one at piv[upto],piv[upto] less than one every else
-    
+//    printf("creating any L!\n");
     piv[upto] = 0;
     px[upto] = lb + ub/(ub-lb) * randu();
 
@@ -1775,6 +1775,7 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
 //    printf("eval should be 1 = %G\n", eval);
 //    printf("after\n");
     
+    free(zeros); zeros = NULL;
 }
 
 
@@ -3223,7 +3224,7 @@ function_train_product(struct FunctionTrain * a, struct FunctionTrain * b)
 
     \param ft [in] - Function train 1
 
-    \return val - \f$ val = int a dx \f$
+    \return \f$ val = \int f(x) dx \f$
 ***********************************************************/
 double 
 function_train_integrate(struct FunctionTrain * ft)
@@ -3271,63 +3272,26 @@ function_train_integrate(struct FunctionTrain * ft)
 /********************************************************//**
     Inner product between two functions in FT form
 
-    \param a [in] - Function train 1
-    \param b [in] - Function train 2
+    \param[in] a - Function train 1
+    \param[in] b - Function train 2
 
-    \return out - int a(x)b(x) dx
+    \return \f$ int a(x)b(x) dx \f$
 
-    \note
-        //This is a slow version, I cant seem to get fast version to be accurate
 ***********************************************************/
 double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 {
     double out = 0.123456789;
     size_t ii;
-    //struct Qmarray * c1 = qmarray_kron(b->cores[0],a->cores[0]);
-   // double * temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
-   // qmarray_free(c1); c1 = NULL;
-
-    ///*
-    //double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
     double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
-
-        
-    /*
-    printf("in function_train_inner\n");
-    printf(" a ranks = ");
-    iprint_sz(a->dim+1,a->ranks);
-    printf(" b ranks = ");
-    iprint_sz(b->dim+1,b->ranks);
-    */
     double * temp2 = NULL;
 
     //size_t ii;
     for (ii = 1; ii < a->dim; ii++){
-        //printf("ii=%zu/%zu\n",ii,a->dim);
-        //print_qmarray(a->cores[ii],3,NULL);
-        //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
-       
-        //temp2 = qmarray_kron_integrate(a->cores[ii],b->cores[ii]);
-        //printf("got kron integrate\n");
-        //size_t nrows = a->cores[ii]->nrows * b->cores[ii]->nrows;
-        //size_t ncols = a->cores[ii]->ncols * b->cores[ii]->ncols;
-        //double * temp3 = calloc_double(ncols);
-        //printf("do dgemv\n");
-        //cblas_dgemv(CblasColMajor,CblasTrans,nrows,ncols,1.0,temp2,nrows,temp,1,0.0,temp3,1);
-        //printf("did dgemv\n");
-        //free(temp); temp = NULL;
-        //free(temp2); temp2 = NULL;
-        //temp = calloc_double(ncols);
-        //memmove(temp,temp3,ncols*sizeof(double));
-        //free(temp3); temp3 = NULL;
-
-        //*
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);
         memmove(temp, temp2,stemp*sizeof(double));
-        //*/
         
         free(temp2); temp2 = NULL;
     }
@@ -3341,9 +3305,9 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 /********************************************************//**
     Compute the L2 norm of a function in FT format
 
-    \param a [in] - Function train 
+    \param[in] a - Function train 
 
-    \return val [out] - sqrt( int a^2(x) dx )
+    \return \f$ \sqrt{int a^2(x) dx} \f$
 ***********************************************************/
 double function_train_norm2(struct FunctionTrain * a)
 {
@@ -3361,10 +3325,10 @@ double function_train_norm2(struct FunctionTrain * a)
 /********************************************************//**
     Compute the L2 norm of the difference between two functions
 
-    \param a [in] -Function train 
-    \param b [in] - function train 2
+    \param[in] a - function train 
+    \param[in] b - function train 2
 
-    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) \f$
+    \return \f$ \sqrt{ \int (a(x)-b(x))^2 dx } \f$
 ***********************************************************/
 double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
 {   
@@ -3382,12 +3346,13 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
 /********************************************************//**
     Compute the L2 norm of the difference between two functions
 
-    \param a [in] -Function train 
-    \param b [in] - function train 2
+    \param[in] a - function train 
+    \param[in] b - function train 2
 
-    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / \lVert b(x) \rVert \f$
+    \return \f$ \sqrt{ \int (a(x)-b(x))^2 dx } / \lVert b(x) \rVert \f$
 ***********************************************************/
-double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
+double function_train_relnorm2diff(struct FunctionTrain * a, 
+                                   struct FunctionTrain * b)
 {   
     
     struct FunctionTrain * c = function_train_copy(b);
@@ -3419,9 +3384,9 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
 /********************************************************//**
     Compute the gradient of a function train 
 
-    \param ft [in] - Function train 
+    \param[in] ft - Function train 
 
-    \return ftg - gradient
+    \return gradient
 ***********************************************************/
 struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 {
@@ -3487,11 +3452,10 @@ struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 /********************************************************//**
     Scale a function train array
 
-    \param fta [inout] - Function train Array
-    \param n [in] - number of elements in the array to scale
-    \param inc [in] - increment between function trains to scale in the array
-    \param scale [in] - value by which to scale
-
+    \param[in,out] fta   - function train array
+    \param[in]     n     - number of elements in the array to scale
+    \param[in]     inc   - increment between elements of array
+    \param[in]     scale - value by which to scale
 ***********************************************************/
 void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale)
 {
@@ -3504,10 +3468,10 @@ void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale
 /********************************************************//**
     Evaluate a function train 1darray
 
-    \param fta [in] - Function train array to evaluate
-    \param x [in] - location at which to obtain evaluations
+    \param[in] fta - Function train array to evaluate
+    \param[in] x   - location at which to obtain evaluations
 
-    \return out evaluation
+    \return evaluation
 ***********************************************************/
 double * ft1d_array_eval(struct FT1DArray * fta, double * x)
 {
@@ -3525,13 +3489,13 @@ double * ft1d_array_eval(struct FT1DArray * fta, double * x)
         out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x) 
     \f]
     
-    \param N [in] - number of function trains in each array
-    \param coeff [in] - coefficients to multiply each element
-    \param f [in] - first array
-    \param g [in] - second array
-    \param epsilon [in] - rounding accuracy
+    \param[in] N       - number of function trains in each array
+    \param[in] coeff   - coefficients to multiply each element
+    \param[in] f       - first array
+    \param[in] g       - second array
+    \param[in] epsilon - rounding accuracy
 
-    \return out - function train
+    \return function train
 ***********************************************************/
 struct FunctionTrain * 
 ft1d_array_sum_prod(size_t N, double * coeff, 
@@ -3654,19 +3618,19 @@ void update_rindex(size_t ii, size_t oncore, size_t rank,
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bd [in] - bounds on input space
-    \param ftref [inout] - initial ftrain decomposition, changed in func
-    \param left_ind [inout] - left indices (first element should be NULL)
-    \param right_ind [inout] - right indices (last element should be NULL)
-    \param cargs [in] - algorithm parameters
-    \param apargs [in] - approximation arguments
+    \param[in] f             - function
+    \param[in] args          - function arguments
+    \param[in] bd            - bounds on input space
+    \param[in,out] ftref     - initial ftrain, changed in func
+    \param[in,out] left_ind  - left indices(first element should be NULL)
+    \param[in,out] right_ind - right indices(last element should be NULL)
+    \param[in]     cargs     - algorithm parameters
+    \param[in]     apargs    - approximation arguments
 
-    \return ft - function train decomposition of $f$
+    \return function train decomposition of \f$ f \f$
 
     \note
-       both left and right indices are nested
+    both left and right indices are nested
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross(double (*f)(double *, void *), void * args, 
@@ -3923,17 +3887,20 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 /***********************************************************//**
     An interface for cross approximation of a function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bds [in] - bounding box 
-    \param xstart [in] - location for first fibers (if null then middle of domain)
-    \param fca [in] - cross approximation args, if NULL then default exists
-    \param apargs [in] - function approximation arguments (if null then defaults)
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] bds    - bounding box 
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, 
+                        if NULL then default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
 
-    \return ft - function train decomposition of f
+    \return function train decomposition of f
 
     \note
-        Nested indices both left and right
+    Nested indices both left and right
 ***************************************************************/
 struct FunctionTrain *
 function_train_cross(double (*f)(double *, void *), void * args, 
@@ -3953,7 +3920,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
 
     double * init_coeff = darray_val(dim,1.0/ (double) dim);
     struct FunctionTrain * ftref = 
-            function_train_constant(dim, 1.0, bds, NULL);
+            function_train_constant(dim, 1.0, bds, apargs);
     
     size_t ii;
     if ( xstart == NULL) {
@@ -4218,18 +4185,21 @@ double vfunc_eval(double * x, void * args)
 /***********************************************************//**
     An interface for cross approximation of a vector-valued function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param nfuncs [in] - function arguments
-    \param bds [in] - bounding box 
-    \param xstart [in] - location for first fibers (if null then middle of domain)
-    \param fca [in] - cross approximation args, if NULL then default exists
-    \param apargs [in] - function approximation arguments (if null then defaults)
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] nfuncs - function arguments
+    \param[in] bds    - bounding box 
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, if NULL then 
+                        default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
 
-    \return fta - function train decomposition of f
+    \return function train decomposition of f
 
     \note
-        Nested indices both left and right
+    Nested indices both left and right
 ***************************************************************/
 struct FT1DArray *
 ft1d_array_cross(double (*f)(double *, size_t, void *), void * args, 

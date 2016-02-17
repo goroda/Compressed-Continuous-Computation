@@ -1572,14 +1572,13 @@ void Test_qmarray_lu1d_linelm(CuTest * tc){
     free(pivi);
 }
 
-
-
 void Test_qmarray_maxvol1d(CuTest * tc){
 
     printf("Testing function: qmarray_maxvol1d (1/2) \n");
 
-    double (*funcs [6])(double, void *) = {&func, &func2, &func3, &func4,
-                                            &func5, &func6};
+    double (*funcs [6])(double, void *) = 
+        {&func, &func2, &func3, &func4,
+         &func5, &func6};
     struct counter c; c.N = 0;
     struct counter c2; c2.N = 0;
     struct counter c3; c3.N = 0;
@@ -1590,8 +1589,9 @@ void Test_qmarray_maxvol1d(CuTest * tc){
 
 
     enum poly_type p = LEGENDRE;
-    struct Qmarray * A = qmarray_approx1d(
-                        3, 2, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
+    struct Qmarray * A = 
+        qmarray_approx1d(
+            3, 2, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
     
 
     double * Asinv = calloc_double(2*2);
@@ -1624,8 +1624,9 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
 
     printf("Testing function: qmarray_maxvol1d (2/2) \n");
 
-    double (*funcs [6])(double, void *) = {&func, &func2, &func3, &func4,
-                                            &func4, &func4};
+    double (*funcs [6])(double, void *) =
+        {&func, &func2, &func3, &func4,
+         &func4, &func4};
     struct counter c; c.N = 0;
     struct counter c2; c2.N = 0;
     struct counter c3; c3.N = 0;
@@ -1636,8 +1637,9 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
 
 
     enum poly_type p = LEGENDRE;
-    struct Qmarray * A = qmarray_approx1d(
-                        1, 6, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
+    struct Qmarray * A = 
+        qmarray_approx1d(
+            1, 6, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
     
 
     double * Asinv = calloc_double(6*6);
@@ -1666,6 +1668,51 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
     free(pivi);
 }
 
+
+void Test_qmarray_maxvol1d_linelm(CuTest * tc){
+
+    printf("Testing function: qmarray_maxvol1d linelm (1)\n");
+
+    double (*funcs [6])(double, void *) = 
+        {&func, &func2, &func3, &func4,
+         &func5, &func6};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    struct counter c5; c5.N = 0;
+    struct counter c6; c6.N = 0;
+    void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6};
+
+    struct Qmarray * A = 
+        qmarray_approx1d(3, 2, funcs, args, LINELM, 
+                         NULL, -1.0, 1.0, NULL);
+    
+    double * Asinv = calloc_double(2*2);
+    size_t * pivi = calloc_size_t(2);
+    double * pivx= calloc_double(2);
+
+    qmarray_maxvol1d(A,Asinv,pivi,pivx);
+     
+    /*
+    printf("pivots at = \n");
+    iprint_sz(3,pivi); 
+    dprint(3,pivx);
+    */
+
+    struct Qmarray * B = qmam(A,Asinv,2);
+    double maxval, maxloc;
+    size_t maxrow, maxcol;
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval);
+    //printf("Less = %d", 1.0+1e-2 > maxval);
+    CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
+    qmarray_free(B);
+
+    qmarray_free(A);
+    free(Asinv);
+    free(pivx);
+    free(pivi);
+}
 
 void Test_qmarray_svd(CuTest * tc){
 
@@ -1848,6 +1895,7 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_svd);
     SUITE_ADD_TEST(suite, Test_qmarray_serialize);
     
@@ -2578,7 +2626,53 @@ void Test_ftapprox_cross4(CuTest * tc)
     free(xtest);
 }
 
+void Test_ftapprox_cross_linelm1(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for linelm (1) \n");
+     
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+    size_t ii,jj,kk,ll;
 
+    struct FunctionMonitor * fm = function_monitor_initnd(funcnd2,NULL,
+                                                          dim,1000);
+    
+    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,NULL);
+    struct FunctionTrain * ft = 
+        function_train_cross(function_monitor_eval,fm,bds,
+                             NULL,NULL,fapp);
+    function_monitor_free(fm);
+
+    //printf("finished !\n");
+    size_t N = 10;
+    double * xtest = linspace(-1.0,1.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double pt[4];
+    
+    for (ii = 0; ii < N; ii++){
+        for (jj = 0; jj < N; jj++){
+            for (kk = 0; kk < N; kk++){
+                for (ll = 0; ll < N; ll++){
+                    pt[0] = xtest[ii]; pt[1] = xtest[jj]; 
+                    pt[2] = xtest[kk]; pt[3] = xtest[ll];
+                    den += pow(funcnd2(pt,NULL),2.0);
+                    err += pow(funcnd2(pt,NULL)-function_train_eval(ft,pt),2.0);
+                    //printf("err=%G\n",err);
+                }
+            }
+        }
+    }
+    err = err/den;
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc,0.0,err,1e-10);
+    //CuAssertDblEquals(tc,0.0,0.0,1e-15);
+
+    bounding_box_free(bds);
+    function_train_free(ft);
+    ft_approx_args_free(fapp);
+    free(xtest);
+}
 
 double sin10d(double * x, void * args){
     
@@ -2785,6 +2879,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
     SUITE_ADD_TEST(suite, Test_sin10dint);
 
     //SUITE_ADD_TEST(suite, Test_sin100dint);

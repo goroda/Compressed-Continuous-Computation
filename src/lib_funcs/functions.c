@@ -80,11 +80,11 @@ struct BoundingBox * bounding_box_init_std(size_t dim)
 /*******************************************************//**
     Initialize a bound structure with each dimension bounded by [lb,ub]
 
-    \param dim [in] - dimension
-    \param lb [in] - lower bounds
-    \param ub [in] - upper bounds
+    \param[in] dim - dimension
+    \param[in] lb  - lower bounds
+    \param[in] ub  - upper bounds
         
-    \return b - bounds
+    \return bounds
 ***********************************************************/
 struct BoundingBox * bounding_box_init(size_t dim, double lb, double ub)
 {
@@ -308,9 +308,9 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
 /********************************************************//**
     Create a pseudo-random polynomial generic function 
 
-*   \param maxorder [in] - maximum order of the polynomial
-*   \param lower [in] - lower bound of input
-*   \param upper [in] - upper bound of input
+*   \param[in] maxorder - maximum order of the polynomial
+*   \param[in] lower    - lower bound of input
+*   \param[in] upper    - upper bound of input
 
     \return gf - generic function
 ************************************************************/
@@ -328,7 +328,7 @@ generic_function_poly_randu(size_t maxorder, double lower, double upper)
 /********************************************************//**
     Take the derivative of a generic function
 
-    \param[in] gf [in] generic function
+    \param[in] gf generic function
 
     \return out - generic function representing the derivative
 ************************************************************/
@@ -367,7 +367,8 @@ generic_function_deriv(struct GenericFunction * gf)
 
     \return generic function
 ************************************************************/
-struct GenericFunction * generic_function_copy(struct GenericFunction * gf)
+struct GenericFunction * 
+generic_function_copy(struct GenericFunction * gf)
 {
     struct GenericFunction * out = NULL; 
 
@@ -397,6 +398,7 @@ struct GenericFunction * generic_function_copy(struct GenericFunction * gf)
 
     \param[in]     gf   - generic function
     \param[in,out] gfpa - preallocated function
+
 ************************************************************/
 void generic_function_copy_pa(struct GenericFunction * gf, struct GenericFunction * gfpa)
 {
@@ -478,14 +480,16 @@ void generic_function_array_free(struct GenericFunction ** gf, size_t n){
 *
 *   \param[in,out] ser        - location to serialize to
 *   \param[in]     gf         - generic function
-*   \param[in]     totSizeIn  - if not null then only total size in bytes of generic function si returned! 
+*   \param[in]     totSizeIn  - if not null then only total size 
+                                in bytes of generic function si returned! 
 *                               if NULL then serialization occurs
 *
 *   \return ptr - ser + num_bytes
 ************************************************************/
 unsigned char *
 serialize_generic_function(unsigned char * ser, 
-                struct GenericFunction * gf, size_t * totSizeIn)
+                           struct GenericFunction * gf, 
+                           size_t * totSizeIn)
 {   
     // order = 
     // function_class -> sub_type -> function
@@ -641,8 +645,8 @@ double generic_function_norm(struct GenericFunction * f){
  /********************************************************//**
  *   Compute the norm of the difference between two generic function
  *
- *   \param f1 [in] - generic function
- *   \param f2 [in] - generic function
+ *   \param[in] f1 - generic function
+ *   \param[in] f2 - generic function
  *
  *   \return out - norm of difference
  ************************************************************/
@@ -658,11 +662,11 @@ double generic_function_norm(struct GenericFunction * f){
  /********************************************************//**
  *   Compute the norm of the difference between two generic function arrays
  *   
- *   \param n [in] - number of elements
- *   \param f1 [in] - generic function array
- *   \param inca [in] - incremenent of first array
- *   \param f2 [in] - generic function array
- *   \param incb [in] - incremenent of second array
+ *   \param[in] n    - number of elements
+ *   \param[in] f1   - generic function array
+ *   \param[in] inca - incremenent of first array
+ *   \param[in] f2   - generic function array
+ *   \param[in] incb - incremenent of second array
  *
  *   \return out - norm of difference
  ************************************************************/
@@ -943,6 +947,8 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      struct PiecewisePoly * ap = NULL;
      struct PiecewisePoly * bp = NULL;
      if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
+         assert (a->fc != LINELM);
+         assert (b->fc != LINELM);
          // everything to PIECEWISE!
          fc = PIECEWISE;
          if (a->fc == POLYNOMIAL){
@@ -1184,11 +1190,11 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
  /********************************************************//**
  *   Evaluate an array of generic functions
  *
- *   \param n [in] - number of functions
- *   \param f [in] - array of functions
- *   \param x [in] - location at which to evaluate
+ *   \param[in] n - number of functions
+ *   \param[in] f - array of functions
+ *   \param[in] x - location at which to evaluate
  *
- *   \return out - array of values
+ *   \return array of values
  ************************************************************/
  double * 
  generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
@@ -1272,10 +1278,10 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
  /********************************************************//**
  *   Add generic functions \f$ y[i] \leftarrow a x[i] + y[i] \f$
  *
- *   \param n [in] - number of functions
- *   \param a [in] - scaling of the first functions
- *   \param x [in] - first function array
- *   \param y [inout] - second function array
+ *   \param[in]     n - number of functions
+ *   \param[in]     a - scaling of the first functions
+ *   \param[in]     x - first function array
+ *   \param[in,out] y - second function array
  *
  *   \return 0 if successfull, 1 if error
  *
@@ -1628,9 +1634,9 @@ generic_function_array_daxpby2(size_t n, double a, size_t ldx,
 /********************************************************//**
 *   Compute a linear combination of generic functions
 *
-*   \param n [in] - number of functions
-*   \param gfarray [in] - array of functions
-*   \param coeffs [in] - scaling coefficients
+*   \param[in] n [in]  - number of functions
+*   \param[in] gfarray - array of functions
+*   \param[in] coeffs  - scaling coefficients
 *
 *   \return out  = sum_i=1^n coeff[i] * gfarray[i]
 ************************************************************/
@@ -1787,9 +1793,6 @@ double generic_function_absmax(struct GenericFunction * f, double * x)
     }
     return out;
 }
-
-
-
 
 /********************************************************//**
     Compute the index, location and value of the maximum, in absolute value, element of a generic function array
@@ -2101,7 +2104,8 @@ generic_function_linear(double a, double offset,
     \param[in]     args    - extra arguments depending on 
                              function_class, sub_type, etc.
 ************************************************************/
-void generic_function_array_orth(size_t n, enum function_class fc, void * st,
+void 
+generic_function_array_orth(size_t n, enum function_class fc, void * st,
                             struct GenericFunction ** gfarray, void * args)
 {
     size_t ii;
