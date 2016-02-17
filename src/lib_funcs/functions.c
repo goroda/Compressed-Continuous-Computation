@@ -680,6 +680,52 @@ double generic_function_norm(struct GenericFunction * f){
  }
 
 
+struct GenericFunction *
+generic_function_onezero(enum function_class fc, double one, size_t nz,
+                         double * zeros, double lb, double ub)
+{
+    assert (fc == LINELM);
+    struct GenericFunction * f = 
+        generic_function_alloc(1, fc, NULL);
+
+    struct LinElemExp * lexp = lin_elem_exp_alloc();
+    lexp->num_nodes = nz+3;
+    lexp->nodes = calloc_double(nz+3);
+    lexp->coeff = calloc_double(nz+3);
+    
+    lexp->nodes[0] = lb;
+    size_t ind = 1;
+    int alloc = 0;
+    for (size_t ii = 0; ii < nz; ii++){
+        if (zeros[ii] < one){
+            lexp->nodes[ind] = zeros[ii];
+            ind++;
+        }
+        else if (alloc == 0){
+//            printf("lets go\n");
+            lexp->nodes[ind] = one;
+            lexp->coeff[ind] = 1.0;
+            ind++;
+            lexp->nodes[ind] = zeros[ii];
+            ind++;
+            alloc = 1;
+        }
+        else{
+            lexp->nodes[ind] = zeros[ii];
+            ind++;
+        }
+    }
+    if (alloc == 0){
+        lexp->nodes[ind] = one;
+        lexp->coeff[ind] = 1.0;
+        ind++;
+    }
+    assert (ind == nz+2);
+    lexp->nodes[nz+2] = ub;
+    f->f = lexp;
+
+    return f;
+}
 
  /********************************************************//**
  *   Compute the integral of a generic function
@@ -1104,7 +1150,7 @@ double generic_function_norm(struct GenericFunction * f){
  }
 
  /********************************************************//**
- *   Evaluate a generic function
+ *   Evalxwluate a generic function
  *
  *   \param[in] f  - function
  *   \param[in] x  - location at which to evaluate

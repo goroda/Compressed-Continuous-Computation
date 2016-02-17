@@ -146,7 +146,9 @@ double generic_function_norm2diff(struct GenericFunction *,
 double generic_function_array_norm2diff(
                 size_t, struct GenericFunction **, size_t,
                 struct GenericFunction **, size_t);
-
+struct GenericFunction *
+generic_function_onezero(enum function_class, double, size_t,
+                         double *, double, double);
 double generic_function_integral(struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
