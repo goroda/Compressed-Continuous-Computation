@@ -63,7 +63,6 @@ struct LinElemExp * lin_elem_exp_alloc()
     p->num_nodes = 0;
     p->nodes = NULL;
     p->coeff = NULL;
-    p->inner = NULL;
     return p;
 }
 
@@ -92,10 +91,6 @@ struct LinElemExp * lin_elem_exp_copy(struct LinElemExp * lexp)
             p->coeff = calloc_double(p->num_nodes);
             memmove(p->coeff,lexp->coeff,p->num_nodes*sizeof(double));
         }
-        if (lexp->inner != NULL){
-            p->inner= calloc_double(p->num_nodes);
-            memmove(p->inner,lexp->inner,p->num_nodes*sizeof(double));
-        }
     }
     return p;
 }
@@ -110,38 +105,9 @@ void lin_elem_exp_free(struct LinElemExp * exp)
     if (exp != NULL){
         free(exp->nodes); exp->nodes = NULL;
         free(exp->coeff); exp->coeff = NULL;
-        free(exp->inner); exp->inner = NULL;
         free(exp); exp = NULL;
     }
 
-}
-
-/********************************************************//**
-    Precompute inner products of each basis     
-
-    \param[in,out] f - lin elem expansion function
-*************************************************************/
-void lin_elem_exp_pinner(struct LinElemExp * f)
-{
-    assert (f->inner == NULL);
-    double * nodes = f->nodes;
-    double * coeff = f->coeff;
-    f->inner = calloc_double(f->num_nodes);
-    double dx = nodes[1]-nodes[0];
-    double m = (coeff[1]-coeff[0])/dx;
-    double p = (-coeff[1]*nodes[0] + coeff[0]*nodes[1])/dx;
-    double t1 = (pow(nodes[1],3)-pow(nodes[0],3))/3.0;
-    double t2 = (pow(nodes[1],2)-pow(nodes[0],2));
-    f->inner[0] = m*m*t1 + p*m*t2 + p*p*dx;
-    for (size_t ii = 1; ii < f->num_nodes-1;ii++){
-        dx = nodes[ii+1]-nodes[ii];
-        m = (-coeff[ii]+coeff[ii+1])/dx;
-        p = (coeff[ii]*nodes[ii+1] - coeff[ii+1]*nodes[ii])/dx;
-        t1 = (pow(nodes[ii+1],3)-pow(nodes[ii],3))/3.0;
-        t2 = (pow(nodes[ii+1],2)-pow(nodes[ii],2));
-        f->inner[ii] = m*m*t1 + p*m*t2 + p*p*dx;
-    }
-    
 }
 
 /********************************************************//**
@@ -156,7 +122,8 @@ void lin_elem_exp_pinner(struct LinElemExp * f)
     \note
     makes a copy of nodes and coefficients
 *************************************************************/
-struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes, double * coeff)
+struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
+                                      double * coeff)
 {
     struct LinElemExp * lexp = lin_elem_exp_alloc();
     assert (num_nodes > 1);
@@ -165,7 +132,6 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes, double *
     lexp->coeff = calloc_double(num_nodes);
     memmove(lexp->nodes,nodes,num_nodes*sizeof(double));
     memmove(lexp->coeff,coeff,num_nodes*sizeof(double));
-    lin_elem_exp_pinner(lexp);
 
     return lexp;
 }
@@ -175,7 +141,7 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes, double *
 *
 *   \param[in]     ser       - location at which to serialize
 *   \param[in]     f         - function to serialize 
-*   \param[in,out] totSizeIn - if not NULL then only return total size of struct 
+*   \param[in,out] totSizeIn - if not NULL then return size of struct 
 *                              if NULL then serialiaze
 *
 *   \return pointer to the end of the serialization
@@ -184,7 +150,7 @@ unsigned char *
 serialize_lin_elem_exp(unsigned char * ser, struct LinElemExp * f,size_t * totSizeIn)
 {
     
-    size_t totsize = sizeof(size_t) + 3 * f->num_nodes*sizeof(double);
+    size_t totsize = sizeof(size_t) + 2 * f->num_nodes*sizeof(double);
 
     if (totSizeIn != NULL){
         *totSizeIn = totsize;
@@ -193,8 +159,6 @@ serialize_lin_elem_exp(unsigned char * ser, struct LinElemExp * f,size_t * totSi
     unsigned char * ptr = serialize_size_t(ser, f->num_nodes);
     ptr = serialize_doublep(ptr, f->nodes, f->num_nodes);
     ptr = serialize_doublep(ptr, f->coeff, f->num_nodes);
-    assert(f->inner != NULL);
-    ptr = serialize_doublep(ptr, f->inner, f->num_nodes);
     return ptr;      
 
 }
@@ -217,7 +181,6 @@ unsigned char * deserialize_lin_elem_exp(unsigned char * ser,
     ptr = deserialize_size_t(ptr,&((*f)->num_nodes));
     ptr = deserialize_doublep(ptr, &((*f)->nodes), &((*f)->num_nodes));
     ptr = deserialize_doublep(ptr, &((*f)->coeff), &((*f)->num_nodes));
-    ptr = deserialize_doublep(ptr, &((*f)->inner), &((*f)->num_nodes));
     
     return ptr;
 }
@@ -232,6 +195,9 @@ unsigned char * deserialize_lin_elem_exp(unsigned char * ser,
 *************************************************************/
 double lin_elem_exp_eval(struct LinElemExp * f, double x)
 {
+    if ((x < f->nodes[0]) || (x > f->nodes[f->num_nodes-1])){
+        return 0.0;
+    }
     size_t indmin = 0;
     size_t indmax = f->num_nodes-1;
     size_t indmid = indmin + (indmax - indmin)/2;
@@ -251,11 +217,11 @@ double lin_elem_exp_eval(struct LinElemExp * f, double x)
     }
 
 //    printf("indmin = %zu,x=%G\n",indmin,x);
+   
     double den = f->nodes[indmin+1]-f->nodes[indmin];
-    double left = f->coeff[indmin] * (f->nodes[indmid+1]-x)/den;
-    double right = f->coeff[indmin+1] * (x-f->nodes[indmin])/den;
-//    printf ("left = %G, right=%G\n",left,right);
-    double value = left+right;
+    double t = (f->nodes[indmid+1]-x)/den;
+
+    double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
     return value;
 }
 
@@ -282,6 +248,154 @@ double lin_elem_exp_integrate(struct LinElemExp * f)
 }
 
 /********************************************************//**
+*   Determine if two functions have the same discretization
+*
+*   \param[in] f - function
+*   \param[in] g - function
+*
+*   \return 1 - yes
+*           0 - no
+*************************************************************/
+static int lin_elem_sdiscp(struct LinElemExp * f, struct LinElemExp * g)
+{
+    if (f->num_nodes != g->num_nodes){
+        return 0;
+    }
+    for (size_t ii = 0; ii < f->num_nodes;ii++){
+        if (fabs(f->nodes[ii] - g->nodes[ii]) > 1e-15){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/********************************************************//**
+*   Compute Integrals necessary for inner products for an element
+*   \f[
+*    left = \int_{x_1}^{x_2} (x_2-x)^2 dx
+*   \f]
+*   \f[
+*    mixed = \int_{x_1}^{x_2} (x_2-x)(x-x_1) dx
+*   \f]
+*   \f[
+*    right = \int_{x_1}^{x_2} (x-x_1)^2 dx
+*   \f]
+*  
+*   \param[in]     x1 - left boundary of element
+*   \param[in]     x2 - right boundary of element
+*   \param[in,out] left - first integral
+*   \param[in,out] mixed - second integral
+*   \param[in,out] right - third integral
+*************************************************************/
+static void lin_elem_exp_inner_element(
+    double x1, double x2, double * left, double * mixed, 
+    double * right)
+{
+    double dx = (x2-x1);
+    double dx2 = pow(x2,2)-pow(x1,2);
+    double dx3 = (pow(x2,3)-pow(x1,3))/3.0;
+          
+    *left = pow(x2,2)*dx - x2*dx2 + dx3;
+    *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3;
+    *right = dx3 - x1*dx2 + pow(x1,2)*dx;
+}
+
+/********************************************************//**
+*   Interpolate two linear element expansions onto the same grid
+*   keeping only those nodes needed for inner product
+*
+*   \param[in]     f - function
+*   \param[in]     g - function
+*   \param[in,out] x - interpolated nodes 
+*   \param[in,out] fvals - values of f
+*   \param[in,out] gvals - values of g
+
+*   \return number of nodes
+
+*   \note
+    x,fvals,gvals must all be previously allocaed with enough space
+    at least f->num_nodes + g->num_nodes is enough for a 
+    conservative allocation
+*************************************************************/
+static size_t lin_elem_exp_inner_same_grid(
+    struct LinElemExp * f, struct LinElemExp * g, double * x,
+    double * fvals, double * gvals)
+{
+    size_t nnodes = 0;
+    size_t inodef = 0;
+    size_t inodeg = 0;
+    
+    if (f->nodes[0] > g->nodes[g->num_nodes-1]){
+        return 0;
+    }
+    if (g->nodes[0] > f->nodes[f->num_nodes-1])
+    {
+        return 0;
+    }
+    while(f->nodes[inodef+1] < g->nodes[0]){
+        inodef++;
+    }
+    while (g->nodes[inodeg+1] < f->nodes[0]){
+        inodeg++;
+    }
+
+    while ((inodef < f->num_nodes) && (inodeg < g->num_nodes)){
+        if (fabs(f->nodes[inodef] - g->nodes[inodeg]) < 1e-15){
+            x[nnodes] = f->nodes[inodef];
+            fvals[nnodes] = f->coeff[inodef];
+            gvals[nnodes] = g->coeff[inodeg];
+            inodef++;
+            inodeg++;
+            nnodes++;
+        }
+        else if (f->nodes[inodef] < g->nodes[inodeg]){
+            x[nnodes] = f->nodes[inodef];
+            fvals[nnodes] = f->coeff[inodef];
+            gvals[nnodes] = lin_elem_exp_eval(g,x[nnodes]);
+            inodef++;
+            nnodes++;
+        }
+        else if (g->nodes[inodeg] < f->nodes[inodef]){
+            x[nnodes] = g->nodes[inodeg];
+            fvals[nnodes] = lin_elem_exp_eval(f, x[nnodes]);
+            gvals[nnodes] = g->coeff[inodeg];
+            inodeg++;
+            nnodes++;
+        }
+    }
+    //printf("nodes are "); dprint(nnodes,x);
+//    printf("fvalues are "); dprint(nnodes,fvals);
+//    printf("gvalues are "); dprint(nnodes, gvals);
+    return nnodes;
+}
+
+/********************************************************//**
+*   Inner product between two functions with the same discretizations
+*
+*   \param[in] N - number of nodes
+*   \param[in] x - nodes
+*   \param[in] f - coefficients of first function
+*   \param[in] g - coefficients of second function
+*
+*   \return inner product
+*************************************************************/
+static double lin_elem_exp_inner_same(size_t N, double * x,
+                                      double * f, double * g)
+{
+    double value = 0.0;
+    double left,mixed,right,dx2;
+    for (size_t ii = 0; ii < N-1; ii++){
+        dx2 = pow(x[ii+1]-x[ii],2);
+        lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
+        value += (f[ii] * g[ii]) / dx2 * left +
+                 (f[ii] * g[ii+1]) / dx2 * mixed +
+                 (g[ii] * f[ii+1]) / dx2 * mixed +
+                 (f[ii+1] * g[ii+1]) / dx2 * right;
+    }    
+    return value;
+}
+
+/********************************************************//**
 *   Inner product between two functions
 *
 *   \param[in] f - function
@@ -292,81 +406,113 @@ double lin_elem_exp_integrate(struct LinElemExp * f)
 double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
 {
 
-    size_t inodef = 0;
-    size_t inodeg = 0;
-
-    double minx, maxx;
-
-    if (f->nodes[0] < g->nodes[0]){
-        if (f->nodes[f->num_nodes-1] < g->nodes[0]){
-            return 0.0;
-        }
-        while (f->nodes[inodef+1] < g->nodes[0]){
-            inodef += 1;
-        }
-        minx = f->nodes[inodef];
+    double value = 0.0;
+    int samedisc = lin_elem_sdiscp(f,g);
+    if (samedisc == 1){
+        value = lin_elem_exp_inner_same(f->num_nodes,f->nodes,
+                                        f->coeff, g->coeff);
     }
     else{
-        if (g->nodes[g->num_nodes-1] < f->nodes[0]){
-            return 0.0;
-        }
-        while (g->nodes[inodeg+1] < f->nodes[0]){
-            inodeg += 1;
-        }
-        minx = g->nodes[inodeg];
-    }
-
-    double inner = 0.0;
-    while ( (inodef < f->num_nodes-2) && (inodeg < g->num_nodes-2) ){
-        double dx1 = f->nodes[inodef+1] - f->nodes[inodef];
-        double m1 = (f->coeff[inodef+1] - f->coeff[inodef])/dx1;
-        double p1 = -f->coeff[inodef+1]*f->nodes[inodef] +
-                        f->coeff[inodef]*f->nodes[inodef+1];
-        p1/= dx1;
-
-        double dx2 = g->nodes[inodeg+1] - g->nodes[inodeg];
-        double m2 = (g->coeff[inodeg+1] - g->coeff[inodeg])/dx2;
-        double p2 = -g->coeff[inodeg+1]*g->nodes[inodeg] +
-                       g->coeff[inodeg]*g->nodes[inodeg+1];
-        p2 /= dx2;
-
-        double coeff1 = m1*m2/3.0;
-        double coeff2 = (p2*m1 + p1*m2)/2.0;
-        double coeff3 = p2*p1;
-
-        if (fabs(f->nodes[inodef+1] - g->nodes[inodeg+1]) < 1e-15){
-            inodef += 1;
-            inodeg += 1;
-            maxx = f->nodes[inodef+1];
-        }
-        else if (f->nodes[inodef+1] < g->nodes[inodeg+1]){
-            maxx = f->nodes[inodef+1];
-            inodef += 1;
-                        
-        }
-        else if (g->nodes[inodeg+1] < f->nodes[inodef+1]){
-            maxx = g->nodes[inodeg+1];
-            inodeg += 1;
+        double xnew[1000];
+        double fnew[1000];
+        double gnew[1000];
+//        printf("here\n");
+        assert ( (f->num_nodes + g->num_nodes) < 1000);
+        size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
+                                                     xnew,fnew,gnew);
+        if (nnodes > 2){
+            //          printf("nnodes = %zu\n",nnodes);
+            // dprint(nnodes,xnew);
+            //dprint(nnodes,fnew);
+            //dprint(nnodes,gnew);
+            value = lin_elem_exp_inner_same(nnodes,xnew,fnew,gnew);
         }
         else{
-            printf("something weird happened in inner product of lin elem\n");
-            exit(1);
+            printf("weird =\n");
+            assert(1 == 0);
         }
-
-        //printf("inodef,inodeg = (%zu,%zu) (%G,%G) \n,",inodef,inodeg,minx,maxx);
-
-        double v1 = pow(maxx,3)-pow(minx,3);
-        double v2 = pow(maxx,2)-pow(minx,2);
-        double v3 = maxx-minx;
-        inner += coeff1*v1 + coeff2*v2 + coeff3*v3;
-        
-        minx = maxx;
-        
+        //       printf("there\n");
     }
- 
-    return inner;
-    
+    return value;
 }
+
+/********************************************************//**
+   Add two functions with same discretization levels
+    
+   \param[in] a - scaled value
+   \param[in] f - function
+   \param[in,out] g - function
+
+   \returns 0 successful
+            1 error
+            
+   \note 
+   Could be sped up by keeping track of evaluations
+*************************************************************/
+static int lin_elem_exp_axpy_same(double a, struct LinElemExp * f,
+                                  struct LinElemExp * g)
+{
+
+    for (size_t ii = 0; ii < g->num_nodes; ii++){
+        g->coeff[ii] += a*f->coeff[ii];
+    }
+    return 0;
+}
+
+
+/********************************************************//**
+*   Interpolate two linear element expansions onto the same grid
+*
+*   \param[in]     f - function
+*   \param[in]     g - function
+*   \param[in,out] x - interpolated nodes 
+
+*   \return number of nodes
+
+*   \note
+    x must be previously allocaed with enough space
+    at least f->num_nodes + g->num_nodes is enough for a 
+    conservative allocation
+*************************************************************/
+static size_t lin_elem_exp_interp_same_grid(
+    struct LinElemExp * f, struct LinElemExp * g, double * x)
+{
+    size_t nnodes = 0;
+    size_t inodef = 0;
+    size_t inodeg = 0;
+    
+    while ((inodef < f->num_nodes) || (inodeg < g->num_nodes)){
+        if (inodef == f->num_nodes){
+            x[nnodes] = g->nodes[inodeg];
+            inodeg++;
+            nnodes++;
+        }
+        else if (inodeg == g->num_nodes){
+            x[nnodes] = f->nodes[inodef];
+            inodef++;
+            nnodes++;
+        }
+        else if (fabs(f->nodes[inodef] - g->nodes[inodeg]) < 1e-15){
+            x[nnodes] = f->nodes[inodef];
+            inodef++;
+            inodeg++;
+            nnodes++;
+        }
+        else if (f->nodes[inodef] < g->nodes[inodeg]){
+            x[nnodes] = f->nodes[inodef];
+            inodef++;
+            nnodes++;
+        }
+        else if (g->nodes[inodeg] < f->nodes[inodef]){
+            x[nnodes] = g->nodes[inodeg];
+            inodeg++;
+            nnodes++;
+        }
+    }
+
+    return nnodes;
+}
+
 
 /********************************************************//**
    Add two functions
@@ -381,77 +527,32 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
    \note 
    Could be sped up by keeping track of evaluations
 *************************************************************/
-int lin_elem_exp_axpy(double a, struct LinElemExp * f,struct LinElemExp * g)
+int lin_elem_exp_axpy(double a, 
+                      struct LinElemExp * f,struct LinElemExp * g)
 {
-    size_t maxN = f->num_nodes + g->num_nodes;
-    double * newnodes = calloc_double(maxN);
-    double * newcoeff = calloc_double(maxN);
     
-    size_t inodef = 0;
-    size_t inodeg = 0;
-    size_t numnodes = 0;
-    while ((inodef < f->num_nodes) && (inodeg < g->num_nodes)){
-        if (fabs(f->nodes[inodef]-g->nodes[inodeg]) < 1e-15){
-            newnodes[numnodes] = f->nodes[inodef];
-            newcoeff[numnodes] = a*f->coeff[inodef] + g->coeff[inodeg];
-            inodef++;
-            inodeg++;
-            numnodes++;
-        }
-        else if (f->nodes[inodef] < g->nodes[inodeg]){
-            newnodes[numnodes] = f->nodes[inodef];
-            newcoeff[numnodes] = a*f->coeff[inodef] +
-                lin_elem_exp_eval(g,newnodes[numnodes]);
-            inodef++;
-            numnodes++;
-        }
-        else{
-            newnodes[numnodes] = g->nodes[inodeg];
-            newcoeff[numnodes] = a *
-                lin_elem_exp_eval(f,g->nodes[inodeg]) +
-                g->coeff[inodeg];
-            inodeg++;
-            numnodes++;
-        }
+    int res = 0;
+    int samedisc = lin_elem_sdiscp(f,g);
+    if (samedisc == 1){
+        res = lin_elem_exp_axpy_same(a,f, g);
     }
-    // There is more work here it is not quite right because
-    // I have never added the final element of either
-    if ((inodef == f->num_nodes) && (inodeg == g->num_nodes)){
-        g->num_nodes = numnodes;
-    }
-    else if (inodef == f->num_nodes){
-        printf("here\n");
-        assert(1 == 0);
-        while (g->nodes[inodeg] < f->nodes[inodef]){
-            newnodes[numnodes] = g->nodes[inodeg];
-            newcoeff[numnodes] = g->coeff[inodeg] +
-                a * lin_elem_exp_eval(f,newnodes[numnodes]);
-            inodeg++;
-            numnodes++;
-            if (inodeg == g->num_nodes){
-                break;
-            }
+    else{
+        double * x = calloc_double(f->num_nodes+g->num_nodes);
+        double * coeff = calloc_double(f->num_nodes+g->num_nodes);
+        size_t num = lin_elem_exp_interp_same_grid(f,g,x);
+//        printf("interpolated!\n");
+        for (size_t ii = 0; ii < num; ii++){
+            coeff[ii] = a*lin_elem_exp_eval(f,x[ii]) +
+                        lin_elem_exp_eval(g,x[ii]);
         }
-
+//        printf("good\n");
+        g->num_nodes = num;
+        free(g->nodes); g->nodes = x;
+//        printf("bad!\n");
+        free(g->coeff); g->coeff = coeff;
+//        printf("word\n");
     }
-    else if (inodeg == g->num_nodes){
-        assert(1 == 0);
-        printf("there\n");
-        while (inodef < f->num_nodes){
-            newnodes[numnodes] = f->nodes[inodef];
-            newcoeff[numnodes] = a*f->coeff[inodef];
-            inodef++;
-            numnodes++;
-        }
-    }
-
-    g->num_nodes = numnodes;
-    free(g->nodes); g->nodes = newnodes;
-    free(g->coeff); g->coeff = newcoeff;
-    free(g->inner); g->inner = NULL;
-    lin_elem_exp_pinner(g);
-    return 0;
-    
+    return res;
 }
 
 /********************************************************//**
@@ -463,15 +564,7 @@ int lin_elem_exp_axpy(double a, struct LinElemExp * f,struct LinElemExp * g)
 *************************************************************/
 double lin_elem_exp_norm(struct LinElemExp * f)
 {
-    if (f->inner == NULL){
-        lin_elem_exp_pinner(f);
-    }
-
-    size_t ii;
-    double norm = 0.0;
-    for (ii = 0; ii < f->num_nodes; ii++){
-        norm += f->inner[ii];
-    }
+    double norm = lin_elem_exp_inner(f,f);
     return sqrt(norm);
 }
 
@@ -539,7 +632,7 @@ double lin_elem_exp_absmax(struct LinElemExp * f, double * x)
 }
 
 /********************************************************//**
-    Compute an error estimate                                                   
+    Compute an error estimate 
 
     \param[in]     f    - function
     \param[in,out] errs - errors for each element
@@ -620,7 +713,7 @@ double lin_elem_exp_err_est(struct LinElemExp * f, double * errs, short dir, sho
 }
 
 /********************************************************//**
-    Approximate a function                                                         
+    Approximate a function
 
     \param[in] f    - function
     \param[in] args - function arguments
@@ -630,19 +723,20 @@ double lin_elem_exp_err_est(struct LinElemExp * f, double * errs, short dir, sho
 
     \return Approximated function
 *************************************************************/
-struct LinElemExp * lin_elem_exp_approx(double (*f)(double,void*), void * args,
-                                        double lb, double ub,
-                                        struct LinElemExpAopts * opts)
+struct LinElemExp * 
+lin_elem_exp_approx(double (*f)(double,void*), void * args,
+                    double lb, double ub,
+                    struct LinElemExpAopts * opts)
 {
     size_t N;
-    int adapt;
+//    int adapt;
     if (opts == NULL){
         N = 10;
-        adapt = 0;
+//        adapt = 0;
     }
     else{
         N = opts->num_nodes;
-        adapt = opts->adapt;
+//        adapt = opts->adapt;
     }
     
     struct LinElemExp * lexp = lin_elem_exp_alloc();
@@ -652,7 +746,6 @@ struct LinElemExp * lin_elem_exp_approx(double (*f)(double,void*), void * args,
     for (size_t ii = 0; ii < N; ii++){
         lexp->coeff[ii] = f(lexp->nodes[ii],args);
     }
-    lin_elem_exp_pinner(lexp);
 
     return lexp;
 }
@@ -671,14 +764,11 @@ struct LinElemExp * lin_elem_exp_constant(double a, double lb, double ub,
                                           struct LinElemExpAopts * opts)
 {
     size_t N;
-    int adapt;
     if (opts == NULL){
         N = 2;
-        adapt = 0;
     }
     else{
         N = opts->num_nodes;
-        adapt = opts->adapt;
     }
     
     struct LinElemExp * lexp = lin_elem_exp_alloc();
@@ -688,7 +778,6 @@ struct LinElemExp * lin_elem_exp_constant(double a, double lb, double ub,
     for (size_t ii = 0; ii < N; ii++){
         lexp->coeff[ii] = a;
     }
-    lin_elem_exp_pinner(lexp);
 
     return lexp;
 }
@@ -705,8 +794,6 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
     for (size_t ii = 0; ii < f->num_nodes; ii++){
         f->coeff[ii] *= -1.0;
     }
-    free(f->inner); f->inner = NULL;
-    lin_elem_exp_pinner(f);
 }
 
 /********************************************************//**
@@ -720,14 +807,10 @@ void lin_elem_exp_scale(double a, struct LinElemExp * f)
     for (size_t ii = 0; ii < f->num_nodes; ii++){
         f->coeff[ii] *= a;
     }
-    free(f->inner); f->inner = NULL;
-    lin_elem_exp_pinner(f);
 }
 
-
-
 /********************************************************//**
-    Get lower bound                                                         
+    Get lower bound
 
     \param[in] f - function
 
@@ -739,7 +822,7 @@ double lin_elem_exp_lb(struct LinElemExp * f)
 }
 
 /********************************************************//**
-    Get upper bound                                                         
+    Get upper bound
 
     \param[in] f - function
 

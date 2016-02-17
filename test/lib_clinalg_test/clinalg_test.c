@@ -912,7 +912,8 @@ void Test_qmarray_householder4(CuTest * tc){
 }
 
 void Test_qmarray_householder_linelm(CuTest * tc){
-
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
     printf("Testing function: qmarray_householder for linelm\n");
 
     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4};
@@ -922,40 +923,74 @@ void Test_qmarray_householder_linelm(CuTest * tc){
     struct counter c4; c4.N = 0;
     void * args[4] = {&c, &c2, &c3, &c4};
 
-
-    struct Qmarray * T = qmarray_orth1d_columns(LINELM,NULL,2,2,-1.0,1.0);
-    double * tmat= qmatqmat_integrate(T,T);
-    printf("tmat = \n");
-    dprint2d_col(2,2,tmat);
+    struct Qmarray* T = qmarray_orth1d_columns(LINELM,NULL,2,2,-1.0,1.0);
+    double * tmat= qmatqma_integrate(T,T);
+    CuAssertDblEquals(tc,1.0,tmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,tmat[3],1e-14);
+//    printf("tmat = \n");
+//    dprint2d_col(2,2,tmat);
     qmarray_free(T); T = NULL;
-    free(tmat);
+    free(tmat); tmat = NULL;
     
+    struct LinElemExpAopts aopts;
+    aopts.num_nodes = 5;
+    aopts.adapt = 0;
+
+    size_t nr = 2;
+    size_t nc = 2;
     struct Qmarray * A = qmarray_approx1d(
-        2, 2, funcs, args, LINELM, NULL, -1.0, 1.0, NULL);
+        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, &aopts);
     
     struct Qmarray * Acopy = qmarray_copy(A);
-
-    double R[4] = {0.0,0.0,0.0,0.0};
-    printf("lets go\n");
+    
+    double * R = calloc_double(nc*nc);
+//    printf("lets go\n");
     struct Qmarray * Q = qmarray_householder_simple("QR",Acopy,R);
-    printf("done\n");
+//    print_qmarray(Q,0,NULL);
+//    printf("done\n");
 
 //    print_qmarray(A,0,NULL);
-    struct Qmarray * Anew = qmam(Q,R,2);
+    struct Qmarray * Anew = qmam(Q,R,nc);
 
-    double * qmat = qmatqmat_integrate(Q,Q);
-    
-    printf("R is \n");
-    dprint2d_col(2,2,R);
-    printf("q is \n");
+//    printf("Q (rows,cols) = (%zu,%zu)\n",Q->nrows,Q->ncols);
+//    printf("compute Q^TQ\n");
+    double * qmat = qmatqma_integrate(Q,Q);
+//    printf("q is \n");
 //    print_qmarray(Q,0,NULL);
-    dprint2d_col(2,2,qmat);
-    
-    double diff1 = generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
-    printf("diff1 = %G\n",diff1);
-    assert (diff1 < 1e-5);
-//    print_qmarray(Anew,0,NULL);
+//    dprint2d_col(nc,nc,qmat);
 
+//    printf("norm A = %G\n",qmarray_norm2(A));
+//    printf("norm Q = %G\n",qmarray_norm2(Q));
+//    printf("R is \n");
+//    dprint2d_col(nc,nc,R);
+
+    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
+    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
+    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
+    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
+
+
+    //printf("diffs = %3.15G,%3.15G,%3.15G,%3.15G\n",diff1,diff2,diff3,diff4);
+
+//    assert(1 == 0);
+//    assert (fabs(qmat[0] - 1.0) < 1e-10);
+//    assert (diff1 < 1e-5);
+//    print_qmarray(Anew,0,NULL)
+    CuAssertDblEquals(tc,1.0,qmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,qmat[3],1e-14);
+
+
+    CuAssertDblEquals(tc,0.0,diff1,1e-14);
+    CuAssertDblEquals(tc,0.0,diff2,1e-14);
+    CuAssertDblEquals(tc,0.0,diff3,1e-14);
+    CuAssertDblEquals(tc,0.0,diff4,1e-14);
+    
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
     free(qmat); qmat = NULL;
     qmarray_free(Q); Q = NULL;
     qmarray_free(A);
@@ -1149,10 +1184,10 @@ void Test_qmarray_lq(CuTest * tc)
     for (ii = 0; ii < r1; ii++){
         for (jj = 0; jj < r1; jj++){
             if (ii == jj){
-               CuAssertDblEquals(tc,1.0,mat[ii*r1+jj],1e-14);
+                CuAssertDblEquals(tc,1.0,mat[ii*r1+jj],1e-14);
             }
             else{
-               CuAssertDblEquals(tc,0.0,mat[ii*r1+jj],1e-14);
+                CuAssertDblEquals(tc,0.0,mat[ii*r1+jj],1e-14);
             }
             if (jj < ii){
                 CuAssertDblEquals(tc,0.0,L[ii*r1+jj],1e-14);
@@ -1174,8 +1209,6 @@ void Test_qmarray_lq(CuTest * tc)
     qmarray_free(LQ); LQ = NULL;
     free(L); L = NULL;
 }
-
-
 
 void Test_qmarray_householder_rows(CuTest * tc){
 
@@ -1271,6 +1304,72 @@ void Test_qmarray_householder_rows(CuTest * tc){
     qmarray_free(Q);
     qmarray_free(Acopy);
     free(R);
+}
+
+void Test_qmarray_householder_rowslinelm(CuTest * tc){
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("Testing function: qmarray_householder LQ for linelm\n");
+
+    double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    void * args[4] = {&c, &c2, &c3, &c4};
+
+    struct Qmarray* T = qmarray_orth1d_rows(LINELM,NULL,2,2,-1.0,1.0);
+    double * tmat= qmaqmat_integrate(T,T);
+    CuAssertDblEquals(tc,1.0,tmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,tmat[3],1e-14);
+//    printf("tmat = \n");
+//    dprint2d_col(2,2,tmat);
+    qmarray_free(T); T = NULL;
+    free(tmat); tmat = NULL;
+    
+    struct LinElemExpAopts aopts;
+    aopts.num_nodes = 5;
+    aopts.adapt = 0;
+
+    size_t nr = 2;
+    size_t nc = 2;
+    struct Qmarray * A = qmarray_approx1d(
+        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, &aopts);
+    
+    struct Qmarray * Acopy = qmarray_copy(A);
+    
+    double * R = calloc_double(nr*nr);
+
+    struct Qmarray * Q = qmarray_householder_simple("LQ",Acopy,R);
+
+    struct Qmarray * Anew = mqma(R,Q,nr);
+
+
+    double * qmat = qmaqmat_integrate(Q,Q);
+
+    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
+    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
+    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
+    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
+
+    CuAssertDblEquals(tc,1.0,qmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,qmat[3],1e-14);
+
+    CuAssertDblEquals(tc,0.0,diff1,1e-14);
+    CuAssertDblEquals(tc,0.0,diff2,1e-14);
+    CuAssertDblEquals(tc,0.0,diff3,1e-14);
+    CuAssertDblEquals(tc,0.0,diff4,1e-14);
+    
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    free(qmat); qmat = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
 }
 
 void Test_qmarray_lu1d(CuTest * tc){
@@ -1398,6 +1497,81 @@ void Test_qmarray_lu1d2(CuTest * tc){
     free(pivx);
     free(pivi);
 }
+
+void Test_qmarray_lu1d_linelm(CuTest * tc){
+
+    printf("Testing function: qmarray_lu1d with linelm \n");
+    //this is column ordered when convertest to Qmarray
+    double (*funcs [6])(double, void *) = {&func,  &func4, &func, 
+                                           &func4, &func5, &func6};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    struct counter c5; c5.N = 0;
+    struct counter c6; c6.N = 0;
+    void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6};
+
+    struct Qmarray * A = qmarray_approx1d(
+                        2, 3, funcs, args, LINELM, NULL, -1.0, 1.0, NULL);
+    //printf("A = (%zu,%zu)\n",A->nrows,A->ncols);
+
+    struct Qmarray * L = qmarray_alloc(2,3);
+
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double * U = calloc_double(3*3);
+    size_t * pivi = calloc_size_t(3);
+    double * pivx = calloc_double(3);
+    qmarray_lu1d(A,L,U,pivi,pivx);
+    
+    double eval;
+    
+    //print_qmarray(A,0,NULL);
+    // check pivots
+    //printf("U = \n");
+    //dprint2d_col(2,2,U);
+    size_t ii,jj;
+    for (ii = 0; ii < 3; ii++){
+        //printf("Checking column %zu \n",ii);
+        //printf("---------------\n");
+        for (jj = 0; jj < ii; jj++){
+            //printf("Should have zero at (%zu,%G)\n",pivi[jj],pivx[jj]);
+            eval = generic_function_1d_eval(L->funcs[2*ii+pivi[jj]], pivx[jj]);
+            CuAssertDblEquals(tc,0.0,eval,1e-14);
+            //printf("eval = %G\n",eval);
+        }
+        //printf("Should have one at (%zu,%G)\n",pivi[ii],pivx[ii]);
+        eval = generic_function_1d_eval(L->funcs[2*ii+pivi[ii]], pivx[ii]);
+        CuAssertDblEquals(tc,1.0,eval,1e-14);
+        //printf("eval = %G\n",eval);
+    }
+    /*
+    eval = generic_function_1d_eval(L->funcs[2+ pivi[0]], pivx[0]);
+    printf("eval = %G\n",eval);
+    eval = generic_function_1d_eval(L->funcs[4+ pivi[1]], pivx[1]);
+    printf("eval = %G\n",eval);
+    eval = generic_function_1d_eval(L->funcs[4+ pivi[0]], pivx[0]);
+    printf("eval = %G\n",eval);
+    */
+
+    //CuAssertDblEquals(tc, 0.0, eval, 1e-13);
+    
+    struct Qmarray * Comb = qmam(L,U,3);
+    double difff = qmarray_norm2diff(Comb,Acopy);
+    //printf("difff = %G\n",difff);
+    CuAssertDblEquals(tc,difff,0,1e-13);
+    
+    //exit(1);
+    qmarray_free(Acopy);
+    qmarray_free(A);
+    qmarray_free(Comb);
+    qmarray_free(L);
+    free(U);
+    free(pivx);
+    free(pivi);
+}
+
 
 
 void Test_qmarray_maxvol1d(CuTest * tc){
@@ -1668,8 +1842,10 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_qr3);
     SUITE_ADD_TEST(suite, Test_qmarray_lq);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_svd);
@@ -3733,7 +3909,7 @@ void Test_diffusion_dmrg(CuTest * tc)
     struct FunctionTrain * shouldbe = exact_diffusion(a,f);
     
     double diff = function_train_norm2diff(is,shouldbe);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-11);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-10);
 
     function_train_free(shouldbe); shouldbe = NULL;
     function_train_free(is); is = NULL;

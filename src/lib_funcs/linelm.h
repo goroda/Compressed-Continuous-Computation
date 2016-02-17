@@ -33,7 +33,7 @@
 
 //Code
 
-/** \file linelem.h
+/** \file linelm.h
  * Provides header files and structure definitions for functions in linelm.c
  */
 
@@ -55,7 +55,7 @@
  * nodes of basis functions
  * \var LinElemExp::coeff
  * coefficients of basis functions
- * \var LinElemExp::inners
+ * \var LinElemExp::inner
  * inner products of basis functions
  */
 struct LinElemExp{

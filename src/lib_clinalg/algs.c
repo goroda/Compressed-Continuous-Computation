@@ -907,9 +907,9 @@ qmatm(struct Qmarray * Q, double * R, size_t b)
 /***********************************************************//**
     Matrix - Quasimatrix array multiplication
 
-    \param R [in] - matrix  (fortran order)
-    \param Q [in] - quasimatrix array
-    \param b [in] - number of rows of R
+    \param[in] R  - matrix  (fortran order)
+    \param[in] Q  - quasimatrix array
+    \param[in] b  - number of rows of R
 
     \return B - qmarray (b x Q->ncols)
 ***************************************************************/
@@ -1025,10 +1025,10 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of Transpose qmarray - qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a  - qmarray 1
+    \param[in] b  - qmarray 2
 
-    \return c - array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
+    \return array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
 ***************************************************************/
 double *
 qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1040,7 +1040,7 @@ qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < ncols; jj++){
         for (ii = 0; ii < nrows; ii++){
             // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
-            c[jj*nrows+ii] =  generic_function_inner_sum(b->nrows, 1, 
+            c[jj*nrows+ii] = generic_function_inner_sum(b->nrows, 1, 
                     a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
         }
     }
@@ -1050,10 +1050,10 @@ qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of qmarray - transpose qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
-    \return c - array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
+    \return array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
 ***************************************************************/
 double *
 qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1065,8 +1065,11 @@ qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < ncols; jj++){
         for (ii = 0; ii < nrows; ii++){
             // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
-            c[jj*nrows+ii] =  generic_function_inner_sum(a->ncols, a->nrows, 
-                    a->funcs + ii, b->nrows, b->funcs + jj);
+            c[jj*nrows+ii] =  
+                generic_function_inner_sum(a->ncols, 
+                                           a->nrows, 
+                                           a->funcs + ii, 
+                                           b->nrows, b->funcs + jj);
         }
     }
     return c;
@@ -1077,10 +1080,10 @@ qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of Transpose qmarray - transpose qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
-    \return c - array of integrals
+    \return array of integrals
 ***************************************************************/
 double *
 qmatqmat_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1565,7 +1568,8 @@ double * qmarray_integrate(struct Qmarray * a)
     size_t ii, jj;
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
-            out[ii*a->nrows + jj] = generic_function_integral(a->funcs[ii*a->nrows+jj]);
+            out[ii*a->nrows + jj] = 
+                generic_function_integral(a->funcs[ii*a->nrows+jj]);
         }
     }
     
@@ -1575,16 +1579,18 @@ double * qmarray_integrate(struct Qmarray * a)
 /***********************************************************//**
     Norm of a qmarray
 
-    \param a [in] - first qmarray
+    \param[in] a - first qmarray
 
-    \return out - 2 norm
+    \return L2 norm
 ***************************************************************/
 double qmarray_norm2(struct Qmarray * a)
 {
     double out = 0.0;
     size_t ii;
     for (ii = 0; ii < a->ncols * a->nrows; ii++){
+//        print_generic_function(a->funcs[ii],0,NULL);
         out += generic_function_inner(a->funcs[ii],a->funcs[ii]);
+        // printf("out in qmarray norm = %G\n",out);
     }
     if (out < 0){
         fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
@@ -1656,6 +1662,7 @@ double eval_zpoly(double x, void * args){
     }
     return out;
 }
+
 void create_any_L(struct GenericFunction ** L, size_t nrows, 
             size_t upto,size_t * piv, double * px, double lb,double ub)
 {
@@ -1716,11 +1723,11 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix array of 1d functioins
 
-    \param A [in] - qmarray to decompose
-    \param L [inout] - qmarray representing L factor
-    \param u [inout] - allocated space for U factor
-    \param piv [inout] - row of pivots 
-    \param px [inout] - x values of pivots 
+    \param[in]     A   - qmarray to decompose
+    \param[in,out] L   - qmarray representing L factor
+    \param[in,out] u   - allocated space for U factor
+    \param[in,out] piv - row of pivots 
+    \param[in,out] px  - x values of pivots 
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
 ***************************************************************/
@@ -2532,50 +2539,53 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         }
 
         if (polyorth == 1){
-            Q = qmarray_orth1d_columns(POLYNOMIAL, 
-                                       &ptype, A->nrows,
-                                       ncols, lb, ub);                     
+            Q = qmarray_orth1d_columns(POLYNOMIAL, &ptype, A->nrows,
+                                       ncols, lb, ub);   
         }
         else{
-//            printf("gen orthonormal stuff\n");
-            Q = qmarray_orth1d_columns(LINELM,&ptype,A->nrows,ncols,lb,ub);
-//            print_qmarray(Q,0,NULL);
-//            printf("gened it!\n");
+            Q = qmarray_orth1d_columns(LINELM,&ptype,A->nrows,ncols,
+                                       lb,ub);
         }
         
         if (fastqr == 1){
-            //free(R); R = NULL;
-//            printf("lets run\n");
             out = qmarray_qr(A,&Q,&R);
-//            printf("ranned it\n");
             assert (out == 0);
         }
         else if (fastqr == 0){
-            //printf("out = 0\n");
-
             struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
             out = qmarray_householder(A,Q,V,R);
             assert(out == 0);
             out = qmarray_qhouse(Q,V);
             assert(out == 0);
             qmarray_free(V);
-//            printf("computed!\n");
         }
     }
     else if (strcmp(dir, "LQ") == 0){
-        Q = qmarray_orth1d_rows(POLYNOMIAL, 
-                                &ptype, A->nrows, ncols,
-                                lb, ub); 
-
+      
         int out = 0;
         int fastqr = 1;
+        int polyorth = 1;
         for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
             if (A->funcs[ii]->fc == PIECEWISE){
                 fastqr = 0;
-                break;
+                // break;
+            }
+            if  (A->funcs[ii]->fc == LINELM){
+                polyorth = 0;
             }
         }
-        
+      
+        if (polyorth == 1){
+            Q = qmarray_orth1d_rows(POLYNOMIAL, 
+                                    &ptype, A->nrows, ncols,
+                                    lb, ub); 
+        }
+        else{
+            Q = qmarray_orth1d_rows(LINELM, 
+                                    &ptype, A->nrows, ncols,
+                                    lb, ub); 
+        }
+  
         if (fastqr == 1){
             //free(R); R = NULL;
             out = qmarray_lq(A,&Q,&R);
@@ -2603,10 +2613,10 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
 /***********************************************************//**
     Compute the svd of a quasimatrix array Udiag(lam)vt = A
 
-    \param A [inout] - qmarray to get SVD (destroyed)
-    \param U [inout] - qmarray with orthonormal columns
-    \param lam [inout] - singular values
-    \param vt [inout] - matrix containing right singular vectors
+    \param[in,out] A   - qmarray to get SVD (destroyed)
+    \param[in,out] U   - qmarray with orthonormal columns
+    \param[in,out] lam - singular values
+    \param[in,out] vt  - matrix containing right singular vectors
 
     \return info - if not == 0 then error
 ***************************************************************/
@@ -3371,9 +3381,9 @@ struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 /********************************************************//**
     Compute the Jacobian of a Function Train 1darray
 
-    \param fta [in] - Function train array
+    \param[in] fta - Function train array
 
-    \return jac - jacobian
+    \return jacobian
 ***********************************************************/
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 {
@@ -3395,9 +3405,9 @@ struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 /********************************************************//**
     Compute the hessian of a function train 
 
-    \param fta [in] - Function train 
+    \param[in] fta - Function train 
 
-    \return fth - hessian of a function train
+    \return hessian of a function train
 ***********************************************************/
 struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 {

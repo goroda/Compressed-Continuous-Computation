@@ -733,29 +733,32 @@ void qmarray_free(struct Qmarray * qm){
 /***********************************************************//**
     Create a qmarray by approximating 1d functions
 
-    \param nrows [in] : number of rows of quasimatrix
-    \param ncols [in] : number of cols of quasimatrix
-    \param funcs [in] : functions (nrows*ncols)
-    \param args [in] : extra arguments to each function
-    \param fc [in] : function class of each column
-    \param st [in] : sub_type of each column
-    \param lb [in] : lower bound of inputs to functions
-    \param ub [in] : upper bound of inputs to functions
-    \param aopts [in] : approximation options
+    \param[in] nrows - number of rows of quasimatrix
+    \param[in] ncols - number of cols of quasimatrix
+    \param[in] funcs - functions (nrows*ncols)
+    \param[in] args  - extra arguments to each function
+    \param[in] fc    - function class of each column
+    \param[in] st    - sub_type of each column
+    \param[in] lb    - lower bound of inputs to functions
+    \param[in] ub    - upper bound of inputs to functions
+    \param[in] aopts - approximation options
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
 struct Qmarray * 
 qmarray_approx1d(size_t nrows, size_t ncols,
-                    double (**funcs)(double, void *),
-                    void ** args, enum function_class fc, void * st, double lb,
-                    double ub, void * aopts)
+                 double (**funcs)(double, void *),
+                 void ** args, 
+                 enum function_class fc, void * st, double lb,
+                 double ub, void * aopts)
 {
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     size_t ii;
     for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_approximate1d(funcs[ii], args[ii], 
-                                    fc, st, lb, ub, aopts);
+        qm->funcs[ii] = 
+            generic_function_approximate1d(funcs[ii], 
+                                           args[ii], 
+                                           fc, st, lb, ub, aopts);
     }
     return qm;
 }
@@ -796,14 +799,14 @@ qmarray_from_fiber_cuts(size_t nrows, size_t ncols,
     Generate a qmarray with orthonormal columns consisting of
     one dimensional functions
 
-    \param fc [in] - function class
-    \param st [in] - function class sub_type
-    \param nrows [in] -  number of rows
-    \param ncols [in] -  number of columns
-    \param lb [in] - lower bound on 1d functions
-    \param ub [in] - upper bound on 1d functions
+    \param[in] fc    - function class
+    \param[in] st    - function class sub_type
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] lb    - lower bound on 1d functions
+    \param[in] ub    - upper bound on 1d functions
 
-    \return qm - qmarray with orthonormal columns
+    \return qmarray with orthonormal columns
 
     \note
         - Not super efficient because of copies
@@ -865,14 +868,14 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
 /***********************************************************//**
     Generate a qmarray with orthonormal rows
 
-    \param fc [in] - function class
-    \param st [in] - function class sub_type
-    \param nrows [in] -  number of rows
-    \param ncols [in] -  number of columns
-    \param lb [in] - lower bound on 1d functions
-    \param ub [in] - upper bound on 1d functions
+    \param[in] fc    - function class
+    \param[in] st    - function class sub_type
+    \param[in] nrows -  number of rows
+    \param[in] ncols -  number of columns
+    \param[in] lb    - lower bound on 1d functions
+    \param[in] ub    - upper bound on 1d functions
 
-    \return qm (OUT) - qmarray with orthonormal columns
+    \return qmarray with orthonormal rows
 
     \note
         Not super efficient because of copies
@@ -900,7 +903,7 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
     generic_function_array_orth(nrows, fc, st, funcs, &ob);
     //printf("wwwhere\n");
     
-     struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
     
     size_t onnon = 0;
     size_t onorder = 0;

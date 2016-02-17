@@ -61,7 +61,8 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
     size_t ncols = A->ncols;
     enum poly_type ptype = LEGENDRE;
     if ( (*Q) == NULL){
-        *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
+        *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols,
+                                    lb,ub); 
     }
 
    // print_qmarray(*Q,0,NULL);
@@ -81,7 +82,8 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
 
         rho = generic_function_array_norm(nrows,1,A->funcs+ii*nrows);
         (*R)[ii*ncols+ii] = rho;
-        alpha = generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1,
+        alpha = generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
                                            A->funcs+ii*nrows);
         
 //        printf("rho = %G\n alpha=%G\n",rho,alpha);
@@ -92,7 +94,8 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         else{
             s = -alpha / fabs(alpha);    
             if (s < 0.0){
-                generic_function_array_flip_sign(nrows,1,(*Q)->funcs+ii*nrows);
+                generic_function_array_flip_sign(nrows,1,
+                                                 (*Q)->funcs+ii*nrows);
             }
         }
 
@@ -126,14 +129,17 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         }
         
         //printf("start inner loop\n");
-        double ev = generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1,
+        double ev = generic_function_inner_sum(nrows,1,
+                                               (*Q)->funcs+ii*nrows,1,
                                                V->funcs+ii*nrows);
         for (kk = ii+1; kk < ncols; kk++){
-            double temp = generic_function_inner_sum(nrows,1,V->funcs+ii*nrows,1,
+            double temp = generic_function_inner_sum(nrows,1,
+                                                     V->funcs+ii*nrows,1,
                                                      A->funcs+kk*nrows);
-            (*R)[kk*ncols+ii]=generic_function_inner_sum(nrows,1,
-                                                         (*Q)->funcs+ii*nrows,1,
-                                                         A->funcs+kk*nrows);
+            (*R)[kk*ncols+ii]=
+                generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
+                                           A->funcs+kk*nrows);
             (*R)[kk*ncols+ii] += (-2.0 * ev * temp);
             for (ll = 0; ll < nrows; ll++){
                 int success =
