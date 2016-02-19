@@ -1734,7 +1734,7 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     if (optargs != NULL){
         printf("Warning: optargs is not null in create_any_L_linelm so\n");
         printf("         might not be able to guarantee that the new px\n");
-        printf("         is going to lie on a desired node\n")
+        printf("         is going to lie on a desired node\n");
     }
     piv[upto] = 0;
     px[upto] = lb + ub/(ub-lb) * randu();
@@ -3629,9 +3629,9 @@ void update_rindex(size_t ii, size_t oncore, size_t rank,
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
 
-    \param[in] f             - function
-    \param[in] args          - function arguments
-    \param[in] bd            - bounds on input space
+    \param[in]     f         - function
+    \param[in]     args      - function arguments
+    \param[in]     bd        -  bounds on input space
     \param[in,out] ftref     - initial ftrain, changed in func
     \param[in,out] left_ind  - left indices(first element should be NULL)
     \param[in,out] right_ind - right indices(last element should be NULL)
@@ -3683,14 +3683,14 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             
             if (VFTCROSS){
                 printf( "prepCore \n");
-//                printf( "left index set = \n");
-//                print_index_set_array(dim,left_ind);
-//                printf( "right index set = \n");
-//                print_index_set_array(dim,right_ind);
+                printf( "left index set = \n");
+                print_index_set_array(dim,left_ind);
+                printf( "right index set = \n");
+                print_index_set_array(dim,right_ind);
             }
             temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
 
-            if (VFTCROSS){
+            if (VFTCROSS == 2){
                 printf ("got it \n");
                 //print_qmarray(temp,0,NULL);
                 struct Qmarray * tempp = qmarray_copy(temp);
@@ -3714,8 +3714,16 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 Q = qmarray_householder_simple("QR", temp,R);
             }
 
-        
-            info = qmarray_maxvol1d(Q,R,pivind, pivx,cargs->optargs);
+            if (cargs->optargs != NULL){
+                //printf("before\n");
+                //struct c3Vector * vec = cargs->optargs->opts[ii];
+                //printf("n = %zu",vec->size);
+                info = qmarray_maxvol1d(Q,R,pivind,pivx,cargs->optargs->opts[ii]);
+                //printf("after\n");
+            }
+            else{
+                info = qmarray_maxvol1d(Q,R,pivind,pivx,NULL);
+            }
 
             if (VFTCROSS){
                 printf( " got info=%d\n",info);
@@ -3752,7 +3760,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
         ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd,
                                     left_ind,right_ind, cargs, apargs,1);
-        if (VFTCROSS){
+        if (VFTCROSS == 2){
             printf ("got it \n");
             //print_qmarray(ft->cores[ii],0,NULL);
             printf("integral = %G\n",function_train_integrate(ft));
@@ -3816,7 +3824,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
             pivind = calloc_size_t(ft->ranks[ii]);
             pivx = calloc_double(ft->ranks[ii]);
-            info = qmarray_maxvol1d(Qt,R,pivind,pivx,cargs->optargs);
+
+            if (cargs->optargs != NULL){
+                info = qmarray_maxvol1d(Qt,R,pivind,pivx,cargs->optargs->opts[ii]);
+            }
+            else{
+                info = qmarray_maxvol1d(Qt,R,pivind,pivx,NULL);
+            }
             
             if (VFTCROSS){
                 printf("got info=%d\n",info);
@@ -3905,7 +3919,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 ***************************************************************/
 void ft_cross_args_init(struct FtCrossArgs * fca)
 {
-    fca->ranks = NULL;
+    fca->ranks = NULL;    
     fca->optargs = NULL;
 }
 
@@ -3958,7 +3972,6 @@ function_train_cross(double (*f)(double *, void *), void * args,
         init_x = xstart;
     }
 
-    
     if (fca != NULL){
         fcause = fca;
     }
@@ -4153,7 +4166,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 /***********************************************************//**
     Computes the maximum rank of a FT
     
-    \param ft [in] 
+    \param[in] ft
 
     \return maxrank
 ***************************************************************/
@@ -4174,7 +4187,7 @@ size_t function_train_maxrank(struct FunctionTrain * ft)
 /***********************************************************//**
     Computes the average rank of a FT. Doesn't cound first and last ranks
     
-    \param ft [in] 
+    \param[in] ft 
 
     \return avgrank
 ***************************************************************/

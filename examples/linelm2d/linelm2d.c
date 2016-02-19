@@ -108,19 +108,23 @@ int main(int argc, char * argv[])
 
     struct LinElemExpAopts aopts = {n,0};
     struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,&aopts);
+    double * xnodes = linspace(lb,ub,n);
+    struct c3Vector c3v = {n,xnodes};
+    struct FiberOptArgs * fopt = fiber_opt_args_bf_same(dim,&c3v);
 
     size_t init_ranks[3] = {1,3,1};
     struct FtCrossArgs fca;
     ft_cross_args_init(&fca);
     fca.dim = dim;
     fca.ranks = init_ranks;
-    fca.epsilon = 1e-10;
+    fca.epsilon = 1e-7;
     fca.maxiter = 10;
     fca.epsround = 1e-6;
-    fca.kickrank = 5;
+    fca.kickrank = 2;
     fca.maxiteradapt = 5;
     fca.verbose = verbose;
-    
+    fca.optargs = fopt;
+   
     struct FunctionMonitor * fm = NULL;
     double (*ff)(double *, void *);
 
@@ -142,7 +146,7 @@ int main(int argc, char * argv[])
     }
 
     // Done with setup
-    double start[2] = {0.5,-0.2};
+    double start[2] = {lb,lb};
     struct FunctionTrain * ft = 
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 
@@ -210,6 +214,7 @@ int main(int argc, char * argv[])
     function_train_free(ft);
     function_monitor_free(fm);
     ft_approx_args_free(fapp);
+    fiber_opt_args_free(fopt);
     bounding_box_free(bds);
     return 0;
 }

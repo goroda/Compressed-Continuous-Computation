@@ -623,16 +623,31 @@ double lin_elem_exp_min(struct LinElemExp * f, double * x)
 *************************************************************/
 double lin_elem_exp_absmax(struct LinElemExp * f, double * x, void * optargs)
 {
-    assert (optargs  == NULL);
-    double mval = fabs(f->coeff[0]);
-    *x = f->nodes[0];
-    for (size_t ii = 1; ii < f->num_nodes;ii++){
-        if (fabs(f->coeff[ii]) > mval){
-            mval = fabs(f->coeff[ii]);
-            *x = f->nodes[ii];
+    if (optargs == NULL){
+
+        double mval = fabs(f->coeff[0]);
+        *x = f->nodes[0];
+        for (size_t ii = 1; ii < f->num_nodes;ii++){
+            if (fabs(f->coeff[ii]) > mval){
+                mval = fabs(f->coeff[ii]);
+                *x = f->nodes[ii];
+            }
         }
+        return mval;
     }
-    return mval;
+    else{
+        struct c3Vector * optnodes = optargs;
+        double mval = fabs(lin_elem_exp_eval(f,optnodes->elem[0]));
+        *x = optnodes->elem[0];
+        for (size_t ii = 0; ii < optnodes->size; ii++){
+            double val = fabs(lin_elem_exp_eval(f,optnodes->elem[ii]));
+            if (val > mval){
+                mval = val;
+                *x = optnodes->elem[ii];
+            }
+        }
+        return mval;
+    }
 }
 
 /********************************************************//**

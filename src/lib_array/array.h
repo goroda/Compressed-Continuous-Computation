@@ -76,6 +76,11 @@ double * deserialize_darray_from_text(char *, size_t *);
 int darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
 
+struct c3Vector{
+    size_t size;
+    double * elem;
+};
+
 //RANDOM NUMBERS
 double randu(void);
 double randn(void);

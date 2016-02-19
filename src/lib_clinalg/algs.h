@@ -85,6 +85,8 @@ struct Cross2dargs
  *  maximum number of rank adaptation iterations
  *  \var FtCrossArgs::verbose
  *  verbosity level (0,1,2)
+ *  \var FtCrossArgs::optargs
+ *  optimization arguments
  * */
 struct FtCrossArgs
 {
@@ -98,7 +100,8 @@ struct FtCrossArgs
     size_t maxiteradapt;
 
     int verbose;
-    void * optargs;
+
+    struct FiberOptArgs * optargs;
 };
 
 

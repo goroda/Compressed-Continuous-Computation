@@ -2721,6 +2721,79 @@ index_set_merge_fill_beg(double ** isl, struct IndexSet * isr)
 }
 
 
+struct FiberOptArgs * fiber_opt_args_alloc()
+{
+    struct FiberOptArgs * fopt = NULL;
+    fopt = malloc(sizeof(struct FiberOptArgs));
+    if (fopt == NULL){
+        fprintf(stderr,"Memory failure allocating FiberOptArgs\n");
+        exit(1);
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Initialize a baseline optimization arguments class
+
+    \param[in] dim - dimension of problem
+
+    \return fiber optimzation arguments that are NULL in each dimension
+***************************************************************/
+struct FiberOptArgs * fiber_opt_args_init(size_t dim)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = NULL;
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Initialize a bruteforce optimization with the same nodes in each dimension
+
+    \param[in] dim - dimension of problem
+    \param[in] nodes - nodes over which to optimize (same ones used for each dimension)
+
+    \return fiber opt args
+***************************************************************/
+struct FiberOptArgs * fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = nodes;
+    }
+    return fopt;
+}
+
+
+/***********************************************************//**
+    Free memory allocate to fiber optimization arguments
+
+    \param[in,out] fopt - fiber optimization structure
+***************************************************************/
+void fiber_opt_args_free(struct FiberOptArgs * fopt)
+{
+    if (fopt != NULL){
+        free(fopt->opts); fopt->opts = NULL;
+        free(fopt); fopt = NULL;
+    }
+}
+
+
 /////////////////////////////////////////////////////////
 // Utilities
 //

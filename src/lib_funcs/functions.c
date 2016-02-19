@@ -2358,14 +2358,14 @@ fiber_cut_ndarray( double (*f)(double *, void *), void * args,
         exit(1);
     }
     size_t ii;
-//    printf("vals are \n");
+    printf("vals are \n");
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(totdim,dim);
         fcut[ii]->f.fnd = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 1;
         memmove(fcut[ii]->vals, val[ii], totdim*sizeof(double));
-//        dprint(totdim,val[ii]);
+        dprint(totdim,val[ii]);
 
     }
     return fcut;

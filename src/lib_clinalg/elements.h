@@ -41,6 +41,7 @@
 #define ELEMENTS_H
 
 #include <stdlib.h>
+#include "array.h"
 #include "../lib_funcs/lib_funcs.h"
 
 //////////////////////////////////////////////////////////////
@@ -347,6 +348,15 @@ double ** index_set_merge(struct IndexSet *, struct IndexSet *,size_t *);
 double ** index_set_merge_fill_end(struct IndexSet *, double **);
 double ** index_set_merge_fill_beg(double **, struct IndexSet *);
 
+struct FiberOptArgs
+{
+    size_t dim;
+    void ** opts;
+};
+struct FiberOptArgs * fiber_opt_args_alloc();
+struct FiberOptArgs * fiber_opt_args_init(size_t);
+struct FiberOptArgs * fiber_opt_args_bf_same(size_t, struct c3Vector *);
+void fiber_opt_args_free(struct FiberOptArgs *);
 
 
 
