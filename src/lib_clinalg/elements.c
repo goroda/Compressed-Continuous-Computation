@@ -698,9 +698,9 @@ qmarray_poly_randu(size_t nrows, size_t ncols,
 /***********************************************************//**
     copy qmarray
 
-    \param qm [in] - qmarray
+    \param[in] qm - qmarray
 
-    \return qmo [out] 
+    \return qmo  
 ***************************************************************/
 struct Qmarray * qmarray_copy(struct Qmarray * qm)
 {
@@ -717,7 +717,7 @@ struct Qmarray * qmarray_copy(struct Qmarray * qm)
 /***********************************************************//**
     Free memory allocated to qmarray 
 
-    \param qm (IN) - qmarray
+    \param[in] qm - qmarray
 ***************************************************************/
 void qmarray_free(struct Qmarray * qm){
     
@@ -770,17 +770,17 @@ qmarray_approx1d(size_t nrows, size_t ncols,
 /***********************************************************//**
     Create a qmarray from a fiber_cuts array
 
-    \param nrows [in] - number of rows of qmarray
-    \param ncols [in] - number of columns of qmarray
-    \param f [in] - functions
-    \param fcut [in] - array of fiber cuts
-    \param fc [in] - function class of each column
-    \param sub_type [in] - sub_type of each column
-    \param lb [in] - lower bound of inputs to functions
-    \param ub [in] - upper bound of inputs to functions
-    \param aopts [in] - approximation options
+    \param[in] nrows    - number of rows of qmarray
+    \param[in] ncols    - number of columns of qmarray
+    \param[in] f        - functions
+    \param[in] fcut     - array of fiber cuts
+    \param[in] fc       - function class of each column
+    \param[in] sub_type - sub_type of each column
+    \param[in] lb       - lower bound of inputs to functions
+    \param[in] ub       - upper bound of inputs to functions
+    \param[in] aopts    - approximation options
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
 struct Qmarray * 
 qmarray_from_fiber_cuts(size_t nrows, size_t ncols, 
@@ -1111,8 +1111,8 @@ ft_approx_args_getfc(struct FtApproxArgs * fargs, size_t dim)
     Extract the sub type to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return sub type of the approximation
 ***************************************************************/
@@ -1136,8 +1136,8 @@ void * ft_approx_args_getst(struct FtApproxArgs * fargs, size_t dim)
     Extract the approximation arguments to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return approximation arguments
 ***************************************************************/
@@ -1173,7 +1173,7 @@ struct BoundingBox * function_train_bds(struct FunctionTrain * ft)
 /***********************************************************//**
     Allocate space for a function_train
 
-    \param dim [in] - dimension of function train
+    \param[in] dim - dimension of function train
 
     \return ft - function train
 ***************************************************************/
@@ -1200,7 +1200,7 @@ struct FunctionTrain * function_train_alloc(size_t dim)
 /***********************************************************//**
     Copy a function train
 
-    \param a [in] - function train to copy
+    \param[in] a - function train to copy
 
     \return b - function train
 ***************************************************************/
@@ -1220,7 +1220,7 @@ struct FunctionTrain * function_train_copy(struct FunctionTrain * a){
 /***********************************************************//**
     Free memory allocated to a function train
 
-    \param ft [inout] - function train to free
+    \param[in,out] ft - function train to free
 ***************************************************************/
 void function_train_free(struct FunctionTrain * ft)
 {
@@ -1239,11 +1239,11 @@ void function_train_free(struct FunctionTrain * ft)
 /********************************************************//**
 *    Create a functiontrain consisting of pseudo-random orth poly expansion
 *   
-*   \param bds [in] - boundaries
-*   \param ranks [in] - (dim+1,1) array of ranks
-*   \param maxorder [in] - maximum order of the polynomial
+*   \param[in] bds      - boundaries
+*   \param[in] ranks    - (dim+1,1) array of ranks
+*   \param[in] maxorder - maximum order of the polynomial
 *
-*   \return ft - runction train
+*   \return function train
 ************************************************************/
 struct FunctionTrain *
 function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxorder)
@@ -1263,13 +1263,13 @@ function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxor
 /***********************************************************//**
     Compute a function train representation of \f$ f1(x1)*f2(x2)*...* fd(xd)\f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] -  one dimensional functions
-    \param args [in] - arguments to the function
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      -  one dimensional functions
+    \param[in] args   - arguments to the function
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain *
 function_train_rankone(size_t dim,  double (*f)(double, size_t, void *), 
@@ -1340,11 +1340,11 @@ function_train_rankone(size_t dim,  double (*f)(double, size_t, void *),
 /***********************************************************//**
     Compute a function train representation of \f$ f1 + f2 + ... + fd \f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] - array of one dimensional functions
-    \param args [in] - array of arguments to the functions
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      - array of one dimensional functions
+    \param[in] args   - array of arguments to the functions
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
     \return ft - function train
 ***************************************************************/
