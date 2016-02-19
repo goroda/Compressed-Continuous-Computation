@@ -83,7 +83,7 @@ quasimatrix_deserialize(unsigned char *, struct Quasimatrix ** );
 struct Quasimatrix * quasimatrix_orth1d(enum function_class fc, 
                         void * st, size_t n, double lb, double ub);
 
-size_t quasimatrix_absmax(struct Quasimatrix *, double *, double *);
+size_t quasimatrix_absmax(struct Quasimatrix *, double *, double *,void*);
 
 /** \struct SkeletonDecomp
  *  \brief Defines a skeleton decomposition of a two-dimensional function \f$ f(x,y) \f$
@@ -206,6 +206,8 @@ struct FtApproxArgs
     } approx_opts;
 
     int targs; // type of args (0,1)
+    
+    void * optargs;
 };
 
 struct FtApproxArgs * 

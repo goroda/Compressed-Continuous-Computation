@@ -1764,12 +1764,13 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 /********************************************************//**
     Compute the location and value of the maximum, in absolute value, element of a generic function 
 
-    \param[in]     f - function
-    \param[in,out] x - location of maximum
+    \param[in]     f       - function
+    \param[in,out] x       - location of maximum
+    \param[in]     optargs - optimization arguments
 
     \return absolute value of the maximum
 ************************************************************/
-double generic_function_absmax(struct GenericFunction * f, double * x)
+double generic_function_absmax(struct GenericFunction * f, double * x, void * optargs)
 {
     double out = 0.123456789;
     struct OrthPolyExpansion * op = NULL;
@@ -1777,14 +1778,22 @@ double generic_function_absmax(struct GenericFunction * f, double * x)
     switch (f->fc){
     case PIECEWISE:
         pw = f->f;
+        if (optargs != NULL){
+            printf("Warning: optimization arguments not yet defined for piecewise polynomials\n");
+            exit(1);
+        }
         out = piecewise_poly_absmax(pw,x);
         break;
     case POLYNOMIAL:
         op = f->f;
+        if (optargs != NULL){
+            printf("Warning: optimization arguments not yed defined for polynomials\n");
+            exit(1);
+        }
         out = orth_poly_expansion_absmax(op,x);
         break;
     case LINELM:
-        out = lin_elem_exp_absmax(f->f,x);
+        out = lin_elem_exp_absmax(f->f,x,optargs);
         break;
     case RATIONAL:
         break;
@@ -1795,29 +1804,31 @@ double generic_function_absmax(struct GenericFunction * f, double * x)
 }
 
 /********************************************************//**
-    Compute the index, location and value of the maximum, in absolute value, element of a generic function array
+    Compute the index, location and value of the maximum, in absolute value, 
+    element of a generic function array
 
-    \param n [in] - number of functions
-    \param lda [in] - stride
-    \param a [in] - array of functions
-    \param ind [inout] - index of maximum
-    \param x [inout] - location of maximum
+    \param[in]     n   - number of functions
+    \param[in]     lda - stride
+    \param[in]     a   - array of functions
+    \param[in,out] ind - index of maximum
+    \param[in,out] x   - location of maximum
 
     \return maxval - absolute value of the maximum
 ************************************************************/
 double 
 generic_function_array_absmax(size_t n, size_t lda, 
-            struct GenericFunction ** a, size_t * ind,  double * x)
+                              struct GenericFunction ** a, size_t * ind,  double * x,
+                              void * optargs)
 {
     size_t ii = 0;
     *ind = ii;
     //printf("do absmax\n");
     //print_generic_function(a[ii],0,NULL);
-    double maxval = generic_function_absmax(a[ii],x);
+    double maxval = generic_function_absmax(a[ii],x,optargs);
     //printf("maxval=%G\n",maxval);
     double tempval, tempx;
     for (ii = 1; ii < n; ii++){
-        tempval = generic_function_absmax(a[ii*lda],&tempx);
+        tempval = generic_function_absmax(a[ii*lda],&tempx,optargs);
         if (tempval > maxval){
             maxval = tempval;
             *x = tempx;
@@ -1854,9 +1865,9 @@ void generic_function_scale(double a, struct GenericFunction * gf)
 /********************************************************//**
     Scale a generic function array
 
-    \param a [in] - value with which to scale the functions
-    \param gf [inout] - functions to scale
-    \param N [in] - number of functions
+    \param[in]     a - value with which to scale the functions
+    \param[in,out] gf  - functions to scale
+    \param[in]     N - number of functions
 ************************************************************/
 void generic_function_array_scale(double a, struct GenericFunction ** gf,
                                     size_t N)
@@ -2093,6 +2104,59 @@ generic_function_linear(double a, double offset,
 
 }
 
+/***********************************************************//**
+    Generate a set of orthonormal arrays of functions for helping
+    generate an orthonormal qmarray 
+
+    \param[in] fc    - function class
+    \param[in] st    - function class sub_type
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] lb    - lower bound on 1d functions
+    \param[in] ub    - upper bound on 1d functions
+
+    \return functions owith orthonormal columns
+
+    \note
+    - Not super efficient because of copies
+***************************************************************/
+void generic_function_array_orth1d_columns(struct GenericFunction ** f,
+                                           struct GenericFunction ** funcs,
+                                           enum function_class fc,
+                                           void * st, size_t nrows,
+                                           size_t ncols, double lb,
+                                           double ub)
+{
+    
+    struct Interval ob;
+    ob.lb = lb;
+    ob.ub = ub;
+    size_t jj,kk;
+    generic_function_array_orth(ncols, fc, st, funcs, &ob);
+    struct GenericFunction * zero = 
+        generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    size_t onnon = 0;
+    size_t onorder = 0;
+    for (jj = 0; jj < ncols; jj++){
+        f[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            f[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        for (kk = onnon+1; kk < nrows; kk++){
+            f[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == nrows){
+            //generic_function_free(funcs[onorder]);
+            //funcs[onorder] = NULL;
+            onorder = onorder+1;
+            onnon = 0;
+        }
+    }
+    generic_function_free(zero); zero = NULL;
+
+}
+
 /*******************************************************//**
     Fill a generic_function array with orthonormal functions 
     of a particular class and sub_type
@@ -2107,6 +2171,7 @@ generic_function_linear(double a, double offset,
 void 
 generic_function_array_orth(size_t n, enum function_class fc, void * st,
                             struct GenericFunction ** gfarray, void * args)
+
 {
     size_t ii;
     double lb, ub;
@@ -2134,17 +2199,18 @@ generic_function_array_orth(size_t n, enum function_class fc, void * st,
     case LINELM:
         lb = ((struct Interval *) args)->lb;
         ub = ((struct Interval *) args)->ub;
-        double * nodes = linspace(lb,ub,2*n);
-        double * fvals = calloc_double(2*n);
-        double val;
+        struct LinElemExp *f[1000];
+        assert (n <= 1000);
+        
+        double * nodes = linspace(lb,ub,n);
+        double * fvals = calloc_double(n);
         for (ii = 0; ii < n; ii++){
             gfarray[ii] = generic_function_alloc(1,fc,st);
-            fvals[2*ii] = 1.0;
-            gfarray[ii]->f = lin_elem_exp_init(2*n,nodes,fvals);
-            val = lin_elem_exp_inner(gfarray[ii]->f,gfarray[ii]->f);
-            lin_elem_exp_scale(1.0/sqrt(val),gfarray[ii]->f);
-            fvals[2*ii] = 0.0;
+            gfarray[ii]->f = lin_elem_exp_init(n,nodes,fvals);
+            gfarray[ii]->fargs = NULL;
+            f[ii] = gfarray[ii]->f;
         }
+        lin_elem_exp_orth_basis(n,f);
         free(nodes); nodes = NULL;
         free(fvals); fvals = NULL;
         break;
@@ -2273,12 +2339,12 @@ fiber_cut_2darray( double (*f)(double, double, void *), void * args,
 /********************************************************//**
     Generate an array fibercuts of a n-dimensional functions
 
-    \param f [in] -  function to cut
-    \param args [in] - function arguments
-    \param totdim [in] - total number of dimensions
-    \param dim [in] - dimension along which we obtain the cut
-    \param n [in] - number of fibercuts
-    \param val [in] - array of values of the inputs for each fibercut 
+    \param[in] f      -  function to cut
+    \param[in] args   - function arguments
+    \param[in] totdim - total number of dimensions
+    \param[in] dim    - dimension along which we obtain the cut
+    \param[in] n      - number of fibercuts
+    \param[in] val    - array of values of the inputs for each fibercut 
 
     \return fcut -array of struct necessary for computing values in the cut
 ***************************************************************/
@@ -2292,12 +2358,14 @@ fiber_cut_ndarray( double (*f)(double *, void *), void * args,
         exit(1);
     }
     size_t ii;
+//    printf("vals are \n");
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(totdim,dim);
         fcut[ii]->f.fnd = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 1;
         memmove(fcut[ii]->vals, val[ii], totdim*sizeof(double));
+//        dprint(totdim,val[ii]);
 
     }
     return fcut;

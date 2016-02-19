@@ -52,6 +52,7 @@ int main( int argc, char *argv[])
 
 
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.epsilon = 1e-1;
     fca.maxiter = 1;
     fca.verbose = 2;

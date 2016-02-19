@@ -427,23 +427,25 @@ quasimatrix_orth1d(enum function_class fc, void * st, size_t n,
 /***********************************************************//**
     Find the absolute maximum element of a quasimatrix of 1d functions
 
-    \param qm [in] - quasimatrix
-    \param absloc [inout] : location (row) of maximum
-    \param absval [inout] : value of maximum
+    \param[in]     qm      - quasimatrix
+    \param[in,out] absloc  - location (row) of maximum
+    \param[in,out] absval  - value of maximum
+    \param[in]     optargs - optimization arguments
 
     \return col - column of maximum element
 ***************************************************************/
 size_t 
 quasimatrix_absmax(struct Quasimatrix * qm, 
-                        double * absloc, double * absval)
+                   double * absloc, double * absval,
+                   void * optargs)
 {   
     size_t col = 0;
     size_t ii;
     double temp_loc;
     double temp_max;
-    *absval = generic_function_absmax(qm->funcs[0], absloc) ;
+    *absval = generic_function_absmax(qm->funcs[0], absloc,optargs) ;
     for (ii = 1; ii < qm->n; ii++){
-        temp_max = generic_function_absmax(qm->funcs[ii], &temp_loc);
+        temp_max = generic_function_absmax(qm->funcs[ii], &temp_loc,optargs);
         if (temp_max > *absval){
             col = ii;
             *absval = temp_max;
@@ -813,55 +815,14 @@ qmarray_from_fiber_cuts(size_t nrows, size_t ncols,
 ***************************************************************/
 struct Qmarray *
 qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
-                            size_t ncols, double lb, double ub)
+                       size_t ncols, double lb, double ub)
 {
-    struct Interval ob;
-    ob.lb = lb;
-    ob.ub = ub;
 
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    struct Qmarray * qmtemp = qmarray_alloc(ncols,1);
+    generic_function_array_orth1d_columns(qm->funcs,qmtemp->funcs,fc,st,nrows,ncols,lb,ub);
     
-    struct GenericFunction ** funcs = NULL;
-    if ( NULL == (funcs = malloc(ncols*sizeof(struct GenericFunction *)))){
-        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
-        exit(1);
-    }
-    size_t ii, jj,kk;
-    for (ii = 0; ii < ncols; ii++){
-        funcs[ii] = NULL;
-    }
-//    printf("gen orthonormal\n");
-    generic_function_array_orth(ncols, fc, st, funcs, &ob);
-//    printf("done\n");
-    
-    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
-    
-    size_t onnon = 0;
-    size_t onorder = 0;
-    for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
-        for (kk = 0; kk < onnon; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        for (kk = onnon+1; kk < nrows; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        onnon = onnon+1;
-        if (onnon == nrows){
-            //generic_function_free(funcs[onorder]);
-            //funcs[onorder] = NULL;
-            onorder = onorder+1;
-            onnon = 0;
-        }
-    }
-    //printf("max order cols = %zu\n",onorder);
-    for (ii = 0; ii < ncols;ii++){
-        generic_function_free(funcs[ii]);
-        funcs[ii] = NULL;
-    }
-    free(funcs); funcs=NULL;
-    generic_function_free(zero); zero = NULL;
-
+    qmarray_free(qmtemp); qmtemp = NULL;
     return qm;
 }
 
@@ -882,7 +843,7 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
 ***************************************************************/
 struct Qmarray *
 qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
-                            size_t ncols, double lb, double ub)
+                    size_t ncols, double lb, double ub)
 {
     struct Interval ob;
     ob.lb = lb;
@@ -1004,6 +965,17 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 ////////////////////////////////////////////////////////////////////
 // function_train 
 //
+struct FtApproxArgs * ft_approx_args_alloc()
+{
+    struct FtApproxArgs * fargs;
+    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
+        fprintf(stderr, "failed to allocate memory for ft approx args.\n");
+        exit(1);
+    }
+
+    return fargs;
+}
+
 /***********************************************************//**
     Create the arguments to give to use for approximation
     in the function train. Specifically, legendre polynomials
@@ -1021,11 +993,7 @@ ft_approx_args_createpoly(size_t dim,
                           enum poly_type * ptype,
                           struct OpeAdaptOpts * aopts)
 {
-    struct FtApproxArgs * fargs;
-    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
-        fprintf(stderr, "failed to allocate memory for ft approx args.\n");
-        exit(1);
-    }
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
     fargs->dim = dim;
     fargs->targs = 0;
     
@@ -1054,11 +1022,8 @@ ft_approx_args_createpwpoly(size_t dim,
                             enum poly_type * ptype,
                             struct PwPolyAdaptOpts * aopts)
 {
-    struct FtApproxArgs * fargs;
-    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
-        fprintf(stderr, "failed to allocate memory for ft approx args.\n");
-        exit(1);
-    }
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
+
     fargs->dim = dim;
     fargs->targs = 0;
     
@@ -1084,11 +1049,7 @@ struct FtApproxArgs *
 ft_approx_args_create_le(size_t dim, 
                          struct LinElemExpAopts * aopts)
 {
-    struct FtApproxArgs * fargs;
-    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
-        fprintf(stderr,"failed to allocate memory for ft approx args.\n");
-        exit(1);
-    }
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
     fargs->dim = dim;
     fargs->targs = 0;
     
@@ -2467,10 +2428,10 @@ void ft1d_array_free(struct FT1DArray * fta)
 /***********************************************************//**
     Allocate an index set for cross approxmiation
 
-    \param type [in] - 0 for left index set, 1 for right index set
-    \param totdim [in] - total dimension of approximation
-    \param dim [in] - current dimension
-    \param rank [in] - rank of current core
+    \param[in] type   - 0 for left index set, 1 for right index set
+    \param[in] totdim - total dimension of approximation
+    \param[in] dim    - current dimension
+    \param[in] rank   - rank of current core
 
     \return is  - index set
 ***************************************************************/
@@ -2511,7 +2472,7 @@ index_set_alloc(int type, size_t totdim, size_t dim, size_t rank)
 /***********************************************************//**
     Free memory allocated for index set and set it to NULL
 
-    \param is [inout] - index set to free
+    \param[in,out] is - index set to free
 ***************************************************************/
 void index_set_free(struct IndexSet * is)
 {
@@ -2532,8 +2493,8 @@ void index_set_free(struct IndexSet * is)
 /***********************************************************//**
     Free memory allocated to index set array
     
-    \param n [in] - number of index sets
-    \param is  [inout] - index set array to free
+    \param[in]     n  - number of index sets
+    \param[in,out] is - index set array to free
 ***************************************************************/
 void index_set_array_free(size_t n, struct IndexSet ** is)
 {
@@ -2551,9 +2512,9 @@ void index_set_array_free(size_t n, struct IndexSet ** is)
 /***********************************************************//**
     Initialize a right nested index set
     
-    \param dim [in] - dimension
-    \param ranks [in] - ranks of the function
-    \param opts [in] - a set of locations
+    \param[in]     dim   - dimension
+    \param[in,out] ranks - ranks of the function
+    \param[in]     opts  - a set of locations
 
     \return isr - right index set
 
@@ -2590,9 +2551,9 @@ index_set_array_rnested(size_t dim, size_t * ranks, double * opts)
 /***********************************************************//**
     Initialize a left-nested index set
     
-    \param dim [in] - dimension
-    \param ranks [in] - ranks of the function
-    \param opts [in] - a set of locations
+    \param[in] dim   - dimension
+    \param[in] ranks - ranks of the function
+    \param[in] opts  - a set of locations
 
     \return isl - left index set
 

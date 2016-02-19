@@ -40,6 +40,7 @@ int main( void )
     double * epsilons = logspace(-13, -1, ntols);
     
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.epsilon = 1e-5;
     fca.maxiter = 10;
     fca.verbose = 0;

@@ -94,7 +94,7 @@ int lin_elem_exp_axpy(double, struct LinElemExp *,struct LinElemExp *);
 double lin_elem_exp_norm(struct LinElemExp *);
 double lin_elem_exp_max(struct LinElemExp *, double *);
 double lin_elem_exp_min(struct LinElemExp *, double *);
-double lin_elem_exp_absmax(struct LinElemExp *, double *);
+double lin_elem_exp_absmax(struct LinElemExp *, double *,void *);
 
 double lin_elem_exp_err_est(struct LinElemExp *, double *, short,short);
 
@@ -106,6 +106,7 @@ lin_elem_exp_approx(double (*)(double,void*), void*,
                     struct LinElemExpAopts *);
 void lin_elem_exp_scale(double, struct LinElemExp *);
 void lin_elem_exp_flip_sign(struct LinElemExp *);
+void lin_elem_exp_orth_basis(size_t, struct LinElemExp **);
 struct LinElemExp *
 lin_elem_exp_constant(double, double, double,
                       struct LinElemExpAopts *);
@@ -113,59 +114,5 @@ double lin_elem_exp_lb(struct LinElemExp *);
 double lin_elem_exp_ub(struct LinElemExp *);
 
 void print_lin_elem_exp(struct LinElemExp *, size_t, void *, FILE *);
-
-/* struct OpeAdaptOpts{ */
-    
-/*     size_t start_num; */
-/*     size_t coeffs_check; */
-/*     double tol; */
-/* }; */
-
-/* struct OrthPolyExpansion * orth_poly_expansion_approx_adapt(double (*A)(double,void *),  */
-/*         void *, enum poly_type, double, double, struct OpeAdaptOpts *); */
-
-/* struct OrthPolyExpansion *  */
-/* orth_poly_expansion_randu(enum poly_type, size_t, double, double); */
-
-
-/* double cheb_integrate2(struct OrthPolyExpansion *); */
-/* double legendre_integrate(struct OrthPolyExpansion *); */
-
-
-/* struct OrthPolyExpansion * */
-/* orth_poly_expansion_prod(struct OrthPolyExpansion *, */
-/*                          struct OrthPolyExpansion *); */
-/* struct OrthPolyExpansion * */
-/* orth_poly_expansion_sum_prod(size_t, size_t,  */
-/*         struct OrthPolyExpansion **, size_t, */
-/*         struct OrthPolyExpansion **); */
-
-/* double orth_poly_expansion_integrate(struct OrthPolyExpansion *); */
-/* double orth_poly_expansion_inner_w(struct OrthPolyExpansion *, */
-/*                             struct OrthPolyExpansion *); */
-/* double orth_poly_expansion_inner(struct OrthPolyExpansion *, */
-/*                             struct OrthPolyExpansion *); */
-/* double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p); */
-/* double orth_poly_expansion_norm(struct OrthPolyExpansion * p); */
-
-/* void orth_poly_expansion_flip_sign(struct OrthPolyExpansion *); */
-
-/* void orth_poly_expansion_scale(double, struct OrthPolyExpansion *); */
-/* struct OrthPolyExpansion * */
-/* orth_poly_expansion_daxpby(double, struct OrthPolyExpansion *, */
-/*                            double, struct OrthPolyExpansion *); */
-
-/* int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x, */
-/*                         struct OrthPolyExpansion * y); */
-/* void */
-/* orth_poly_expansion_sum3_up(double, struct OrthPolyExpansion *, */
-/*                            double, struct OrthPolyExpansion *, */
-/*                            double, struct OrthPolyExpansion *); */
-
-/* struct OrthPolyExpansion * */
-/* orth_poly_expansion_lin_comb(size_t, size_t,  */
-/*         struct OrthPolyExpansion **, size_t, */
-/*         double *); */
-
 
 #endif

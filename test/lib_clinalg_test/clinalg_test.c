@@ -298,7 +298,7 @@ void Test_quasimatrix_lu1d(CuTest * tc){
     struct Quasimatrix * Acopy = qmm(A,eye,3);
     double * U = calloc_double(3*3);
     double * piv = calloc_double(3);
-    quasimatrix_lu1d(A,L,U,piv);
+    quasimatrix_lu1d(A,L,U,piv,NULL);
      
     double eval;
     eval = generic_function_1d_eval(L->funcs[1], piv[0]);
@@ -363,7 +363,7 @@ void Test_quasimatrix_maxvol1d(CuTest * tc){
 
     struct Quasimatrix * B = qmm(A,Asinv,3);
     double maxval, maxloc;
-    quasimatrix_absmax(B,&maxloc,&maxval);
+    quasimatrix_absmax(B,&maxloc,&maxval,NULL);
     //printf("Less = %d", 1.0+1e-2 > maxval);
     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
 
@@ -1395,7 +1395,7 @@ void Test_qmarray_lu1d(CuTest * tc){
     double * U = calloc_double(2*2);
     size_t * pivi = calloc_size_t(2);
     double * pivx = calloc_double(2);
-    qmarray_lu1d(A,L,U,pivi,pivx);
+    qmarray_lu1d(A,L,U,pivi,pivx,NULL);
     
     double eval;
     
@@ -1449,7 +1449,7 @@ void Test_qmarray_lu1d2(CuTest * tc){
     double * U = calloc_double(3*3);
     size_t * pivi = calloc_size_t(3);
     double * pivx = calloc_double(3);
-    qmarray_lu1d(A,L,U,pivi,pivx);
+    qmarray_lu1d(A,L,U,pivi,pivx,NULL);
     
     double eval;
     
@@ -1523,7 +1523,7 @@ void Test_qmarray_lu1d_linelm(CuTest * tc){
     double * U = calloc_double(3*3);
     size_t * pivi = calloc_size_t(3);
     double * pivx = calloc_double(3);
-    qmarray_lu1d(A,L,U,pivi,pivx);
+    qmarray_lu1d(A,L,U,pivi,pivx,NULL);
     
     double eval;
     
@@ -1598,7 +1598,7 @@ void Test_qmarray_maxvol1d(CuTest * tc){
     size_t * pivi = calloc_size_t(2);
     double * pivx= calloc_double(2);
 
-    qmarray_maxvol1d(A,Asinv,pivi,pivx);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,NULL);
      
     /*
     printf("pivots at = \n");
@@ -1609,7 +1609,7 @@ void Test_qmarray_maxvol1d(CuTest * tc){
     struct Qmarray * B = qmam(A,Asinv,2);
     double maxval, maxloc;
     size_t maxrow, maxcol;
-    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval);
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL);
     //printf("Less = %d", 1.0+1e-2 > maxval);
     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
     qmarray_free(B);
@@ -1646,7 +1646,7 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
     size_t * pivi = calloc_size_t(6);
     double * pivx= calloc_double(6);
 
-    qmarray_maxvol1d(A,Asinv,pivi,pivx);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,NULL);
      
     /*
     printf("pivots at = \n");
@@ -1657,7 +1657,7 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
     struct Qmarray * B = qmam(A,Asinv,2);
     double maxval, maxloc;
     size_t maxrow, maxcol;
-    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval);
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL);
     //printf("Less = %d", 1.0+1e-2 > maxval);
     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
     qmarray_free(B);
@@ -1692,7 +1692,7 @@ void Test_qmarray_maxvol1d_linelm(CuTest * tc){
     size_t * pivi = calloc_size_t(2);
     double * pivx= calloc_double(2);
 
-    qmarray_maxvol1d(A,Asinv,pivi,pivx);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,NULL);
      
     /*
     printf("pivots at = \n");
@@ -1703,7 +1703,7 @@ void Test_qmarray_maxvol1d_linelm(CuTest * tc){
     struct Qmarray * B = qmam(A,Asinv,2);
     double maxval, maxloc;
     size_t maxrow, maxcol;
-    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval);
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL);
     //printf("Less = %d", 1.0+1e-2 > maxval);
     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
     qmarray_free(B);
@@ -2371,6 +2371,7 @@ void Test_ftapprox_cross(CuTest * tc)
     fca.epsilon = 1e-5;
     fca.maxiter = 10;
     fca.verbose = 0;
+    fca.optargs = NULL;
 
     struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
     struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
@@ -2501,6 +2502,7 @@ void Test_ftapprox_cross3(CuTest * tc)
     fca.verbose = 0;
     fca.dim = dim;
     fca.ranks = ranks;
+    fca.optargs = NULL;
 
     struct PwPolyAdaptOpts aopts;
     aopts.ptype = LEGENDRE;
@@ -2707,6 +2709,7 @@ void Test_sin10dint(CuTest * tc)
     fca.epsilon = 1e-5;
     fca.maxiter = 10;
     fca.verbose = 0;
+    fca.optargs = NULL;
 
     struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
     struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
@@ -2834,6 +2837,7 @@ void Test_sin1000dint(CuTest * tc)
     fca.epsilon = 1e-5;
     fca.maxiter = 10;
     fca.verbose = 1;
+    fca.optargs = NULL;
 
     struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
     struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);

@@ -1,3 +1,4 @@
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -528,7 +529,8 @@ static size_t lin_elem_exp_interp_same_grid(
    Could be sped up by keeping track of evaluations
 *************************************************************/
 int lin_elem_exp_axpy(double a, 
-                      struct LinElemExp * f,struct LinElemExp * g)
+                      struct LinElemExp * f,
+                      struct LinElemExp * g)
 {
     
     int res = 0;
@@ -613,13 +615,15 @@ double lin_elem_exp_min(struct LinElemExp * f, double * x)
 /********************************************************//**
     Compute the maximum of the absolute value function
 
-    \param[in]     f - function
-    \param[in,out] x - location of absolute value max
+    \param[in]     f       - function
+    \param[in,out] x       - location of absolute value max
+    \param[in]     optargs - optimization arguments
     
     \return value
 *************************************************************/
-double lin_elem_exp_absmax(struct LinElemExp * f, double * x)
+double lin_elem_exp_absmax(struct LinElemExp * f, double * x, void * optargs)
 {
+    assert (optargs  == NULL);
     double mval = fabs(f->coeff[0]);
     *x = f->nodes[0];
     for (size_t ii = 1; ii < f->num_nodes;ii++){
@@ -793,6 +797,34 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
 {
     for (size_t ii = 0; ii < f->num_nodes; ii++){
         f->coeff[ii] *= -1.0;
+    }
+}
+
+/********************************************************//**
+    Generate an orthonormal basis
+    
+    \param[in]     n - number of basis function
+    \param[in,out] f - linear element expansions with allocated nodes
+                       and coefficients set to zero
+
+    \note
+    Uses modified gram schmidt to determine function coefficients
+    Each function f[ii] must have the same nodes
+*************************************************************/
+void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f)
+{
+    double norm, proj;
+    for (size_t ii = 0; ii < n; ii++){
+        assert (f[ii]->num_nodes == n);
+        f[ii]->coeff[ii] = 1.0;        
+    }
+    for (size_t ii = 0; ii < n; ii++){
+        norm = lin_elem_exp_norm(f[ii]);
+        lin_elem_exp_scale(1/norm,f[ii]);
+        for (size_t jj = ii+1; jj < n; jj++){
+            proj = lin_elem_exp_inner(f[ii],f[jj]);
+            lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+        }
     }
 }
 

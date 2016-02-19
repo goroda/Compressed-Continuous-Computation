@@ -101,12 +101,13 @@ int main()
            ft_approx_args_createpwpoly(dim,&(aopts.ptype),&aopts);
 
         struct FtCrossArgs fca;
+        ft_cross_args_init(&fca);
         fca.epsilon = 1e-1;
         fca.maxiter = 1;
         fca.verbose = 2;
         fca.dim = dim;
         fca.ranks = ranks;
-    
+
         struct FunctionTrain * ft = 
                 ftapprox_cross(function_monitor_eval, fm,
                                bds, ftref, isl, isr, &fca,fapp);

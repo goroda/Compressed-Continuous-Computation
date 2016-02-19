@@ -1037,6 +1037,41 @@ void Test_lin_elem_exp_scale(CuTest * tc)
     lin_elem_exp_free(f);
 }
 
+void Test_lin_elem_exp_orth_basis(CuTest * tc)
+{
+    printf("Testing function: lin_elem_exp_orth_basis\n");
+    double lb = -2.0;
+    double ub = 0.2;
+    size_t N = 100;
+    double * x = linspace(lb,ub,N);
+    double * coeff = calloc_double(N);
+
+    struct LinElemExp * f[100];
+    for (size_t ii = 0; ii < N; ii++){
+        f[ii] = lin_elem_exp_init(N,x,coeff);
+    }
+
+    lin_elem_exp_orth_basis(N,f);
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            double val = lin_elem_exp_inner(f[ii],f[jj]);
+            if (ii == jj){
+                CuAssertDblEquals(tc,1.0,val,1e-15);
+            }
+            else{
+                CuAssertDblEquals(tc,0.0,val,1e-15);
+            }
+        }
+    }
+
+    for (size_t ii = 0; ii < N; ii++){
+        lin_elem_exp_free(f[ii]);        
+    }
+    free(x); x = NULL;
+    free(coeff); coeff = NULL;
+}
+
+
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -1050,6 +1085,7 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_constant);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
     return suite;
 }
 

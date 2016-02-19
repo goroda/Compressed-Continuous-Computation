@@ -44,6 +44,8 @@
 int qmarray_qr(struct Qmarray *, struct Qmarray **, double **);
 int qmarray_lq(struct Qmarray *, struct Qmarray **, double **);
 
+int qmarray_qr_gs(struct Qmarray *, double **);
+int qmarray_lq_gs(struct Qmarray *, double **);
 #endif
 
 

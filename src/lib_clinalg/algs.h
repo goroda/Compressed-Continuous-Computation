@@ -98,6 +98,7 @@ struct FtCrossArgs
     size_t maxiteradapt;
 
     int verbose;
+    void * optargs;
 };
 
 
@@ -114,7 +115,7 @@ int quasimatrix_householder(struct Quasimatrix *, struct Quasimatrix *,
         struct Quasimatrix *, double *);
 int quasimatrix_qhouse(struct Quasimatrix *, struct Quasimatrix *);
 
-int quasimatrix_lu1d(struct Quasimatrix *, struct Quasimatrix *, double *, double *);
+int quasimatrix_lu1d(struct Quasimatrix *, struct Quasimatrix *, double *, double *, void *);
 
 int quasimatrix_maxvol1d(struct Quasimatrix *, double *, double *);
 
@@ -162,8 +163,8 @@ void qmarray_axpy(double,struct Qmarray *, struct Qmarray *);
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 
 int qmarray_lu1d(struct Qmarray *, struct Qmarray *, double *, size_t *,
-                    double *);
-int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *);
+                 double *, void *);
+int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *,void *);
 
 int qmarray_qhouse(struct Qmarray *, struct Qmarray *);
 int qmarray_qhouse_rows(struct Qmarray *, struct Qmarray *);
@@ -179,7 +180,8 @@ size_t qmarray_truncated_svd(struct Qmarray *, struct Qmarray **,
             double **, double **, double);
 
 
-void qmarray_absmax1d(struct Qmarray *, double *, size_t *, size_t *, double *);
+void qmarray_absmax1d(struct Qmarray *, double *, size_t *, 
+                      size_t *, double *, void *);
 struct Qmarray * qmarray_transpose(struct Qmarray * a);
 struct Qmarray * qmarray_stackh(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_stackv(struct Qmarray *, struct Qmarray *);
@@ -221,6 +223,7 @@ ftapprox_cross(double (*)(double *, void *), void *,
     struct IndexSet **, struct IndexSet **, 
     struct FtCrossArgs *, struct FtApproxArgs *);
 
+void ft_cross_args_init(struct FtCrossArgs *);
 struct FunctionTrain *
 function_train_cross(double (*)(double *, void *), void *, 
         struct BoundingBox *, double *,

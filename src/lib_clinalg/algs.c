@@ -376,8 +376,9 @@ int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
     \param L [inout] - quasimatrix representing L factor
     \param u [inout] - allocated space for U factor
     \param p [inout] - pivots 
+    \param[in] optargs - optimization arguments
 
-    \return info
+    \return inno
 
     \note
         info = 
@@ -385,7 +386,7 @@ int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
             - <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int quasimatrix_lu1d(struct Quasimatrix * A, struct Quasimatrix * L, double * u,
-            double * p)
+                     double * p, void * optargs)
 {
     int info = 0;
     
@@ -398,7 +399,7 @@ int quasimatrix_lu1d(struct Quasimatrix * A, struct Quasimatrix * L, double * u,
         //printf("kk=%zu\n",kk);
         //printf("getting max of function:\n");
         //print_generic_function(A->funcs[kk],0,NULL);
-        generic_function_absmax(A->funcs[kk], &amloc);
+        generic_function_absmax(A->funcs[kk], &amloc,optargs);
         p[kk] = amloc;
         //printf("location of max =%3.5f\n",amloc);
 
@@ -467,7 +468,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
     }
     struct Quasimatrix * Acopy = qmm(A,eye,r);
 
-    info =  quasimatrix_lu1d(Acopy,L,U,p);
+    info =  quasimatrix_lu1d(Acopy,L,U,p,NULL);
     //printf("pivot immediate \n");
     //dprint(A->n, p);
 
@@ -500,7 +501,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
     struct Quasimatrix * B = qmm(A,Asinv,r);
     size_t maxcol;
     double maxloc, maxval;
-    maxcol = quasimatrix_absmax(B,&maxloc,&maxval);
+    maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
 
     while (maxval > (1.0 + delta)){
         //printf("maxval = %3.4f\n", maxval);
@@ -516,7 +517,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
         dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
         quasimatrix_free(B);
         B = qmm(A,Asinv,r);
-        maxcol = quasimatrix_absmax(B,&maxloc,&maxval);
+        maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
     }
     //printf("maxval = %3.4f\n", maxval);
 
@@ -1665,7 +1666,7 @@ double eval_zpoly(double x, void * args){
 
 void create_any_L(struct GenericFunction ** L, size_t nrows, 
                   size_t upto,size_t * piv, double * px,
-                  double lb, double ub)
+                  double lb, double ub, void * optargs)
 {
     
     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
@@ -1710,7 +1711,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
         }
     }
 
-    double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval);
+    double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
     if (VQMALU){
         printf("got new val = %G\n", val);
     }
@@ -1723,12 +1724,18 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
 
 void create_any_L_linelm(struct GenericFunction ** L, size_t nrows, 
                          size_t upto,size_t * piv, double * px,
-                         double lb, double ub)
+                         double lb, double ub, void * optargs)
 {
     
     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
     // and one at piv[upto],piv[upto] less than one every else
 //    printf("creating any L!\n");
+
+    if (optargs != NULL){
+        printf("Warning: optargs is not null in create_any_L_linelm so\n");
+        printf("         might not be able to guarantee that the new px\n");
+        printf("         is going to lie on a desired node\n")
+    }
     piv[upto] = 0;
     px[upto] = lb + ub/(ub-lb) * randu();
 
@@ -1782,16 +1789,17 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix array of 1d functioins
 
-    \param[in]     A   - qmarray to decompose
-    \param[in,out] L   - qmarray representing L factor
-    \param[in,out] u   - allocated space for U factor
-    \param[in,out] piv - row of pivots 
-    \param[in,out] px  - x values of pivots 
+    \param[in]     A       - qmarray to decompose
+    \param[in,out] L       - qmarray representing L factor
+    \param[in,out] u       - allocated space for U factor
+    \param[in,out] piv     - row of pivots 
+    \param[in,out] px      - x values of pivots 
+    \param[in]     optargs - optimization arguments
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
-                 size_t * piv, double * px)
+                 size_t * piv, double * px, void * optargs)
 {
     int info = 0;
     
@@ -1815,7 +1823,7 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         //printf("before absmax\n");
         //this line is critical!!
         val = generic_function_array_absmax(A->nrows, 1, A->funcs + kk*A->nrows, 
-                                                    &amind, &amloc);
+                                            &amind, &amloc,optargs);
         //printf("after absmax\n");
         piv[kk] = amind;
         px[kk] = amloc;
@@ -1838,10 +1846,10 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
 
             if (A->funcs[kk*A->nrows]->fc == LINELM){
                 //printf("lets go!\n");
-                create_any_L_linelm(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub);
+                create_any_L_linelm(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
             }
             else{
-                create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub);
+                create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
             }
             amind = piv[kk];
             amloc = px[kk];
@@ -1957,10 +1965,11 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     Perform a greedy maximum volume procedure to find the 
     maximum volume submatrix of a qmarray
 
-    \param A [in] - qmarray
-    \param Asinv [inout] - submatrix inv
-    \param pivi [inout] - row pivots 
-    \param pivx [inout] - x value in row pivots 
+    \param[in]     A       - qmarray
+    \param[in,out] Asinv   - submatrix inv
+    \param[in,out] pivi    - row pivots 
+    \param[in,out] pivx    - x value in row pivots 
+    \param[in]     optargs - optimization arguments
 
     \return info = 
             0 converges,
@@ -1971,7 +1980,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
         naive implementation without rank 1 updates
 ***************************************************************/
 int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi, 
-        double * pivx)
+                     double * pivx, void * optargs)
 {
     //printf("in maxvolqmarray!\n");
 
@@ -1993,7 +2002,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
 
     //print_qmarray(Acopy,0,NULL);
-    info =  qmarray_lu1d(Acopy,L,U,pivi, pivx);
+    info =  qmarray_lu1d(Acopy,L,U,pivi, pivx,optargs);
     if (VQMAMAXVOL){
         printf("pivot immediate \n");
         iprint_sz(A->ncols, pivi);
@@ -2051,7 +2060,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     if (VQMAMAXVOL){
         printf("do absmax1d\n");
     }
-    qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval);
+    qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval,optargs);
     if (VQMAMAXVOL){
         printf("maxrow=%zu maxcol=%zu maxval=%G\n",maxrow, maxcol, maxval);
     }
@@ -2080,7 +2089,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         //dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
         qmarray_free(B); B = NULL;
         B = qmam(A,Asinv,r);
-        qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2);
+        qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2,optargs);
 
         if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){
             break;
@@ -2120,10 +2129,10 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
 /***********************************************************//**
     Compute the householder triangularization of a quasimatrix array. 
 
-    \param A [inout] - qmarray to triangularize (overwritten)
-    \param E [inout] - qmarray with orthonormal columns
-    \param V [inout] - allocated space for a qmarray (will store reflectors)
-    \param R [inout] - allocated space upper triangular factor
+    \param[in,out] A - qmarray to triangularize (overwritten)
+    \param[in,out] E - qmarray with orthonormal columns
+    \param[in,out] V - allocated space for a qmarray (will store reflectors)
+    \param[in,out] R - allocated space upper triangular factor
 
     \return info - (if != 0 then something is wrong)
 ***************************************************************/
@@ -2566,15 +2575,12 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     qmarray. whose elements consist of
     one dimensional functions (simple interface)
 
-    \param dir [in] - type either "QR" or "LQ"
-    \param A [inout] - qmarray to triangularize (destroyed in call)
-    \param R [inout] - allocated space upper triangular factor
+    \param[in]    dir - type either "QR" or "LQ"
+    \param[in,out] A  - qmarray to triangularize (destroyed in call)
+    \param[in,out] R  - allocated space upper triangular factor
 
-    \return E - quasimatrix denoting the Q term
+    \return Q 
 
-    \note 
-        For now I have only implemented this for polynomial function class 
-            and legendre subtype
 ***************************************************************/
 struct Qmarray *
 qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
@@ -2607,23 +2613,25 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         if (polyorth == 1){
             Q = qmarray_orth1d_columns(POLYNOMIAL, &ptype, A->nrows,
                                        ncols, lb, ub);   
+            if (fastqr == 1){
+                out = qmarray_qr(A,&Q,&R);
+                assert (out == 0);
+            }
+            else if (fastqr == 0){
+                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+                out = qmarray_householder(A,Q,V,R);
+                assert(out == 0);
+                out = qmarray_qhouse(Q,V);
+                assert(out == 0);
+                qmarray_free(V);
+            }
         }
         else{
-            Q = qmarray_orth1d_columns(LINELM,&ptype,A->nrows,ncols,
-                                       lb,ub);
-        }
-        
-        if (fastqr == 1){
+            Q = qmarray_orth1d_columns(LINELM, 
+                                       &ptype, A->nrows, ncols,
+                                       lb, ub); 
             out = qmarray_qr(A,&Q,&R);
-            assert (out == 0);
-        }
-        else if (fastqr == 0){
-            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-            out = qmarray_householder(A,Q,V,R);
             assert(out == 0);
-            out = qmarray_qhouse(Q,V);
-            assert(out == 0);
-            qmarray_free(V);
         }
     }
     else if (strcmp(dir, "LQ") == 0){
@@ -2645,28 +2653,28 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
             Q = qmarray_orth1d_rows(POLYNOMIAL, 
                                     &ptype, A->nrows, ncols,
                                     lb, ub); 
+            if (fastqr == 1){
+                //free(R); R = NULL;
+                out = qmarray_lq(A,&Q,&R);
+                assert (out == 0);
+            }
+            else{
+                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+                //printf("here\n");
+                out = qmarray_householder_rows(A,Q,V,R);
+                //printf("there!\n");
+                assert(out == 0);
+                out = qmarray_qhouse_rows(Q,V);
+                assert(out == 0);
+                qmarray_free(V); V = NULL;
+            }
         }
         else{
             Q = qmarray_orth1d_rows(LINELM, 
                                     &ptype, A->nrows, ncols,
                                     lb, ub); 
-        }
-  
-        if (fastqr == 1){
-            //free(R); R = NULL;
             out = qmarray_lq(A,&Q,&R);
-            assert (out == 0);
-        }
-        else{
-
-            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-            //printf("here\n");
-            out = qmarray_householder_rows(A,Q,V,R);
-            //printf("there!\n");
             assert(out == 0);
-            out = qmarray_qhouse_rows(Q,V);
-            assert(out == 0);
-            qmarray_free(V); V = NULL;
         }
     }
     else{
@@ -2746,18 +2754,20 @@ size_t qmarray_truncated_svd(struct Qmarray * A, struct Qmarray ** U,
 /***********************************************************//**
     Compute the location of the (abs) maximum element in aqmarray consisting of 1 dimensional functions
 
-    \param qma [in] - qmarray 1
-    \param xmax [inout] - x value at maximum
-    \param rowmax [inout] - row of maximum
-    \param colmax [inout] - column of maximum
-    \param maxval [inout] - absolute maximum value
+    \param[in]     qma     - qmarray 1
+    \param[in,out] xmax    - x value at maximum
+    \param[in,out] rowmax  - row of maximum
+    \param[in,out] colmax  - column of maximum
+    \param[in,out] maxval  - absolute maximum value
+    \param[in]     optargs - optimization arguments
 ***************************************************************/
 void qmarray_absmax1d(struct Qmarray * qma, double * xmax, size_t * rowmax,
-                       size_t * colmax, double * maxval)
+                      size_t * colmax, double * maxval, void * optargs)
 {
     size_t combrowcol;
     *maxval = generic_function_array_absmax(qma->nrows * qma->ncols,
-                            1, qma->funcs, &combrowcol, xmax);
+                                            1, qma->funcs, 
+                                            &combrowcol, xmax,optargs);
     
     size_t nsubs = 0;
     //printf("combrowcol = %zu \n", combrowcol);
@@ -2881,9 +2891,9 @@ struct Qmarray * qmarray_blockdiag(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Compute the derivative of every function in the qmarray
 
-    \param a [in] - qmarray
+    \param[in] a - qmarray
 
-    \return b - qmarray of derivatives
+    \return qmarray of derivatives
 ***************************************************************/
 struct Qmarray * qmarray_deriv(struct Qmarray * a)
 {
@@ -2918,9 +2928,9 @@ void qmarray_roundt(struct Qmarray ** qma, double epsilon)
 /***********************************************************//**
     Evaluate a qmarray
 
-    \param qma [in] - quasimatrix array
-    \param x [in] - location at which to evaluate
-    \param out [in] - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     qma - quasimatrix array
+    \param[in]     x   - location at which to evaluate
+    \param[in,out] out - allocated array to store output (qma->nrows * qma->ncols)
 
 ***************************************************************/
 void qmarray_eval(struct Qmarray * qma, double x, double * out)
@@ -2937,8 +2947,8 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
 /***********************************************************//**
     Evaluate a function train
 
-    \param ft [in] - function train
-    \param x [in] - location at which to evaluate
+    \param[in] ft - function train
+    \param[in] x  - location at which to evaluate
 
     \return val - value of the function train
 ***************************************************************/
@@ -3029,8 +3039,8 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 /********************************************************//**
     Rounding of a function train
 
-    \param ain [in] - FT 
-    \param epsilon [in] - threshold
+    \param[in] ain - FT 
+    \param[in] epsilon - threshold
 
     \return ft - rounded function train
 ***********************************************************/
@@ -3114,13 +3124,13 @@ function_train_round(struct FunctionTrain * ain, double epsilon)
 /********************************************************//**
     Addition of two functions in FT format
 
-    \param a [in] - FT 1
-    \param b [in] - FT 2
+    \param[in] a - FT 1
+    \param[in] b - FT 2
 
     \return ft - function representing a+b
 ***********************************************************/
 struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
-                                struct FunctionTrain * b)
+                                          struct FunctionTrain * b)
 {
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     
@@ -3615,6 +3625,7 @@ void update_rindex(size_t ii, size_t oncore, size_t rank,
     }
 }
 
+
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
 
@@ -3634,9 +3645,9 @@ void update_rindex(size_t ii, size_t oncore, size_t rank,
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross(double (*f)(double *, void *), void * args, 
-    struct BoundingBox * bd, struct FunctionTrain * ftref, 
-    struct IndexSet ** left_ind, struct IndexSet ** right_ind, 
-    struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
+               struct BoundingBox * bd, struct FunctionTrain * ftref, 
+               struct IndexSet ** left_ind, struct IndexSet ** right_ind, 
+               struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
 {
     size_t dim = bd->dim;
     int info;
@@ -3672,10 +3683,10 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             
             if (VFTCROSS){
                 printf( "prepCore \n");
-                //printf( "left index set = \n");
-                //print_index_set_array(dim,left_ind);
-                //printf( "right index set = \n");
-                //print_index_set_array(dim,right_ind);
+//                printf( "left index set = \n");
+//                print_index_set_array(dim,left_ind);
+//                printf( "right index set = \n");
+//                print_index_set_array(dim,right_ind);
             }
             temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
 
@@ -3683,11 +3694,14 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 printf ("got it \n");
                 //print_qmarray(temp,0,NULL);
                 struct Qmarray * tempp = qmarray_copy(temp);
+                printf("core is \n");
+                //print_qmarray(tempp,0,NULL);
                 R = calloc_double(temp->ncols * temp->ncols);
                 Q = qmarray_householder_simple("QR", temp,R);
                 printf("R=\n");
                 dprint2d_col(temp->ncols, temp->ncols, R);
-                
+//                print_qmarray(Q,0,NULL);
+
                 struct Qmarray * mult = qmam(Q,R,temp->ncols);
                 //print_qmarray(Q,3,NULL);
                 double difftemp = qmarray_norm2diff(mult,tempp);
@@ -3701,7 +3715,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             }
 
         
-            info = qmarray_maxvol1d(Q,R,pivind, pivx);
+            info = qmarray_maxvol1d(Q,R,pivind, pivx,cargs->optargs);
 
             if (VFTCROSS){
                 printf( " got info=%d\n",info);
@@ -3802,7 +3816,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
             pivind = calloc_size_t(ft->ranks[ii]);
             pivx = calloc_double(ft->ranks[ii]);
-            info = qmarray_maxvol1d(Qt,R,pivind, pivx);
+            info = qmarray_maxvol1d(Qt,R,pivind,pivx,cargs->optargs);
             
             if (VFTCROSS){
                 printf("got info=%d\n",info);
@@ -3885,6 +3899,17 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 }
 
 /***********************************************************//**
+    Initialize a baseline cross-approximation args
+
+    \param[in,out] fargs 
+***************************************************************/
+void ft_cross_args_init(struct FtCrossArgs * fca)
+{
+    fca->ranks = NULL;
+    fca->optargs = NULL;
+}
+
+/***********************************************************//**
     An interface for cross approximation of a function
 
     \param[in] f      - function
@@ -3946,7 +3971,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
         init_ranks[0] = 1;
         init_ranks[dim] = 1;
         
-
+        ft_cross_args_init(&temp);
         temp.dim = dim;
         temp.ranks = init_ranks;
         temp.epsilon = 1e-5;
@@ -3956,6 +3981,8 @@ function_train_cross(double (*f)(double *, void *), void * args,
         temp.epsround = 1e-10;
         temp.kickrank = 10;
         temp.maxiteradapt = 5;
+        
+        temp.optargs = NULL;
         fcause = &temp;
     }
     
@@ -3970,6 +3997,8 @@ function_train_cross(double (*f)(double *, void *), void * args,
     //printf("ranks 500 = %zu \n",fcause->ranks[500]);
     struct IndexSet ** isr = index_set_array_rnested(dim, fcause->ranks, init_x);
     struct IndexSet ** isl = index_set_array_lnested(dim, fcause->ranks, init_x);
+
+//    print_index_set_array(2,isr);
 
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,init_x,
@@ -4006,20 +4035,20 @@ function_train_cross(double (*f)(double *, void *), void * args,
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function with rank adaptation
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bds [in] - bounds on input space
-    \param ftref [inout] - initial ftrain decomposition, changed in func
-    \param isl [inout] - left indices (first element should be NULL)
-    \param isr [inout] - right indices (last element should be NULL)
-    \param xhelp [in] - values helpful to create new index sets if *fca* is NULL
-    \param fca [in] - algorithm parameters, if NULL then default paramaters used
-    \param apargs [in] - function approximation args 
+    \param[in]     f      - function
+    \param[in]     args   - function arguments
+    \param[in]     bds    - bounds on input space
+    \param[in,out] ftref  - initial ftrain decomposition, changed in func
+    \param[in,out] isl    - left indices (first element should be NULL)
+    \param[in,out] isr    - right indices (last element should be NULL)
+    \param[in]     xhelp  - values helpful to create new index sets if *fca* is NULL
+    \param[in]     fca    - algorithm parameters, if NULL then default paramaters used
+    \param[in      apargs - function approximation args 
 
-    \return ft - function train decomposition of $f$
+    \return function train decomposition of $f$
 
     \note
-       both left and right indices are nested
+    both left and right indices are nested
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross_rankadapt( double (*f)(double *, void *),

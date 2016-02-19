@@ -111,6 +111,7 @@ int main(int argc, char * argv[])
 
     size_t init_ranks[3] = {1,3,1};
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.dim = dim;
     fca.ranks = init_ranks;
     fca.epsilon = 1e-10;
@@ -141,7 +142,7 @@ int main(int argc, char * argv[])
     }
 
     // Done with setup
-    double start[2] = {lb,lb};
+    double start[2] = {0.5,-0.2};
     struct FunctionTrain * ft = 
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 
