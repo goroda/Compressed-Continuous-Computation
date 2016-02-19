@@ -1432,12 +1432,12 @@ function_train_initsum(size_t dim,  double (**f)(double, void *),
 /***********************************************************//**
     Compute a tensor train representation of  \f$ f1 + f2 + ...+ fd \f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] - one dimensional function with args x and i where  
-               should denote which function to evaluate
-    \param args [in] - array of arguments to the functions
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      - one dimensional function with args x and i where  
+                        should denote which function to evaluate
+    \param[in] args   - array of arguments to the functions
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
     \return ft - function train
 ***************************************************************/
@@ -1539,15 +1539,15 @@ function_train_initsum2(size_t dim,  double (*f)(double, size_t, void *),
     Compute a tensor train representation of 
     \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param c [in] -  slope of the function in each dimension (ldc x dim)
-    \param ldc [in] - stride of coefficients in array of c
-    \param a [in] - offset of the function in each dimension (ldc x dim)
-    \param lda [in] - stride of coefficients in array a
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] c      -  slope of the function in each dimension (ldc x dim)
+    \param[in] ldc    - stride of coefficients in array of c
+    \param[in] a      - offset of the function in each dimension (ldc x dim)
+    \param[in] lda    - stride of coefficients in array a
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_linear2(size_t dim, struct BoundingBox * bds, 
@@ -1646,15 +1646,15 @@ function_train_linear2(size_t dim, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
 
-    \param dim [in] - dimension of function train
-    \param a [in] - value of tensor train
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] a      - value of tensor train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 
     \note 
-        Puts the constant into the first core
+    Puts the constant into the first core
 ***************************************************************/
 struct FunctionTrain * 
 function_train_constant(size_t dim, double a, struct BoundingBox * bds,  
@@ -1710,12 +1710,12 @@ function_train_constant(size_t dim, double a, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a tensor train representation of \f$ x_1c_1 + x_2c_2 + .... + x_dc_d \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param coeffs [in] -  slope of the function in each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs -  slope of the function in each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs, 
@@ -1809,16 +1809,16 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param coeffs (IN): Q matrix
-    \param m [in] - m (dim,)
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs - Q matrix
+    \param[in] m      - m (dim,)
+    \param[in] ftargs - parameters for computation
 
-    \returns ft - function train
+    \returns function train
 
     \note
-        Could be more efficient with a better distribution of ranks
+    Could be more efficient with a better distribution of ranks
 ***************************************************************/
 struct FunctionTrain * 
 function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs, 
@@ -1956,17 +1956,17 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a tensor train representation of \f$ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f$
 
-    \param bds [in] - boundarys of each dimension
-    \param coeffs [in] - coefficients for each dimension
-    \param m [in] - offset in each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs - coefficients for each dimension
+    \param[in] m      - offset in each dimension
+    \param[in] ftargs - parameters for computation
 
     \return ft - function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_quadratic_aligned(struct BoundingBox * bds, 
-            double * coeffs, double * m,
-            struct FtApproxArgs * ftargs)
+                                 double * coeffs, double * m,
+                                 struct FtApproxArgs * ftargs)
 {
     size_t dim = bds->dim;
 
@@ -2062,9 +2062,9 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
 /***********************************************************//**
     Serialize a function_train
 
-    \param ser [inout] - stream to serialize to
-    \param ft [in] - function train
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     ft        - function train
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of ytes
 ***************************************************************/
@@ -2105,8 +2105,8 @@ function_train_serialize(unsigned char * ser, struct FunctionTrain * ft,
 /***********************************************************//**
     Deserialize a function train
 
-    \param ser [inout] - serialized function train
-    \param ft [inout] - function_train
+    \param[in,out] ser - serialized function train
+    \param[in,out] ft  - function_train
 
     \return ptr - shifted ser after deserialization
 ***************************************************************/
@@ -2134,8 +2134,8 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 /***********************************************************//**
     Save a function train to file
     
-    \param ft [in] - function train to save
-    \param filename [in] - name of file to save to
+    \param[in] ft       - function train to save
+    \param[in] filename - name of file to save to
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
@@ -2172,7 +2172,7 @@ int function_train_save(struct FunctionTrain * ft, char * filename)
 /***********************************************************//**
     Load a function train from a file
     
-    \param filename [in] - filename of file to load
+    \param[in] filename - filename of file to load
 
     \return ft if successfull NULL otherwise
 ***************************************************************/
@@ -2212,9 +2212,9 @@ struct FunctionTrain * function_train_load(char * filename)
 /***********************************************************//**
     Allocate a 1d array of function trains
 
-    \param dimout [in] - number of function trains
+    \param[in] dimout - number of function trains
 
-    \return fta - function train array
+    \return function train array
 
     \note 
         Each ft of the array is set to NULL;
@@ -2246,15 +2246,15 @@ struct FT1DArray * ft1d_array_alloc(size_t dimout)
 /***********************************************************//**
     Serialize a function train array
 
-    \param ser [inout] - stream to serialize to
-    \param ft [in] - function train array
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser        - stream to serialize to
+    \param[in]     ft         - function train array
+    \param[in,out] totSizeIn  - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of bytes
 ***************************************************************/
 unsigned char * 
 ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
-                size_t *totSizeIn)
+                     size_t *totSizeIn)
 {
 
     // size -> ft1 -> ft2 -> ... ->ft[size]
@@ -2286,8 +2286,8 @@ ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
 /***********************************************************//**
     Deserialize a function train array
 
-    \param ser [inout] - serialized function train array
-    \param ft [inout] - function_train array
+    \param[in,out] ser - serialized function train array
+    \param[in,out] ft  - function_train array
 
     \return ptr - shifted ser after deserialization
 ***************************************************************/
@@ -2311,8 +2311,8 @@ ft1d_array_deserialize(unsigned char * ser, struct FT1DArray ** ft)
 /***********************************************************//**
     Save a function train array to file
     
-    \param ft [in] - function train array to save
-    \param filename [in] - name of file to save to
+    \param[in] ft       - function train array to save
+    \param[in] filename - name of file to save to
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
@@ -2349,7 +2349,7 @@ int ft1d_array_save(struct FT1DArray * ft, char * filename)
 /***********************************************************//**
     Load a function train array from a file
     
-    \param filename [in] - filename of file to load
+    \param[in] filename - filename of file to load
 
     \return ft if successfull NULL otherwise
 ***************************************************************/
@@ -2388,7 +2388,7 @@ struct FT1DArray * ft1d_array_load(char * filename)
 /***********************************************************//**
     Copy an array of function trains
 
-    \param fta [in] - array to coppy
+    \param[in] fta - array to coppy
 
     \return ftb - copied array
 ***************************************************************/
@@ -2405,7 +2405,7 @@ struct FT1DArray * ft1d_array_copy(struct FT1DArray * fta)
 /***********************************************************//**
     Free a 1d array of function trains
 
-    \param fta [inout] - function train array to free
+    \param[in,out] fta - function train array to free
 ***************************************************************/
 void ft1d_array_free(struct FT1DArray * fta)
 {
