@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
     char filename[256];
-    sprintf(filename,"errs.dat");
+    sprintf(filename,"%s/errs.dat",dirout);
     FILE * fp = fopen(filename,"w");
     assert (fp != NULL);
     fprintf(fp,"n l2 l2est linf linfest integral\n");
@@ -152,6 +152,9 @@ int main(int argc, char * argv[])
         free(f); f = NULL;
         free(loc); loc = NULL;
         lin_elem_exp_free(le); le = NULL;
+    }
+    if (verbose == 1){
+        printf("Done.!\n");
     }
     fclose(fp);
     free(xtest); xtest = NULL;

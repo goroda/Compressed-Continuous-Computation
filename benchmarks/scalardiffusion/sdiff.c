@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
                 abort();
         }
     } while (next_option != -1);
-
+    assert (output_filename == NULL);
     int type = 2;
     
     if (benchmark == 0){

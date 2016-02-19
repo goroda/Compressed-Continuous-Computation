@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,20 +33,23 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file indmanage.h
+ * Provides header files and structure definitions for functions in indmanage.c
  */
 
+struct CrossIndex
+{
+    size_t d; // dimension of each node
+    size_t n;
+    struct CrossNode * nodes;
+};
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "elements.h"
-#include "indmanage.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "dmrgprod.h"
-#include "qmarray_qr.h"
-#include "diffusion.h"
-
-#endif
+struct CrossIndex * cross_index_alloc(size_t);
+void cross_index_free(struct CrossIndex *);
+void cross_index_add_index(struct CrossIndex *, size_t, double *);
+void cross_index_add_nested(struct CrossIndex *, int, 
+                            size_t, double *, double);
+struct CrossIndex *
+cross_index_create_nested(int, int, size_t, size_t,
+                          double *, struct CrossIndex *);
+void print_cross_index(struct CrossIndex *);

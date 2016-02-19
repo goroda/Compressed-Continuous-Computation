@@ -2891,6 +2891,55 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     return suite;
 }
 
+void Test_CrossIndexing(CuTest * tc)
+{
+   printf("Testing Function: general cross indexing functions\n");
+   size_t d = 1;
+   struct CrossIndex * ci = cross_index_alloc(d);
+   size_t N = 10;
+   double * pts = linspace(-2.0,2.0,N);
+   for (size_t ii = 0; ii < N; ii++){
+       cross_index_add_index(ci,d,&(pts[ii]));
+   }
+
+   CuAssertIntEquals(tc,N,ci->n);
+   print_cross_index(ci);
+   
+   size_t N2 = 7;
+   double * pts2 = linspace(-1.5,1.5,N);
+   size_t Ntot = 14;
+   int newfirst = 1;
+   struct CrossIndex * ci2 = cross_index_create_nested(newfirst,0,Ntot,N2,pts2,ci);
+   CuAssertIntEquals(tc,Ntot,ci2->n);
+   print_cross_index(ci2);
+
+   struct CrossIndex * ci3 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
+   CuAssertIntEquals(tc,Ntot,ci3->n);
+   print_cross_index(ci3);
+
+   newfirst = 0;
+   struct CrossIndex * ci4 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
+   CuAssertIntEquals(tc,Ntot,ci4->n);
+   print_cross_index(ci4);
+
+   cross_index_free(ci); ci = NULL;
+   cross_index_free(ci2); ci2 = NULL;
+   cross_index_free(ci3); ci3 = NULL;
+   cross_index_free(ci4); ci4 = NULL;
+   free(pts); pts = NULL;
+   free(pts2); pts2 = NULL;
+
+}
+
+CuSuite * CLinalgCrossIndGetSuite(){
+
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_CrossIndexing);
+
+    return suite;
+ }
+
+
 double funcGrad(double * x, void * args){
     assert (args == NULL);
     double out = x[0] * x[1] + x[2] * x[3];
@@ -4040,15 +4089,17 @@ void RunAllTests(void) {
     CuSuite * clin = CLinalgGetSuite();
     CuSuite * qma = CLinalgQmarrayGetSuite();
     CuSuite * ftr = CLinalgFuncTrainGetSuite();
+    CuSuite * cind = CLinalgCrossIndGetSuite();
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
+    /* CuSuiteAddSuite(suite, clin); */
+    /* CuSuiteAddSuite(suite, qma); */
+    /* CuSuiteAddSuite(suite, ftr); */
+    /* CuSuiteAddSuite(suite, fta); */
+    CuSuiteAddSuite(suite, cind);
+    /* CuSuiteAddSuite(suite, dmrg); */
+    /* CuSuiteAddSuite(suite, diff); */
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
@@ -4058,6 +4109,7 @@ void RunAllTests(void) {
     CuSuiteDelete(qma);
     CuSuiteDelete(ftr);
     CuSuiteDelete(fta);
+    CuSuiteDelete(cind);
     CuSuiteDelete(dmrg);
     CuSuiteDelete(diff);
     CuStringDelete(output);

@@ -2544,7 +2544,6 @@ index_set_array_rnested(size_t dim, size_t * ranks, double * opts)
         }
     }
     isr[dim-1] = NULL;
-    
     return isr;
 }
 
