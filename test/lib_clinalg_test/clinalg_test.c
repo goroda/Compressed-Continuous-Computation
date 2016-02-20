@@ -2893,7 +2893,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
 
 void Test_CrossIndexing(CuTest * tc)
 {
-   printf("Testing Function: general cross indexing functions\n");
+   printf("Testing Function: general cross indexing functions (uncomment print statements for visual test)\n");
    size_t d = 1;
    struct CrossIndex * ci = cross_index_alloc(d);
    size_t N = 10;
@@ -2915,13 +2915,29 @@ void Test_CrossIndexing(CuTest * tc)
 
    struct CrossIndex * ci3 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
    CuAssertIntEquals(tc,Ntot,ci3->n);
+   printf("\n\n\nci3\n");
    print_cross_index(ci3);
 
    newfirst = 0;
    struct CrossIndex * ci4 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
    CuAssertIntEquals(tc,Ntot,ci4->n);
+   printf("\n\n\nci4\n");
    print_cross_index(ci4);
 
+   size_t ind[5] = {1, 3, 0, 3, 2};
+   double nx[5] = {0.2, -0.8, 0.3, -1.0, 0.2};
+   struct CrossIndex * ci5 = cross_index_create_nested_ind(0,5,ind,nx,ci4);
+   CuAssertIntEquals(tc,5,ci5->n);
+   print_cross_index(ci5);
+
+   double ** vals = cross_index_merge_wspace(ci3,ci4);
+   printf("merged\n");
+   for (size_t ii = 0; ii < Ntot; ii++){
+       dprint(7,vals[ii]);
+       free(vals[ii]); vals[ii] = NULL;
+   }
+   free(vals);
+   
    cross_index_free(ci); ci = NULL;
    cross_index_free(ci2); ci2 = NULL;
    cross_index_free(ci3); ci3 = NULL;

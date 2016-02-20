@@ -80,10 +80,10 @@ int main(int argc, char * argv[])
                 dirout = optarg;
                 break;
             case 'f':
-                function = strtol(optarg,NULL,10);
+                function = (size_t) strtol(optarg,NULL,10);
                 break;
             case 'n':
-                n = strtol(optarg,NULL,10);
+                n = (size_t) strtol(optarg,NULL,10);
                 break;
             case 'l':
                 lb = strtod(optarg,NULL);
@@ -150,9 +150,8 @@ int main(int argc, char * argv[])
     struct FunctionTrain * ft = 
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 
-
     size_t nevals = nstored_hashtable_cp(fm->evals);
-    size_t ntot = pow(n,dim);
+    size_t ntot = n*n;
     if (verbose == 1){
         printf("Final ranks are "); iprint_sz(3,ft->ranks);
         printf("Number of evaluations = %zu\n",nevals);

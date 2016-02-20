@@ -3209,10 +3209,10 @@ void function_train_scale(struct FunctionTrain * x, double a)
 /********************************************************//**
     Product of two functions in function train form
 
-    \param a [in] - Function train 1
-    \param b [in] - Function train 2
+    \param[in] a  - Function train 1
+    \param[in] b  - Function train 2
 
-    \return ft - \f$ ft(x) = a(x)b(x) \f$
+    \return Product \f$ f(x) = a(x)b(x) \f$
 ***********************************************************/
 struct FunctionTrain * 
 function_train_product(struct FunctionTrain * a, struct FunctionTrain * b)
@@ -3232,9 +3232,9 @@ function_train_product(struct FunctionTrain * a, struct FunctionTrain * b)
 /********************************************************//**
     Integrate a function in function train format
 
-    \param ft [in] - Function train 1
+    \param[in] ft - Function train 1
 
-    \return \f$ val = \int f(x) dx \f$
+    \return Integral \f$ \int f(x) dx \f$
 ***********************************************************/
 double 
 function_train_integrate(struct FunctionTrain * ft)
@@ -3285,7 +3285,7 @@ function_train_integrate(struct FunctionTrain * ft)
     \param[in] a - Function train 1
     \param[in] b - Function train 2
 
-    \return \f$ int a(x)b(x) dx \f$
+    \return Inner product \f$ \int a(x)b(x) dx \f$
 
 ***********************************************************/
 double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
@@ -3317,7 +3317,7 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 
     \param[in] a - Function train 
 
-    \return \f$ \sqrt{int a^2(x) dx} \f$
+    \return L2 Norm \f$ \sqrt{int a^2(x) dx} \f$
 ***********************************************************/
 double function_train_norm2(struct FunctionTrain * a)
 {
@@ -3338,7 +3338,7 @@ double function_train_norm2(struct FunctionTrain * a)
     \param[in] a - function train 
     \param[in] b - function train 2
 
-    \return \f$ \sqrt{ \int (a(x)-b(x))^2 dx } \f$
+    \return L2 difference \f$ \sqrt{ \int (a(x)-b(x))^2 dx } \f$
 ***********************************************************/
 double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
 {   
@@ -3359,7 +3359,8 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
     \param[in] a - function train 
     \param[in] b - function train 2
 
-    \return \f$ \sqrt{ \int (a(x)-b(x))^2 dx } / \lVert b(x) \rVert \f$
+    \return Relative L2 difference 
+    \f$ \sqrt{ \int (a(x)-b(x))^2 dx } / \lVert b(x) \rVert \f$
 ***********************************************************/
 double function_train_relnorm2diff(struct FunctionTrain * a, 
                                    struct FunctionTrain * b)
@@ -3759,7 +3760,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         }
         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
         ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd,
-                                    left_ind,right_ind, cargs, apargs,1);
+                                 left_ind,right_ind, cargs, apargs,1);
         if (VFTCROSS == 2){
             printf ("got it \n");
             //print_qmarray(ft->cores[ii],0,NULL);
@@ -3915,7 +3916,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 /***********************************************************//**
     Initialize a baseline cross-approximation args
 
-    \param[in,out] fargs 
+    \param[in,out] fca - cross approximation arguments 
 ***************************************************************/
 void ft_cross_args_init(struct FtCrossArgs * fca)
 {
@@ -4056,9 +4057,9 @@ function_train_cross(double (*f)(double *, void *), void * args,
     \param[in,out] isr    - right indices (last element should be NULL)
     \param[in]     xhelp  - values helpful to create new index sets if *fca* is NULL
     \param[in]     fca    - algorithm parameters, if NULL then default paramaters used
-    \param[in      apargs - function approximation args 
+    \param[in]     apargs - function approximation args 
 
-    \return function train decomposition of $f$
+    \return function train decomposition of f
 
     \note
     both left and right indices are nested
@@ -4166,7 +4167,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 /***********************************************************//**
     Computes the maximum rank of a FT
     
-    \param[in] ft
+    \param[in] ft - function train
 
     \return maxrank
 ***************************************************************/
@@ -4187,7 +4188,7 @@ size_t function_train_maxrank(struct FunctionTrain * ft)
 /***********************************************************//**
     Computes the average rank of a FT. Doesn't cound first and last ranks
     
-    \param[in] ft 
+    \param[in] ft - function train
 
     \return avgrank
 ***************************************************************/

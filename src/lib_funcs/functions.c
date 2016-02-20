@@ -2350,7 +2350,7 @@ fiber_cut_2darray( double (*f)(double, double, void *), void * args,
 ***************************************************************/
 struct FiberCut **
 fiber_cut_ndarray( double (*f)(double *, void *), void * args, 
-                            size_t totdim, size_t dim, size_t n, double ** val)
+                   size_t totdim, size_t dim, size_t n, double ** val)
 {   
     struct FiberCut ** fcut;
     if (NULL == ( fcut = malloc(n *sizeof(struct FiberCut *)))){

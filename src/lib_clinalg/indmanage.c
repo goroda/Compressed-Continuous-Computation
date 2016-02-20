@@ -31,7 +31,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/** \file indmanage
+/** \file indmanage.c
  * Provides routines for managing index sets associated with cross approximation algorithm
  */
 
@@ -103,6 +103,17 @@ void cross_node_add_nested(struct CrossNode ** cn, int left, size_t nold, double
     free(x); x = NULL;
 }
 
+struct CrossNode * cross_node_get(struct CrossNode * cn, size_t ind)
+{
+    struct CrossNode * out = cn;
+    size_t iter = 0;
+    while (iter < ind){
+        out = out->next;
+        iter++;
+    }
+    return out;
+}
+
 void print_cross_nodes(struct CrossNode * cn){
     if (cn == NULL){
         printf("NULL\n");
@@ -157,6 +168,12 @@ void cross_index_add_nested(struct CrossIndex * cn, int left,
     cross_node_add_nested(&(cn->nodes),left,dold,xold,xnew);
 }
 
+struct CrossNode * cross_index_get_node(struct CrossIndex * c, size_t ind)
+{
+    assert (ind < c->n);
+    return cross_node_get(c->nodes,ind);
+}
+
 struct CrossIndex *
 cross_index_create_nested(int newfirst, int left, 
                           size_t sizenew, size_t nopts,
@@ -168,8 +185,9 @@ cross_index_create_nested(int newfirst, int left,
     struct CrossIndex * ci = cross_index_alloc(dold+1);
     
     // add new options before reusing nodes from old
-    struct CrossNode * oc = old->nodes;
+
     if (newfirst == 1){
+        struct CrossNode * oc = old->nodes;
         for (size_t ii = 0; ii < old->n; ii++){
             for (size_t jj = 0; jj < nopts; jj++){
                 cross_index_add_nested(ci,left,oc->n,oc->x,newopts[jj]);
@@ -197,6 +215,79 @@ cross_index_create_nested(int newfirst, int left,
     return NULL;
 }
 
+
+struct CrossIndex *
+cross_index_create_nested_ind(int left, size_t sizenew, size_t * indold,
+                              double * newx, struct CrossIndex * old)
+{
+    size_t dold = old->d;
+    struct CrossIndex * ci = cross_index_alloc(dold+1);
+
+    for (size_t ii = 0; ii < sizenew; ii++){
+        struct CrossNode * cn = cross_index_get_node(old,indold[ii]);
+        cross_index_add_nested(ci,left,cn->n,cn->x,newx[ii]);
+    }
+    return ci;
+}
+
+double **
+cross_index_merge_wspace(struct CrossIndex * left, struct CrossIndex * right)
+{
+    double ** vals = NULL;
+    if ( (left != NULL) && (right != NULL) ){
+        assert (left->n == right->n);
+        vals = malloc(right->n * sizeof(double *));
+        if (vals == NULL){
+            fprintf(stderr, "Cannot allocate values for merging CrossIndex\n");
+            exit(1);
+        }
+        size_t dl = left->d;
+        size_t dr = right->d;
+        size_t d = dl+dr+1;
+        struct CrossNode * cl = left->nodes;
+        struct CrossNode * cr = right->nodes;
+        for (size_t ii = 0; ii < right->n;ii++){
+            vals[ii] = calloc_double(d);
+            memmove(vals[ii],cl->x,dl*sizeof(double));
+            memmove(vals[ii]+dl+1,cr->x,dr*sizeof(double));
+            cl = cl->next;
+            cr = cr->next;
+        }
+    }
+    else if (left == NULL){
+        assert (right != NULL);
+        vals = malloc(right->n * sizeof(double *));
+        if (vals == NULL){
+            fprintf(stderr, "Cannot allocate values for merging CrossIndex\n");
+            exit(1);
+        }
+        size_t d = right->d+1;
+        struct CrossNode * cn = right->nodes;
+        for (size_t ii = 0; ii < right->n; ii++){
+            vals[ii] = calloc_double(d);
+            memmove(vals[ii]+1,cn->x,(d-1)*sizeof(double));
+            cn = cn->next;
+        }
+    }
+    else if (right == NULL){
+        assert (left != NULL);
+        
+        vals = malloc(left->n * sizeof(double *));
+        if (vals == NULL){
+            fprintf(stderr, "Cannot allocate values for merging CrossIndex\n");
+            exit(1);
+        }
+        size_t d = left->d+1;
+        struct CrossNode * cn = left->nodes;
+        for (size_t ii = 0; ii < left->n; ii++){
+            vals[ii] = calloc_double(d);
+            memmove(vals[ii],cn->x,(d-1)*sizeof(double));
+            cn = cn->next;
+        }
+    }
+
+    return vals;
+}
 
 void print_cross_index(struct CrossIndex * cn)
 {

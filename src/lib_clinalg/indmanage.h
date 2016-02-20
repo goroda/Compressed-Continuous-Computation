@@ -33,10 +33,6 @@
 
 //Code
 
-/** \file indmanage.h
- * Provides header files and structure definitions for functions in indmanage.c
- */
-
 struct CrossIndex
 {
     size_t d; // dimension of each node
@@ -52,4 +48,11 @@ void cross_index_add_nested(struct CrossIndex *, int,
 struct CrossIndex *
 cross_index_create_nested(int, int, size_t, size_t,
                           double *, struct CrossIndex *);
+
+struct CrossIndex *
+cross_index_create_nested_ind(int, size_t, size_t *,
+                              double *, struct CrossIndex *);
+double **
+cross_index_merge_wspace(struct CrossIndex *, struct CrossIndex *);
+
 void print_cross_index(struct CrossIndex *);
