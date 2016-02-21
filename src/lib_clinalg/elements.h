@@ -314,40 +314,6 @@ struct FT1DArray * ft1d_array_load(char *);
 struct FT1DArray * ft1d_array_copy(struct FT1DArray *);
 void ft1d_array_free(struct FT1DArray *);
 
-
-/////////////////////////////////////////////////////////////////////
-// Indices
-/** \struct IndexSet
- * \brief Describes index sets used for cross approximation
- * \var IndexSet::type
- * 0 for left, 1 for right
- * \var IndexSet::totdim
- * total dimension of the function
- * \var IndexSet::dim
- * the dimension for which the index set is useful
- * \var IndexSet::rank
- * rank for the dimension sepecified
- * \var IndexSet::inds
- * set of indices
- */
-struct IndexSet{
-    
-    int type; // 0 for left, 1 for right
-    size_t totdim;
-    size_t dim;
-    size_t rank;
-    double ** inds;
-};
-
-struct IndexSet * index_set_alloc(int, size_t, size_t, size_t);
-void index_set_free(struct IndexSet *);
-void index_set_array_free(size_t, struct IndexSet **);
-struct IndexSet ** index_set_array_rnested(size_t, size_t *, double *);
-struct IndexSet ** index_set_array_lnested(size_t, size_t *, double *);
-double ** index_set_merge(struct IndexSet *, struct IndexSet *,size_t *);
-double ** index_set_merge_fill_end(struct IndexSet *, double **);
-double ** index_set_merge_fill_beg(double **, struct IndexSet *);
-
 struct FiberOptArgs
 {
     size_t dim;
@@ -364,6 +330,5 @@ void fiber_opt_args_free(struct FiberOptArgs *);
 // Utilities
 void print_quasimatrix(struct Quasimatrix *, size_t, void *);
 void print_qmarray(struct Qmarray *, size_t, void *);
-void print_index_set_array(size_t, struct IndexSet **);
 
 #endif

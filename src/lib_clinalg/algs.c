@@ -3561,7 +3561,7 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     size_t ncols, ncuts;
     size_t dim = bd->dim;
     
-    //printf("here!|n");
+
     fc = ft_approx_args_getfc(fta,ii);
     sub_type = ft_approx_args_getst(fta,ii);
     approx_args = ft_approx_args_getaopts(fta, ii);
@@ -3570,17 +3570,13 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     if (t == 1){
         ncuts = nrows;
         ncols = 1;
-        //      vals = cross_index_merge_wspace(left_ind[ii],right_ind[ii]);
         vals = cross_index_merge(left_ind[ii],right_ind[ii-1]);
-        //vals = index_set_merge_fill_end(left_ind[ii],right_ind[ii-1]->inds);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else if (t == -1){
         ncuts = cargs->ranks[ii+1];
         ncols = ncuts;
-//        vals = cross_index_merge_wspace(left_ind[ii],right_ind[ii]);
         vals = cross_index_merge(left_ind[ii+1],right_ind[ii]);
-//        vals = index_set_merge_fill_beg(left_ind[ii+1]->inds,right_ind[ii]); 
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else{
@@ -3594,7 +3590,6 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
             ncuts = left_ind[ii]->n * right_ind[ii]->n;
         }
         vals = cross_index_merge_wspace(left_ind[ii],right_ind[ii]);
-//        vals = index_set_merge(left_ind[ii],right_ind[ii], &ncuts); 
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
         ncols = ncuts / nrows;
     }
@@ -3616,33 +3611,6 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     
     return temp;
 }
-
-void update_lindex(size_t ii,size_t rank, struct IndexSet ** left_ind, 
-                    size_t * pivind, double * pivx)
-{
-    size_t jj,kk;
-    for (jj = 0; jj < rank; jj++){
-        left_ind[ii+1]->inds[jj][ii] = pivx[jj];
-        for (kk = 0; kk < ii; kk++){
-            left_ind[ii+1]->inds[jj][kk] = 
-                left_ind[ii]->inds[pivind[jj]][kk];
-        }
-    }
-}
-void update_rindex(size_t ii, size_t oncore, size_t rank, 
-                    struct IndexSet ** right_ind,
-                    size_t * pivind, double * pivx)
-{
-    size_t jj, kk;
-    for (jj = 0; jj < rank; jj++){
-        right_ind[ii-1]->inds[jj][0] = pivx[jj];
-        for (kk = 1; kk < oncore; kk++){
-            right_ind[ii-1]->inds[jj][kk] = 
-                        right_ind[ii]->inds[pivind[jj]][kk-1];
-        }
-    }
-}
-
 
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
@@ -3771,11 +3739,8 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 }
             }
             
-            //update_lindex(ii,ft->ranks[ii+1], left_ind, pivind, pivx);
-            
             qmarray_free(ft->cores[ii]); ft->cores[ii]=NULL;
             ft->cores[ii] = qmam(Q,R, temp->ncols);
-            //nrows = left_ind[ii+1]->rank;
             nrows = left_ind[ii+1]->n;
 
             qmarray_free(temp); temp = NULL;
@@ -3832,7 +3797,6 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
-        //print_index_set_array(dim,left_ind);
 
         ///////////////////////////////////////////////////////
         // right-left sweep
@@ -3913,8 +3877,6 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 }
                 //printf("updated\n");
             }
-
-//            update_rindex(ii, oncore, ft->ranks[ii], right_ind, pivind, pivx);
 
             qmarray_free(temp); temp = NULL;
             qmarray_free(Q); Q = NULL;
@@ -4072,23 +4034,9 @@ function_train_cross(double (*f)(double *, void *), void * args,
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
     
-//    struct IndexSet ** isr = index_set_array_rnested(dim, fcause->ranks, init_x);
-//    struct IndexSet ** isl = index_set_array_lnested(dim, fcause->ranks, init_x);
-
-//    print_index_set_array(2,isr);
-
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,fcause,fapp);
     
-    /*
-    index_set_array_free(dim, isr); isr = NULL;
-    index_set_array_free(dim, isl); isl = NULL;
-    isr = index_set_array_rnested(dim, ft->ranks, init_x);
-    isl = index_set_array_lnested(dim, ft->ranks, init_x);
-    memmove(fcause->ranks,ft->ranks,(dim+1)*sizeof(size_t));
-    function_train_free(ft); ft = NULL;
-    ft = ftapprox_cross(f,args, bds, dim, ftref, isl, isr, fcause);
-    */
     if (xstart == NULL){
         free_dd(dim, init_x); //init_x = NULL;
     }
@@ -4100,15 +4048,11 @@ function_train_cross(double (*f)(double *, void *), void * args,
     }
 
     function_train_free(ftref); ftref = NULL;
-    //  index_set_array_free(dim, isr); isr = NULL;
-//    index_set_array_free(dim, isl); isl = NULL;
     for (ii = 0; ii < dim;ii++){
         cross_index_free(isl[ii]);
         cross_index_free(isr[ii]);
     }
     free(init_coeff); init_coeff = NULL;
-    //function_train_free(ft); ft = NULL;
-
     return ft;
 }
 
@@ -4180,8 +4124,6 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 
     //printf("adapt here!\n");
 
-//    struct IndexSet ** isln = NULL;
-//    struct IndexSet ** isrn = NULL;
     size_t iter = 0;
 //    double * xhelp = NULL;
     while ( (adapt == 1) && (fca->maxiteradapt>0))
@@ -4193,17 +4135,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
             iprint_sz(ft->dim+1,fca->ranks);
         }
         
-        // need a better way to boost indices
-        //isrn = index_set_array_rnested(dim, fca->ranks, xhelp);
-        //isln = index_set_array_lnested(dim, fca->ranks, xhelp);
-
         function_train_free(ft); ft = NULL;
         ft = ftapprox_cross(f, args, bds, ftc, isl, isr, fca,apargs);
          
-        //printf("Done with adapted one\n");
-        //index_set_array_free(dim,isrn);
-        //index_set_array_free(dim,isln);
-
         function_train_free(ftc); ftc = NULL;
         function_train_free(ftr); ftr = NULL;
 
@@ -4219,6 +4153,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
             if (ranks_found[ii] == ftr->ranks[ii]){
                 adapt = 1;
                 fca->ranks[ii] = ranks_found[ii] + kickrank;
+
+                // add indices again
+                cross_index_copylast(isr[ii-1],kickrank);
                 ranks_found[ii] = fca->ranks[ii];
             }
         }
