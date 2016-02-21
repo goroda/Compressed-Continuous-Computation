@@ -3157,10 +3157,10 @@ struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
 /********************************************************//**
     af(x) + b
 
-    \param a [in] - scaling factor
-    \param b [in] - offset
-    \param f [in] - object to scale
-    \param epsilon [in] - rounding tolerance
+    \param[in] a        - scaling factor
+    \param[in] b        - offset
+    \param[in] f        - object to scale
+    \param[in] epsilon  - rounding tolerance
 
     \return ft - function representing a+b
 ***********************************************************/
@@ -4091,7 +4091,12 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     struct FunctionTrain * ft = NULL;
 
     ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
-
+    // printf("found left index\n");
+    // print_cross_index(isl[1]);
+    // printf("found right index\n");
+    //print_cross_index(isr[0]);
+    
+    
     //return ft;
     if (fca->verbose > 0){
         printf("done with first cross... rounding\n");
@@ -4101,6 +4106,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     
     struct FunctionTrain * ftc = function_train_copy(ft);
     struct FunctionTrain * ftr = function_train_round(ft, eps);
+    //printf("rounded ranks = "); iprint_sz()
     //struct FunctionTrain * ftr = function_train_copy(ft);
     //return ftr; 
     //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
@@ -4122,7 +4128,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
         }
     }
 
-    //printf("adapt here!\n");
+    //printf("adapt here! adapt=%zu\n",adapt);
 
     size_t iter = 0;
 //    double * xhelp = NULL;

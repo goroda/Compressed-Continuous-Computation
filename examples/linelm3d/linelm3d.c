@@ -18,9 +18,9 @@ void print_code_usage (FILE * stream, int exit_code)
             " -h --help      Display this usage information.\n"
             " -d --directory Output directory (defaults to .)\n"
             " -f --function  Which function to approximate \n"
-            "                0: (default) x + y \n"
-            "                1: x*y \n"
-            "                2: sin(5xy)\n"
+            "                0: (default) x + y + z\n"
+            "                1: x*y*z \n"
+            "                2: sin(5xyz)\n"
             " -n --n         Discretization level (default 6)\n"
             " -l --lower     Lower bounds on x,y (default -1)\n"
             " -u --upper     Upper bounds on x,y (default 1)\n"
@@ -32,20 +32,20 @@ void print_code_usage (FILE * stream, int exit_code)
 double f0(double *x, void * args)
 {
     assert(args == NULL);
-    return x[0] + x[1];
+    return x[0] + x[1] + x[2];
 }
 
 double f1(double *x, void * args)
 {
     assert(args == NULL);
-    return x[0] * x[1];
+    return x[0] * x[1] * x[2];
 }
 
 double f2(double * x, void * args)
 {
     assert (args == NULL);
     double out;
-    out = sin(5.0 * x[0] * x[1] );
+    out = sin(5.0 * x[0] * x[1] * x[2] );
     //double out = x[0]*x[1] + pow(x[0],2)*pow(x[1],2) + pow(x[1],3)*sin(x[0]);
     
     return out;
@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
         }
     } while (next_option != -1);
 
-    size_t dim = 2;
+    size_t dim = 3;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
 
     struct LinElemExpAopts aopts = {n,0};
@@ -154,12 +154,14 @@ int main(int argc, char * argv[])
         printf("nodes are\n");
         dprint(n,xnodes);
     }
-    assert ( n > 4);
-    double startx[3] = {xnodes[0], xnodes[5], xnodes[n-1]};
-    double starty[3] = {xnodes[0], xnodes[4], xnodes[n-1]};
-    double * start[2];
+    assert (n > 3);
+    double startx[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
+    double starty[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
+    double startz[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
+    double * start[3];
     start[0] = startx;
     start[1] = starty;
+    start[2] = startz;
     struct FunctionTrain * ft = 
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 

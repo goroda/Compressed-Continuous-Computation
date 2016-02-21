@@ -324,8 +324,6 @@ struct FiberOptArgs * fiber_opt_args_init(size_t);
 struct FiberOptArgs * fiber_opt_args_bf_same(size_t, struct c3Vector *);
 void fiber_opt_args_free(struct FiberOptArgs *);
 
-
-
 /////////////////////////////////////////////////////////
 // Utilities
 void print_quasimatrix(struct Quasimatrix *, size_t, void *);

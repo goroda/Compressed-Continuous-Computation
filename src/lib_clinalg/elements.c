@@ -2460,8 +2460,9 @@ struct FiberOptArgs * fiber_opt_args_init(size_t dim)
 /***********************************************************//**
     Initialize a bruteforce optimization with the same nodes in each dimension
 
-    \param[in] dim - dimension of problem
-    \param[in] nodes - nodes over which to optimize (same ones used for each dimension)
+    \param[in] dim   - dimension of problem
+    \param[in] nodes - nodes over which to optimize 
+                       (same ones used for each dimension)
 
     \return fiber opt args
 ***************************************************************/
