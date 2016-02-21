@@ -299,10 +299,10 @@ int main( int argc, char *argv[])
     fca.maxiteradapt = 5;
     fca.verbose = 2;
 
-    double * center = darray_val(dim,0.0);
+    //double * center = darray_val(dim,0.0);
     
     struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval, fm, bds, center,&fca, fapp);
+        function_train_cross(function_monitor_eval, fm, bds,NULL,&fca, fapp);
 
     size_t nvals = nstored_hashtable_cp(fm->evals);
     printf("number of evaluations = %zu \n", nvals);
@@ -345,7 +345,7 @@ int main( int argc, char *argv[])
     bounding_box_free(bds); bds = NULL;
     ft_approx_args_free(fapp); fapp = NULL;
     free(fca.ranks); fca.ranks = NULL;
-    free(center); center = NULL;
+    //free(center); center = NULL;
     function_train_free(ft); ft = NULL;
     free(testpt); testpt = NULL;
 

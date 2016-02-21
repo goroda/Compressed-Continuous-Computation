@@ -42,6 +42,7 @@
 #define ALGS_H
 
 #include "elements.h"
+#include "indmanage.h"
 
 /** \struct Cross2dargs
  *  \brief Contains arguments for cross approximation
@@ -223,13 +224,13 @@ ft1d_array_sum_prod(size_t, double *, struct FT1DArray *, struct FT1DArray *,
 struct FunctionTrain *
 ftapprox_cross(double (*)(double *, void *), void *, 
     struct BoundingBox *, struct FunctionTrain *, 
-    struct IndexSet **, struct IndexSet **, 
+    struct CrossIndex **, struct CrossIndex **, 
     struct FtCrossArgs *, struct FtApproxArgs *);
 
 void ft_cross_args_init(struct FtCrossArgs *);
 struct FunctionTrain *
 function_train_cross(double (*)(double *, void *), void *, 
-        struct BoundingBox *, double *,
+        struct BoundingBox *, double **,
         struct FtCrossArgs *, struct FtApproxArgs *);
 
 struct FT1DArray * function_train_hessian(struct FunctionTrain *);
@@ -238,9 +239,8 @@ struct FunctionTrain *
 ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
                 struct BoundingBox *, 
                 struct FunctionTrain *, 
-                struct IndexSet **, 
-                struct IndexSet **,
-                double *,
+                struct CrossIndex **, 
+                struct CrossIndex **,
                 struct FtCrossArgs *,
                 struct FtApproxArgs *
                 );
@@ -253,7 +253,7 @@ struct FT1DArray *
 ft1d_array_cross(double (*f)(double *, size_t, void *), void *, 
                 size_t,
                 struct BoundingBox *,
-                double *,
+                double **,
                 struct FtCrossArgs *,
                 struct FtApproxArgs *);
 

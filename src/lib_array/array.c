@@ -53,6 +53,15 @@ double * calloc_double(const size_t N){
     return arrp;
 }
 
+double ** malloc_dd(const size_t N){
+    double ** x;
+    if (NULL == ( x = malloc(N * sizeof(double *)))){
+        fprintf(stderr, "failed to allocate memory for double pointer.\n");
+        exit(1);
+    }
+    return x;
+}
+
 int * calloc_int(const size_t N){
 
     int * arrp; 

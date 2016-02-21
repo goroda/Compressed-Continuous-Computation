@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include <assert.h>
 
 #include "array.h"
 #include "lib_clinalg.h"
@@ -63,11 +64,13 @@ int main( void )
         printf("On dim (%zu/%zu) : %zu \n",ii,ndims,dim);
         struct BoundingBox * bds = bounding_box_init_std(dim);
         size_t * ranks = calloc_size_t(dim+1);
-        double * yr  = calloc_double(dim);
+        double ** yr  = malloc_dd(dim);
         double * coeffs = calloc_double(dim);
         for (kk = 0; kk < dim; kk++){
             bds->lb[kk] = 0.0;
             ranks[kk] = 2;
+            yr[kk] = calloc_double(2);
+            yr[kk][1] = 0.2; // set one fiber to something  than 0;
             coeffs[kk] = 1.0/(double) dim;
         }
         ranks[0] = 1; ranks[dim] = 1;
@@ -81,8 +84,13 @@ int main( void )
         for (jj = 0; jj < ntols; jj++){
             printf("..... On tol (%zu/%zu) : %E \n", jj,ntols, epsilons[jj]);
 
-            struct IndexSet ** isr = index_set_array_rnested(dim, ranks, yr);
-            struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
+            struct CrossIndex ** isl = malloc(dim * sizeof(struct CrossIndex *));
+            struct CrossIndex ** isr = malloc(dim * sizeof(struct CrossIndex *));
+            assert (isl != NULL);
+            assert (isr != NULL);
+            cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+            cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+
             ao.tol = epsilons[jj]; 
             struct FtApproxArgs * fapp = 
                 ft_approx_args_createpoly(dim,&ptype,&ao);
@@ -110,13 +118,19 @@ int main( void )
             function_train_free(ftref); ftref = NULL;
             function_monitor_free(fm); fm = NULL;
             ft_approx_args_free(fapp); fapp = NULL;
-            index_set_array_free(dim, isr); isr = NULL;
-            index_set_array_free(dim, isl); isl = NULL;
+            for (size_t ll = 0; ll < dim; ll++){
+                cross_index_free(isr[ll]); isr[ll] = NULL;
+                cross_index_free(isl[ll]); isl[ll] = NULL;
+            }
+            free(isr); isr = NULL;
+            free(isl); isl = NULL;
+//            index_set_array_free(dim, isr); isr = NULL;
+//            index_set_array_free(dim, isl); isl = NULL;
         }
 
         bounding_box_free(bds); bds = NULL;
         free(ranks); ranks = NULL;
-        free(yr); yr = NULL;
+        free_dd(dim,yr); yr = NULL;
         free(coeffs); coeffs = NULL;
     }
 

@@ -913,7 +913,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
          fprintf(stderr,"lin_elem_exp_prod not yet implemeted\n");
          exit(1);
  //        out->f = lin_elem_exp_prod(a->f,b->f);
-         break;
+//         break;
      case RATIONAL:
          break;
      case KERNEL:
@@ -2093,7 +2093,7 @@ generic_function_linear(double a, double offset,
     case LINELM:
         fprintf(stderr,"Linear LINELM not yet implemented\n");
         exit(1);
-        break;
+//        break;
     case RATIONAL:
         break;
     case KERNEL:
@@ -2114,8 +2114,6 @@ generic_function_linear(double a, double offset,
     \param[in] ncols - number of columns
     \param[in] lb    - lower bound on 1d functions
     \param[in] ub    - upper bound on 1d functions
-
-    \return functions owith orthonormal columns
 
     \note
     - Not super efficient because of copies
@@ -2358,14 +2356,14 @@ fiber_cut_ndarray( double (*f)(double *, void *), void * args,
         exit(1);
     }
     size_t ii;
-    printf("vals are \n");
+//    printf("vals are \n");
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(totdim,dim);
         fcut[ii]->f.fnd = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 1;
         memmove(fcut[ii]->vals, val[ii], totdim*sizeof(double));
-        dprint(totdim,val[ii]);
+//        dprint(totdim,val[ii]);
 
     }
     return fcut;

@@ -2358,7 +2358,12 @@ void Test_ftapprox_cross(CuTest * tc)
        
     size_t dim = 2;
     size_t rank[3] = {1, 3, 1};
-    double yr[2] = {-1.0, 0.0};
+    double * yr[2];
+    yr[1] = calloc_double(3);
+    yr[1][0] = -1.0;
+    yr[1][1] =  0.0;
+    yr[1][2] =  1.0;
+    yr[0] = calloc_double(3);
 
     struct BoundingBox * bds = bounding_box_init_std(dim);
     
@@ -2373,14 +2378,21 @@ void Test_ftapprox_cross(CuTest * tc)
     fca.verbose = 0;
     fca.optargs = NULL;
 
-    struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
-    struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
+    struct CrossIndex * isl[2];
+    struct CrossIndex * isr[2];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,rank,yr);
+
+    //struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
+    //struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
     
     //print_index_set_array(2,isr);
     //print_index_set_array(2,isl);
 
+    //printf("start cross approximation\n");
     struct FunctionTrain * ft = ftapprox_cross(funcnd1,NULL,bds,ftref,
-                                    isl, isr, &fca,fapp);
+                                               isl, isr, &fca,fapp);
+    //printf("ended cross approximation\n");
     
     //print_index_set_array(2,isr);
     //print_index_set_array(2,isl);
@@ -2403,14 +2415,18 @@ void Test_ftapprox_cross(CuTest * tc)
     err /= den;
     CuAssertDblEquals(tc,0.0,err,1e-15);
 
-    index_set_array_free(dim,isr);
-    index_set_array_free(dim,isl);
+    cross_index_free(isl[1]);
+    cross_index_free(isr[0]);
+//    index_set_array_free(dim,isr);
+//    index_set_array_free(dim,isl);
     //
     bounding_box_free(bds);
     bounding_box_free(bounds);
     free(fapp);
     function_train_free(ft);
     function_train_free(ftref);
+    free(yr[0]);
+    free(yr[1]);
     free(xtest);
 }
 
@@ -2492,9 +2508,19 @@ void Test_ftapprox_cross3(CuTest * tc)
     struct FunctionMonitor * fm = 
             function_monitor_initnd(disc2d,NULL,dim,1000*dim);
             
-    double * yr  = calloc_double(dim);
-    struct IndexSet ** isr = index_set_array_rnested(dim, ranks, yr);
-    struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
+    double * yr[2];
+    yr[1] = calloc_double(2);
+    yr[1][0] = 0.3;
+    yr[1][1] =  0.0;
+    yr[0] = calloc_double(2);
+
+    struct CrossIndex * isl[2];
+    struct CrossIndex * isr[2];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+
+    //struct IndexSet ** isr = index_set_array_rnested(dim, ranks, yr);
+//    struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
 
     struct FtCrossArgs fca;
     fca.epsilon = 1e-4;
@@ -2520,11 +2546,20 @@ void Test_ftapprox_cross3(CuTest * tc)
     struct FunctionTrain * ft = ftapprox_cross(function_monitor_eval, fm,
                                     bds, ftref, isl, isr, &fca,fapp);
 
+//    printf("X Nodes \n");
+//    print_cross_index(isl[1]);
 
-    free(yr);
+//    printf("Y Nodes are \n");
+//    print_cross_index(isr[0]);
+    
+    free(yr[0]);
+    free(yr[1]);
     ft_approx_args_free(fapp);
-    index_set_array_free(dim,isr);
-    index_set_array_free(dim,isl);
+
+    cross_index_free(isr[0]);
+    cross_index_free(isl[1]);
+//    index_set_array_free(dim,isr);
+//    index_set_array_free(dim,isl);
             
     double v1, v2;
     size_t ii,jj;
@@ -2696,7 +2731,7 @@ void Test_sin10dint(CuTest * tc)
        
     size_t dim = 10;
     size_t rank[11] = {1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1};
-    double yr[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
     
     struct BoundingBox * bds = bounding_box_init(dim,0.0,1.0);
     
@@ -2711,8 +2746,19 @@ void Test_sin10dint(CuTest * tc)
     fca.verbose = 0;
     fca.optargs = NULL;
 
-    struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
-    struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
+    double ** yr = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        yr[ii] = linspace(0.0,1.0,2);
+    }
+
+    struct CrossIndex * isl[10];
+    struct CrossIndex * isr[10];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,rank,yr);
+
+    //print_cross_index(isr[0]);
+    //print_cross_index(isr[1]);
+    //exit(1); 
     
     //print_index_set_array(dim,isr);
     //print_index_set_array(dim,isl);
@@ -2722,7 +2768,7 @@ void Test_sin10dint(CuTest * tc)
 
 
     struct FunctionTrain * ft = ftapprox_cross(sin10d,NULL,bds,ftref,
-                                    isl, isr, &fca,fapp);
+                                               isl, isr, &fca,fapp);
     
     unsigned char * text = NULL;
     size_t size;
@@ -2743,9 +2789,14 @@ void Test_sin10dint(CuTest * tc)
     //printf("Relative error of integrating 10 dimensional sin = %G\n",relerr);
     CuAssertDblEquals(tc,0.0,relerr,1e-12);
 
-
-    index_set_array_free(dim,isr);
-    index_set_array_free(dim,isl);
+    for (size_t ii = 0; ii < dim; ii++){
+        cross_index_free(isr[ii]); isr[ii] = NULL;
+        cross_index_free(isl[ii]); isl[ii] = NULL;
+    }
+//    index_set_array_free(dim,isr);
+//    index_set_array_free(dim,isl);
+    
+    free_dd(dim,yr);
     //
     bounding_box_free(bds);
     free(fapp);
@@ -2809,62 +2860,62 @@ double sin1000d(double * x, void * args){
     return out;
 }
 
-void Test_sin1000dint(CuTest * tc)
-{
-    printf("Testing Function: integration of sin1000d\n");
+/* void Test_sin1000dint(CuTest * tc) */
+/* { */
+/*     printf("Testing Function: integration of sin1000d\n"); */
        
-    size_t dim = 1000;
-    size_t rank[1001];
-    double yr[1000];
-    double coeffs[1000];
+/*     size_t dim = 1000; */
+/*     size_t rank[1001]; */
+/*     double yr[1000]; */
+/*     double coeffs[1000]; */
     
-    struct BoundingBox * bds = bounding_box_init(dim,0.0,1.0);
-    size_t ii;
-    for (ii = 0; ii < dim; ii++){
-        rank[ii] = 2;
-        yr[ii] = 0.0;
-        coeffs[ii] = 1.0/ (double) dim;
-    }
-    rank[0] = 1;
-    rank[dim] = 1;
+/*     struct BoundingBox * bds = bounding_box_init(dim,0.0,1.0); */
+/*     size_t ii; */
+/*     for (ii = 0; ii < dim; ii++){ */
+/*         rank[ii] = 2; */
+/*         yr[ii] = 0.0; */
+/*         coeffs[ii] = 1.0/ (double) dim; */
+/*     } */
+/*     rank[0] = 1; */
+/*     rank[dim] = 1; */
     
-    enum poly_type ptype = LEGENDRE;
-    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,NULL);
+/*     enum poly_type ptype = LEGENDRE; */
+/*     struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,NULL); */
     
-    struct FtCrossArgs fca;
-    fca.dim = dim;
-    fca.ranks = rank;
-    fca.epsilon = 1e-5;
-    fca.maxiter = 10;
-    fca.verbose = 1;
-    fca.optargs = NULL;
+/*     struct FtCrossArgs fca; */
+/*     fca.dim = dim; */
+/*     fca.ranks = rank; */
+/*     fca.epsilon = 1e-5; */
+/*     fca.maxiter = 10; */
+/*     fca.verbose = 1; */
+/*     fca.optargs = NULL; */
 
-    struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr);
-    struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr);
+/*     struct IndexSet ** isr = index_set_array_rnested(dim, rank, yr); */
+/*     struct IndexSet ** isl = index_set_array_lnested(dim, rank, yr); */
     
-    //print_index_set_array(dim,isr);
-    //print_index_set_array(dim,isl);
+/*     //print_index_set_array(dim,isr); */
+/*     //print_index_set_array(dim,isl); */
 
-    struct FunctionTrain * ftref =function_train_linear(dim, bds, coeffs,NULL);
-    struct FunctionTrain * ft = ftapprox_cross(sin1000d,NULL,bds,ftref,
-                                    isl, isr, &fca,fapp);
+/*     struct FunctionTrain * ftref =function_train_linear(dim, bds, coeffs,NULL); */
+/*     struct FunctionTrain * ft = ftapprox_cross(sin1000d,NULL,bds,ftref, */
+/*                                     isl, isr, &fca,fapp); */
 
-    double intval = function_train_integrate(ft);
-    double should = -2.6375125156875276773939642726964969819689605535e-19;
+/*     double intval = function_train_integrate(ft); */
+/*     double should = -2.6375125156875276773939642726964969819689605535e-19; */
 
-    double relerr = fabs(intval-should)/fabs(should);
-    printf("Relative error of integrating 1000 dimensional sin = %G\n",relerr);
-    CuAssertDblEquals(tc,0.0,relerr,1e-10);
+/*     double relerr = fabs(intval-should)/fabs(should); */
+/*     printf("Relative error of integrating 1000 dimensional sin = %G\n",relerr); */
+/*     CuAssertDblEquals(tc,0.0,relerr,1e-10); */
 
 
-    index_set_array_free(dim,isr);
-    index_set_array_free(dim,isl);
-    //
-    bounding_box_free(bds);
-    free(fapp);
-    function_train_free(ft);
-    function_train_free(ftref);
-}
+/*     index_set_array_free(dim,isr); */
+/*     index_set_array_free(dim,isl); */
+/*     // */
+/*     bounding_box_free(bds); */
+/*     free(fapp); */
+/*     function_train_free(ft); */
+/*     function_train_free(ftref); */
+/* } */
 
 CuSuite * CLinalgFuncTrainGetSuite(){
 
@@ -2903,7 +2954,7 @@ void Test_CrossIndexing(CuTest * tc)
    }
 
    CuAssertIntEquals(tc,N,ci->n);
-   print_cross_index(ci);
+//   print_cross_index(ci);
    
    size_t N2 = 7;
    double * pts2 = linspace(-1.5,1.5,N);
@@ -2911,29 +2962,29 @@ void Test_CrossIndexing(CuTest * tc)
    int newfirst = 1;
    struct CrossIndex * ci2 = cross_index_create_nested(newfirst,0,Ntot,N2,pts2,ci);
    CuAssertIntEquals(tc,Ntot,ci2->n);
-   print_cross_index(ci2);
+//   print_cross_index(ci2);
 
    struct CrossIndex * ci3 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
    CuAssertIntEquals(tc,Ntot,ci3->n);
-   printf("\n\n\nci3\n");
-   print_cross_index(ci3);
+//   printf("\n\n\nci3\n");
+//   print_cross_index(ci3);
 
    newfirst = 0;
    struct CrossIndex * ci4 = cross_index_create_nested(newfirst,1,Ntot,N2,pts2,ci2);
    CuAssertIntEquals(tc,Ntot,ci4->n);
-   printf("\n\n\nci4\n");
-   print_cross_index(ci4);
+//   printf("\n\n\nci4\n");
+//   print_cross_index(ci4);
 
    size_t ind[5] = {1, 3, 0, 3, 2};
    double nx[5] = {0.2, -0.8, 0.3, -1.0, 0.2};
    struct CrossIndex * ci5 = cross_index_create_nested_ind(0,5,ind,nx,ci4);
    CuAssertIntEquals(tc,5,ci5->n);
-   print_cross_index(ci5);
+//   print_cross_index(ci5);
 
    double ** vals = cross_index_merge_wspace(ci3,ci4);
-   printf("merged\n");
-   for (size_t ii = 0; ii < Ntot; ii++){
-       dprint(7,vals[ii]);
+//   printf("merged\n");
+   for (size_t ii = 0; ii < Ntot*Ntot; ii++){
+//       dprint(7,vals[ii]);
        free(vals[ii]); vals[ii] = NULL;
    }
    free(vals);
@@ -4109,13 +4160,13 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-    /* CuSuiteAddSuite(suite, clin); */
-    /* CuSuiteAddSuite(suite, qma); */
-    /* CuSuiteAddSuite(suite, ftr); */
-    /* CuSuiteAddSuite(suite, fta); */
+    CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, qma);
+    CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, cind);
-    /* CuSuiteAddSuite(suite, dmrg); */
-    /* CuSuiteAddSuite(suite, diff); */
+    CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, diff);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);

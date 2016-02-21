@@ -215,7 +215,6 @@ cross_index_create_nested(int newfirst, int left,
     return NULL;
 }
 
-
 struct CrossIndex *
 cross_index_create_nested_ind(int left, size_t sizenew, size_t * indold,
                               double * newx, struct CrossIndex * old)
@@ -235,8 +234,8 @@ cross_index_merge_wspace(struct CrossIndex * left, struct CrossIndex * right)
 {
     double ** vals = NULL;
     if ( (left != NULL) && (right != NULL) ){
-        assert (left->n == right->n);
-        vals = malloc(right->n * sizeof(double *));
+        
+        vals = malloc(right->n * left->n * sizeof(double *));
         if (vals == NULL){
             fprintf(stderr, "Cannot allocate values for merging CrossIndex\n");
             exit(1);
@@ -246,11 +245,16 @@ cross_index_merge_wspace(struct CrossIndex * left, struct CrossIndex * right)
         size_t d = dl+dr+1;
         struct CrossNode * cl = left->nodes;
         struct CrossNode * cr = right->nodes;
+        size_t onind;
         for (size_t ii = 0; ii < right->n;ii++){
-            vals[ii] = calloc_double(d);
-            memmove(vals[ii],cl->x,dl*sizeof(double));
-            memmove(vals[ii]+dl+1,cr->x,dr*sizeof(double));
-            cl = cl->next;
+            cl = left->nodes;
+            for (size_t jj = 0; jj < left->n;jj++){
+                onind = ii*left->n+jj;
+                vals[onind] = calloc_double(d);
+                memmove(vals[onind],cl->x,dl*sizeof(double));
+                memmove(vals[onind]+dl+1,cr->x,dr*sizeof(double));
+                cl = cl->next;
+            }
             cr = cr->next;
         }
     }
@@ -289,6 +293,76 @@ cross_index_merge_wspace(struct CrossIndex * left, struct CrossIndex * right)
     return vals;
 }
 
+double **
+cross_index_merge(struct CrossIndex * left, struct CrossIndex * right)
+{
+    double ** vals = NULL;
+    assert (left != NULL);
+    assert (right != NULL);
+    assert (left->n == right->n);
+    vals = malloc(right->n * sizeof(double *));
+    if (vals == NULL){
+        fprintf(stderr, "Cannot allocate values for merging CrossIndex\n");
+        exit(1);
+    }
+    size_t dl = left->d;
+    size_t dr = right->d;
+    size_t d = dl+dr;
+    struct CrossNode * cl = left->nodes;
+    struct CrossNode * cr = right->nodes;
+    for (size_t ii = 0; ii < right->n;ii++){
+        cl = left->nodes;
+        vals[ii] = calloc_double(d);
+        memmove(vals[ii],cl->x,dl*sizeof(double));
+        memmove(vals[ii]+dl,cr->x,dr*sizeof(double));
+        cl = cl->next;
+        cr = cr->next;
+    }
+    return vals;
+}
+
+void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
+                                  int allnull, int reverse,
+                                  size_t * sizes, double ** vals)
+{
+
+    if (allnull == 1){
+        for (size_t ii = 0; ii < dim; ii++){
+            ci[ii] = NULL;
+        }
+    }
+    else{
+        assert (reverse == 1);
+        assert (dim > 1);
+        ci[dim-1] = NULL;
+        ci[dim-2] = cross_index_alloc(1);
+        for (size_t jj = 0; jj < sizes[dim-1];jj++){
+            cross_index_add_index(ci[dim-2],1,&(vals[dim-1][jj]));
+        }
+        size_t ind = dim-2;
+        for (size_t ii = 0; ii < dim-2; ii++){
+            ind = ind-1;
+            ci[ind] = cross_index_create_nested(1,1,sizes[ind+1],sizes[ind+1],
+                                                vals[ind+1], ci[ind+1]);
+            
+        }
+    }
+}
+
+
+void cross_index_copylast(struct CrossIndex * ci, size_t ntimes)
+{
+
+    if (ci != NULL){
+        struct CrossNode * last = cross_index_get_node(ci,ci->n-1);
+        for (size_t ii = 0; ii < ntimes; ii++){
+            cross_index_add_index(ci,last->n,last->x);
+        }
+    }
+    
+}
+
+
 void print_cross_index(struct CrossIndex * cn)
 {
     if (cn != NULL){
@@ -300,6 +374,6 @@ void print_cross_index(struct CrossIndex * cn)
         print_cross_nodes(cn->nodes);
     }
     else{
-        printf("Cross index is NULL");
+        printf("Cross index is NULL\n");
     }
 }

@@ -33,6 +33,9 @@
 
 //Code
 
+#ifndef INDMANAGE_H
+#define INDMANAGE_H
+
 struct CrossIndex
 {
     size_t d; // dimension of each node
@@ -55,4 +58,13 @@ cross_index_create_nested_ind(int, size_t, size_t *,
 double **
 cross_index_merge_wspace(struct CrossIndex *, struct CrossIndex *);
 
+double **
+cross_index_merge(struct CrossIndex *, struct CrossIndex *);
+
+void cross_index_array_initialize(size_t, struct CrossIndex **,
+                                  int, int,size_t *, double **);
+
+void cross_index_copylast(struct CrossIndex *, size_t);
 void print_cross_index(struct CrossIndex *);
+
+#endif

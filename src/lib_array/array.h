@@ -40,6 +40,7 @@
 #include <stdlib.h>
 
 double * calloc_double(const size_t);
+double ** malloc_dd(const size_t);
 int * calloc_int(const size_t);
 size_t * calloc_size_t(const size_t);
 void copy_dd(size_t, size_t, double **, double **);

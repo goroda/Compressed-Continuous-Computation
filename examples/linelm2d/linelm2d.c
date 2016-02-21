@@ -146,7 +146,11 @@ int main(int argc, char * argv[])
     }
 
     // Done with setup
-    double start[2] = {lb,lb};
+    double startx[2] = {lb,ub};
+    double starty[2] = {lb,ub};
+    double * start[2];
+    start[0] = startx;
+    start[1] = starty;
     struct FunctionTrain * ft = 
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 
