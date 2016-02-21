@@ -10,6 +10,7 @@ lib/*
 *.pdf
 *.log
 *.aux
+*.#*
 
 doc/html/*
 doc/latex/*

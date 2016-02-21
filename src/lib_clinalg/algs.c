@@ -3644,12 +3644,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     double * R = NULL;
     size_t * pivind = NULL;
     double * pivx = NULL;
-    double diff, den;
+    double diff, diff2, den;
     
     struct FunctionTrain * ft = function_train_alloc(dim);
     memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t));
     
     struct FunctionTrain * fti = function_train_copy(ftref);
+    struct FunctionTrain * fti2 = NULL;
 
     int done = 0;
     size_t iter = 0;
@@ -3784,7 +3785,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
-            printf("...... Error L/R Sweep = %E\n",diff);
+            // printf("...... Error L/R Sweep = %E\n",diff);
         }
         
         if (diff < cargs->epsilon){
@@ -3898,6 +3899,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     
 
         diff = function_train_relnorm2diff(ft,fti);
+        if (fti2 != NULL){
+            diff2 = function_train_relnorm2diff(ft,fti2);
+        }
+        else{
+            diff2 = diff;
+        }
+
 
         //den = function_train_norm2(ft);
         //diff = function_train_norm2diff(ft,fti);
@@ -3907,15 +3915,17 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm R/L Sweep = %E\n",den);
-            printf("...... Error R/L Sweep = %E\n",diff);
+            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        if (diff < cargs->epsilon){
+        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
             done = 1;
             break;
         }
 
+        function_train_free(fti2); fti2 = NULL;
+        fti2 = function_train_copy(fti);
         function_train_free(fti); fti=NULL;
         fti = function_train_copy(ft);
 
@@ -3927,6 +3937,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     }
 
     function_train_free(fti); fti=NULL;
+    function_train_free(fti2); fti2=NULL;
     return ft;
 }
 

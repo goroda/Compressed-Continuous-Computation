@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
     struct c3Vector c3v = {n,xnodes};
     struct FiberOptArgs * fopt = fiber_opt_args_bf_same(dim,&c3v);
 
-    size_t init_ranks[3] = {1,3,1};
+    size_t init_ranks[4] = {1,3,3,1};
     struct FtCrossArgs fca;
     ft_cross_args_init(&fca);
     fca.dim = dim;
@@ -166,9 +166,9 @@ int main(int argc, char * argv[])
         function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
-    size_t ntot = n*n;
+    size_t ntot = n*n*n;
     if (verbose == 1){
-        printf("Final ranks are "); iprint_sz(3,ft->ranks);
+        printf("Final ranks are "); iprint_sz(4,ft->ranks);
         printf("Number of evaluations = %zu\n",nevals);
         printf("Number of total nodes = %zu\n",ntot);
         printf("Fraction of nodes used is %3.15G\n",(double)nevals/(double)ntot);
@@ -186,44 +186,51 @@ int main(int argc, char * argv[])
     fclose(fp);
 
 
-    FILE *fp2;
-    char toterrs[256];
-    sprintf(toterrs,"%s/%s_%zu.dat",dirout,"recon",n);
-    fp2 =  fopen(toterrs, "w");
-    if (fp2 == NULL){
-        fprintf(stderr, "cat: can't open %s\n", toterrs);
-        return 0;
-    }
+    /* FILE *fp2; */
+    /* char toterrs[256]; */
+    /* sprintf(toterrs,"%s/%s_%zu.dat",dirout,"recon",n); */
+    /* fp2 =  fopen(toterrs, "w"); */
+    /* if (fp2 == NULL){ */
+    /*     fprintf(stderr, "cat: can't open %s\n", toterrs); */
+    /*     return 0; */
+    /* } */
 
-    fprintf(fp2,"x y f f0 df0\n");
+    
+    //fprintf(fp2,"x y f f0 df0\n");
     size_t N1 = 40;
     size_t N2 = 40;
+    size_t N3 = 40;
     double * xtest = linspace(lb,ub,N1);
     double * ytest = linspace(lb,ub,N2);
+    double * ztest = linspace(lb,ub,N3);
 
     double out1=0.0;
     double den=0.0;
-    double pt[2];
+    double pt[3];
     double v1,v2;
     for (size_t ii = 0; ii < N1; ii++){
         for (size_t jj = 0; jj < N2; jj++){
-            pt[0] = xtest[ii]; pt[1] = ytest[jj];
-            v1 = ff(pt,NULL);
-            v2 = function_train_eval(ft,pt);
-            fprintf(fp2, "%3.5f %3.5f %3.5f %3.5f %3.5f \n", 
-                    xtest[ii], ytest[jj],v1,v2,v1-v2);
-            den += pow(v1,2.0);
-            out1 += pow(v1-v2,2.0);
+            for (size_t kk = 0; kk < N3; kk++){
+                pt[0] = xtest[ii]; pt[1] = ytest[jj]; pt[2] = ztest[kk];
+                v1 = ff(pt,NULL);
+                v2 = function_train_eval(ft,pt);
+                //fprintf(fp2, "%3.5f %3.5f %3.5f %3.5f %3.5f \n", 
+                //        xtest[ii], ytest[jj],v1,v2,v1-v2);
+                den += pow(v1,2.0);
+                out1 += pow(v1-v2,2.0);
+            }
         }
-        fprintf(fp2,"\n");
+        //fprintf(fp2,"\n");
     }
     if (verbose == 1){
         printf("RMS Error of Final = %G\n", out1/den);
     }
 
 
-    fclose(fp2);
-    free(xtest); free(ytest);
+    //fclose(fp2);
+    free(xtest);
+    free(ytest);
+    free(ztest);
 
     function_train_free(ft);
     function_monitor_free(fm);
