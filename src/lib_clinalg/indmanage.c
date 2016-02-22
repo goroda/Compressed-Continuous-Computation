@@ -342,7 +342,10 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
         size_t ind = dim-2;
         for (size_t ii = 0; ii < dim-2; ii++){
             ind = ind-1;
-            ci[ind] = cross_index_create_nested(1,1,sizes[ind+1],sizes[ind+1],
+            //printf("ind = %zu size=%zu, vals = \n",ind,sizes[ind+1]);
+            //dprint(sizes[ind+1],vals[ind+1]);
+            ci[ind] = cross_index_create_nested(1,1,sizes[ind+1],
+                                                sizes[ind+1],
                                                 vals[ind+1], ci[ind+1]);
             
         }

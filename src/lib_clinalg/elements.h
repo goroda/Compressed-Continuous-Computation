@@ -41,7 +41,7 @@
 #define ELEMENTS_H
 
 #include <stdlib.h>
-#include "array.h"
+#include "../lib_array/array.h"
 #include "../lib_funcs/lib_funcs.h"
 
 //////////////////////////////////////////////////////////////
@@ -208,7 +208,7 @@ struct FtApproxArgs
 
     int targs; // type of args (0,1)
     
-    void * optargs;
+//    void * optargs;
 };
 
 struct FtApproxArgs * 

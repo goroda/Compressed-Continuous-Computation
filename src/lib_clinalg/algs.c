@@ -3546,10 +3546,11 @@ ft1d_array_sum_prod(size_t N, double * coeff,
 
 // utility function for function_train_cross (not in header file)
 struct Qmarray *
-prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
-        struct BoundingBox * bd,
-        struct CrossIndex ** left_ind, struct CrossIndex ** right_ind, 
-        struct FtCrossArgs * cargs, struct FtApproxArgs * fta, int t)
+prepCore(size_t ii, size_t nrows, 
+         double(*f)(double *, void *), void * args,
+         struct BoundingBox * bd,
+         struct CrossIndex ** left_ind, struct CrossIndex ** right_ind, 
+         struct FtCrossArgs * cargs, struct FtApproxArgs * fta, int t)
 {
 
     enum function_class fc;
@@ -3565,7 +3566,7 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     fc = ft_approx_args_getfc(fta,ii);
     sub_type = ft_approx_args_getst(fta,ii);
     approx_args = ft_approx_args_getaopts(fta, ii);
-    
+    //printf("sub_type prep_core= %d\n",*(int *)ft_approx_args_getst(fta,ii));
     //printf("t=%d\n",t);
     if (t == 1){
         ncuts = nrows;
@@ -3632,7 +3633,8 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
 struct FunctionTrain *
 ftapprox_cross(double (*f)(double *, void *), void * args, 
                struct BoundingBox * bd, struct FunctionTrain * ftref, 
-               struct CrossIndex ** left_ind, struct CrossIndex ** right_ind, 
+               struct CrossIndex ** left_ind, 
+               struct CrossIndex ** right_ind, 
                struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
 {
     size_t dim = bd->dim;
@@ -3654,13 +3656,16 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
     int done = 0;
     size_t iter = 0;
+
     while (done == 0){
         if (cargs->verbose > 0)
             printf("cross iter=%zu \n",iter);
-        
+      
         // left right sweep;
         nrows = 1; 
         for (ii = 0; ii < dim-1; ii++){
+            //  printf("sub_type ftcross= %d\n",
+            //         *(int *)ft_approx_args_getst(apargs,ii));        
             if (cargs->verbose > 1){
                 printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
             }
@@ -3675,7 +3680,8 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 printf( "right index set = \n");
                 print_cross_index(right_ind[ii]);
             }
-            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
+            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,
+                            cargs,apargs,0);
 
             if (VFTCROSS == 2){
                 printf ("got it \n");
@@ -4021,30 +4027,40 @@ function_train_cross(double (*f)(double *, void *), void * args,
 
     if ( xstart == NULL) {
         init_x = malloc_dd(dim);
-        for (ii = 0; ii < dim; ii++){
-            init_x[ii] = linspace(bds->lb[ii],bds->ub[ii],fcause->ranks[ii+1]);
+        // not used in cross because left->right first
+        init_x[0] = calloc_double(fcause->ranks[1]); 
+        
+        for (ii = 0; ii < dim-1; ii++){
+            init_x[ii+1] = linspace(bds->lb[ii+1],bds->ub[ii+1],
+                                    fcause->ranks[ii+1]);
         }
     }
     else{
         init_x = xstart;
     }
 
-    
+    enum poly_type ptype;
     if (apargs != NULL){
         fapp = apargs;
     }
     else{
-        enum poly_type ptype = LEGENDRE;
+        ptype = LEGENDRE;
         fapp = ft_approx_args_createpoly(dim,&ptype,NULL);
     }
-
+    
+    //for (size_t ii = 0; ii < dim; ii++){
+    //   printf("sub_type = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
+    //    printf("2 = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
+    //}
     //printf("ranks 500 = %zu \n",fcause->ranks[500]);
     assert (dim <= 1000);
     struct CrossIndex * isl[1000];
     struct CrossIndex * isr[1000];
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    //printf("3 = %d\n",*(int *)ft_approx_args_getst(fapp,0));
+    //printf("4 = %d\n",*(int *)ft_approx_args_getst(fapp,1));
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
-    
+    //printf("pre rankadapt = %d\n",*(int *)ft_approx_args_getst(fapp,0));
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,fcause,fapp);
     

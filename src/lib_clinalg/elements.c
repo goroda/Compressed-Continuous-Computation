@@ -458,7 +458,7 @@ quasimatrix_absmax(struct Quasimatrix * qm,
 /***********************************************************//**
     Allocate memory for a skeleton decomposition
 
-    \param r [in] - rank
+    \param[in] r - rank
 
     \return skd - skeleton decomposition
 ***************************************************************/
@@ -481,7 +481,7 @@ struct SkeletonDecomp * skeleton_decomp_alloc(size_t r)
 /***********************************************************//**
     Copy a skeleton decomposition
 
-    \param skd [in] - skeleton decomposition
+    \param[in] skd - skeleton decomposition
     \return snew  - copied skeleton decomposition
 ***************************************************************/
 struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp * skd)
@@ -513,7 +513,7 @@ struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp * skd)
 /***********************************************************//**
     Free memory allocated to skeleton decomposition
 
-    \param skd [inout] - skeleton decomposition
+    \param[in,out] skd - skeleton decomposition
 ***************************************************************/
 void skeleton_decomp_free(struct SkeletonDecomp * skd)
 {
@@ -529,17 +529,17 @@ void skeleton_decomp_free(struct SkeletonDecomp * skd)
     Allocate and initialize skeleton decomposition 
     with a set of pivots and a given approximation
 
-    \param f [in] - function to approximate
-    \param args [in] - function arguments
-    \param bounds [in] - bounds on function
-    \param fc [in] - function classes of approximation (2)
-    \param sub_type [in] - sub_type of approximation (2)
-    \param r [in] - rank
-    \param pivx [in] - x pivots
-    \param pivy [in] - y pivots
-    \param approx_args [in] - approximation arguments (2);
+    \param[in] f           - function to approximate
+    \param[in] args        - function arguments
+    \param[in] bounds      - bounds on function
+    \param[in] fc          - function classes of approximation (2)
+    \param[in] sub_type    - sub_type of approximation (2)
+    \param[in] r           - rank
+    \param[in] pivx        - x pivots
+    \param[in] pivy        - y pivots
+    \param[in] approx_args - approximation arguments (2);
 
-    \return skd - skeleton decomposition
+    \return skeleton decomposition
 ***************************************************************/
 struct SkeletonDecomp * 
 skeleton_decomp_init2d_from_pivots(double (*f)(double,double,void *),

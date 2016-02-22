@@ -2993,6 +2993,7 @@ void Test_CrossIndexing(CuTest * tc)
    cross_index_free(ci2); ci2 = NULL;
    cross_index_free(ci3); ci3 = NULL;
    cross_index_free(ci4); ci4 = NULL;
+   cross_index_free(ci5); ci5 = NULL;
    free(pts); pts = NULL;
    free(pts2); pts2 = NULL;
 

@@ -1536,6 +1536,7 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     if ((int)ptype > 10){
         printf("Warning: for some reason ptype is\n");
         printf("specified to be %d, reverting to 0\n",ptype);
+        exit(1);
         ptype = 0;
     }
     struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
