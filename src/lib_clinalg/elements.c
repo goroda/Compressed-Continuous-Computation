@@ -427,23 +427,25 @@ quasimatrix_orth1d(enum function_class fc, void * st, size_t n,
 /***********************************************************//**
     Find the absolute maximum element of a quasimatrix of 1d functions
 
-    \param qm [in] - quasimatrix
-    \param absloc [inout] : location (row) of maximum
-    \param absval [inout] : value of maximum
+    \param[in]     qm      - quasimatrix
+    \param[in,out] absloc  - location (row) of maximum
+    \param[in,out] absval  - value of maximum
+    \param[in]     optargs - optimization arguments
 
     \return col - column of maximum element
 ***************************************************************/
 size_t 
 quasimatrix_absmax(struct Quasimatrix * qm, 
-                        double * absloc, double * absval)
+                   double * absloc, double * absval,
+                   void * optargs)
 {   
     size_t col = 0;
     size_t ii;
     double temp_loc;
     double temp_max;
-    *absval = generic_function_absmax(qm->funcs[0], absloc) ;
+    *absval = generic_function_absmax(qm->funcs[0], absloc,optargs) ;
     for (ii = 1; ii < qm->n; ii++){
-        temp_max = generic_function_absmax(qm->funcs[ii], &temp_loc);
+        temp_max = generic_function_absmax(qm->funcs[ii], &temp_loc,optargs);
         if (temp_max > *absval){
             col = ii;
             *absval = temp_max;
@@ -456,7 +458,7 @@ quasimatrix_absmax(struct Quasimatrix * qm,
 /***********************************************************//**
     Allocate memory for a skeleton decomposition
 
-    \param r [in] - rank
+    \param[in] r - rank
 
     \return skd - skeleton decomposition
 ***************************************************************/
@@ -479,7 +481,7 @@ struct SkeletonDecomp * skeleton_decomp_alloc(size_t r)
 /***********************************************************//**
     Copy a skeleton decomposition
 
-    \param skd [in] - skeleton decomposition
+    \param[in] skd - skeleton decomposition
     \return snew  - copied skeleton decomposition
 ***************************************************************/
 struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp * skd)
@@ -511,7 +513,7 @@ struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp * skd)
 /***********************************************************//**
     Free memory allocated to skeleton decomposition
 
-    \param skd [inout] - skeleton decomposition
+    \param[in,out] skd - skeleton decomposition
 ***************************************************************/
 void skeleton_decomp_free(struct SkeletonDecomp * skd)
 {
@@ -527,17 +529,17 @@ void skeleton_decomp_free(struct SkeletonDecomp * skd)
     Allocate and initialize skeleton decomposition 
     with a set of pivots and a given approximation
 
-    \param f [in] - function to approximate
-    \param args [in] - function arguments
-    \param bounds [in] - bounds on function
-    \param fc [in] - function classes of approximation (2)
-    \param sub_type [in] - sub_type of approximation (2)
-    \param r [in] - rank
-    \param pivx [in] - x pivots
-    \param pivy [in] - y pivots
-    \param approx_args [in] - approximation arguments (2);
+    \param[in] f           - function to approximate
+    \param[in] args        - function arguments
+    \param[in] bounds      - bounds on function
+    \param[in] fc          - function classes of approximation (2)
+    \param[in] sub_type    - sub_type of approximation (2)
+    \param[in] r           - rank
+    \param[in] pivx        - x pivots
+    \param[in] pivy        - y pivots
+    \param[in] approx_args - approximation arguments (2);
 
-    \return skd - skeleton decomposition
+    \return skeleton decomposition
 ***************************************************************/
 struct SkeletonDecomp * 
 skeleton_decomp_init2d_from_pivots(double (*f)(double,double,void *),
@@ -696,9 +698,9 @@ qmarray_poly_randu(size_t nrows, size_t ncols,
 /***********************************************************//**
     copy qmarray
 
-    \param qm [in] - qmarray
+    \param[in] qm - qmarray
 
-    \return qmo [out] 
+    \return qmo  
 ***************************************************************/
 struct Qmarray * qmarray_copy(struct Qmarray * qm)
 {
@@ -715,7 +717,7 @@ struct Qmarray * qmarray_copy(struct Qmarray * qm)
 /***********************************************************//**
     Free memory allocated to qmarray 
 
-    \param qm (IN) - qmarray
+    \param[in] qm - qmarray
 ***************************************************************/
 void qmarray_free(struct Qmarray * qm){
     
@@ -733,29 +735,32 @@ void qmarray_free(struct Qmarray * qm){
 /***********************************************************//**
     Create a qmarray by approximating 1d functions
 
-    \param nrows [in] : number of rows of quasimatrix
-    \param ncols [in] : number of cols of quasimatrix
-    \param funcs [in] : functions (nrows*ncols)
-    \param args [in] : extra arguments to each function
-    \param fc [in] : function class of each column
-    \param st [in] : sub_type of each column
-    \param lb [in] : lower bound of inputs to functions
-    \param ub [in] : upper bound of inputs to functions
-    \param aopts [in] : approximation options
+    \param[in] nrows - number of rows of quasimatrix
+    \param[in] ncols - number of cols of quasimatrix
+    \param[in] funcs - functions (nrows*ncols)
+    \param[in] args  - extra arguments to each function
+    \param[in] fc    - function class of each column
+    \param[in] st    - sub_type of each column
+    \param[in] lb    - lower bound of inputs to functions
+    \param[in] ub    - upper bound of inputs to functions
+    \param[in] aopts - approximation options
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
 struct Qmarray * 
 qmarray_approx1d(size_t nrows, size_t ncols,
-                    double (**funcs)(double, void *),
-                    void ** args, enum function_class fc, void * st, double lb,
-                    double ub, void * aopts)
+                 double (**funcs)(double, void *),
+                 void ** args, 
+                 enum function_class fc, void * st, double lb,
+                 double ub, void * aopts)
 {
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     size_t ii;
     for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_approximate1d(funcs[ii], args[ii], 
-                                    fc, st, lb, ub, aopts);
+        qm->funcs[ii] = 
+            generic_function_approximate1d(funcs[ii], 
+                                           args[ii], 
+                                           fc, st, lb, ub, aopts);
     }
     return qm;
 }
@@ -765,17 +770,17 @@ qmarray_approx1d(size_t nrows, size_t ncols,
 /***********************************************************//**
     Create a qmarray from a fiber_cuts array
 
-    \param nrows [in] - number of rows of qmarray
-    \param ncols [in] - number of columns of qmarray
-    \param f [in] - functions
-    \param fcut [in] - array of fiber cuts
-    \param fc [in] - function class of each column
-    \param sub_type [in] - sub_type of each column
-    \param lb [in] - lower bound of inputs to functions
-    \param ub [in] - upper bound of inputs to functions
-    \param aopts [in] - approximation options
+    \param[in] nrows    - number of rows of qmarray
+    \param[in] ncols    - number of columns of qmarray
+    \param[in] f        - functions
+    \param[in] fcut     - array of fiber cuts
+    \param[in] fc       - function class of each column
+    \param[in] sub_type - sub_type of each column
+    \param[in] lb       - lower bound of inputs to functions
+    \param[in] ub       - upper bound of inputs to functions
+    \param[in] aopts    - approximation options
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
 struct Qmarray * 
 qmarray_from_fiber_cuts(size_t nrows, size_t ncols, 
@@ -796,88 +801,49 @@ qmarray_from_fiber_cuts(size_t nrows, size_t ncols,
     Generate a qmarray with orthonormal columns consisting of
     one dimensional functions
 
-    \param fc [in] - function class
-    \param st [in] - function class sub_type
-    \param nrows [in] -  number of rows
-    \param ncols [in] -  number of columns
-    \param lb [in] - lower bound on 1d functions
-    \param ub [in] - upper bound on 1d functions
+    \param[in] fc    - function class
+    \param[in] st    - function class sub_type
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] lb    - lower bound on 1d functions
+    \param[in] ub    - upper bound on 1d functions
 
-    \return qm - qmarray with orthonormal columns
+    \return qmarray with orthonormal columns
 
     \note
         - Not super efficient because of copies
 ***************************************************************/
 struct Qmarray *
 qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
-                            size_t ncols, double lb, double ub)
+                       size_t ncols, double lb, double ub)
 {
-    struct Interval ob;
-    ob.lb = lb;
-    ob.ub = ub;
 
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    struct Qmarray * qmtemp = qmarray_alloc(ncols,1);
+    generic_function_array_orth1d_columns(qm->funcs,qmtemp->funcs,fc,st,nrows,ncols,lb,ub);
     
-    struct GenericFunction ** funcs = NULL;
-    if ( NULL == (funcs = malloc(ncols*sizeof(struct GenericFunction *)))){
-        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
-        exit(1);
-    }
-    size_t ii, jj,kk;
-    for (ii = 0; ii < ncols; ii++){
-        funcs[ii] = NULL;
-    }
-    generic_function_array_orth(ncols, fc, st, funcs, &ob);
-    
-    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
-    
-    size_t onnon = 0;
-    size_t onorder = 0;
-    for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
-        for (kk = 0; kk < onnon; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        for (kk = onnon+1; kk < nrows; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        onnon = onnon+1;
-        if (onnon == nrows){
-            //generic_function_free(funcs[onorder]);
-            //funcs[onorder] = NULL;
-            onorder = onorder+1;
-            onnon = 0;
-        }
-    }
-    //printf("max order cols = %zu\n",onorder);
-    for (ii = 0; ii < ncols;ii++){
-        generic_function_free(funcs[ii]);
-        funcs[ii] = NULL;
-    }
-    free(funcs); funcs=NULL;
-    generic_function_free(zero); zero = NULL;
-
+    qmarray_free(qmtemp); qmtemp = NULL;
     return qm;
 }
 
 /***********************************************************//**
     Generate a qmarray with orthonormal rows
 
-    \param fc [in] - function class
-    \param st [in] - function class sub_type
-    \param nrows [in] -  number of rows
-    \param ncols [in] -  number of columns
-    \param lb [in] - lower bound on 1d functions
-    \param ub [in] - upper bound on 1d functions
+    \param[in] fc    - function class
+    \param[in] st    - function class sub_type
+    \param[in] nrows -  number of rows
+    \param[in] ncols -  number of columns
+    \param[in] lb    - lower bound on 1d functions
+    \param[in] ub    - upper bound on 1d functions
 
-    \return qm (OUT) - qmarray with orthonormal columns
+    \return qmarray with orthonormal rows
 
     \note
         Not super efficient because of copies
 ***************************************************************/
 struct Qmarray *
 qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
-                            size_t ncols, double lb, double ub)
+                    size_t ncols, double lb, double ub)
 {
     struct Interval ob;
     ob.lb = lb;
@@ -898,7 +864,7 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
     generic_function_array_orth(nrows, fc, st, funcs, &ob);
     //printf("wwwhere\n");
     
-     struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
+    struct GenericFunction * zero = generic_function_constant(0.0,fc,st,lb,ub,NULL);
     
     size_t onnon = 0;
     size_t onorder = 0;
@@ -999,26 +965,35 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 ////////////////////////////////////////////////////////////////////
 // function_train 
 //
-/***********************************************************//**
-    Create the arguments to give to use for approximation
-    in the function train. Specifically, legendre polynomials
-    for all dimensions
-
-    \param dim [in] - dimension of function train
-    \param ptype [in] - type of polynomial
-    \param aopts [in] - arguments for creating the approximation (could be NULL)
-
-    \return fargs -- approximation arguments
-***************************************************************/
-struct FtApproxArgs * ft_approx_args_createpoly(size_t dim, 
-            enum poly_type * ptype,
-            struct OpeAdaptOpts * aopts)
+struct FtApproxArgs * ft_approx_args_alloc()
 {
     struct FtApproxArgs * fargs;
     if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
         fprintf(stderr, "failed to allocate memory for ft approx args.\n");
         exit(1);
     }
+
+    return fargs;
+}
+
+/***********************************************************//**
+    Create the arguments to give to use for approximation
+    in the function train. Specifically, legendre polynomials
+    for all dimensions
+
+    \param[in] dim   - dimension of function train
+    \param[in] ptype - type of polynomial
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
+
+    \return approximation arguments
+***************************************************************/
+struct FtApproxArgs * 
+ft_approx_args_createpoly(size_t dim, 
+                          enum poly_type * ptype,
+                          struct OpeAdaptOpts * aopts)
+{
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
     fargs->dim = dim;
     fargs->targs = 0;
     
@@ -1035,21 +1010,20 @@ struct FtApproxArgs * ft_approx_args_createpoly(size_t dim,
     Create the arguments to give to use for approximation
     in the function train. Specifically, piecewise legendre polynomials
 
-    \param dim [in] - dimension of function train
-    \param ptype [in] - type of polynomial
-    \param aopts [in] - arguments for creating the approximation (could be NULL)
+    \param[in] dim   - dimension of function train
+    \param[in] ptype - type of polynomial
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
 
     \return fargs - approximation arguments
 ***************************************************************/
-struct FtApproxArgs * ft_approx_args_createpwpoly(size_t dim, 
-            enum poly_type * ptype,
-            struct PwPolyAdaptOpts * aopts)
+struct FtApproxArgs * 
+ft_approx_args_createpwpoly(size_t dim, 
+                            enum poly_type * ptype,
+                            struct PwPolyAdaptOpts * aopts)
 {
-    struct FtApproxArgs * fargs;
-    if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
-        fprintf(stderr, "failed to allocate memory for ft approx args.\n");
-        exit(1);
-    }
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
+
     fargs->dim = dim;
     fargs->targs = 0;
     
@@ -1062,9 +1036,36 @@ struct FtApproxArgs * ft_approx_args_createpwpoly(size_t dim,
 }
 
 /***********************************************************//**
+    Create the linear element approximation args to sent to
+    function cross
+
+    \param[in] dim   - dimension of function train
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
+
+    \return fargs - approximation arguments
+***************************************************************/
+struct FtApproxArgs * 
+ft_approx_args_create_le(size_t dim, 
+                         struct LinElemExpAopts * aopts)
+{
+    struct FtApproxArgs * fargs = ft_approx_args_alloc();
+    fargs->dim = dim;
+    fargs->targs = 0;
+    
+    enum function_class fc = LINELM;
+    fargs->fc.fc0 = fc;    
+    fargs->sub_type.st0 = 0;
+    fargs->approx_opts.ao0 = aopts;
+    
+    return fargs;
+}
+
+
+/***********************************************************//**
     Free memory allocated to FtApproxArgs
 
-    \param fargs [inout] - function train approximation arguments
+    \param[in,out] fargs - function train approximation arguments
 ***************************************************************/
 void ft_approx_args_free(struct FtApproxArgs * fargs)
 {
@@ -1081,13 +1082,12 @@ void ft_approx_args_free(struct FtApproxArgs * fargs)
     }
 }
 
-
 /***********************************************************//**
     Extract the function class to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return function_class of the approximation
 ***************************************************************/
@@ -1111,8 +1111,8 @@ ft_approx_args_getfc(struct FtApproxArgs * fargs, size_t dim)
     Extract the sub type to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return sub type of the approximation
 ***************************************************************/
@@ -1136,8 +1136,8 @@ void * ft_approx_args_getst(struct FtApproxArgs * fargs, size_t dim)
     Extract the approximation arguments to use for the approximation of the
     *dim*-th dimensional functions 
 
-    \param fargs [in] - function train approximation arguments
-    \param dim [in] - dimension to extract
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
 
     \return approximation arguments
 ***************************************************************/
@@ -1173,7 +1173,7 @@ struct BoundingBox * function_train_bds(struct FunctionTrain * ft)
 /***********************************************************//**
     Allocate space for a function_train
 
-    \param dim [in] - dimension of function train
+    \param[in] dim - dimension of function train
 
     \return ft - function train
 ***************************************************************/
@@ -1203,7 +1203,7 @@ struct FunctionTrain * function_train_alloc(size_t dim)
 /***********************************************************//**
     Copy a function train
 
-    \param a [in] - function train to copy
+    \param[in] a - function train to copy
 
     \return b - function train
 ***************************************************************/
@@ -1223,7 +1223,7 @@ struct FunctionTrain * function_train_copy(struct FunctionTrain * a){
 /***********************************************************//**
     Free memory allocated to a function train
 
-    \param ft [inout] - function train to free
+    \param[in,out] ft - function train to free
 ***************************************************************/
 void function_train_free(struct FunctionTrain * ft)
 {
@@ -1245,11 +1245,11 @@ void function_train_free(struct FunctionTrain * ft)
 /********************************************************//**
 *    Create a functiontrain consisting of pseudo-random orth poly expansion
 *   
-*   \param bds [in] - boundaries
-*   \param ranks [in] - (dim+1,1) array of ranks
-*   \param maxorder [in] - maximum order of the polynomial
+*   \param[in] bds      - boundaries
+*   \param[in] ranks    - (dim+1,1) array of ranks
+*   \param[in] maxorder - maximum order of the polynomial
 *
-*   \return ft - runction train
+*   \return function train
 ************************************************************/
 struct FunctionTrain *
 function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxorder)
@@ -1269,13 +1269,13 @@ function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxor
 /***********************************************************//**
     Compute a function train representation of \f$ f1(x1)*f2(x2)*...* fd(xd)\f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] -  one dimensional functions
-    \param args [in] - arguments to the function
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      -  one dimensional functions
+    \param[in] args   - arguments to the function
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain *
 function_train_rankone(size_t dim,  double (*f)(double, size_t, void *), 
@@ -1346,11 +1346,11 @@ function_train_rankone(size_t dim,  double (*f)(double, size_t, void *),
 /***********************************************************//**
     Compute a function train representation of \f$ f1 + f2 + ... + fd \f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] - array of one dimensional functions
-    \param args [in] - array of arguments to the functions
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      - array of one dimensional functions
+    \param[in] args   - array of arguments to the functions
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
     \return ft - function train
 ***************************************************************/
@@ -1438,12 +1438,12 @@ function_train_initsum(size_t dim,  double (**f)(double, void *),
 /***********************************************************//**
     Compute a tensor train representation of  \f$ f1 + f2 + ...+ fd \f$
 
-    \param dim [in] - dimension of function train
-    \param f [in] - one dimensional function with args x and i where  
-               should denote which function to evaluate
-    \param args [in] - array of arguments to the functions
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] f      - one dimensional function with args x and i where  
+                        should denote which function to evaluate
+    \param[in] args   - array of arguments to the functions
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
     \return ft - function train
 ***************************************************************/
@@ -1545,15 +1545,15 @@ function_train_initsum2(size_t dim,  double (*f)(double, size_t, void *),
     Compute a tensor train representation of 
     \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
 
-    \param dim [in] - dimension of function train
-    \param bds [in] - boundarys of each dimension
-    \param c [in] -  slope of the function in each dimension (ldc x dim)
-    \param ldc [in] - stride of coefficients in array of c
-    \param a [in] - offset of the function in each dimension (ldc x dim)
-    \param lda [in] - stride of coefficients in array a
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] c      -  slope of the function in each dimension (ldc x dim)
+    \param[in] ldc    - stride of coefficients in array of c
+    \param[in] a      - offset of the function in each dimension (ldc x dim)
+    \param[in] lda    - stride of coefficients in array a
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_linear2(size_t dim, struct BoundingBox * bds, 
@@ -1652,15 +1652,15 @@ function_train_linear2(size_t dim, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
 
-    \param dim [in] - dimension of function train
-    \param a [in] - value of tensor train
-    \param bds [in] - boundarys of each dimension
-    \param ftargs [in] - parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] a      - value of tensor train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return ft - function train
+    \return function train
 
     \note 
-        Puts the constant into the first core
+    Puts the constant into the first core
 ***************************************************************/
 struct FunctionTrain * 
 function_train_constant(size_t dim, double a, struct BoundingBox * bds,  
@@ -1716,12 +1716,12 @@ function_train_constant(size_t dim, double a, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a tensor train representation of \f$ x_1c_1 + x_2c_2 + .... + x_dc_d \f$
 
-    \param[in] dim    dimension of function train
-    \param[in] bds    boundarys of each dimension
-    \param[in] coeffs slope of the function in each dimension
-    \param[in] ftargs parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs - slope of the function in each dimension
+    \param[in] ftargs - parameters for computation
 
-    \return a function train
+    \return function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs, 
@@ -1815,20 +1815,21 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$
 
-    \param[in] dim     dimension of function train
-    \param[in] bds     boundarys of each dimension
-    \param[in] Q       matrix (dim,dim)
-    \param[in] m       offset (dim,)
-    \param[in] ftargs  parameters for computation
+    \param[in] dim    - dimension of function train
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs - Q matrix
+    \param[in] m      - m (dim,)
+    \param[in] ftargs - parameters for computation
 
-    \returns a function train
+    \returns function train
 
     \note
     Could be more efficient with a better distribution of ranks
 ***************************************************************/
 struct FunctionTrain * 
-function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs, 
-                        double * m, struct FtApproxArgs * ftargs)
+function_train_quadratic(size_t dim, struct BoundingBox * bds, 
+                         double * coeffs, 
+                         double * m, struct FtApproxArgs * ftargs)
 {
     assert (dim > 1); //
     struct FtApproxArgs * ftargs_use;
@@ -1960,19 +1961,19 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds, double * coeffs,
 }
 
 /***********************************************************//**
-    Compute a tensor train representation of \f$ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f$
+    Compute a tensor train representation of \f[ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f]
 
-    \param[in] bds     boundarys of each dimension
-    \param[in] coeffs  coefficients for each dimension
-    \param[in] m       offset in each dimension
-    \param[in] ftargs  parameters for computation
+    \param[in] bds    - boundarys of each dimension
+    \param[in] coeffs - coefficients for each dimension
+    \param[in] m      - offset in each dimension
+    \param[in] ftargs - parameters for computation
 
     \return a function train
 ***************************************************************/
 struct FunctionTrain * 
 function_train_quadratic_aligned(struct BoundingBox * bds, 
-            double * coeffs, double * m,
-            struct FtApproxArgs * ftargs)
+                                 double * coeffs, double * m,
+                                 struct FtApproxArgs * ftargs)
 {
     size_t dim = bds->dim;
 
@@ -2068,9 +2069,9 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
 /***********************************************************//**
     Serialize a function_train
 
-    \param ser [inout] - stream to serialize to
-    \param ft [in] - function train
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     ft        - function train
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of ytes
 ***************************************************************/
@@ -2111,8 +2112,8 @@ function_train_serialize(unsigned char * ser, struct FunctionTrain * ft,
 /***********************************************************//**
     Deserialize a function train
 
-    \param ser [inout] - serialized function train
-    \param ft [inout] - function_train
+    \param[in,out] ser - serialized function train
+    \param[in,out] ft  - function_train
 
     \return ptr - shifted ser after deserialization
 ***************************************************************/
@@ -2140,8 +2141,8 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 /***********************************************************//**
     Save a function train to file
     
-    \param ft [in] - function train to save
-    \param filename [in] - name of file to save to
+    \param[in] ft       - function train to save
+    \param[in] filename - name of file to save to
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
@@ -2178,7 +2179,7 @@ int function_train_save(struct FunctionTrain * ft, char * filename)
 /***********************************************************//**
     Load a function train from a file
     
-    \param filename [in] - filename of file to load
+    \param[in] filename - filename of file to load
 
     \return ft if successfull NULL otherwise
 ***************************************************************/
@@ -2218,9 +2219,9 @@ struct FunctionTrain * function_train_load(char * filename)
 /***********************************************************//**
     Allocate a 1d array of function trains
 
-    \param dimout [in] - number of function trains
+    \param[in] dimout - number of function trains
 
-    \return fta - function train array
+    \return function train array
 
     \note 
         Each ft of the array is set to NULL;
@@ -2252,15 +2253,15 @@ struct FT1DArray * ft1d_array_alloc(size_t dimout)
 /***********************************************************//**
     Serialize a function train array
 
-    \param ser [inout] - stream to serialize to
-    \param ft [in] - function train array
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser        - stream to serialize to
+    \param[in]     ft         - function train array
+    \param[in,out] totSizeIn  - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of bytes
 ***************************************************************/
 unsigned char * 
 ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
-                size_t *totSizeIn)
+                     size_t *totSizeIn)
 {
 
     // size -> ft1 -> ft2 -> ... ->ft[size]
@@ -2292,8 +2293,8 @@ ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
 /***********************************************************//**
     Deserialize a function train array
 
-    \param ser [inout] - serialized function train array
-    \param ft [inout] - function_train array
+    \param[in,out] ser - serialized function train array
+    \param[in,out] ft  - function_train array
 
     \return ptr - shifted ser after deserialization
 ***************************************************************/
@@ -2317,8 +2318,8 @@ ft1d_array_deserialize(unsigned char * ser, struct FT1DArray ** ft)
 /***********************************************************//**
     Save a function train array to file
     
-    \param ft [in] - function train array to save
-    \param filename [in] - name of file to save to
+    \param[in] ft       - function train array to save
+    \param[in] filename - name of file to save to
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
@@ -2355,7 +2356,7 @@ int ft1d_array_save(struct FT1DArray * ft, char * filename)
 /***********************************************************//**
     Load a function train array from a file
     
-    \param filename [in] - filename of file to load
+    \param[in] filename - filename of file to load
 
     \return ft if successfull NULL otherwise
 ***************************************************************/
@@ -2394,7 +2395,7 @@ struct FT1DArray * ft1d_array_load(char * filename)
 /***********************************************************//**
     Copy an array of function trains
 
-    \param fta [in] - array to coppy
+    \param[in] fta - array to coppy
 
     \return ftb - copied array
 ***************************************************************/
@@ -2411,7 +2412,7 @@ struct FT1DArray * ft1d_array_copy(struct FT1DArray * fta)
 /***********************************************************//**
     Free a 1d array of function trains
 
-    \param fta [inout] - function train array to free
+    \param[in,out] fta - function train array to free
 ***************************************************************/
 void ft1d_array_free(struct FT1DArray * fta)
 {
@@ -2428,302 +2429,78 @@ void ft1d_array_free(struct FT1DArray * fta)
     }
 }
 
-/////////////////////////////////////////////////////////////////////
-// Indices
 
-/***********************************************************//**
-    Allocate an index set for cross approxmiation
-
-    \param type [in] - 0 for left index set, 1 for right index set
-    \param totdim [in] - total dimension of approximation
-    \param dim [in] - current dimension
-    \param rank [in] - rank of current core
-
-    \return is  - index set
-***************************************************************/
-struct IndexSet * 
-index_set_alloc(int type, size_t totdim, size_t dim, size_t rank)
+struct FiberOptArgs * fiber_opt_args_alloc()
 {
-    struct IndexSet * is = NULL;
-    if ( NULL == (is = malloc(sizeof(struct IndexSet)))){
-        fprintf(stderr, "failed to allocate memory for index_set.\n");
+    struct FiberOptArgs * fopt = NULL;
+    fopt = malloc(sizeof(struct FiberOptArgs));
+    if (fopt == NULL){
+        fprintf(stderr,"Memory failure allocating FiberOptArgs\n");
         exit(1);
     }
-    is->type = type;
-    is->totdim = totdim;
-    is->dim = dim;
-    is->rank = rank;
-    //printf("rank =%zu\n", rank);
-    if ( NULL == (is->inds = malloc( rank *sizeof(double *)))){
-        fprintf(stderr, "failed to allocate memory for index_set_indices.\n");
-        exit(1);
-    }
-    size_t ii;
-    // left indices
-    if (type == 0){
-        assert (dim > 0);
-        for (ii = 0; ii < rank; ii++){
-            is->inds[ii] = calloc_double(dim);    
-        }
-    }
-    else if (type == 1){
-        assert (dim < (totdim-1));
-        for (ii = 0; ii < rank; ii++){
-            is->inds[ii] = calloc_double(totdim-dim);    
-        }
-    }
-    return is;
+    return fopt;
 }
 
 /***********************************************************//**
-    Free memory allocated for index set and set it to NULL
+    Initialize a baseline optimization arguments class
 
-    \param is [inout] - index set to free
+    \param[in] dim - dimension of problem
+
+    \return fiber optimzation arguments that are NULL in each dimension
 ***************************************************************/
-void index_set_free(struct IndexSet * is)
+struct FiberOptArgs * fiber_opt_args_init(size_t dim)
 {
-    if (is != NULL){
-        size_t ii;
-        size_t rank = is->rank;
-        for (ii = 0; ii < rank; ii++){
-            free(is->inds[ii]);
-            is->inds[ii] = NULL;
-        }
-        free(is->inds);
-        is->inds = NULL;
-        free(is);
-        is = NULL;
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
     }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = NULL;
+    }
+    return fopt;
 }
 
 /***********************************************************//**
-    Free memory allocated to index set array
-    
-    \param n [in] - number of index sets
-    \param is  [inout] - index set array to free
-***************************************************************/
-void index_set_array_free(size_t n, struct IndexSet ** is)
-{
-    if (is != NULL) {
+    Initialize a bruteforce optimization with the same nodes in each dimension
 
-        size_t ii;
-        for (ii = 0; ii < n; ii++){
-            index_set_free(is[ii]);
-            is[ii] = NULL;
-        }
-        free(is); is = NULL;
+    \param[in] dim   - dimension of problem
+    \param[in] nodes - nodes over which to optimize 
+                       (same ones used for each dimension)
+
+    \return fiber opt args
+***************************************************************/
+struct FiberOptArgs * fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
     }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = nodes;
+    }
+    return fopt;
 }
+
 
 /***********************************************************//**
-    Initialize a right nested index set
-    
-    \param dim [in] - dimension
-    \param ranks [in] - ranks of the function
-    \param opts [in] - a set of locations
+    Free memory allocate to fiber optimization arguments
 
-    \return isr - right index set
-
-    \note
-        This function is mainly used for the initialization of the
-        right index set in the function train approximation
-        algorithm
+    \param[in,out] fopt - fiber optimization structure
 ***************************************************************/
-struct IndexSet ** 
-index_set_array_rnested(size_t dim, size_t * ranks, double * opts)
+void fiber_opt_args_free(struct FiberOptArgs * fopt)
 {
-    struct IndexSet ** isr = NULL;
-    if ( NULL == (isr = malloc(dim * sizeof(struct IndexSet * )))){
-        fprintf(stderr, "failed to allocate memory for index_set array.\n");
-        exit(1);
+    if (fopt != NULL){
+        free(fopt->opts); fopt->opts = NULL;
+        free(fopt); fopt = NULL;
     }
-    
-    size_t jj,kk;
-    size_t ii = 0;
-    for (ii = 0; ii < dim-1; ii++){
-        isr[ii] = index_set_alloc(1, dim, ii, ranks[ii+1]);
-        for (jj = 0; jj < ranks[ii+1]; jj++){
-            for (kk = ii+1; kk < dim; kk++){
-                isr[ii]->inds[jj][kk-ii-1] = opts[kk];
-                //isr[ii]->inds[jj][kk-ii-1] = randu();
-            }
-        }
-    }
-    isr[dim-1] = NULL;
-    
-    return isr;
-}
-
-/***********************************************************//**
-    Initialize a left-nested index set
-    
-    \param dim [in] - dimension
-    \param ranks [in] - ranks of the function
-    \param opts [in] - a set of locations
-
-    \return isl - left index set
-
-    \note
-        This function is mainly used for the initialization of the
-        left index set in the function train approximation
-        algorithm
-***************************************************************/
-struct IndexSet ** 
-index_set_array_lnested(size_t dim, size_t * ranks, double * opts)
-{
-    
-    struct IndexSet ** isl = NULL;
-    if ( NULL == (isl = malloc(dim * sizeof(struct IndexSet *)))){
-        fprintf(stderr, "failed to allocate memory for index_set array.\n");
-        exit(1);
-    }
-    
-    size_t jj,kk;
-    size_t ii = 0;
-    isl[ii] = NULL;
-    for (ii = 1; ii < dim; ii++){
-        isl[ii] = index_set_alloc(0, dim, ii, ranks[ii]);
-        for (jj = 0; jj < ranks[ii]; jj++){
-            for (kk = 0; kk < ii; kk++){
-                //isl[ii]->inds[jj][kk] = randu();
-                isl[ii]->inds[jj][kk] = opts[kk];
-            }
-        }
-    }
-    return isl;
-}
-
-double ** 
-index_set_merge(struct IndexSet * isl, struct IndexSet * isr, size_t * nvals)
-{
-    double ** out = NULL;   
-    size_t rankl, rankr;
-    size_t endleft, dim;
-    if ((isl == NULL) && (isr != NULL)){
-        rankl = 0;
-        rankr = isr->rank;
-        endleft = 0;
-        dim = isr->totdim;
-        out = malloc(rankr * sizeof(double *));
-        *nvals = rankr;
-    }
-    else if ( (isl != NULL) && (isr == NULL)){
-        rankl = isl->rank;
-        rankr = 0;
-        endleft = isl->totdim;
-        dim = isl->totdim;
-        out = malloc(rankl * sizeof(double *));
-        *nvals = rankl;
-    }
-    else if ( (isl != NULL) && (isr != NULL)){
-        rankl = isl->rank;
-        rankr = isr->rank;
-        endleft = isl->dim;
-        dim = isl->totdim;
-        out = malloc(rankl * rankr * sizeof(double *));
-        *nvals = rankl*rankr;
-    }
-    else{
-        fprintf(stderr, "cannot merge these indices.\n");
-        exit(1);
-    }
-
-    if ( out == NULL){
-        fprintf(stderr, "failed to allocate memory for index_set.\n");
-        exit(1);
-    }
-
-    size_t ii, jj, kk;
-    if (rankl == 0){
-        for (ii = 0; ii < rankr; ii++){
-            out[ii] = calloc_double(dim);
-            out[ii][0] = 0.0; // arbitray
-            for (jj = 1; jj < dim; jj++){
-                out[ii][jj] = isr->inds[ii][jj-1]; 
-            }
-        }
-    }
-    else if (rankr == 0){
-        for (ii = 0; ii < rankl; ii++){
-            out[ii] = calloc_double(dim);
-            for (jj = 0; jj < dim-1; jj++){
-                out[ii][jj] = isl->inds[ii][jj]; 
-            }
-            out[ii][dim-1] = 0.0; // arbitray
-        }
-    }
-    else {
-        for (ii = 0; ii < rankr; ii++){
-            for (jj = 0; jj < rankl; jj++){
-                out[ii*rankl+jj] = calloc_double(dim);
-                for (kk = 0; kk < endleft; kk++){
-                    out[ii*rankl+jj][kk] = isl->inds[jj][kk];
-                }
-                out[ii*rankl+jj][endleft] = 0.0; // arbitrary;
-                for (kk = endleft+1; kk < dim; kk++){
-                    out[ii*rankl+jj][kk] = isr->inds[ii][kk-endleft-1];
-                }
-            }
-        }
-    }
-    
-    return out;
-}
-
-double ** 
-index_set_merge_fill_end(struct IndexSet * isl, double ** isr)
-                            
-{
-    double ** out = NULL;   
-    size_t rankl, dim, ii, jj;
-    assert (isl != NULL);
-
-    rankl = isl->rank;
-
-    dim = isl->totdim;
-    out = malloc(rankl * sizeof(double *));
-
-    if ( out == NULL){
-        fprintf(stderr, "failed to allocate memory for index_set.\n");
-        exit(1);
-    }
-
-    for (ii = 0; ii < rankl; ii++){
-        out[ii] = calloc_double(dim);
-        for (jj = 0; jj < dim-1; jj++){
-            out[ii][jj] = isl->inds[ii][jj]; 
-        }
-        out[ii][dim-1] = isr[ii][0];
-    }
-    return out;
-}
-
-double ** 
-index_set_merge_fill_beg(double ** isl, struct IndexSet * isr)
-                            
-{
-    double ** out = NULL;   
-    size_t rankr, dim, ii, jj;
-    assert (isr != NULL);
-
-    rankr = isr->rank;
-
-    dim = isr->totdim;
-    out = malloc(rankr * sizeof(double *));
-
-    if ( out == NULL){
-        fprintf(stderr, "failed to allocate memory for index_set.\n");
-        exit(1);
-    }
-
-    for (ii = 0; ii < rankr; ii++){
-        out[ii] = calloc_double(dim);
-        out[ii][0] = isl[ii][0];
-        for (jj = 1; jj < dim; jj++){
-            out[ii][jj] = isr->inds[ii][jj-1]; 
-        }
-    }
-    return out;
 }
 
 
@@ -2757,30 +2534,3 @@ void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
     }
 }
 
-void print_index_set_array(size_t N, struct IndexSet ** ar){
-    
-    size_t ii, jj;
-    for (ii = 0; ii < N; ii++){
-        printf("Index Set (%zu/%zu) .... \n",ii,N);
-        if (ar[ii] == NULL){
-            printf("NULL\n");
-        }
-        else{
-            if (ar[ii]->type == 1){
-                for (jj = 0; jj < ar[ii]->rank; jj++){
-                    dprint(N-ii-1, ar[ii]->inds[jj]);
-                }
-            }
-            else if (ar[ii]->type == 0){
-                for (jj = 0; jj < ar[ii]->rank; jj++){
-                    dprint(ii, ar[ii]->inds[jj]);
-                }
-            }
-            else{
-                fprintf(stderr, "type of index set not specified\n");
-                exit(1);
-            }
-        }
-    }
-
-}

@@ -60,7 +60,11 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
     size_t nrows = A->nrows;
     size_t ncols = A->ncols;
     enum poly_type ptype = LEGENDRE;
-    *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
+    if ( (*Q) == NULL){
+        *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols,
+                                    lb,ub); 
+    }
+
    // print_qmarray(*Q,0,NULL);
     
     if ((*R) == NULL){
@@ -74,13 +78,15 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
 
     double s, rho, alpha, sigma;
     for (ii = 0; ii < ncols; ii++){
-        //printf("ii = %zu \n", ii);
+//        printf("ii = %zu \n", ii);
 
         rho = generic_function_array_norm(nrows,1,A->funcs+ii*nrows);
         (*R)[ii*ncols+ii] = rho;
-        alpha = generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1, A->funcs+ii*nrows);
+        alpha = generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
+                                           A->funcs+ii*nrows);
         
-        //printf("alpha=%G\n",alpha);
+//        printf("rho = %G\n alpha=%G\n",rho,alpha);
         if (fabs(alpha) < ZERO){
             alpha = 0.0;
             s = 0.0;
@@ -88,20 +94,23 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         else{
             s = -alpha / fabs(alpha);    
             if (s < 0.0){
-                generic_function_array_flip_sign(nrows,1,(*Q)->funcs+ii*nrows);
+                generic_function_array_flip_sign(nrows,1,
+                                                 (*Q)->funcs+ii*nrows);
             }
         }
-        
+
+//        printf("s = %G\n",s);
         //should be able to get sigma without doing computation
         sigma = 0.0;
         for (kk = 0; kk < nrows; kk++){
-            //printf("kk = %zu\n",kk);
+//            printf("kk = %zu\n",kk);
             generic_function_weighted_sum_pa(
                 rho,(*Q)->funcs[ii*nrows+kk],-1.0,A->funcs[ii*nrows+kk],
                 &(V->funcs[ii*nrows+kk]));
-            //printf("v is null? %d \n",V->funcs[ii*nrows+kk]->f == NULL);
-            sigma += generic_function_inner(V->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
-            //printf("take innert = %zu\n",kk);
+//            printf("v is null? %d \n",V->funcs[ii*nrows+kk]->f == NULL);
+            sigma += generic_function_inner(V->funcs[ii*nrows+kk],
+                                            V->funcs[ii*nrows+kk]);
+//            printf("take innert = %zu\n",kk);
         }
         sigma = sqrt(sigma);
 
@@ -110,7 +119,8 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
             for (kk = 0; kk < nrows; kk++){
                 generic_function_free(V->funcs[ii*nrows+kk]);
                 V->funcs[ii*nrows+kk] = NULL;
-                V->funcs[ii*nrows+kk] = generic_function_copy((*Q)->funcs[ii*nrows+kk]);
+                V->funcs[ii*nrows+kk] = generic_function_copy(
+                    (*Q)->funcs[ii*nrows+kk]);
                 //generic_function_copy_pa((*Q)->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
             }
         }
@@ -119,17 +129,33 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         }
         
         //printf("start inner loop\n");
-        double ev = generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1,V->funcs+ii*nrows);
+        double ev = generic_function_inner_sum(nrows,1,
+                                               (*Q)->funcs+ii*nrows,1,
+                                               V->funcs+ii*nrows);
         for (kk = ii+1; kk < ncols; kk++){
-            double temp = generic_function_inner_sum(nrows,1,V->funcs+ii*nrows,1,A->funcs+kk*nrows);
-            (*R)[kk*ncols+ii]=generic_function_inner_sum(nrows,1,(*Q)->funcs+ii*nrows,1,A->funcs+kk*nrows);
+            double temp = generic_function_inner_sum(nrows,1,
+                                                     V->funcs+ii*nrows,1,
+                                                     A->funcs+kk*nrows);
+            (*R)[kk*ncols+ii]=
+                generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
+                                           A->funcs+kk*nrows);
             (*R)[kk*ncols+ii] += (-2.0 * ev * temp);
             for (ll = 0; ll < nrows; ll++){
-                int success = generic_function_axpy(-2.0*temp,V->funcs[ii*nrows+ll],A->funcs[kk*nrows+ll]);
-                assert (success == 0);
+                int success =
+                    generic_function_axpy(-2.0*temp,
+                                          V->funcs[ii*nrows+ll],
+                                          A->funcs[kk*nrows+ll]);
+                if (success == 1){
+                    return 1;
+                }
+                //assert (success == 0);
                 success = generic_function_axpy(-(*R)[kk*ncols+ii],
                         (*Q)->funcs[ii*nrows+ll],A->funcs[kk*nrows+ll]);
-                assert (success == 0);
+                if (success == 1){
+                    return 1;
+                }
+//                assert (success == 0);
             }
         }
     }
@@ -169,7 +195,10 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
     size_t nrows = A->nrows;
     size_t ncols = A->ncols;
     enum poly_type ptype = LEGENDRE;
-    *Q = qmarray_orth1d_rows(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
+
+    if ( (*Q) == NULL){
+        *Q = qmarray_orth1d_rows(POLYNOMIAL,&ptype,nrows,ncols, lb, ub); 
+    }
 
     if ((*L) == NULL){
         *L = calloc_double(nrows*nrows);
@@ -266,3 +295,62 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
     return 0;
 }
 
+int qmarray_qr_gs(struct Qmarray * A, double ** R)
+{
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+    if ((*R) == NULL){
+        *R = calloc_double(ncols*ncols);
+    }
+    
+    for (size_t ii = 0; ii < ncols; ii++ ){
+        (*R)[ii*ncols+ii] = generic_function_array_norm(nrows,1,A->funcs + ii*nrows);
+        if ((*R)[ii*ncols+ii] > ZERO){
+            generic_function_array_scale(1.0/(*R)[ii*ncols+ii],A->funcs+ii*nrows,nrows);
+            for (size_t jj = ii+1; jj < ncols; jj++){
+                (*R)[jj*ncols+ii] = generic_function_inner_sum(nrows,1,A->funcs+ii*nrows,
+                                                               1, A->funcs + jj*nrows);
+                generic_function_array_axpy(nrows,-(*R)[jj*ncols+ii],A->funcs+ii*nrows,A->funcs+jj*nrows);
+            }
+        }
+        else{
+            printf("warning!!\n");
+            printf("norm = %G\n",(*R)[ii*ncols+ii]);
+            assert(1 == 0);
+        }
+    }
+    return 0;
+}
+
+
+int qmarray_lq_gs(struct Qmarray * A, double ** R)
+{
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+    if ((*R) == NULL){
+        *R = calloc_double(nrows*nrows);
+    }
+    
+    for (size_t ii = 0; ii < nrows; ii++ ){
+        (*R)[ii*nrows+ii] = generic_function_array_norm(ncols,nrows,A->funcs + ii);
+        if ((*R)[ii*nrows+ii] > ZERO){
+            for (size_t jj = 0; jj < ncols; jj++){
+                generic_function_scale(1.0/(*R)[ii*nrows+ii],A->funcs[jj*nrows+ii]);                
+            }
+            for (size_t jj = ii+1; jj < nrows; jj++){
+                (*R)[ii*nrows+jj] = generic_function_inner_sum(ncols,nrows,A->funcs+ii,
+                                                               nrows, A->funcs + jj);
+                for (size_t kk = 0; kk < ncols; kk++){
+                    generic_function_axpy(-(*R)[ii*nrows+jj],
+                                          A->funcs[kk*nrows+ii],
+                                          A->funcs[kk*nrows+jj]);
+                }
+            }
+        }
+        else{
+            printf("norm = %G\n",(*R)[ii*nrows+ii]);
+            assert (1 == 0);
+        }
+    }
+    return 0;
+}

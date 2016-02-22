@@ -25,13 +25,13 @@ double disc2d(double * xy, void * args)
     return out;
 }
 
-int main( int argc, char *argv[])
+int main(void)
 {
 
-    if ((argc != 2) && (argc != 1)){
-       printf("Correct function call = ./genz2d \n");
-       return 0;
-    }
+//    if ((argc != 2) && (argc != 1)){
+//       printf("Correct function call = ./genz2d \n");
+//       return 0;
+//    }
     
     size_t dim = 2;
     
@@ -46,12 +46,21 @@ int main( int argc, char *argv[])
     struct FunctionMonitor * fm = 
             function_monitor_initnd(disc2d,NULL,dim,1000*dim);
             
-    double * yr  = calloc_double(dim);
-    struct IndexSet ** isr = index_set_array_rnested(dim, ranks, yr);
-    struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
+    // double * yr  = calloc_double(dim);
+    // Setup fibers to use
+    double x[2] = {0.0,0.1};
+    double y[2] = {0.0,0.1};
+    double *yr[2];
+    yr[0] = x;
+    yr[0] = y;
 
+    struct CrossIndex * isl[2];
+    struct CrossIndex * isr[2];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,ranks,yr);
 
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.epsilon = 1e-1;
     fca.maxiter = 1;
     fca.verbose = 2;
@@ -76,11 +85,11 @@ int main( int argc, char *argv[])
     //struct FunctionTrain * ft = ftapprox_cross(disc2d, NULL,
     //                                bds, dim, ftref, isl, isr, &fca);
 
-    free(yr);
     ft_approx_args_free(fapp);
-    index_set_array_free(dim,isr);
-    index_set_array_free(dim,isl);
-            
+    
+    cross_index_free(isr[0]);
+    cross_index_free(isl[1]);
+                
     char final_errs[256];
     sprintf(final_errs,"final.dat");
 
@@ -90,7 +99,7 @@ int main( int argc, char *argv[])
     FILE *fp;
     fp =  fopen(evals, "w");
     if (fp == NULL){
-        fprintf(stderr, "cat: can't open %s\n", argv[1]);
+        fprintf(stderr, "cat: can't open %s\n",evals);
         return 0;
     }
     function_monitor_print_to_file(fm,fp);
@@ -99,7 +108,7 @@ int main( int argc, char *argv[])
     FILE *fp2;
     fp2 =  fopen(final_errs, "w");
     if (fp2 == NULL){
-        fprintf(stderr, "cat: can't open %s\n", argv[1]);
+        fprintf(stderr, "cat: can't open %s\n", final_errs);
         return 0;
     }
 

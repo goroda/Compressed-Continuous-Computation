@@ -42,6 +42,7 @@
 #define ALGS_H
 
 #include "elements.h"
+#include "indmanage.h"
 
 /** \struct Cross2dargs
  *  \brief Contains arguments for cross approximation
@@ -85,6 +86,8 @@ struct Cross2dargs
  *  maximum number of rank adaptation iterations
  *  \var FtCrossArgs::verbose
  *  verbosity level (0,1,2)
+ *  \var FtCrossArgs::optargs
+ *  optimization arguments
  * */
 struct FtCrossArgs
 {
@@ -98,6 +101,8 @@ struct FtCrossArgs
     size_t maxiteradapt;
 
     int verbose;
+
+    struct FiberOptArgs * optargs;
 };
 
 
@@ -114,7 +119,7 @@ int quasimatrix_householder(struct Quasimatrix *, struct Quasimatrix *,
         struct Quasimatrix *, double *);
 int quasimatrix_qhouse(struct Quasimatrix *, struct Quasimatrix *);
 
-int quasimatrix_lu1d(struct Quasimatrix *, struct Quasimatrix *, double *, double *);
+int quasimatrix_lu1d(struct Quasimatrix *, struct Quasimatrix *, double *, double *, void *);
 
 int quasimatrix_maxvol1d(struct Quasimatrix *, double *, double *);
 
@@ -162,8 +167,8 @@ void qmarray_axpy(double,struct Qmarray *, struct Qmarray *);
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 
 int qmarray_lu1d(struct Qmarray *, struct Qmarray *, double *, size_t *,
-                    double *);
-int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *);
+                 double *, void *);
+int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *,void *);
 
 int qmarray_qhouse(struct Qmarray *, struct Qmarray *);
 int qmarray_qhouse_rows(struct Qmarray *, struct Qmarray *);
@@ -179,7 +184,8 @@ size_t qmarray_truncated_svd(struct Qmarray *, struct Qmarray **,
             double **, double **, double);
 
 
-void qmarray_absmax1d(struct Qmarray *, double *, size_t *, size_t *, double *);
+void qmarray_absmax1d(struct Qmarray *, double *, size_t *, 
+                      size_t *, double *, void *);
 struct Qmarray * qmarray_transpose(struct Qmarray * a);
 struct Qmarray * qmarray_stackh(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_stackv(struct Qmarray *, struct Qmarray *);
@@ -219,12 +225,13 @@ ft1d_array_sum_prod(size_t, double *, struct FT1DArray *, struct FT1DArray *,
 struct FunctionTrain *
 ftapprox_cross(double (*)(double *, void *), void *, 
     struct BoundingBox *, struct FunctionTrain *, 
-    struct IndexSet **, struct IndexSet **, 
+    struct CrossIndex **, struct CrossIndex **, 
     struct FtCrossArgs *, struct FtApproxArgs *);
 
+void ft_cross_args_init(struct FtCrossArgs *);
 struct FunctionTrain *
 function_train_cross(double (*)(double *, void *), void *, 
-        struct BoundingBox *, double *,
+        struct BoundingBox *, double **,
         struct FtCrossArgs *, struct FtApproxArgs *);
 
 struct FT1DArray * function_train_hessian(struct FunctionTrain *);
@@ -233,9 +240,8 @@ struct FunctionTrain *
 ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
                 struct BoundingBox *, 
                 struct FunctionTrain *, 
-                struct IndexSet **, 
-                struct IndexSet **,
-                double *,
+                struct CrossIndex **, 
+                struct CrossIndex **,
                 struct FtCrossArgs *,
                 struct FtApproxArgs *
                 );
@@ -248,7 +254,7 @@ struct FT1DArray *
 ft1d_array_cross(double (*f)(double *, size_t, void *), void *, 
                 size_t,
                 struct BoundingBox *,
-                double *,
+                double **,
                 struct FtCrossArgs *,
                 struct FtApproxArgs *);
 

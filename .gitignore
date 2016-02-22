@@ -8,6 +8,9 @@ lib/*
 *~
 *#
 *.pdf
+*.log
+*.aux
+*.#*
 
 doc/html/*
 doc/latex/*
@@ -24,6 +27,7 @@ benchmarks/dmrgprod/dat/*
 benchmarks/qrdecomp/bin/*
 benchmarks/scalardiffusion/dat/*
 benchmarks/scalardiffusion/bin/*
+benchmarks/linelmconv/bin/*
 
 fileheaders.txt
 update_file_headers.py

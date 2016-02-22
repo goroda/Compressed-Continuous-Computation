@@ -40,6 +40,7 @@
 #include <stdlib.h>
 
 double * calloc_double(const size_t);
+double ** malloc_dd(const size_t);
 int * calloc_int(const size_t);
 size_t * calloc_size_t(const size_t);
 void copy_dd(size_t, size_t, double **, double **);
@@ -75,6 +76,11 @@ double * deserialize_darray_from_text(char *, size_t *);
 
 int darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
+
+struct c3Vector{
+    size_t size;
+    double * elem;
+};
 
 //RANDOM NUMBERS
 double randu(void);

@@ -46,7 +46,7 @@
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
  * only POLYNOMIAL is implemented!!!
  */
-enum function_class {PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL};
+enum function_class {PIECEWISE, POLYNOMIAL, LINELM, RATIONAL, KERNEL};
 
 /** \struct Interval
  * \brief A pair of lower and upper bounds
@@ -150,7 +150,9 @@ double generic_function_norm2diff(struct GenericFunction *,
 double generic_function_array_norm2diff(
                 size_t, struct GenericFunction **, size_t,
                 struct GenericFunction **, size_t);
-
+struct GenericFunction *
+generic_function_onezero(enum function_class, double, size_t,
+                         double *, double, double);
 double generic_function_integral(struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
@@ -200,9 +202,10 @@ struct GenericFunction * generic_function_lin_comb(size_t,
 struct GenericFunction * generic_function_lin_comb2(size_t, size_t, 
                 struct GenericFunction **, size_t, double *);
 
-double generic_function_absmax(struct GenericFunction *, double *);
+double generic_function_absmax(struct GenericFunction *, double *,void *);
 double generic_function_array_absmax(size_t, size_t, 
-        struct GenericFunction **, size_t *, double *);
+                                     struct GenericFunction **, 
+                                     size_t *, double *, void *);
 void generic_function_scale(double, struct GenericFunction *);
 void generic_function_array_scale(double, struct GenericFunction **, size_t);
 void generic_function_kronh(int,
@@ -227,6 +230,13 @@ generic_function_quadratic(double, double,
             enum function_class, void *,
             double, double, void *);
 
+void generic_function_array_orth1d_columns(
+    struct GenericFunction **,
+    struct GenericFunction **,
+    enum function_class,
+    void *, size_t,
+    size_t, double,
+    double);
 void generic_function_array_orth(size_t, enum function_class, void *,
                             struct GenericFunction **, void *);
 

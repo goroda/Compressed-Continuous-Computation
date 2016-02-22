@@ -42,6 +42,7 @@
 #define LIB_CLINALG_H
 
 #include "elements.h"
+#include "indmanage.h"
 #include "algs.h"
 #include "dmrg.h"
 #include "dmrgprod.h"

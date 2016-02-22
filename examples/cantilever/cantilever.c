@@ -58,6 +58,7 @@ int main()
 
     size_t init_ranks[3] = {1,5,1};
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.dim = dim;
     fca.ranks = init_ranks;
     fca.ranks[dim] = 1;

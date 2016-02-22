@@ -285,6 +285,7 @@ int main( int argc, char *argv[])
     // Initialize cross approximation options
     size_t init_ranks = 5;
     struct FtCrossArgs fca;
+    ft_cross_args_init(&fca);
     fca.dim = dim;
     fca.ranks = calloc_size_t(dim+1);
     size_t ii;
@@ -298,10 +299,10 @@ int main( int argc, char *argv[])
     fca.maxiteradapt = 5;
     fca.verbose = 2;
 
-    double * center = darray_val(dim,0.0);
+    //double * center = darray_val(dim,0.0);
     
     struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval, fm, bds, center,&fca, fapp);
+        function_train_cross(function_monitor_eval, fm, bds,NULL,&fca, fapp);
 
     size_t nvals = nstored_hashtable_cp(fm->evals);
     printf("number of evaluations = %zu \n", nvals);
@@ -340,12 +341,11 @@ int main( int argc, char *argv[])
     printf("RMSE = %G\n", sqrt(errnum / (double) nrand));
     printf("Relative RMSE = %G \n", sqrt(err));
 
-
     function_monitor_free(fm); fm = NULL;
     bounding_box_free(bds); bds = NULL;
     ft_approx_args_free(fapp); fapp = NULL;
     free(fca.ranks); fca.ranks = NULL;
-    free(center); center = NULL;
+    //free(center); center = NULL;
     function_train_free(ft); ft = NULL;
     free(testpt); testpt = NULL;
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -41,6 +41,7 @@
 #define ELEMENTS_H
 
 #include <stdlib.h>
+#include "../lib_array/array.h"
 #include "../lib_funcs/lib_funcs.h"
 
 //////////////////////////////////////////////////////////////
@@ -83,7 +84,7 @@ quasimatrix_deserialize(unsigned char *, struct Quasimatrix ** );
 struct Quasimatrix * quasimatrix_orth1d(enum function_class fc, 
                         void * st, size_t n, double lb, double ub);
 
-size_t quasimatrix_absmax(struct Quasimatrix *, double *, double *);
+size_t quasimatrix_absmax(struct Quasimatrix *, double *, double *,void*);
 
 /** \struct SkeletonDecomp
  *  \brief Defines a skeleton decomposition of a two-dimensional function \f$ f(x,y) \f$
@@ -206,12 +207,19 @@ struct FtApproxArgs
     } approx_opts;
 
     int targs; // type of args (0,1)
+    
+//    void * optargs;
 };
 
-struct FtApproxArgs * ft_approx_args_createpoly(size_t, enum poly_type *,
-                struct OpeAdaptOpts * aopts);
-struct FtApproxArgs * ft_approx_args_createpwpoly(size_t, enum poly_type *,
-                struct PwPolyAdaptOpts * aopts);
+struct FtApproxArgs * 
+ft_approx_args_createpoly(size_t, enum poly_type *,
+                          struct OpeAdaptOpts *);
+struct FtApproxArgs * 
+ft_approx_args_createpwpoly(size_t, enum poly_type *,
+                            struct PwPolyAdaptOpts *);
+struct FtApproxArgs * 
+ft_approx_args_create_le(size_t, 
+                         struct LinElemExpAopts *);
 
 enum function_class 
 ft_approx_args_getfc(struct FtApproxArgs *, size_t);
@@ -311,47 +319,19 @@ struct FT1DArray * ft1d_array_load(char *);
 struct FT1DArray * ft1d_array_copy(struct FT1DArray *);
 void ft1d_array_free(struct FT1DArray *);
 
-
-/////////////////////////////////////////////////////////////////////
-// Indices
-/** \struct IndexSet
- * \brief Describes index sets used for cross approximation
- * \var IndexSet::type
- * 0 for left, 1 for right
- * \var IndexSet::totdim
- * total dimension of the function
- * \var IndexSet::dim
- * the dimension for which the index set is useful
- * \var IndexSet::rank
- * rank for the dimension sepecified
- * \var IndexSet::inds
- * set of indices
- */
-struct IndexSet{
-    
-    int type; // 0 for left, 1 for right
-    size_t totdim;
+struct FiberOptArgs
+{
     size_t dim;
-    size_t rank;
-    double ** inds;
+    void ** opts;
 };
-
-struct IndexSet * index_set_alloc(int, size_t, size_t, size_t);
-void index_set_free(struct IndexSet *);
-void index_set_array_free(size_t, struct IndexSet **);
-struct IndexSet ** index_set_array_rnested(size_t, size_t *, double *);
-struct IndexSet ** index_set_array_lnested(size_t, size_t *, double *);
-double ** index_set_merge(struct IndexSet *, struct IndexSet *,size_t *);
-double ** index_set_merge_fill_end(struct IndexSet *, double **);
-double ** index_set_merge_fill_beg(double **, struct IndexSet *);
-
-
-
+struct FiberOptArgs * fiber_opt_args_alloc();
+struct FiberOptArgs * fiber_opt_args_init(size_t);
+struct FiberOptArgs * fiber_opt_args_bf_same(size_t, struct c3Vector *);
+void fiber_opt_args_free(struct FiberOptArgs *);
 
 /////////////////////////////////////////////////////////
 // Utilities
 void print_quasimatrix(struct Quasimatrix *, size_t, void *);
 void print_qmarray(struct Qmarray *, size_t, void *);
-void print_index_set_array(size_t, struct IndexSet **);
 
 #endif

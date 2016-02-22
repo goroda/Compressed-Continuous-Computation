@@ -46,6 +46,7 @@
 
 #include "qmarray_qr.h"
 #include "lib_funcs.h"
+#include "indmanage.h"
 #include "algs.h"
 #include "array.h"
 #include "linalg.h"
@@ -376,8 +377,9 @@ int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
     \param L [inout] - quasimatrix representing L factor
     \param u [inout] - allocated space for U factor
     \param p [inout] - pivots 
+    \param[in] optargs - optimization arguments
 
-    \return info
+    \return inno
 
     \note
         info = 
@@ -385,7 +387,7 @@ int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
             - <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int quasimatrix_lu1d(struct Quasimatrix * A, struct Quasimatrix * L, double * u,
-            double * p)
+                     double * p, void * optargs)
 {
     int info = 0;
     
@@ -398,7 +400,7 @@ int quasimatrix_lu1d(struct Quasimatrix * A, struct Quasimatrix * L, double * u,
         //printf("kk=%zu\n",kk);
         //printf("getting max of function:\n");
         //print_generic_function(A->funcs[kk],0,NULL);
-        generic_function_absmax(A->funcs[kk], &amloc);
+        generic_function_absmax(A->funcs[kk], &amloc,optargs);
         p[kk] = amloc;
         //printf("location of max =%3.5f\n",amloc);
 
@@ -467,7 +469,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
     }
     struct Quasimatrix * Acopy = qmm(A,eye,r);
 
-    info =  quasimatrix_lu1d(Acopy,L,U,p);
+    info =  quasimatrix_lu1d(Acopy,L,U,p,NULL);
     //printf("pivot immediate \n");
     //dprint(A->n, p);
 
@@ -500,7 +502,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
     struct Quasimatrix * B = qmm(A,Asinv,r);
     size_t maxcol;
     double maxloc, maxval;
-    maxcol = quasimatrix_absmax(B,&maxloc,&maxval);
+    maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
 
     while (maxval > (1.0 + delta)){
         //printf("maxval = %3.4f\n", maxval);
@@ -516,7 +518,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
         dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
         quasimatrix_free(B);
         B = qmm(A,Asinv,r);
-        maxcol = quasimatrix_absmax(B,&maxloc,&maxval);
+        maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
     }
     //printf("maxval = %3.4f\n", maxval);
 
@@ -907,9 +909,9 @@ qmatm(struct Qmarray * Q, double * R, size_t b)
 /***********************************************************//**
     Matrix - Quasimatrix array multiplication
 
-    \param R [in] - matrix  (fortran order)
-    \param Q [in] - quasimatrix array
-    \param b [in] - number of rows of R
+    \param[in] R  - matrix  (fortran order)
+    \param[in] Q  - quasimatrix array
+    \param[in] b  - number of rows of R
 
     \return B - qmarray (b x Q->ncols)
 ***************************************************************/
@@ -1025,10 +1027,10 @@ qmatqmat(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of Transpose qmarray - qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a  - qmarray 1
+    \param[in] b  - qmarray 2
 
-    \return c - array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
+    \return array of integrals of  \f$ c = \int a(x)^T b(x) dx \f$
 ***************************************************************/
 double *
 qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1040,7 +1042,7 @@ qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < ncols; jj++){
         for (ii = 0; ii < nrows; ii++){
             // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
-            c[jj*nrows+ii] =  generic_function_inner_sum(b->nrows, 1, 
+            c[jj*nrows+ii] = generic_function_inner_sum(b->nrows, 1, 
                     a->funcs + ii*a->nrows, 1, b->funcs + jj*b->nrows);
         }
     }
@@ -1050,10 +1052,10 @@ qmatqma_integrate(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of qmarray - transpose qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
-    \return c - array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
+    \return array of integrals of  \f$ c = \int a(x) b(x)^T dx \f$
 ***************************************************************/
 double *
 qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1065,8 +1067,11 @@ qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
     for (jj = 0; jj < ncols; jj++){
         for (ii = 0; ii < nrows; ii++){
             // c[jj*nrows+ii] = a[:,ii]^T b[jj,:]
-            c[jj*nrows+ii] =  generic_function_inner_sum(a->ncols, a->nrows, 
-                    a->funcs + ii, b->nrows, b->funcs + jj);
+            c[jj*nrows+ii] =  
+                generic_function_inner_sum(a->ncols, 
+                                           a->nrows, 
+                                           a->funcs + ii, 
+                                           b->nrows, b->funcs + jj);
         }
     }
     return c;
@@ -1077,10 +1082,10 @@ qmaqmat_integrate(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Integral of Transpose qmarray - transpose qmarray mutliplication
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
-    \return c - array of integrals
+    \return array of integrals
 ***************************************************************/
 double *
 qmatqmat_integrate(struct Qmarray * a, struct Qmarray * b)
@@ -1565,7 +1570,8 @@ double * qmarray_integrate(struct Qmarray * a)
     size_t ii, jj;
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
-            out[ii*a->nrows + jj] = generic_function_integral(a->funcs[ii*a->nrows+jj]);
+            out[ii*a->nrows + jj] = 
+                generic_function_integral(a->funcs[ii*a->nrows+jj]);
         }
     }
     
@@ -1575,16 +1581,18 @@ double * qmarray_integrate(struct Qmarray * a)
 /***********************************************************//**
     Norm of a qmarray
 
-    \param a [in] - first qmarray
+    \param[in] a - first qmarray
 
-    \return out - 2 norm
+    \return L2 norm
 ***************************************************************/
 double qmarray_norm2(struct Qmarray * a)
 {
     double out = 0.0;
     size_t ii;
     for (ii = 0; ii < a->ncols * a->nrows; ii++){
+//        print_generic_function(a->funcs[ii],0,NULL);
         out += generic_function_inner(a->funcs[ii],a->funcs[ii]);
+        // printf("out in qmarray norm = %G\n",out);
     }
     if (out < 0){
         fprintf(stderr,"Inner product between two qmarrays cannot be negative %G\n",out);
@@ -1656,8 +1664,10 @@ double eval_zpoly(double x, void * args){
     }
     return out;
 }
+
 void create_any_L(struct GenericFunction ** L, size_t nrows, 
-            size_t upto,size_t * piv, double * px, double lb,double ub)
+                  size_t upto,size_t * piv, double * px,
+                  double lb, double ub, void * optargs)
 {
     
     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
@@ -1702,7 +1712,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
         }
     }
 
-    double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval);
+    double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
     if (VQMALU){
         printf("got new val = %G\n", val);
     }
@@ -1713,19 +1723,84 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
     generic_function_array_scale(1.0/val,L,nrows);
 }
 
+void create_any_L_linelm(struct GenericFunction ** L, size_t nrows, 
+                         size_t upto,size_t * piv, double * px,
+                         double lb, double ub, void * optargs)
+{
+    
+    //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
+    // and one at piv[upto],piv[upto] less than one every else
+//    printf("creating any L!\n");
+
+    if (optargs != NULL){
+        printf("Warning: optargs is not null in create_any_L_linelm so\n");
+        printf("         might not be able to guarantee that the new px\n");
+        printf("         is going to lie on a desired node\n");
+    }
+    piv[upto] = 0;
+    px[upto] = lb + ub/(ub-lb) * randu();
+
+    double * zeros = calloc_double(upto);
+    size_t iz = 0;
+    for (size_t ii = 0; ii < upto; ii++){
+        if (piv[ii] == 0){
+            if ( (fabs(px[ii] - lb) > 1e-15) && (fabs(px[ii]-ub) > 1e-15)){
+                zeros[iz] = px[ii];
+                iz++;
+            }
+        }
+    }
+
+    int exists = 0;
+    do {
+        exists = 0;
+        for (size_t ii = 0; ii < iz; ii++){
+            if (fabs(px[ii] - px[upto]) < 1e-15){
+                exists = 1;
+                px[upto] = lb + ub/(ub-lb)*randu();
+                break;
+            }
+        }
+    }while (exists == 1);
+        
+//    printf("before\n");
+//    dprint(upto,px);
+//    iprint_sz(upto,piv);
+//    printf("%G\n",px[upto]);
+//    dprint(iz,zeros);
+    L[0] = generic_function_onezero(LINELM,px[upto],iz,zeros,lb,ub);
+
+    for (size_t ii = 1; ii < nrows;ii++){
+        L[ii] = generic_function_constant(0.0,LINELM,NULL,lb,ub,NULL);
+    }
+
+//    for (size_t ii = 0; ii < upto; ii++){
+//        double eval = generic_function_1d_eval(
+//            L[piv[ii]],px[ii]);
+        //      printf("eval should be 0 = %G\n",eval);
+//    }
+//    double eval = generic_function_1d_eval(L[piv[upto]],px[upto]);
+//    printf("eval should be 1 = %G\n", eval);
+//    printf("after\n");
+    
+    free(zeros); zeros = NULL;
+}
+
+
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix array of 1d functioins
 
-    \param A [in] - qmarray to decompose
-    \param L [inout] - qmarray representing L factor
-    \param u [inout] - allocated space for U factor
-    \param piv [inout] - row of pivots 
-    \param px [inout] - x values of pivots 
+    \param[in]     A       - qmarray to decompose
+    \param[in,out] L       - qmarray representing L factor
+    \param[in,out] u       - allocated space for U factor
+    \param[in,out] piv     - row of pivots 
+    \param[in,out] px      - x values of pivots 
+    \param[in]     optargs - optimization arguments
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
-            size_t * piv, double * px)
+                 size_t * piv, double * px, void * optargs)
 {
     int info = 0;
     
@@ -1749,7 +1824,7 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         //printf("before absmax\n");
         //this line is critical!!
         val = generic_function_array_absmax(A->nrows, 1, A->funcs + kk*A->nrows, 
-                                                    &amind, &amloc);
+                                            &amind, &amloc,optargs);
         //printf("after absmax\n");
         piv[kk] = amind;
         px[kk] = amloc;
@@ -1769,7 +1844,14 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
             if (VQMALU){
                 printf("creating any L\n");
             }
-            create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub);
+
+            if (A->funcs[kk*A->nrows]->fc == LINELM){
+                //printf("lets go!\n");
+                create_any_L_linelm(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
+            }
+            else{
+                create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
+            }
             amind = piv[kk];
             amloc = px[kk];
 
@@ -1884,10 +1966,11 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     Perform a greedy maximum volume procedure to find the 
     maximum volume submatrix of a qmarray
 
-    \param A [in] - qmarray
-    \param Asinv [inout] - submatrix inv
-    \param pivi [inout] - row pivots 
-    \param pivx [inout] - x value in row pivots 
+    \param[in]     A       - qmarray
+    \param[in,out] Asinv   - submatrix inv
+    \param[in,out] pivi    - row pivots 
+    \param[in,out] pivx    - x value in row pivots 
+    \param[in]     optargs - optimization arguments
 
     \return info = 
             0 converges,
@@ -1898,7 +1981,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
         naive implementation without rank 1 updates
 ***************************************************************/
 int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi, 
-        double * pivx)
+                     double * pivx, void * optargs)
 {
     //printf("in maxvolqmarray!\n");
 
@@ -1920,7 +2003,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
 
     //print_qmarray(Acopy,0,NULL);
-    info =  qmarray_lu1d(Acopy,L,U,pivi, pivx);
+    info =  qmarray_lu1d(Acopy,L,U,pivi, pivx,optargs);
     if (VQMAMAXVOL){
         printf("pivot immediate \n");
         iprint_sz(A->ncols, pivi);
@@ -1978,7 +2061,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     if (VQMAMAXVOL){
         printf("do absmax1d\n");
     }
-    qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval);
+    qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval,optargs);
     if (VQMAMAXVOL){
         printf("maxrow=%zu maxcol=%zu maxval=%G\n",maxrow, maxcol, maxval);
     }
@@ -2007,7 +2090,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         //dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
         qmarray_free(B); B = NULL;
         B = qmam(A,Asinv,r);
-        qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2);
+        qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2,optargs);
 
         if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){
             break;
@@ -2047,10 +2130,10 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
 /***********************************************************//**
     Compute the householder triangularization of a quasimatrix array. 
 
-    \param A [inout] - qmarray to triangularize (overwritten)
-    \param E [inout] - qmarray with orthonormal columns
-    \param V [inout] - allocated space for a qmarray (will store reflectors)
-    \param R [inout] - allocated space upper triangular factor
+    \param[in,out] A - qmarray to triangularize (overwritten)
+    \param[in,out] E - qmarray with orthonormal columns
+    \param[in,out] V - allocated space for a qmarray (will store reflectors)
+    \param[in,out] R - allocated space upper triangular factor
 
     \return info - (if != 0 then something is wrong)
 ***************************************************************/
@@ -2493,15 +2576,12 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     qmarray. whose elements consist of
     one dimensional functions (simple interface)
 
-    \param dir [in] - type either "QR" or "LQ"
-    \param A [inout] - qmarray to triangularize (destroyed in call)
-    \param R [inout] - allocated space upper triangular factor
+    \param[in]    dir - type either "QR" or "LQ"
+    \param[in,out] A  - qmarray to triangularize (destroyed in call)
+    \param[in,out] R  - allocated space upper triangular factor
 
-    \return E - quasimatrix denoting the Q term
+    \return Q 
 
-    \note 
-        For now I have only implemented this for polynomial function class 
-            and legendre subtype
 ***************************************************************/
 struct Qmarray *
 qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
@@ -2515,59 +2595,103 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
     enum poly_type ptype = LEGENDRE;
     // generate two quasimatrices needed for householder
    
-   
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
-        
-        // This version does not yet work with piecewise functions
-//        free(R); R = NULL;
-//        int out = qmarray_qr(A,&Q,&R);
-//        assert (out == 0);
 
-
-        Q = qmarray_orth1d_columns(POLYNOMIAL, 
-                        &ptype, A->nrows, ncols, lb, ub); 
-        struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
         int out = 0;
-        out = qmarray_householder(A,Q,V,R);
-        assert(out == 0);
-        out = qmarray_qhouse(Q,V);
-        assert(out == 0);
-        qmarray_free(V);
+        int fastqr = 1;
+        int polyorth = 1;
+        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
+            if (A->funcs[ii]->fc == PIECEWISE){
+                fastqr = 0;
+            }
+            if (A->funcs[ii]->fc == LINELM){
+                polyorth = 0;
+                //fastqr = 0;
+            }
+        }
 
+        if (polyorth == 1){
+            Q = qmarray_orth1d_columns(POLYNOMIAL, &ptype, A->nrows,
+                                       ncols, lb, ub);   
+            if (fastqr == 1){
+                out = qmarray_qr(A,&Q,&R);
+                assert (out == 0);
+            }
+            else if (fastqr == 0){
+                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+                out = qmarray_householder(A,Q,V,R);
+                assert(out == 0);
+                out = qmarray_qhouse(Q,V);
+                assert(out == 0);
+                qmarray_free(V);
+            }
+        }
+        else{
+            Q = qmarray_orth1d_columns(LINELM, 
+                                       &ptype, A->nrows, ncols,
+                                       lb, ub); 
+            out = qmarray_qr(A,&Q,&R);
+            assert(out == 0);
+        }
     }
     else if (strcmp(dir, "LQ") == 0){
-        Q = qmarray_orth1d_rows(POLYNOMIAL, 
-                        &ptype, A->nrows, ncols, lb, ub); 
-
-        struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-        
-        //printf("here\n");
+      
         int out = 0;
-        out = qmarray_householder_rows(A,Q,V,R);
-        
-        //printf("there!\n");
-        assert(out == 0);
-        out = qmarray_qhouse_rows(Q,V);
-        assert(out == 0);
-
-        qmarray_free(V);
-
+        int fastqr = 1;
+        int polyorth = 1;
+        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
+            if (A->funcs[ii]->fc == PIECEWISE){
+                fastqr = 0;
+                // break;
+            }
+            if  (A->funcs[ii]->fc == LINELM){
+                polyorth = 0;
+            }
+        }
+      
+        if (polyorth == 1){
+            Q = qmarray_orth1d_rows(POLYNOMIAL, 
+                                    &ptype, A->nrows, ncols,
+                                    lb, ub); 
+            if (fastqr == 1){
+                //free(R); R = NULL;
+                out = qmarray_lq(A,&Q,&R);
+                assert (out == 0);
+            }
+            else{
+                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+                //printf("here\n");
+                out = qmarray_householder_rows(A,Q,V,R);
+                //printf("there!\n");
+                assert(out == 0);
+                out = qmarray_qhouse_rows(Q,V);
+                assert(out == 0);
+                qmarray_free(V); V = NULL;
+            }
+        }
+        else{
+            Q = qmarray_orth1d_rows(LINELM, 
+                                    &ptype, A->nrows, ncols,
+                                    lb, ub); 
+            out = qmarray_lq(A,&Q,&R);
+            assert(out == 0);
+        }
     }
     else{
         fprintf(stderr, "No clear QR/LQ decomposition for type=%s\n",dir);
         exit(1);
     }
-    return  Q;
+    return Q;
 }
 
 /***********************************************************//**
     Compute the svd of a quasimatrix array Udiag(lam)vt = A
 
-    \param A [inout] - qmarray to get SVD (destroyed)
-    \param U [inout] - qmarray with orthonormal columns
-    \param lam [inout] - singular values
-    \param vt [inout] - matrix containing right singular vectors
+    \param[in,out] A   - qmarray to get SVD (destroyed)
+    \param[in,out] U   - qmarray with orthonormal columns
+    \param[in,out] lam - singular values
+    \param[in,out] vt  - matrix containing right singular vectors
 
     \return info - if not == 0 then error
 ***************************************************************/
@@ -2631,18 +2755,20 @@ size_t qmarray_truncated_svd(struct Qmarray * A, struct Qmarray ** U,
 /***********************************************************//**
     Compute the location of the (abs) maximum element in aqmarray consisting of 1 dimensional functions
 
-    \param qma [in] - qmarray 1
-    \param xmax [inout] - x value at maximum
-    \param rowmax [inout] - row of maximum
-    \param colmax [inout] - column of maximum
-    \param maxval [inout] - absolute maximum value
+    \param[in]     qma     - qmarray 1
+    \param[in,out] xmax    - x value at maximum
+    \param[in,out] rowmax  - row of maximum
+    \param[in,out] colmax  - column of maximum
+    \param[in,out] maxval  - absolute maximum value
+    \param[in]     optargs - optimization arguments
 ***************************************************************/
 void qmarray_absmax1d(struct Qmarray * qma, double * xmax, size_t * rowmax,
-                       size_t * colmax, double * maxval)
+                      size_t * colmax, double * maxval, void * optargs)
 {
     size_t combrowcol;
     *maxval = generic_function_array_absmax(qma->nrows * qma->ncols,
-                            1, qma->funcs, &combrowcol, xmax);
+                                            1, qma->funcs, 
+                                            &combrowcol, xmax,optargs);
     
     size_t nsubs = 0;
     //printf("combrowcol = %zu \n", combrowcol);
@@ -2766,9 +2892,9 @@ struct Qmarray * qmarray_blockdiag(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Compute the derivative of every function in the qmarray
 
-    \param a [in] - qmarray
+    \param[in] a - qmarray
 
-    \return b - qmarray of derivatives
+    \return qmarray of derivatives
 ***************************************************************/
 struct Qmarray * qmarray_deriv(struct Qmarray * a)
 {
@@ -2803,9 +2929,9 @@ void qmarray_roundt(struct Qmarray ** qma, double epsilon)
 /***********************************************************//**
     Evaluate a qmarray
 
-    \param qma [in] - quasimatrix array
-    \param x [in] - location at which to evaluate
-    \param out [in] - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     qma - quasimatrix array
+    \param[in]     x   - location at which to evaluate
+    \param[in,out] out - allocated array to store output (qma->nrows * qma->ncols)
 
 ***************************************************************/
 void qmarray_eval(struct Qmarray * qma, double x, double * out)
@@ -2822,8 +2948,8 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
 /***********************************************************//**
     Evaluate a function train
 
-    \param ft [in] - function train
-    \param x [in] - location at which to evaluate
+    \param[in] ft - function train
+    \param[in] x  - location at which to evaluate
 
     \return val - value of the function train
 ***************************************************************/
@@ -2941,8 +3067,8 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 /********************************************************//**
     Rounding of a function train
 
-    \param ain [in] - FT 
-    \param epsilon [in] - threshold
+    \param[in] ain - FT 
+    \param[in] epsilon - threshold
 
     \return ft - rounded function train
 ***********************************************************/
@@ -3026,13 +3152,13 @@ function_train_round(struct FunctionTrain * ain, double epsilon)
 /********************************************************//**
     Addition of two functions in FT format
 
-    \param a [in] - FT 1
-    \param b [in] - FT 2
+    \param[in] a - FT 1
+    \param[in] b - FT 2
 
     \return ft - function representing a+b
 ***********************************************************/
 struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
-                                struct FunctionTrain * b)
+                                          struct FunctionTrain * b)
 {
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     
@@ -3058,10 +3184,10 @@ struct FunctionTrain * function_train_sum(struct FunctionTrain * a,
 /********************************************************//**
     af(x) + b
 
-    \param a [in] - scaling factor
-    \param b [in] - offset
-    \param f [in] - object to scale
-    \param epsilon [in] - rounding tolerance
+    \param[in] a        - scaling factor
+    \param[in] b        - offset
+    \param[in] f        - object to scale
+    \param[in] epsilon  - rounding tolerance
 
     \return ft - function representing a+b
 ***********************************************************/
@@ -3111,10 +3237,10 @@ void function_train_scale(struct FunctionTrain * x, double a)
 /********************************************************//**
     Product of two functions in function train form
 
-    \param a [in] - Function train 1
-    \param b [in] - Function train 2
+    \param[in] a  - Function train 1
+    \param[in] b  - Function train 2
 
-    \return ft - \f$ ft(x) = a(x)b(x) \f$
+    \return Product \f$ f(x) = a(x)b(x) \f$
 ***********************************************************/
 struct FunctionTrain * 
 function_train_product(struct FunctionTrain * a, struct FunctionTrain * b)
@@ -3134,9 +3260,9 @@ function_train_product(struct FunctionTrain * a, struct FunctionTrain * b)
 /********************************************************//**
     Integrate a function in function train format
 
-    \param ft [in] - Function train 1
+    \param[in] ft - Function train 1
 
-    \return val - \f$ val = int a dx \f$
+    \return Integral \f$ \int f(x) dx \f$
 ***********************************************************/
 double 
 function_train_integrate(struct FunctionTrain * ft)
@@ -3184,63 +3310,26 @@ function_train_integrate(struct FunctionTrain * ft)
 /********************************************************//**
     Inner product between two functions in FT form
 
-    \param a [in] - Function train 1
-    \param b [in] - Function train 2
+    \param[in] a - Function train 1
+    \param[in] b - Function train 2
 
-    \return out - int a(x)b(x) dx
+    \return Inner product \f$ \int a(x)b(x) dx \f$
 
-    \note
-        //This is a slow version, I cant seem to get fast version to be accurate
 ***********************************************************/
 double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 {
     double out = 0.123456789;
     size_t ii;
-    //struct Qmarray * c1 = qmarray_kron(b->cores[0],a->cores[0]);
-   // double * temp = generic_function_integral_array(c1->nrows*c1->ncols,1,c1->funcs);
-   // qmarray_free(c1); c1 = NULL;
-
-    ///*
-    //double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
     double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
-
-        
-    /*
-    printf("in function_train_inner\n");
-    printf(" a ranks = ");
-    iprint_sz(a->dim+1,a->ranks);
-    printf(" b ranks = ");
-    iprint_sz(b->dim+1,b->ranks);
-    */
     double * temp2 = NULL;
 
     //size_t ii;
     for (ii = 1; ii < a->dim; ii++){
-        //printf("ii=%zu/%zu\n",ii,a->dim);
-        //print_qmarray(a->cores[ii],3,NULL);
-        //printf("c1 nr = %zu, nc =%zu\n",a->cores[ii]->nrows,a->cores[ii]->ncols);
-       
-        //temp2 = qmarray_kron_integrate(a->cores[ii],b->cores[ii]);
-        //printf("got kron integrate\n");
-        //size_t nrows = a->cores[ii]->nrows * b->cores[ii]->nrows;
-        //size_t ncols = a->cores[ii]->ncols * b->cores[ii]->ncols;
-        //double * temp3 = calloc_double(ncols);
-        //printf("do dgemv\n");
-        //cblas_dgemv(CblasColMajor,CblasTrans,nrows,ncols,1.0,temp2,nrows,temp,1,0.0,temp3,1);
-        //printf("did dgemv\n");
-        //free(temp); temp = NULL;
-        //free(temp2); temp2 = NULL;
-        //temp = calloc_double(ncols);
-        //memmove(temp,temp3,ncols*sizeof(double));
-        //free(temp3); temp3 = NULL;
-
-        //*
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);
         memmove(temp, temp2,stemp*sizeof(double));
-        //*/
         
         free(temp2); temp2 = NULL;
     }
@@ -3254,9 +3343,9 @@ double function_train_inner(struct FunctionTrain * a, struct FunctionTrain * b)
 /********************************************************//**
     Compute the L2 norm of a function in FT format
 
-    \param a [in] - Function train 
+    \param[in] a - Function train 
 
-    \return val [out] - sqrt( int a^2(x) dx )
+    \return L2 Norm \f$ \sqrt{int a^2(x) dx} \f$
 ***********************************************************/
 double function_train_norm2(struct FunctionTrain * a)
 {
@@ -3274,10 +3363,10 @@ double function_train_norm2(struct FunctionTrain * a)
 /********************************************************//**
     Compute the L2 norm of the difference between two functions
 
-    \param a [in] -Function train 
-    \param b [in] - function train 2
+    \param[in] a - function train 
+    \param[in] b - function train 2
 
-    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) \f$
+    \return L2 difference \f$ \sqrt{ \int (a(x)-b(x))^2 dx } \f$
 ***********************************************************/
 double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
 {   
@@ -3295,12 +3384,14 @@ double function_train_norm2diff(struct FunctionTrain * a, struct FunctionTrain *
 /********************************************************//**
     Compute the L2 norm of the difference between two functions
 
-    \param a [in] -Function train 
-    \param b [in] - function train 2
+    \param[in] a - function train 
+    \param[in] b - function train 2
 
-    \return val - \f$ \sqrt( \int (a(x)-b(x))^2 dx ) / \lVert b(x) \rVert \f$
+    \return Relative L2 difference 
+    \f$ \sqrt{ \int (a(x)-b(x))^2 dx } / \lVert b(x) \rVert \f$
 ***********************************************************/
-double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrain * b)
+double function_train_relnorm2diff(struct FunctionTrain * a, 
+                                   struct FunctionTrain * b)
 {   
     
     struct FunctionTrain * c = function_train_copy(b);
@@ -3332,9 +3423,9 @@ double function_train_relnorm2diff(struct FunctionTrain * a, struct FunctionTrai
 /********************************************************//**
     Compute the gradient of a function train 
 
-    \param ft [in] - Function train 
+    \param[in] ft - Function train 
 
-    \return ftg - gradient
+    \return gradient
 ***********************************************************/
 struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 {
@@ -3359,9 +3450,9 @@ struct FT1DArray * function_train_gradient(struct FunctionTrain * ft)
 /********************************************************//**
     Compute the Jacobian of a Function Train 1darray
 
-    \param fta [in] - Function train array
+    \param[in] fta - Function train array
 
-    \return jac - jacobian
+    \return jacobian
 ***********************************************************/
 struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 {
@@ -3383,9 +3474,9 @@ struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta)
 /********************************************************//**
     Compute the hessian of a function train 
 
-    \param fta [in] - Function train 
+    \param[in] fta - Function train 
 
-    \return fth - hessian of a function train
+    \return hessian of a function train
 ***********************************************************/
 struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 {
@@ -3400,11 +3491,10 @@ struct FT1DArray * function_train_hessian(struct FunctionTrain * fta)
 /********************************************************//**
     Scale a function train array
 
-    \param fta [inout] - Function train Array
-    \param n [in] - number of elements in the array to scale
-    \param inc [in] - increment between function trains to scale in the array
-    \param scale [in] - value by which to scale
-
+    \param[in,out] fta   - function train array
+    \param[in]     n     - number of elements in the array to scale
+    \param[in]     inc   - increment between elements of array
+    \param[in]     scale - value by which to scale
 ***********************************************************/
 void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale)
 {
@@ -3417,10 +3507,10 @@ void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale
 /********************************************************//**
     Evaluate a function train 1darray
 
-    \param fta [in] - Function train array to evaluate
-    \param x [in] - location at which to obtain evaluations
+    \param[in] fta - Function train array to evaluate
+    \param[in] x   - location at which to obtain evaluations
 
-    \return out evaluation
+    \return evaluation
 ***********************************************************/
 double * ft1d_array_eval(struct FT1DArray * fta, double * x)
 {
@@ -3454,13 +3544,13 @@ void ft1d_array_eval2(struct FT1DArray * fta, double * x, double * out)
         out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x) 
     \f]
     
-    \param N [in] - number of function trains in each array
-    \param coeff [in] - coefficients to multiply each element
-    \param f [in] - first array
-    \param g [in] - second array
-    \param epsilon [in] - rounding accuracy
+    \param[in] N       - number of function trains in each array
+    \param[in] coeff   - coefficients to multiply each element
+    \param[in] f       - first array
+    \param[in] g       - second array
+    \param[in] epsilon - rounding accuracy
 
-    \return out - function train
+    \return function train
 ***********************************************************/
 struct FunctionTrain * 
 ft1d_array_sum_prod(size_t N, double * coeff, 
@@ -3499,10 +3589,11 @@ ft1d_array_sum_prod(size_t N, double * coeff,
 
 // utility function for function_train_cross (not in header file)
 struct Qmarray *
-prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
-        struct BoundingBox * bd,
-        struct IndexSet ** left_ind, struct IndexSet ** right_ind, 
-        struct FtCrossArgs * cargs, struct FtApproxArgs * fta, int t)
+prepCore(size_t ii, size_t nrows, 
+         double(*f)(double *, void *), void * args,
+         struct BoundingBox * bd,
+         struct CrossIndex ** left_ind, struct CrossIndex ** right_ind, 
+         struct FtCrossArgs * cargs, struct FtApproxArgs * fta, int t)
 {
 
     enum function_class fc;
@@ -3514,38 +3605,49 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     size_t ncols, ncuts;
     size_t dim = bd->dim;
     
-    //printf("here!|n");
+
     fc = ft_approx_args_getfc(fta,ii);
     sub_type = ft_approx_args_getst(fta,ii);
     approx_args = ft_approx_args_getaopts(fta, ii);
-    
+    //printf("sub_type prep_core= %d\n",*(int *)ft_approx_args_getst(fta,ii));
     //printf("t=%d\n",t);
     if (t == 1){
         ncuts = nrows;
         ncols = 1;
-        vals = index_set_merge_fill_end(left_ind[ii],right_ind[ii-1]->inds); 
+        vals = cross_index_merge(left_ind[ii],right_ind[ii-1]);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else if (t == -1){
         ncuts = cargs->ranks[ii+1];
         ncols = ncuts;
-        vals = index_set_merge_fill_beg(left_ind[ii+1]->inds,right_ind[ii]); 
+        vals = cross_index_merge(left_ind[ii+1],right_ind[ii]);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else{
-        vals = index_set_merge(left_ind[ii],right_ind[ii], &ncuts); 
+        if (left_ind[ii] == NULL){
+            ncuts = right_ind[ii]->n;
+        }
+        else if (right_ind[ii] == NULL){
+            ncuts = left_ind[ii]->n;
+        }
+        else{
+            ncuts = left_ind[ii]->n * right_ind[ii]->n;
+        }
+        vals = cross_index_merge_wspace(left_ind[ii],right_ind[ii]);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
         ncols = ncuts / nrows;
     }
-    if (VPREPCORE)
+    if (VPREPCORE){
         printf("compute from fibercuts\n");
+    }
     temp = qmarray_from_fiber_cuts(nrows, ncols,
                     fiber_cut_eval, fcut, fc, sub_type,
                     bd->lb[ii],bd->ub[ii], approx_args);
 
     //print_qmarray(temp,0,NULL);
-    if (VPREPCORE)
+    if (VPREPCORE){
         printf("computed!\n");
+    }
 
     free_dd(ncuts,vals); vals = NULL;
     fiber_cut_array_free(ncuts, fcut); fcut = NULL;
@@ -3554,54 +3656,29 @@ prepCore(size_t ii, size_t nrows, double(*f)(double *, void *), void * args,
     return temp;
 }
 
-void update_lindex(size_t ii,size_t rank, struct IndexSet ** left_ind, 
-                    size_t * pivind, double * pivx)
-{
-    size_t jj,kk;
-    for (jj = 0; jj < rank; jj++){
-        left_ind[ii+1]->inds[jj][ii] = pivx[jj];
-        for (kk = 0; kk < ii; kk++){
-            left_ind[ii+1]->inds[jj][kk] = 
-                left_ind[ii]->inds[pivind[jj]][kk];
-        }
-    }
-}
-void update_rindex(size_t ii, size_t oncore, size_t rank, 
-                    struct IndexSet ** right_ind,
-                    size_t * pivind, double * pivx)
-{
-    size_t jj, kk;
-    for (jj = 0; jj < rank; jj++){
-        right_ind[ii-1]->inds[jj][0] = pivx[jj];
-        for (kk = 1; kk < oncore; kk++){
-            right_ind[ii-1]->inds[jj][kk] = 
-                        right_ind[ii]->inds[pivind[jj]][kk-1];
-        }
-    }
-}
-
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bd [in] - bounds on input space
-    \param ftref [inout] - initial ftrain decomposition, changed in func
-    \param left_ind [inout] - left indices (first element should be NULL)
-    \param right_ind [inout] - right indices (last element should be NULL)
-    \param cargs [in] - algorithm parameters
-    \param apargs [in] - approximation arguments
+    \param[in]     f         - function
+    \param[in]     args      - function arguments
+    \param[in]     bd        -  bounds on input space
+    \param[in,out] ftref     - initial ftrain, changed in func
+    \param[in,out] left_ind  - left indices(first element should be NULL)
+    \param[in,out] right_ind - right indices(last element should be NULL)
+    \param[in]     cargs     - algorithm parameters
+    \param[in]     apargs    - approximation arguments
 
-    \return ft - function train decomposition of $f$
+    \return function train decomposition of \f$ f \f$
 
     \note
-       both left and right indices are nested
+    both left and right indices are nested
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross(double (*f)(double *, void *), void * args, 
-    struct BoundingBox * bd, struct FunctionTrain * ftref, 
-    struct IndexSet ** left_ind, struct IndexSet ** right_ind, 
-    struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
+               struct BoundingBox * bd, struct FunctionTrain * ftref, 
+               struct CrossIndex ** left_ind, 
+               struct CrossIndex ** right_ind, 
+               struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
 {
     size_t dim = bd->dim;
     int info;
@@ -3612,22 +3689,26 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     double * R = NULL;
     size_t * pivind = NULL;
     double * pivx = NULL;
-    double diff, den;
+    double diff, diff2, den;
     
     struct FunctionTrain * ft = function_train_alloc(dim);
     memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t));
     
     struct FunctionTrain * fti = function_train_copy(ftref);
+    struct FunctionTrain * fti2 = NULL;
 
     int done = 0;
     size_t iter = 0;
+
     while (done == 0){
         if (cargs->verbose > 0)
             printf("cross iter=%zu \n",iter);
-        
+      
         // left right sweep;
         nrows = 1; 
         for (ii = 0; ii < dim-1; ii++){
+            //  printf("sub_type ftcross= %d\n",
+            //         *(int *)ft_approx_args_getst(apargs,ii));        
             if (cargs->verbose > 1){
                 printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
             }
@@ -3637,22 +3718,26 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             
             if (VFTCROSS){
                 printf( "prepCore \n");
-                //printf( "left index set = \n");
-                //print_index_set_array(dim,left_ind);
-                //printf( "right index set = \n");
-                //print_index_set_array(dim,right_ind);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
             }
-            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
+            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,
+                            cargs,apargs,0);
 
-            if (VFTCROSS){
+            if (VFTCROSS == 2){
                 printf ("got it \n");
                 //print_qmarray(temp,0,NULL);
                 struct Qmarray * tempp = qmarray_copy(temp);
+                printf("core is \n");
+                //print_qmarray(tempp,0,NULL);
                 R = calloc_double(temp->ncols * temp->ncols);
                 Q = qmarray_householder_simple("QR", temp,R);
                 printf("R=\n");
                 dprint2d_col(temp->ncols, temp->ncols, R);
-                
+//                print_qmarray(Q,0,NULL);
+
                 struct Qmarray * mult = qmam(Q,R,temp->ncols);
                 //print_qmarray(Q,3,NULL);
                 double difftemp = qmarray_norm2diff(mult,tempp);
@@ -3665,8 +3750,16 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 Q = qmarray_householder_simple("QR", temp,R);
             }
 
-        
-            info = qmarray_maxvol1d(Q,R,pivind, pivx);
+            if (cargs->optargs != NULL){
+                //printf("before\n");
+                //struct c3Vector * vec = cargs->optargs->opts[ii];
+                //printf("n = %zu",vec->size);
+                info = qmarray_maxvol1d(Q,R,pivind,pivx,cargs->optargs->opts[ii]);
+                //printf("after\n");
+            }
+            else{
+                info = qmarray_maxvol1d(Q,R,pivind,pivx,NULL);
+            }
 
             if (VFTCROSS){
                 printf( " got info=%d\n",info);
@@ -3683,11 +3776,22 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 exit(1);
             }
 
-            update_lindex(ii,ft->ranks[ii+1], left_ind, pivind, pivx);
+            cross_index_free(left_ind[ii+1]);
+            if (ii > 0){
+                left_ind[ii+1] =
+                    cross_index_create_nested_ind(0,ft->ranks[ii+1],pivind,
+                                                  pivx,left_ind[ii]);
+            }
+            else{
+                left_ind[ii+1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[1]; zz++){
+                    cross_index_add_index(left_ind[1],1,&(pivx[zz]));
+                }
+            }
             
             qmarray_free(ft->cores[ii]); ft->cores[ii]=NULL;
             ft->cores[ii] = qmam(Q,R, temp->ncols);
-            nrows = left_ind[ii+1]->rank;
+            nrows = left_ind[ii+1]->n;
 
             qmarray_free(temp); temp = NULL;
             qmarray_free(Q); Q = NULL;
@@ -3702,8 +3806,8 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         }
         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
         ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd,
-                                    left_ind,right_ind, cargs, apargs,1);
-        if (VFTCROSS){
+                                 left_ind,right_ind,cargs,apargs,1);
+        if (VFTCROSS == 2){
             printf ("got it \n");
             //print_qmarray(ft->cores[ii],0,NULL);
             printf("integral = %G\n",function_train_integrate(ft));
@@ -3730,7 +3834,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
-            printf("...... Error L/R Sweep = %E\n",diff);
+            // printf("...... Error L/R Sweep = %E\n",diff);
         }
         
         if (diff < cargs->epsilon){
@@ -3738,11 +3842,11 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             break;
         }
         
-//        function_train_free(fti); fti=NULL;
-//        fti = function_train_copy(ft);
+        //function_train_free(fti); fti=NULL;
+        //fti = function_train_copy(ft);
+        
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
-        //print_index_set_array(dim,left_ind);
 
         ///////////////////////////////////////////////////////
         // right-left sweep
@@ -3755,7 +3859,14 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             }
 
             nrows = ft->ranks[ii]; 
-            
+
+            if (VFTCROSS){
+                printf("do prep\n");
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
             //printf("prep core\n");
             temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
             //printf("prepped core\n");
@@ -3767,7 +3878,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
             pivind = calloc_size_t(ft->ranks[ii]);
             pivx = calloc_double(ft->ranks[ii]);
-            info = qmarray_maxvol1d(Qt,R,pivind, pivx);
+
+            if (cargs->optargs != NULL){
+                info = qmarray_maxvol1d(Qt,R,pivind,pivx,cargs->optargs->opts[ii]);
+            }
+            else{
+                info = qmarray_maxvol1d(Qt,R,pivind,pivx,NULL);
+            }
             
             if (VFTCROSS){
                 printf("got info=%d\n",info);
@@ -3794,8 +3911,22 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
             qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
             ft->cores[ii] = qmarray_transpose(Q);
-            
-            update_rindex(ii, oncore, ft->ranks[ii], right_ind, pivind, pivx);
+
+            cross_index_free(right_ind[ii-1]);
+            if (ii < dim-1){
+                //printf("are we really here? oncore=%zu,ii=%zu\n",oncore,ii);
+                right_ind[ii-1] =
+                    cross_index_create_nested_ind(1,ft->ranks[ii],pivind,
+                                                  pivx,right_ind[ii]);
+            }
+            else{
+                //printf("lets update the cross index ii=%zu\n",ii);
+                right_ind[ii-1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[ii]; zz++){
+                    cross_index_add_index(right_ind[ii-1],1,&(pivx[zz]));
+                }
+                //printf("updated\n");
+            }
 
             qmarray_free(temp); temp = NULL;
             qmarray_free(Q); Q = NULL;
@@ -3817,6 +3948,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     
 
         diff = function_train_relnorm2diff(ft,fti);
+        if (fti2 != NULL){
+            diff2 = function_train_relnorm2diff(ft,fti2);
+        }
+        else{
+            diff2 = diff;
+        }
+
 
         //den = function_train_norm2(ft);
         //diff = function_train_norm2diff(ft,fti);
@@ -3826,15 +3964,17 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm R/L Sweep = %E\n",den);
-            printf("...... Error R/L Sweep = %E\n",diff);
+            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        if (diff < cargs->epsilon){
+        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
             done = 1;
             break;
         }
 
+        function_train_free(fti2); fti2 = NULL;
+        fti2 = function_train_copy(fti);
         function_train_free(fti); fti=NULL;
         fti = function_train_copy(ft);
 
@@ -3846,35 +3986,50 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     }
 
     function_train_free(fti); fti=NULL;
+    function_train_free(fti2); fti2=NULL;
     return ft;
+}
+
+/***********************************************************//**
+    Initialize a baseline cross-approximation args
+
+    \param[in,out] fca - cross approximation arguments 
+***************************************************************/
+void ft_cross_args_init(struct FtCrossArgs * fca)
+{
+    fca->ranks = NULL;    
+    fca->optargs = NULL;
 }
 
 /***********************************************************//**
     An interface for cross approximation of a function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bds [in] - bounding box 
-    \param xstart [in] - location for first fibers (if null then middle of domain)
-    \param fca [in] - cross approximation args, if NULL then default exists
-    \param apargs [in] - function approximation arguments (if null then defaults)
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] bds    - bounding box 
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, 
+                        if NULL then default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
 
-    \return ft - function train decomposition of f
+    \return function train decomposition of f
 
     \note
-        Nested indices both left and right
+    Nested indices both left and right
 ***************************************************************/
 struct FunctionTrain *
 function_train_cross(double (*f)(double *, void *), void * args, 
-                struct BoundingBox * bds,
-                double * xstart,
-                struct FtCrossArgs * fca,
-                struct FtApproxArgs * apargs)
+                     struct BoundingBox * bds,
+                     double ** xstart,
+                     struct FtCrossArgs * fca,
+                     struct FtApproxArgs * apargs)
 {   
     size_t dim = bds->dim;
     
     size_t * init_ranks = NULL;
-    double * init_x = NULL;
+    double ** init_x = NULL;
     struct FtCrossArgs * fcause = NULL;
     struct FtCrossArgs temp;
     struct FtApproxArgs * fapp = NULL;
@@ -3882,20 +4037,10 @@ function_train_cross(double (*f)(double *, void *), void * args,
 
     double * init_coeff = darray_val(dim,1.0/ (double) dim);
     struct FunctionTrain * ftref = 
-            function_train_constant(dim, 1.0, bds, NULL);
+            function_train_constant(dim, 1.0, bds, apargs);
     
     size_t ii;
-    if ( xstart == NULL) {
-        init_x = calloc_double(dim);
-        for (ii = 0; ii < dim; ii++){
-            init_x[ii] = (bds->lb[ii]+bds->ub[ii])/2.0;
-        }
-    }
-    else{
-        init_x = xstart;
-    }
 
-    
     if (fca != NULL){
         fcause = fca;
     }
@@ -3908,7 +4053,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
         init_ranks[0] = 1;
         init_ranks[dim] = 1;
         
-
+        ft_cross_args_init(&temp);
         temp.dim = dim;
         temp.ranks = init_ranks;
         temp.epsilon = 1e-5;
@@ -3918,36 +4063,52 @@ function_train_cross(double (*f)(double *, void *), void * args,
         temp.epsround = 1e-10;
         temp.kickrank = 10;
         temp.maxiteradapt = 5;
+        
+        temp.optargs = NULL;
         fcause = &temp;
     }
-    
+
+    if ( xstart == NULL) {
+        init_x = malloc_dd(dim);
+        // not used in cross because left->right first
+        init_x[0] = calloc_double(fcause->ranks[1]); 
+        
+        for (ii = 0; ii < dim-1; ii++){
+            init_x[ii+1] = linspace(bds->lb[ii+1],bds->ub[ii+1],
+                                    fcause->ranks[ii+1]);
+        }
+    }
+    else{
+        init_x = xstart;
+    }
+
+    enum poly_type ptype;
     if (apargs != NULL){
         fapp = apargs;
     }
     else{
-        enum poly_type ptype = LEGENDRE;
+        ptype = LEGENDRE;
         fapp = ft_approx_args_createpoly(dim,&ptype,NULL);
     }
-
-    //printf("ranks 500 = %zu \n",fcause->ranks[500]);
-    struct IndexSet ** isr = index_set_array_rnested(dim, fcause->ranks, init_x);
-    struct IndexSet ** isl = index_set_array_lnested(dim, fcause->ranks, init_x);
-
-    struct FunctionTrain * ft  = NULL;
-    ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,init_x,
-                                        fcause,fapp);
     
-    /*
-    index_set_array_free(dim, isr); isr = NULL;
-    index_set_array_free(dim, isl); isl = NULL;
-    isr = index_set_array_rnested(dim, ft->ranks, init_x);
-    isl = index_set_array_lnested(dim, ft->ranks, init_x);
-    memmove(fcause->ranks,ft->ranks,(dim+1)*sizeof(size_t));
-    function_train_free(ft); ft = NULL;
-    ft = ftapprox_cross(f,args, bds, dim, ftref, isl, isr, fcause);
-    */
+    //for (size_t ii = 0; ii < dim; ii++){
+    //   printf("sub_type = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
+    //    printf("2 = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
+    //}
+    //printf("ranks 500 = %zu \n",fcause->ranks[500]);
+    assert (dim <= 1000);
+    struct CrossIndex * isl[1000];
+    struct CrossIndex * isr[1000];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    //printf("3 = %d\n",*(int *)ft_approx_args_getst(fapp,0));
+    //printf("4 = %d\n",*(int *)ft_approx_args_getst(fapp,1));
+    cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
+    //printf("pre rankadapt = %d\n",*(int *)ft_approx_args_getst(fapp,0));
+    struct FunctionTrain * ft  = NULL;
+    ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,fcause,fapp);
+    
     if (xstart == NULL){
-        free(init_x); init_x = NULL;
+        free_dd(dim, init_x); //init_x = NULL;
     }
     if (apargs == NULL){
         free(fapp); fapp = NULL;
@@ -3957,42 +4118,40 @@ function_train_cross(double (*f)(double *, void *), void * args,
     }
 
     function_train_free(ftref); ftref = NULL;
-    index_set_array_free(dim, isr); isr = NULL;
-    index_set_array_free(dim, isl); isl = NULL;
+    for (ii = 0; ii < dim;ii++){
+        cross_index_free(isl[ii]);
+        cross_index_free(isr[ii]);
+    }
     free(init_coeff); init_coeff = NULL;
-    //function_train_free(ft); ft = NULL;
-
     return ft;
 }
 
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function with rank adaptation
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bds [in] - bounds on input space
-    \param ftref [inout] - initial ftrain decomposition, changed in func
-    \param isl [inout] - left indices (first element should be NULL)
-    \param isr [inout] - right indices (last element should be NULL)
-    \param xhelp [in] - values helpful to create new index sets if *fca* is NULL
-    \param fca [in] - algorithm parameters, if NULL then default paramaters used
-    \param apargs [in] - function approximation args 
+    \param[in]     f      - function
+    \param[in]     args   - function arguments
+    \param[in]     bds    - bounds on input space
+    \param[in,out] ftref  - initial ftrain decomposition, changed in func
+    \param[in,out] isl    - left indices (first element should be NULL)
+    \param[in,out] isr    - right indices (last element should be NULL)
+    \param[in]     fca    - algorithm parameters, if NULL then default paramaters used
+    \param[in]     apargs - function approximation args 
 
-    \return ft - function train decomposition of $f$
+    \return function train decomposition of f
 
     \note
-       both left and right indices are nested
+    both left and right indices are nested
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross_rankadapt( double (*f)(double *, void *),
-                void * args,
-                struct BoundingBox * bds, 
-                struct FunctionTrain * ftref, 
-                struct IndexSet ** isl, 
-                struct IndexSet ** isr,
-                double * xhelp,
-                struct FtCrossArgs * fca,
-                struct FtApproxArgs * apargs)
+                          void * args,
+                          struct BoundingBox * bds, 
+                          struct FunctionTrain * ftref, 
+                          struct CrossIndex ** isl, 
+                          struct CrossIndex ** isr,
+                          struct FtCrossArgs * fca,
+                          struct FtApproxArgs * apargs)
                 
 {
     size_t dim = bds->dim;
@@ -4002,7 +4161,12 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     struct FunctionTrain * ft = NULL;
 
     ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
-
+    // printf("found left index\n");
+    // print_cross_index(isl[1]);
+    // printf("found right index\n");
+    //print_cross_index(isr[0]);
+    
+    
     //return ft;
     if (fca->verbose > 0){
         printf("done with first cross... rounding\n");
@@ -4012,6 +4176,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     
     struct FunctionTrain * ftc = function_train_copy(ft);
     struct FunctionTrain * ftr = function_train_round(ft, eps);
+    //printf("rounded ranks = "); iprint_sz()
     //struct FunctionTrain * ftr = function_train_copy(ft);
     //return ftr; 
     //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
@@ -4022,15 +4187,21 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
         if (ranks_found[ii] == ftr->ranks[ii]){
             adapt = 1;
             fca->ranks[ii] = ranks_found[ii] + kickrank;
+            
+            // simply repeat the last nodes
+            // this is not efficient but I don't have a better
+            // idea. Could do it using random locations but
+            // I don't want to.
+            cross_index_copylast(isr[ii-1],kickrank);
+            
             ranks_found[ii] = fca->ranks[ii];
         }
     }
 
-    //printf("adapt here!\n");
+    //printf("adapt here! adapt=%zu\n",adapt);
 
-    struct IndexSet ** isln = NULL;
-    struct IndexSet ** isrn = NULL;
     size_t iter = 0;
+//    double * xhelp = NULL;
     while ( (adapt == 1) && (fca->maxiteradapt>0))
     {
         adapt = 0;
@@ -4040,17 +4211,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
             iprint_sz(ft->dim+1,fca->ranks);
         }
         
-        // need a better way to boost indices
-        isrn = index_set_array_rnested(dim, fca->ranks, xhelp);
-        isln = index_set_array_lnested(dim, fca->ranks, xhelp);
-
         function_train_free(ft); ft = NULL;
-        ft = ftapprox_cross(f, args, bds, ftc, isln, isrn, fca,apargs);
+        ft = ftapprox_cross(f, args, bds, ftc, isl, isr, fca,apargs);
          
-        //printf("Done with adapted one\n");
-        index_set_array_free(dim,isrn);
-        index_set_array_free(dim,isln);
-
         function_train_free(ftc); ftc = NULL;
         function_train_free(ftr); ftr = NULL;
 
@@ -4066,6 +4229,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
             if (ranks_found[ii] == ftr->ranks[ii]){
                 adapt = 1;
                 fca->ranks[ii] = ranks_found[ii] + kickrank;
+
+                // add indices again
+                cross_index_copylast(isr[ii-1],kickrank);
                 ranks_found[ii] = fca->ranks[ii];
             }
         }
@@ -4086,7 +4252,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 /***********************************************************//**
     Computes the maximum rank of a FT
     
-    \param ft [in] 
+    \param[in] ft - function train
 
     \return maxrank
 ***************************************************************/
@@ -4107,7 +4273,7 @@ size_t function_train_maxrank(struct FunctionTrain * ft)
 /***********************************************************//**
     Computes the average rank of a FT. Doesn't cound first and last ranks
     
-    \param ft [in] 
+    \param[in] ft - function train
 
     \return avgrank
 ***************************************************************/
@@ -4147,24 +4313,27 @@ double vfunc_eval(double * x, void * args)
 /***********************************************************//**
     An interface for cross approximation of a vector-valued function
 
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param nfuncs [in] - function arguments
-    \param bds [in] - bounding box 
-    \param xstart [in] - location for first fibers (if null then middle of domain)
-    \param fca [in] - cross approximation args, if NULL then default exists
-    \param apargs [in] - function approximation arguments (if null then defaults)
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] nfuncs - function arguments
+    \param[in] bds    - bounding box 
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, if NULL then 
+                        default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
 
-    \return fta - function train decomposition of f
+    \return function train decomposition of f
 
     \note
-        Nested indices both left and right
+    Nested indices both left and right
 ***************************************************************/
 struct FT1DArray *
 ft1d_array_cross(double (*f)(double *, size_t, void *), void * args, 
                 size_t nfuncs,
                 struct BoundingBox * bds,
-                double * xstart,
+                double ** xstart,
                 struct FtCrossArgs * fca,
                 struct FtApproxArgs * apargs)
 {   

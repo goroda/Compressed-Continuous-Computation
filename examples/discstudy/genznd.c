@@ -78,13 +78,15 @@ int main()
         printf("On dim (%zu/%zu) : %zu \n",ii,ndims,dim);
         struct BoundingBox * bds = bounding_box_init_std(dim);
         size_t * ranks = calloc_size_t(dim+1);
-        double * yr  = calloc_double(dim);
-        double * coeffs = calloc_double(dim);
+        double * coeffs = calloc_double(dim);        
+        double ** yr  = malloc_dd(dim);
+
         for (kk = 0; kk < dim; kk++){
             bds->lb[kk] = 0.0;
             ranks[kk] = 1;
             coeffs[kk] = 1.0/(double) dim;
-            yr[kk] = 0.3;
+            yr[kk] = calloc_double(1);
+            yr[kk][0] = 0.3;
         }
         ranks[0] = 1; ranks[dim] = 1;
         
@@ -93,20 +95,25 @@ int main()
         
         struct FunctionMonitor * fm = 
             function_monitor_initnd(discnd,&dim,dim,1000*dim);
-        
-        struct IndexSet ** isr = index_set_array_rnested(dim, ranks, yr);
-        struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
+
+        struct CrossIndex ** isl = malloc(dim * sizeof(struct CrossIndex *));
+        struct CrossIndex ** isr = malloc(dim * sizeof(struct CrossIndex *));
+        assert (isl != NULL);
+        assert (isr != NULL);
+        cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+        cross_index_array_initialize(dim,isr,0,1,ranks,yr);
 
         struct FtApproxArgs * fapp = 
            ft_approx_args_createpwpoly(dim,&(aopts.ptype),&aopts);
 
         struct FtCrossArgs fca;
+        ft_cross_args_init(&fca);
         fca.epsilon = 1e-1;
         fca.maxiter = 1;
         fca.verbose = 2;
         fca.dim = dim;
         fca.ranks = ranks;
-    
+
         struct FunctionTrain * ft = 
                 ftapprox_cross(function_monitor_eval, fm,
                                bds, ftref, isl, isr, &fca,fapp);
@@ -125,12 +132,16 @@ int main()
 
         function_train_free(ft); ft = NULL;
         ft_approx_args_free(fapp); fapp = NULL;
-        index_set_array_free(dim,isr); isr = NULL;
-        index_set_array_free(dim,isl); isl = NULL;
+        for (size_t ll = 0; ll < dim; ll++){
+            cross_index_free(isr[ll]); isr[ll] = NULL;
+            cross_index_free(isl[ll]); isl[ll] = NULL;
+        }
+        free(isr); isr = NULL;
+        free(isl); isl = NULL;
         function_monitor_free(fm); fm = NULL;
         function_train_free(ftref); ftref = NULL;
         free(ranks); ranks = NULL;
-        free(yr); yr = NULL;
+        free_dd(dim,yr); yr = NULL;
         free(coeffs); coeffs = NULL;
         bounding_box_free(bds);
     }

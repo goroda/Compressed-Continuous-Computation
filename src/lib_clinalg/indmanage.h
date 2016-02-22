@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,18 +33,38 @@
 
 //Code
 
-/** \file lib_funcs.h
- * Groups header files of function library together
- */
+#ifndef INDMANAGE_H
+#define INDMANAGE_H
 
+struct CrossIndex
+{
+    size_t d; // dimension of each node
+    size_t n;
+    struct CrossNode * nodes;
+};
 
-#ifndef LIB_ONEDFUNCS_H
-#define LIB_ONEDFUNCS_H
+struct CrossIndex * cross_index_alloc(size_t);
+void cross_index_free(struct CrossIndex *);
+void cross_index_add_index(struct CrossIndex *, size_t, double *);
+void cross_index_add_nested(struct CrossIndex *, int, 
+                            size_t, double *, double);
+struct CrossIndex *
+cross_index_create_nested(int, int, size_t, size_t,
+                          double *, struct CrossIndex *);
 
-#include "polynomials.h"
-#include "piecewisepoly.h"
-#include "linelm.h"
-#include "functions.h"
-#include "monitoring.h"
+struct CrossIndex *
+cross_index_create_nested_ind(int, size_t, size_t *,
+                              double *, struct CrossIndex *);
+double **
+cross_index_merge_wspace(struct CrossIndex *, struct CrossIndex *);
+
+double **
+cross_index_merge(struct CrossIndex *, struct CrossIndex *);
+
+void cross_index_array_initialize(size_t, struct CrossIndex **,
+                                  int, int,size_t *, double **);
+
+void cross_index_copylast(struct CrossIndex *, size_t);
+void print_cross_index(struct CrossIndex *);
 
 #endif

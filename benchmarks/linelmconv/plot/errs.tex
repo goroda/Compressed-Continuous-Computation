@@ -1,0 +1,63 @@
+\documentclass[border={0pt 0pt 40pt 30pt}]{standalone}
+%\documentclass[]{article}
+
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8in}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{colormaps}
+
+
+\pgfkeys
+{
+    /tikz/.cd,
+    myvar/.store in=\myvar,
+    %#adjust 1
+    myvar={errs.dat},
+}
+
+\begin{document}
+
+    \begin{tikzpicture}
+		\begin{loglogaxis}[ 
+            %cycle list name=black white,
+			%xlabel={rank($a^2$)},
+			xlabel={$n$},
+			ylabel={$||u-\hat{u}||$},
+			%width={0.3\textwidth},
+            grid=major,
+			enlargelimits=true,
+            legend entries={$L_2$, Estimated $L_2$, $L_{\infty}$, Estimated $L_{\infty}$},
+            legend style={
+                legend pos = north east,
+            },
+			%colorbar,
+        ]
+          \addplot table [x=n,y=l2] {\myvar};
+          \addplot table [x=n,y=l2est] {\myvar};
+          \addplot table [x=n,y=linf] {\myvar};
+          \addplot table [x=n,y=linfest] {\myvar};
+        \addplot[no marks] table [ 
+            x=n,
+            y={create col/linear regression={y=l2,
+                variance list={800,600,400,400,400,400}}}] {\myvar}
+            coordinate [pos=0.5] (A)
+            coordinate [pos=0.9]  (B)
+            ;
+
+        \xdef\slope{\pgfplotstableregressiona}
+        \draw (A) -| (B)
+         node [pos=0.75,anchor=west]
+          {\pgfmathprintnumber{\slope}};
+
+		\end{loglogaxis}
+	\end{tikzpicture}
+
+\end{document}

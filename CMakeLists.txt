@@ -49,6 +49,7 @@ include_directories(src/lib_tensdecomp)
 include_directories(src/lib_funcdecomp)
 include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
+include_directories(include)
 
 add_subdirectory(src)
 add_subdirectory(test)

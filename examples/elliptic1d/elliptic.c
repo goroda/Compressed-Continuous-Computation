@@ -394,6 +394,7 @@ int main(int argc, char *argv[])
 
             size_t init_ranks = 5;
             struct FtCrossArgs fca;
+            ft_cross_args_init(&fca);
             fca.dim = dim;
             fca.ranks = calloc_size_t(dim+1);
             size_t ii;
