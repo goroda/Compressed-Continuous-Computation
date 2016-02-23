@@ -458,36 +458,6 @@ void generic_function_free(struct GenericFunction * gf){
 }
 
 /********************************************************//**
-<<<<<<< HEAD
-*   Evaluate a generic function
-*
-*   \param[in] f  - function
-*   \param[in] x  - location at which to evaluate
-*
-*   \return out - evaluation
-************************************************************/
-double generic_function_1d_eval(struct GenericFunction * f, double x){
-    double out = 0.1234567890;
-    struct OrthPolyExpansion * op;
-    struct PiecewisePoly * pw;
-    switch (f->fc){
-        case PIECEWISE:
-            pw = f->f;
-            out = piecewise_poly_eval(pw,x);
-            break;
-        case POLYNOMIAL:
-            op = f->f;
-            out = orth_poly_expansion_eval(op,x);
-            break;    
-        case RATIONAL:
-            break;
-        case KERNEL:
-            break;
-    }
-    return out;
-}
-
-/********************************************************//**
     Free memory for generic function array
 
     \param[in,out] gf - generic function array
