@@ -1200,15 +1200,18 @@ struct FunctionTrain * function_train_alloc(size_t dim)
     return ft;
 }
 
-/***********************************************************//**
+/**********************************************************//**
     Copy a function train
 
     \param[in] a - function train to copy
 
     \return b - function train
-***************************************************************/
+**************************************************************/
 struct FunctionTrain * function_train_copy(struct FunctionTrain * a){
 
+    if (a == NULL){
+        return NULL;
+    }
     struct FunctionTrain * b = function_train_alloc(a->dim);
     
     size_t ii;
@@ -1220,11 +1223,11 @@ struct FunctionTrain * function_train_copy(struct FunctionTrain * a){
     return b;
 }
 
-/***********************************************************//**
+/**********************************************************//**
     Free memory allocated to a function train
 
     \param[in,out] ft - function train to free
-***************************************************************/
+**************************************************************/
 void function_train_free(struct FunctionTrain * ft)
 {
     if (ft != NULL){

@@ -3834,7 +3834,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
-            // printf("...... Error L/R Sweep = %E\n",diff);
+            printf("...... Error L/R Sweep = %E\n",diff);
         }
         
         if (diff < cargs->epsilon){
