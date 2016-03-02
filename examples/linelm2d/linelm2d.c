@@ -112,13 +112,7 @@ int main(int argc, char * argv[])
     double ubv[2] = {ub, 3*ub};
     struct BoundingBox * bds = bounding_box_vec(dim,lbv,ubv);
 
-    struct LinElemExpAopts aoptsx = {n,0};
-    struct LinElemExpAopts aoptsy = {n,0};
-    struct LinElemExpAopts ** aopts = 
-        malloc(2*sizeof(struct LinElemExpAopts));
-    aopts[0] = &aoptsx;
-    aopts[1] = &aoptsy;
-    struct FtApproxArgs * fapp = ft_approx_args_create_le2(dim,aopts);
+
     double * xnodes = linspace(lb,ub,n);
     double * ynodes = linspace(2*lb,3*ub,n);
     struct c3Vector c3vx = {n,xnodes};
@@ -127,6 +121,15 @@ int main(int argc, char * argv[])
     c3v[0] = &c3vx;
     c3v[1] = &c3vy;
     struct FiberOptArgs * fopt = fiber_opt_args_bf(dim,c3v);
+
+    struct LinElemExpAopts * aoptsx=lin_elem_exp_aopts_alloc(n,xnodes);
+    struct LinElemExpAopts * aoptsy=lin_elem_exp_aopts_alloc(n,ynodes);
+    struct LinElemExpAopts ** aopts = 
+        malloc(2*sizeof(struct LinElemExpAopts));
+    aopts[0] = aoptsx;
+    aopts[1] = aoptsy;
+    struct FtApproxArgs * fapp = ft_approx_args_create_le2(dim,aopts);
+
 
     size_t init_ranks[3] = {1,3,1};
     struct FtCrossArgs fca;
@@ -235,6 +238,8 @@ int main(int argc, char * argv[])
 
     fclose(fp2);
     free(xtest); free(ytest);
+    lin_elem_exp_aopts_free(aoptsx);
+    lin_elem_exp_aopts_free(aoptsy);
     free(aopts); aopts = NULL;
     free(c3v); c3v = NULL;
     function_train_free(ft);

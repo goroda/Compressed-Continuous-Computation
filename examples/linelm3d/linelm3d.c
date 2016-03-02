@@ -110,11 +110,13 @@ int main(int argc, char * argv[])
     size_t dim = 3;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
 
-    struct LinElemExpAopts aopts = {n,0};
-    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,&aopts);
+
     double * xnodes = linspace(lb,ub,n);
     struct c3Vector c3v = {n,xnodes};
     struct FiberOptArgs * fopt = fiber_opt_args_bf_same(dim,&c3v);
+
+    struct LinElemExpAopts * aopts=lin_elem_exp_aopts_alloc(n,xnodes);
+    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,aopts);
 
     size_t init_ranks[4] = {1,3,3,1};
     struct FtCrossArgs fca;
@@ -162,8 +164,9 @@ int main(int argc, char * argv[])
     start[0] = startx;
     start[1] = starty;
     start[2] = startz;
-    struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(function_monitor_eval,fm,bds,start,
+                              &fca,fapp);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     size_t ntot = n*n*n;
@@ -232,6 +235,7 @@ int main(int argc, char * argv[])
     free(ytest);
     free(ztest);
 
+    lin_elem_exp_aopts_free(aopts);
     function_train_free(ft);
     function_monitor_free(fm);
     ft_approx_args_free(fapp);

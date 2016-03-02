@@ -934,14 +934,14 @@ void Test_qmarray_householder_linelm(CuTest * tc){
     qmarray_free(T); T = NULL;
     free(tmat); tmat = NULL;
     
-    struct LinElemExpAopts aopts;
-    aopts.num_nodes = 5;
-    aopts.adapt = 0;
+    double *x = linspace(-1.0,1.0,5);
+    struct LinElemExpAopts * aopts = lin_elem_exp_aopts_alloc(5,x);
+    free(x); x= NULL;
 
     size_t nr = 2;
     size_t nc = 2;
     struct Qmarray * A = qmarray_approx1d(
-        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, &aopts);
+        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, aopts);
     
     struct Qmarray * Acopy = qmarray_copy(A);
     
@@ -988,7 +988,8 @@ void Test_qmarray_householder_linelm(CuTest * tc){
     CuAssertDblEquals(tc,0.0,diff2,1e-14);
     CuAssertDblEquals(tc,0.0,diff3,1e-14);
     CuAssertDblEquals(tc,0.0,diff4,1e-14);
-    
+
+    lin_elem_exp_aopts_free(aopts);
     qmarray_free(Anew); Anew = NULL;
     free(R); R = NULL;
     free(qmat); qmat = NULL;
@@ -1328,16 +1329,17 @@ void Test_qmarray_householder_rowslinelm(CuTest * tc){
 //    dprint2d_col(2,2,tmat);
     qmarray_free(T); T = NULL;
     free(tmat); tmat = NULL;
-    
-    struct LinElemExpAopts aopts;
-    aopts.num_nodes = 5;
-    aopts.adapt = 0;
 
+    double *x = linspace(-1.0,1.0,5);
+    struct LinElemExpAopts * aopts = lin_elem_exp_aopts_alloc(5,x);
+    free(x); x= NULL;
+    
     size_t nr = 2;
     size_t nc = 2;
     struct Qmarray * A = qmarray_approx1d(
-        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, &aopts);
-    
+        nr, nc, funcs, args, LINELM, NULL, -1.0, 1.0, aopts);
+    lin_elem_exp_aopts_free(aopts);
+
     struct Qmarray * Acopy = qmarray_copy(A);
     
     double * R = calloc_double(nr*nr);

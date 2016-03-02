@@ -732,6 +732,43 @@ double lin_elem_exp_err_est(struct LinElemExp * f, double * errs, short dir, sho
 }
 
 /********************************************************//**
+    Allocate approximation arguments
+
+    \param[in] N - number of nodes
+    \param[in] x - nodes
+
+    \return approximation arguments
+*************************************************************/
+struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
+{
+    struct LinElemExpAopts * aopts = NULL;
+    aopts = malloc(sizeof(struct LinElemExpAopts));
+    if (aopts == NULL){
+        fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
+        exit(1);
+    }
+    aopts->num_nodes= N;
+    aopts->nodes = calloc_double(N);
+    memmove(aopts->nodes,x,N*sizeof(double));
+    aopts->adapt = 0;
+
+    return aopts;
+}
+
+/********************************************************//**
+    Free memory allocated to approximation arguments
+
+    \param[in,out] aopts - approximation arguments
+*************************************************************/
+void lin_elem_exp_aopts_free(struct LinElemExpAopts * aopts)
+{
+    if (aopts != NULL){
+        free(aopts->nodes); aopts->nodes = NULL;
+        free(aopts); aopts = NULL;
+    }
+}
+
+/********************************************************//**
     Approximate a function
 
     \param[in] f    - function
@@ -747,20 +784,23 @@ lin_elem_exp_approx(double (*f)(double,void*), void * args,
                     double lb, double ub,
                     struct LinElemExpAopts * opts)
 {
+
+    struct LinElemExp * lexp = lin_elem_exp_alloc();
     size_t N;
-//    int adapt;
     if (opts == NULL){
         N = 10;
-//        adapt = 0;
+        lexp->num_nodes = N;
+        lexp->nodes = linspace(lb,ub,N);
     }
     else{
+        assert (opts->nodes != NULL);
+
         N = opts->num_nodes;
-//        adapt = opts->adapt;
+        lexp->num_nodes = N;
+        lexp->nodes = calloc_double(N);
+        memmove(lexp->nodes,opts->nodes,N*sizeof(double));
     }
     
-    struct LinElemExp * lexp = lin_elem_exp_alloc();
-    lexp->num_nodes = N;
-    lexp->nodes = linspace(lb,ub,N);
     lexp->coeff = calloc_double(N);
     for (size_t ii = 0; ii < N; ii++){
         lexp->coeff[ii] = f(lexp->nodes[ii],args);
@@ -779,8 +819,9 @@ lin_elem_exp_approx(double (*f)(double,void*), void * args,
 
     \return function
 *************************************************************/
-struct LinElemExp * lin_elem_exp_constant(double a, double lb, double ub,
-                                          struct LinElemExpAopts * opts)
+struct LinElemExp * 
+lin_elem_exp_constant(double a, double lb, double ub,
+                      struct LinElemExpAopts * opts)
 {
     size_t N;
     if (opts == NULL){

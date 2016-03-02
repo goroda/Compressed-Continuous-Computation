@@ -77,10 +77,15 @@ double * deserialize_darray_from_text(char *, size_t *);
 int darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
 
-struct c3Vector{
+struct c3Vector
+{
     size_t size;
     double * elem;
 };
+
+struct c3Vector * c3vector_alloc(size_t, double *);
+struct c3Vector ** c3vector_alloc_array(size_t);
+void c3vector_free_array(struct c3Vector **, size_t);
 
 //RANDOM NUMBERS
 double randu(void);

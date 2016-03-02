@@ -66,18 +66,6 @@ struct LinElemExp{
     double * inner;
 };
 
-/** \struct LinElemExpAopts
- * \brief Approximation options of LinElemExp
- * \var LinElemExp::num_nodes
- * number of basis functions or nodes
- * \var LinElemExp::adapt
- * whether or not to adapt (0 or 1)
- */
-struct LinElemExpAopts
-{
-    size_t num_nodes;
-    int adapt;
-};
 
 struct LinElemExp * lin_elem_exp_alloc();
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
@@ -99,6 +87,24 @@ double lin_elem_exp_absmax(struct LinElemExp *, double *,void *);
 double lin_elem_exp_err_est(struct LinElemExp *, double *, short,short);
 
 /////////////////////////////////////////////////////////////////////
+/** \struct LinElemExpAopts
+ * \brief Approximation options of LinElemExp
+ * \var LinElemExp::num_nodes
+ * number of basis functions or nodes
+ * \var LinElemExp::nodes
+ * nodes
+ * \var LinElemExp::adapt
+ * whether or not to adapt (0 or 1)
+ */
+struct LinElemExpAopts
+{
+    size_t num_nodes;
+    double * nodes;
+    int adapt;
+};
+
+struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
+void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 
 struct LinElemExp *
 lin_elem_exp_approx(double (*)(double,void*), void*,

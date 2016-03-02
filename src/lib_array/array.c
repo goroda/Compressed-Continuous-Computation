@@ -639,6 +639,51 @@ darray_load(char * filename, int type)
     return value;
 }
 
+struct c3Vector * c3vector_alloc(size_t d, double * x)
+{
+    struct c3Vector * c3v = malloc(sizeof(struct c3Vector));
+    if (c3v == NULL){
+        fprintf(stderr,"Cannot Allocate c3Vector\n");
+        exit(1);
+    }
+    c3v->size = d;
+    c3v->elem = calloc_double(d);
+    memmove(c3v->elem,x,d*sizeof(double));
+    return c3v;
+}
+
+void c3vector_free(struct c3Vector * c3v)
+{
+    if (c3v != NULL){
+        free(c3v->elem); c3v->elem = NULL;
+        free(c3v); c3v = NULL;
+    }
+}
+
+struct c3Vector ** c3vector_alloc_array(size_t N)
+{
+    struct c3Vector ** c3v;
+    c3v = malloc(N*sizeof(struct c3Vector *));
+    if (c3v == NULL){
+        fprintf(stderr,"Memory alloc for c3Vector array failed\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < N; ii++){
+        c3v[ii] = NULL;
+    }
+    return c3v;
+}
+
+void c3vector_free_array(struct c3Vector ** c3v, size_t N)
+{
+    if (c3v != NULL){
+        for (size_t ii = 0; ii < N; ii++){
+            c3vector_free(c3v[ii]); c3v[ii] = NULL;
+        }
+        free(c3v); c3v = NULL;
+    }
+}
+
 // UTILITIES
 
 //random numbers
