@@ -2368,7 +2368,8 @@ void Test_ftapprox_cross(CuTest * tc)
     struct BoundingBox * bds = bounding_box_init_std(dim);
     
     enum poly_type ptype = LEGENDRE;
-    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,NULL);
+    struct FtApproxArgs * fapp = 
+        ft_approx_args_createpoly(dim,&ptype,NULL);
     
     struct FtCrossArgs fca;
     fca.dim = 2;
@@ -2422,7 +2423,7 @@ void Test_ftapprox_cross(CuTest * tc)
     //
     bounding_box_free(bds);
     bounding_box_free(bounds);
-    free(fapp);
+    ft_approx_args_free(fapp);
     function_train_free(ft);
     function_train_free(ftref);
     free(yr[0]);
@@ -2799,7 +2800,7 @@ void Test_sin10dint(CuTest * tc)
     free_dd(dim,yr);
     //
     bounding_box_free(bds);
-    free(fapp);
+    ft_approx_args_free(fapp);
     free(text);
     function_train_free(ft);
     function_train_free(ftd);

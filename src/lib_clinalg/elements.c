@@ -965,15 +965,64 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 ////////////////////////////////////////////////////////////////////
 // function_train 
 //
-struct FtApproxArgs * ft_approx_args_alloc()
+struct FtOneApprox * 
+ft_one_approx_alloc(enum function_class fc, void * sub_type, 
+                    void * aopts)
+{
+
+    struct FtOneApprox * app = malloc(sizeof(struct FtOneApprox));
+    if (app == NULL){
+        fprintf(stderr,"Cannot allocate FtOneApprox\n");
+        exit(1);
+    }
+    app->fc = fc;
+    app->sub_type = sub_type;
+    app->aopts = aopts;
+    return app;
+}
+
+void ft_one_approx_free(struct FtOneApprox * oa)
+{
+    if (oa != NULL){
+        free(oa); oa = NULL;
+    }
+}
+
+struct FtApproxArgs * ft_approx_args_alloc(size_t dim)
 {
     struct FtApproxArgs * fargs;
     if ( NULL == (fargs = malloc(sizeof(struct FtApproxArgs)))){
-        fprintf(stderr, "failed to allocate memory for ft approx args.\n");
+        fprintf(stderr, "Cannot allocate space for FtApproxArgs.\n");
         exit(1);
+    }
+    fargs->aopts = malloc(dim * sizeof(struct FtOneApprox *));
+    if (fargs->aopts == NULL){
+        fprintf(stderr, "Cannot allocat FtApproxArgs\n");
+        exit(1);
+    }
+    fargs->dim = dim;
+    for (size_t ii = 0; ii < dim; ii++){
+        fargs->aopts[ii] = NULL;
     }
 
     return fargs;
+}
+
+/***********************************************************//**
+    Free memory allocated to FtApproxArgs
+
+    \param[in,out] fargs - function train approximation arguments
+***************************************************************/
+void ft_approx_args_free(struct FtApproxArgs * fargs)
+{
+    if (fargs != NULL){
+        for (size_t ii = 0; ii < fargs->dim;ii++){
+            ft_one_approx_free(fargs->aopts[ii]);
+            fargs->aopts[ii] = NULL;
+        }
+        free(fargs->aopts); fargs->aopts = NULL;
+        free(fargs); fargs = NULL;
+    }
 }
 
 /***********************************************************//**
@@ -993,16 +1042,12 @@ ft_approx_args_createpoly(size_t dim,
                           enum poly_type * ptype,
                           struct OpeAdaptOpts * aopts)
 {
-    struct FtApproxArgs * fargs = ft_approx_args_alloc();
+    struct FtApproxArgs * fargs = ft_approx_args_alloc(dim);
     fargs->dim = dim;
-    fargs->targs = 0;
-    
-    enum function_class fc = POLYNOMIAL;
-    fargs->fc.fc0 = fc;    
-    //printf("create poly type %d \n",*ptype);
-    fargs->sub_type.st0 = ptype;
-    fargs->approx_opts.ao0 = aopts;
-    
+    for (size_t ii = 0; ii < dim; ii++){
+        fargs->aopts[ii] = ft_one_approx_alloc(POLYNOMIAL,ptype,aopts);
+    }
+
     return fargs;
 }
 
@@ -1022,16 +1067,11 @@ ft_approx_args_createpwpoly(size_t dim,
                             enum poly_type * ptype,
                             struct PwPolyAdaptOpts * aopts)
 {
-    struct FtApproxArgs * fargs = ft_approx_args_alloc();
-
+    struct FtApproxArgs * fargs = ft_approx_args_alloc(dim);
     fargs->dim = dim;
-    fargs->targs = 0;
-    
-    enum function_class fc = PIECEWISE;
-    fargs->fc.fc0 = fc;    
-    fargs->sub_type.st0 = ptype;
-    fargs->approx_opts.ao0 = aopts;
-    
+    for (size_t ii = 0; ii < dim; ii++){
+        fargs->aopts[ii] = ft_one_approx_alloc(PIECEWISE,ptype,aopts);
+    }
     return fargs;
 }
 
@@ -1049,36 +1089,36 @@ struct FtApproxArgs *
 ft_approx_args_create_le(size_t dim, 
                          struct LinElemExpAopts * aopts)
 {
-    struct FtApproxArgs * fargs = ft_approx_args_alloc();
+    struct FtApproxArgs * fargs = ft_approx_args_alloc(dim);
     fargs->dim = dim;
-    fargs->targs = 0;
-    
-    enum function_class fc = LINELM;
-    fargs->fc.fc0 = fc;    
-    fargs->sub_type.st0 = 0;
-    fargs->approx_opts.ao0 = aopts;
-    
+    int zero = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        fargs->aopts[ii] = ft_one_approx_alloc(LINELM,&zero,aopts);
+    }
     return fargs;
 }
 
 /***********************************************************//**
-    Free memory allocated to FtApproxArgs
+    Create the linear element approximation args to sent to
+    function cross
 
-    \param[in,out] fargs - function train approximation arguments
+    \param[in] dim   - dimension of function train
+    \param[in] aopts - arguments for creating the approximation 
+                       (could be NULL)
+
+    \return fargs - approximation arguments
 ***************************************************************/
-void ft_approx_args_free(struct FtApproxArgs * fargs)
+struct FtApproxArgs * 
+ft_approx_args_create_le2(size_t dim, 
+                         struct LinElemExpAopts ** aopts)
 {
-    if (fargs != NULL){
-        if (fargs->targs == 0){
-            free(fargs);
-            fargs = NULL;
-        }
-        else{
-            fprintf(stderr, 
-                    "Freeing ftapprox args of this type not implemnted");
-            exit(1);
-        }
+    struct FtApproxArgs * fargs = ft_approx_args_alloc(dim);
+    fargs->dim = dim;
+    int zero = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        fargs->aopts[ii] = ft_one_approx_alloc(LINELM,&zero,aopts[ii]);
     }
+    return fargs;
 }
 
 /***********************************************************//**
@@ -1093,17 +1133,7 @@ void ft_approx_args_free(struct FtApproxArgs * fargs)
 enum function_class 
 ft_approx_args_getfc(struct FtApproxArgs * fargs, size_t dim)
 {
-    
-    if (fargs->targs == 0){
-        return fargs->fc.fc0;
-    }
-    else if (fargs->targs == 1){
-        return fargs->fc.fc1[dim];
-    }
-    else{
-        fprintf(stderr, "ftapprox args of this type not implemnted");
-        exit(1);
-    }
+    return fargs->aopts[dim]->fc;
 }
 
 /***********************************************************//**
@@ -1117,18 +1147,7 @@ ft_approx_args_getfc(struct FtApproxArgs * fargs, size_t dim)
 ***************************************************************/
 void * ft_approx_args_getst(struct FtApproxArgs * fargs, size_t dim)
 {
-    
-    if (fargs->targs == 0){
-
-        return fargs->sub_type.st0;
-    }
-    else if (fargs->targs == 1){
-        return fargs->sub_type.st1[dim];
-    }
-    else{
-        fprintf(stderr, "ftapprox args of this type not implemnted");
-        exit(1);
-    }
+    return fargs->aopts[dim]->sub_type;
 }
 
 /***********************************************************//**
@@ -1142,17 +1161,7 @@ void * ft_approx_args_getst(struct FtApproxArgs * fargs, size_t dim)
 ***************************************************************/
 void * ft_approx_args_getaopts(struct FtApproxArgs * fargs, size_t dim)
 {
-    
-    if (fargs->targs == 0){
-        return fargs->approx_opts.ao0;
-    }
-    else if (fargs->targs == 1){
-        return fargs->approx_opts.ao1[dim];
-    }
-    else{
-        fprintf(stderr, "ftapprox args of this type not implemnted");
-        exit(1);
-    }
+    return fargs->aopts[dim]->aopts;
 }
 
 struct BoundingBox * function_train_bds(struct FunctionTrain * ft)
@@ -2431,7 +2440,6 @@ void ft1d_array_free(struct FT1DArray * fta)
     }
 }
 
-
 struct FiberOptArgs * fiber_opt_args_alloc()
 {
     struct FiberOptArgs * fopt = NULL;
@@ -2467,7 +2475,8 @@ struct FiberOptArgs * fiber_opt_args_init(size_t dim)
 }
 
 /***********************************************************//**
-    Initialize a bruteforce optimization with the same nodes in each dimension
+    Initialize a bruteforce optimization with the same nodes 
+    in each dimension
 
     \param[in] dim   - dimension of problem
     \param[in] nodes - nodes over which to optimize 
@@ -2475,7 +2484,8 @@ struct FiberOptArgs * fiber_opt_args_init(size_t dim)
 
     \return fiber opt args
 ***************************************************************/
-struct FiberOptArgs * fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes)
+struct FiberOptArgs * 
+fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes)
 {
     struct FiberOptArgs * fopt = fiber_opt_args_alloc();
     fopt->dim = dim;
@@ -2487,6 +2497,33 @@ struct FiberOptArgs * fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes
     }
     for (size_t ii = 0; ii < dim; ii++){
         fopt->opts[ii] = nodes;
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Initialize a bruteforce optimization with different nodes
+    in each dimension
+
+    \param[in] dim   - dimension of problem
+    \param[in] nodes - nodes over which to optimize 
+                       (same ones used for each dimension)
+
+    \return fiber opt args
+***************************************************************/
+struct FiberOptArgs * 
+fiber_opt_args_bf(size_t dim, struct c3Vector ** nodes)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = nodes[ii];
     }
     return fopt;
 }

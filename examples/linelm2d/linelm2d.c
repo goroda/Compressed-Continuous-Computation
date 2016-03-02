@@ -108,13 +108,25 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
     size_t dim = 2;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    double lbv[2] = {lb, 2*lb};
+    double ubv[2] = {ub, 3*ub};
+    struct BoundingBox * bds = bounding_box_vec(dim,lbv,ubv);
 
-    struct LinElemExpAopts aopts = {n,0};
-    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,&aopts);
+    struct LinElemExpAopts aoptsx = {n,0};
+    struct LinElemExpAopts aoptsy = {n,0};
+    struct LinElemExpAopts ** aopts = 
+        malloc(2*sizeof(struct LinElemExpAopts));
+    aopts[0] = &aoptsx;
+    aopts[1] = &aoptsy;
+    struct FtApproxArgs * fapp = ft_approx_args_create_le2(dim,aopts);
     double * xnodes = linspace(lb,ub,n);
-    struct c3Vector c3v = {n,xnodes};
-    struct FiberOptArgs * fopt = fiber_opt_args_bf_same(dim,&c3v);
+    double * ynodes = linspace(2*lb,3*ub,n);
+    struct c3Vector c3vx = {n,xnodes};
+    struct c3Vector c3vy = {n,ynodes};
+    struct c3Vector ** c3v = malloc(2 * sizeof(struct c3Vector));
+    c3v[0] = &c3vx;
+    c3v[1] = &c3vy;
+    struct FiberOptArgs * fopt = fiber_opt_args_bf(dim,c3v);
 
     size_t init_ranks[3] = {1,3,1};
     struct FtCrossArgs fca;
@@ -156,12 +168,13 @@ int main(int argc, char * argv[])
     }
     assert ( n > 4);
     double startx[3] = {xnodes[0], xnodes[5], xnodes[n-1]};
-    double starty[3] = {xnodes[0], xnodes[4], xnodes[n-1]};
+    double starty[3] = {ynodes[0], ynodes[4], ynodes[n-1]};
     double * start[2];
     start[0] = startx;
     start[1] = starty;
-    struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval,fm,bds,start,&fca,fapp);
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(function_monitor_eval,fm,
+                              bds,start,&fca,fapp);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     size_t ntot = n*n;
@@ -197,7 +210,7 @@ int main(int argc, char * argv[])
     size_t N1 = 40;
     size_t N2 = 40;
     double * xtest = linspace(lb,ub,N1);
-    double * ytest = linspace(lb,ub,N2);
+    double * ytest = linspace(2*lb,3*ub,N2);
 
     double out1=0.0;
     double den=0.0;
@@ -222,7 +235,8 @@ int main(int argc, char * argv[])
 
     fclose(fp2);
     free(xtest); free(ytest);
-
+    free(aopts); aopts = NULL;
+    free(c3v); c3v = NULL;
     function_train_free(ft);
     function_monitor_free(fm);
     ft_approx_args_free(fapp);

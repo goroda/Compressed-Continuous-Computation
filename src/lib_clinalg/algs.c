@@ -4111,7 +4111,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
         free_dd(dim, init_x); //init_x = NULL;
     }
     if (apargs == NULL){
-        free(fapp); fapp = NULL;
+        ft_approx_args_free(fapp); fapp = NULL;
     }
     if (fca == NULL){
         free(init_ranks); init_ranks = NULL;

@@ -177,38 +177,24 @@ qmarray_deserialize(unsigned char *, struct Qmarray ** );
 ////////////////////////////////////////////////////////////////////
 // function_train 
 
+struct FtOneApprox
+{
+    enum function_class fc;
+    void * sub_type;
+    void * aopts;
+};
+
 /** \struct FtApproxArgs
  * \brief function train approximation arguments
  * \var FtApproxArgs::dim
  * function dimension
- * \var FtApproxArgs::fc
- * function approximation classes
- * \var FtApproxArgs::sub_type
- * function approximation sub types
- * \var FtApproxArgs::approx_opts
+ * \var FtApproxArgs::aopts
  * function approximation options
- * \var FtApproxArgs::targs
- * type of approximations (0: same in each dimension, 1: specified separately for each  dimension)
  */
 struct FtApproxArgs
 {
     size_t dim;
-    union func_class {
-        enum function_class fc0;
-        enum function_class * fc1;
-    } fc;
-    union st {
-        void * st0;
-        void ** st1;
-    } sub_type; 
-    union aopts {
-        void * ao0;
-        void ** ao1;
-    } approx_opts;
-
-    int targs; // type of args (0,1)
-    
-//    void * optargs;
+    struct FtOneApprox ** aopts;
 };
 
 struct FtApproxArgs * 
@@ -220,6 +206,10 @@ ft_approx_args_createpwpoly(size_t, enum poly_type *,
 struct FtApproxArgs * 
 ft_approx_args_create_le(size_t, 
                          struct LinElemExpAopts *);
+
+struct FtApproxArgs * 
+ft_approx_args_create_le2(size_t, 
+                         struct LinElemExpAopts **);
 
 enum function_class 
 ft_approx_args_getfc(struct FtApproxArgs *, size_t);
@@ -326,7 +316,9 @@ struct FiberOptArgs
 };
 struct FiberOptArgs * fiber_opt_args_alloc();
 struct FiberOptArgs * fiber_opt_args_init(size_t);
-struct FiberOptArgs * fiber_opt_args_bf_same(size_t, struct c3Vector *);
+struct FiberOptArgs * fiber_opt_args_bf(size_t,struct c3Vector **);
+
+struct FiberOptArgs * fiber_opt_args_bf_same(size_t,struct c3Vector *);
 void fiber_opt_args_free(struct FiberOptArgs *);
 
 /////////////////////////////////////////////////////////
