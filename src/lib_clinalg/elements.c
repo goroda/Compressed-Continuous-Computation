@@ -1061,7 +1061,6 @@ ft_approx_args_create_le(size_t dim,
     return fargs;
 }
 
-
 /***********************************************************//**
     Free memory allocated to FtApproxArgs
 
