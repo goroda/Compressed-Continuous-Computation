@@ -1689,6 +1689,22 @@ void Test_qmarray_maxvol1d_linelm(CuTest * tc){
     struct Qmarray * A = 
         qmarray_approx1d(3, 2, funcs, args, LINELM, 
                          NULL, -1.0, 1.0, NULL);
+
+    unsigned char * text = NULL;
+    size_t size;
+    qmarray_serialize(NULL,A,&size);
+    text = malloc(size * sizeof(unsigned char));
+    qmarray_serialize(text,A,NULL);
+    
+    struct Qmarray * C = NULL;
+    qmarray_deserialize(text,&C);
+    free(text); text = NULL;
+
+
+    double diff = qmarray_norm2diff(A,C);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    qmarray_free(C); C = NULL;
+
     
     double * Asinv = calloc_double(2*2);
     size_t * pivi = calloc_size_t(2);
@@ -2678,9 +2694,9 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
                                                           dim,1000);
     
     struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,NULL);
-    struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval,fm,bds,
-                             NULL,NULL,fapp);
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(function_monitor_eval,fm,bds,
+                              NULL,NULL,fapp);
     function_monitor_free(fm);
 
     //printf("finished !\n");
@@ -2708,6 +2724,24 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     CuAssertDblEquals(tc,0.0,err,1e-10);
     //CuAssertDblEquals(tc,0.0,0.0,1e-15);
 
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+    
     bounding_box_free(bds);
     function_train_free(ft);
     ft_approx_args_free(fapp);

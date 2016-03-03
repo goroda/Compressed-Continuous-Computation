@@ -64,6 +64,7 @@ struct LinElemExp * lin_elem_exp_alloc()
     p->num_nodes = 0;
     p->nodes = NULL;
     p->coeff = NULL;
+    p->inner = NULL;
     return p;
 }
 
@@ -79,10 +80,7 @@ struct LinElemExp * lin_elem_exp_copy(struct LinElemExp * lexp)
     
     struct LinElemExp * p = NULL;
     if (lexp != NULL){
-        if ( NULL == (p = malloc(sizeof(struct LinElemExp)))){
-            fprintf(stderr, "failed to allocate memory for LinElemExp.\n");
-            exit(1);
-        }
+        p = lin_elem_exp_alloc();
         p->num_nodes = lexp->num_nodes;
         if (lexp->nodes != NULL){
             p->nodes = calloc_double(p->num_nodes);
@@ -150,14 +148,17 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
 unsigned char *
 serialize_lin_elem_exp(unsigned char * ser, struct LinElemExp * f,size_t * totSizeIn)
 {
-    
-    size_t totsize = sizeof(size_t) + 2 * f->num_nodes*sizeof(double);
+
+    // 3 * sizeof(size_t)-- 1 for num_nodes, 2 for sizes of nodes and coeffs
+    size_t totsize = 3*sizeof(size_t) + 2 * f->num_nodes*sizeof(double);
 
     if (totSizeIn != NULL){
         *totSizeIn = totsize;
         return ser;
     }
+
     unsigned char * ptr = serialize_size_t(ser, f->num_nodes);
+    //serializing a pointer also serializes its size
     ptr = serialize_doublep(ptr, f->nodes, f->num_nodes);
     ptr = serialize_doublep(ptr, f->coeff, f->num_nodes);
     return ptr;      
@@ -925,13 +926,19 @@ double lin_elem_exp_ub(struct LinElemExp * f)
 void print_lin_elem_exp(struct LinElemExp * f, size_t prec, 
                         void * args, FILE * stream)
 {
-    assert (args == NULL);
-    fprintf(stream, "Lin Elem Expansion");
-    for (size_t ii = 0; ii < f->num_nodes; ii++){
-        if (prec < 100){
-            fprintf(stream, "(%3.5G,%3.5G)  ",f->nodes[ii],f->coeff[ii]);
-        }
+    if (f == NULL){
+        fprintf(stream, "Lin Elem Expansion is NULL\n");
     }
-    fprintf(stream,"\n");
+    else{
+        assert (args == NULL);
+        fprintf(stream, "Lin Elem Expansion: num_nodes=%zu\n",f->num_nodes);
+        for (size_t ii = 0; ii < f->num_nodes; ii++){
+            if (prec < 100){
+                fprintf(stream, "(%3.*G,%3.*G)  ",(int)prec,f->nodes[ii],
+                        (int)prec,f->coeff[ii]);
+            }
+        }
+        fprintf(stream,"\n");
+    }
 }
 

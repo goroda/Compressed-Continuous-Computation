@@ -1071,6 +1071,53 @@ void Test_lin_elem_exp_orth_basis(CuTest * tc)
     free(coeff); coeff = NULL;
 }
 
+void Test_lin_elem_exp_serialize(CuTest * tc){
+    
+    printf("Testing functions: (de)serializing lin_elem_exp \n");
+    
+    double lb = -1.0;
+    double ub = 2.0;
+
+    struct counter c1 = {0};
+    struct counter c2 = {0};
+    size_t N1 = 10;
+    double * x1 = linspace(lb,ub,N1);
+    double f1[1000];
+    for (size_t ii = 0; ii < N1; ii++){
+        f1[ii] = func3(x1[ii],&c1);
+    }
+    struct LinElemExp * pl = lin_elem_exp_init(N1,x1,f1);
+
+    //print_lin_elem_exp(pl,4,NULL,stdout);
+      
+    unsigned char * text = NULL;
+    size_t size_to_be;
+    serialize_lin_elem_exp(text, pl, &size_to_be);
+    text = malloc(size_to_be * sizeof(unsigned char));
+    serialize_lin_elem_exp(text, pl, NULL);
+     
+    //printf("text=\n%s\n",text);
+    struct LinElemExp * pt = NULL;
+    deserialize_lin_elem_exp(text, &pt);
+
+    //printf("pt num nodes = %zu\n",pt->num_nodes);
+    //print_lin_elem_exp(pt,0,NULL,stdout);            
+
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(lin_elem_exp_eval(pl,xtest[ii]) -
+                   lin_elem_exp_eval(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+
+    free(xtest);
+    free(text);
+    lin_elem_exp_free(pl);
+    lin_elem_exp_free(pt);
+}
 
 CuSuite * LelmGetSuite(){
 
@@ -1086,6 +1133,7 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize);
     return suite;
 }
 

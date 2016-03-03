@@ -899,16 +899,16 @@ qmarray_orth1d_rows(enum function_class fc, void * st, size_t nrows,
 /***********************************************************//**
     Serialize a qmarray
 
-    \param ser [inout] - stream to serialize to
-    \param qma [in] - quasimatrix array
-    \param totSizeIn [inout] if NULL then serialize, if not NULL
-                             then return size;
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     qma       - quasimatrix array
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL
+                               then return size;
 
-    \return ptr [out] - ser shifted by number of ytes
+    \return ser shifted by number of bytes
 ***************************************************************/
 unsigned char * 
 qmarray_serialize(unsigned char * ser, struct Qmarray * qma, 
-                    size_t *totSizeIn)
+                  size_t *totSizeIn)
 {
 
     // nrows -> ncols -> func -> func-> ... -> func
@@ -2088,7 +2088,7 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
 ***************************************************************/
 unsigned char * 
 function_train_serialize(unsigned char * ser, struct FunctionTrain * ft,
-                size_t *totSizeIn)
+                         size_t *totSizeIn)
 {
 
     // dim -> nranks -> core1 -> core2 -> ... -> cored

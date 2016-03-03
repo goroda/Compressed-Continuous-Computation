@@ -967,13 +967,14 @@ serialize_orth_poly_expansion(unsigned char * ser,
 /********************************************************//**
 *   Deserialize orth_poly_expansion
 *
-*   \param ser [in] - input string
-*   \param poly [inout]: poly expansion
+*   \param[in]     ser  - input string
+*   \param[in,out] poly - poly expansion
 *
 *   \return ptr - ser + number of bytes of poly expansion
 *************************************************************/
 unsigned char * 
-deserialize_orth_poly_expansion(unsigned char * ser, 
+deserialize_orth_poly_expansion(
+    unsigned char * ser, 
         struct OrthPolyExpansion ** poly)
 {
     

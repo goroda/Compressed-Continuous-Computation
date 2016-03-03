@@ -222,7 +222,9 @@ generic_function_alloc(size_t dim, enum function_class fc, void * sub_type){
         out->sub_type.ptype = ptype; 
         break;
     case LINELM:
-        out->sub_type.ptype = 0;
+        ptype = 0;
+        out->sub_type.ptype = ptype;
+        break;
     case RATIONAL:
         break;
     case KERNEL:
@@ -578,6 +580,7 @@ serialize_generic_function(unsigned char * ser,
         lexp = gf->f;
         totSize += sizeof(int); // sub_type;
         serialize_lin_elem_exp(NULL,lexp, &sizef);
+        //printf("size_f = %zu\n",sizef);
         totSize += sizef;
         if (totSizeIn != NULL){
             *totSizeIn = totSize;
@@ -650,7 +653,7 @@ deserialize_generic_function(unsigned char * ser,
         ptr = deserialize_lin_elem_exp(ptr, &lexp);
 
         *gf = generic_function_alloc(dim, fc, &ptype);
-        (*gf)->f = ope;
+        (*gf)->f = lexp;
         (*gf)->fargs=NULL;
         break;    
     case RATIONAL:
@@ -2463,6 +2466,7 @@ void print_generic_function(struct GenericFunction * gf, size_t prec,void * args
         break;
     case LINELM:
         print_lin_elem_exp(gf->f,prec,args,stdout);
+        break;
     case RATIONAL:
         break;
     case KERNEL:
