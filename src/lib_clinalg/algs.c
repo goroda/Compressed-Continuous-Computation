@@ -51,7 +51,8 @@
 #include "array.h"
 #include "linalg.h"
 
-#define ZEROTHRESH 1e4*DBL_EPSILON
+#define ZEROTHRESH 1e2*DBL_EPSILON
+//#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e-14
 //#define ZEROTHRESH 1e-20
 
@@ -1841,16 +1842,19 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         //assert(fabs(val) > ZEROTHRESH); // dont deal with zero functions yet
         if (fabs(val) <= ZEROTHRESH) {
             // THIS IS STILL INCORRECT BECAUSE A CONSTANT L DOES NOT SATISFY THE REQUIRED CONDITIONS
+            // printf("here val=%G\n",val);
             if (VQMALU){
                 printf("creating any L\n");
             }
 
             if (A->funcs[kk*A->nrows]->fc == LINELM){
                 //printf("lets go!\n");
-                create_any_L_linelm(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
+                create_any_L_linelm(L->funcs+kk*L->nrows,
+                                    L->nrows,kk,piv,px,lb,ub,optargs);
             }
             else{
-                create_any_L(L->funcs+kk*L->nrows,L->nrows,kk,piv,px,lb,ub,optargs);
+                create_any_L(L->funcs+kk*L->nrows,L->nrows,
+                             kk,piv,px,lb,ub,optargs);
             }
             amind = piv[kk];
             amloc = px[kk];
@@ -1865,8 +1869,9 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         }
         else{
             generic_function_array_daxpby2(A->nrows,1.0/val, 1, 
-                                    A->funcs + kk*A->nrows, 
-                                    0.0, 1, NULL, 1, L->funcs + kk * L->nrows);
+                                           A->funcs + kk*A->nrows, 
+                                           0.0, 1, NULL, 1, 
+                                           L->funcs + kk * L->nrows);
         }
         //printf("k start here\n");
         for (ii = 0; ii < A->ncols; ii++){
@@ -2576,12 +2581,11 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     qmarray. whose elements consist of
     one dimensional functions (simple interface)
 
-    \param[in]    dir - type either "QR" or "LQ"
-    \param[in,out] A  - qmarray to triangularize (destroyed in call)
-    \param[in,out] R  - allocated space upper triangular factor
+    \param[in]     dir - type either "QR" or "LQ"
+    \param[in,out] A   - qmarray to triangularize (destroyed in call)
+    \param[in,out] R   - allocated space upper triangular factor
 
     \return Q 
-
 ***************************************************************/
 struct Qmarray *
 qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
@@ -2632,6 +2636,9 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
                                        &ptype, A->nrows, ncols,
                                        lb, ub); 
             out = qmarray_qr(A,&Q,&R);
+            //printf("R = \n");
+            //dprint2d_col(ncols,ncols,R);
+
             assert(out == 0);
         }
     }
@@ -2720,19 +2727,20 @@ int qmarray_svd(struct Qmarray * A, struct Qmarray ** U, double * lam,
     Compute the reduced svd of a quasimatrix array 
     Udiag(lam)vt = A  with every singular value greater than delta
 
-    \param A [inout] - qmarray to get SVD (destroyed)
-    \param U [inout] - qmarray with orthonormal columns
-    \param lam [inout] - singular values 
-    \param vt [inout] - matrix containing right singular vectors
-    \param delta [inout] - threshold
+    \param[in,out] A     - qmarray to get SVD (destroyed)
+    \param[in,out] U     - qmarray with orthonormal columns
+    \param[in,out] lam   - singular values 
+    \param[in,out] vt    - matrix containing right singular vectors
+    \param[in,out] delta - threshold
 
     \return rank - rank of the qmarray
     
     \note
         *U*, *lam*, and *vt* are allocated in this function
 ***************************************************************/
-size_t qmarray_truncated_svd(struct Qmarray * A, struct Qmarray ** U, 
-            double ** lam, double ** vt, double delta)
+size_t qmarray_truncated_svd(
+    struct Qmarray * A, struct Qmarray ** U, 
+    double ** lam, double ** vt, double delta)
 {
 
     //int info = 0;
@@ -2740,8 +2748,10 @@ size_t qmarray_truncated_svd(struct Qmarray * A, struct Qmarray ** U,
     struct Qmarray * temp = qmarray_householder_simple("QR",A,R);
 
     double * u = NULL;
-    size_t rank = truncated_svd(A->ncols, A->ncols, A->ncols, R, &u, lam, vt, 
-                                delta);
+    //printf("R = \n");
+    //dprint2d_col(A->ncols,A->ncols,R);
+    size_t rank = truncated_svd(A->ncols, A->ncols, A->ncols, 
+                                R, &u, lam, vt, delta);
     
     qmarray_free(*U);
     *U = qmam(temp,u,rank);
@@ -3592,7 +3602,7 @@ struct Qmarray *
 prepCore(size_t ii, size_t nrows, 
          double(*f)(double *, void *), void * args,
          struct BoundingBox * bd,
-         struct CrossIndex ** left_ind, struct CrossIndex ** right_ind, 
+         struct CrossIndex ** left_ind,struct CrossIndex ** right_ind, 
          struct FtCrossArgs * cargs, struct FtApproxArgs * fta, int t)
 {
 
@@ -4091,21 +4101,24 @@ function_train_cross(double (*f)(double *, void *), void * args,
         fapp = ft_approx_args_createpoly(dim,&ptype,NULL);
     }
     
-    //for (size_t ii = 0; ii < dim; ii++){
-    //   printf("sub_type = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
-    //    printf("2 = %d\n",*(int *)ft_approx_args_getst(fapp,ii));
-    //}
-    //printf("ranks 500 = %zu \n",fcause->ranks[500]);
     assert (dim <= 1000);
     struct CrossIndex * isl[1000];
     struct CrossIndex * isr[1000];
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-    //printf("3 = %d\n",*(int *)ft_approx_args_getst(fapp,0));
-    //printf("4 = %d\n",*(int *)ft_approx_args_getst(fapp,1));
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
-    //printf("pre rankadapt = %d\n",*(int *)ft_approx_args_getst(fapp,0));
+    
+    /* for (size_t ii = 0; ii < dim; ii++) */
+    /* { */
+    /*     printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n"); */
+    /*     printf("dim = %zu\n",ii); */
+    /*     print_cross_index(isl[ii]); */
+    /*     print_cross_index(isr[ii]); */
+    /*     printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n"); */
+    /* } */
     struct FunctionTrain * ft  = NULL;
-    ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,isr,fcause,fapp);
+    ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
+                                  isr,fcause,fapp);
+    
     
     if (xstart == NULL){
         free_dd(dim, init_x); //init_x = NULL;
@@ -4132,10 +4145,12 @@ function_train_cross(double (*f)(double *, void *), void * args,
     \param[in]     f      - function
     \param[in]     args   - function arguments
     \param[in]     bds    - bounds on input space
-    \param[in,out] ftref  - initial ftrain decomposition, changed in func
+    \param[in,out] ftref  - initial ftrain decomposition, 
+                            changed in func
     \param[in,out] isl    - left indices (first element should be NULL)
     \param[in,out] isr    - right indices (last element should be NULL)
-    \param[in]     fca    - algorithm parameters, if NULL then default paramaters used
+    \param[in]     fca    - algorithm parameters, 
+                            if NULL then default paramaters used
     \param[in]     apargs - function approximation args 
 
     \return function train decomposition of f
@@ -4161,6 +4176,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     struct FunctionTrain * ft = NULL;
 
     ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
+    if (fca->maxiteradapt == 0){
+        return ft;
+    }
     // printf("found left index\n");
     // print_cross_index(isl[1]);
     // printf("found right index\n");

@@ -262,23 +262,24 @@ void svd(size_t m, size_t n, size_t lda, double *a, double *u, double *s,
 /*************************************************************//**
     Compute the truncated singular value decomposition
 
-    \param m [in] - Number of rows of a matrix
-    \param n [in] - Number of columns of a matrixt
-    \param lda [in] - LDA (see lapack)
-    \param a [inout] - matrix in column order (FORTRAN) gets destroyed by 
-                       SVD call
-    \param u [inout] - left singular values in column order 
-    \param s [inout] - array of singular values 
-    \param vt [inout] - right singular values in column order 
-    \param delta [inout] - truncation level such that sum(s^2) <= delta
+    \param[in]     m     - Number of rows of a matrix
+    \param[in]     n     - Number of columns of a matrixt
+    \param[in]     lda   - LDA (see lapack)
+    \param[in,out] a     - matrix in column order (FORTRAN) gets 
+                           destroyed by SVD call
+    \param[in,out] u     - left singular values in column order 
+    \param[in,out] s     - array of singular values 
+    \param[in,out] vt    - right singular values in column order 
+    \param[in]     delta - truncation level such that sum(s^2) <= delta
 
     \return rank
     
     \note 
         Will never return a rank 0 approximation
 **************************************************************/
-size_t truncated_svd(size_t m, size_t n, size_t lda, double *a, double **u, 
-        double **s, double **vt, double delta)
+size_t truncated_svd(size_t m, size_t n, size_t lda, double *a, 
+                     double **u, 
+                     double **s, double **vt, double delta)
 {
     size_t numberOfSingularValues = m < n ? m:n;
     double * u_temp;
@@ -302,7 +303,8 @@ size_t truncated_svd(size_t m, size_t n, size_t lda, double *a, double **u,
     size_t ii;
     double sum = 0.0;
     size_t rank = numberOfSingularValues;
-
+    //printf("sing before ");
+    //dprint(numberOfSingularValues,s_temp);
     //for (ii = numberOfSingularValues-1; ii >= 0; ii--){
     for (ii = 0; ii < numberOfSingularValues; ii++){
         sum+=pow(s_temp[numberOfSingularValues - ii- 1],2);
@@ -310,7 +312,9 @@ size_t truncated_svd(size_t m, size_t n, size_t lda, double *a, double **u,
         if (rank == 1) break;
         rank -= 1;
     }
-    
+
+    //printf("num keep = %zu\n ",rank);
+
     *u = calloc_double(m*rank);
     memmove((*u), u_temp, rank * m * sizeof(double));
     

@@ -2748,6 +2748,66 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     free(xtest);
 }
 
+double func_not_all(double * x, void * args)
+{
+    (void)(args);
+    double out = x[1] + x[4];
+    //printf("out = %G\n",out);
+    return out;
+}
+
+void Test_ftapprox_cross_linelm2(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for linelm (2) \n");
+     
+    size_t dim = 6;
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+    size_t ii,jj,kk,ll;
+
+    struct FunctionMonitor * fm = 
+        function_monitor_initnd(func_not_all,NULL,
+                                dim,1000);
+    
+    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,NULL);
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(function_monitor_eval,fm,bds,
+                              NULL,NULL,fapp);
+    function_monitor_free(fm);
+
+    //printf("ranks = "); iprint_sz(dim+1,ft->ranks);
+    //for (size_t ii = 0; ii < dim;ii++){
+    //    print_qmarray(ft->cores[ii],0,NULL);
+    //}
+
+    //printf("finished !\n");
+    double pt[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double eval = function_train_eval(ft,pt);
+    CuAssertDblEquals(tc,0.0,eval,1e-14);
+    //printf("eval = %G\n",eval);
+    
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+    
+    bounding_box_free(bds);
+    function_train_free(ft);
+    ft_approx_args_free(fapp);
+}
+
 double sin10d(double * x, void * args){
     
     assert ( args == NULL );
@@ -2972,6 +3032,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
     SUITE_ADD_TEST(suite, Test_sin10dint);
 
     //SUITE_ADD_TEST(suite, Test_sin100dint);

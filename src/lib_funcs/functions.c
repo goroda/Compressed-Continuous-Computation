@@ -201,7 +201,8 @@ struct GenericFunction ** generic_function_array_alloc(size_t size)
     \return out - generic function
 ************************************************************/
 struct GenericFunction *
-generic_function_alloc(size_t dim, enum function_class fc, void * sub_type){
+generic_function_alloc(size_t dim, enum function_class fc, 
+                       void * sub_type){
     struct GenericFunction * out;
     if (NULL == ( out = malloc(sizeof(struct GenericFunction)))){
         fprintf(stderr, "failed to allocate for a generic function.\n");
@@ -2162,12 +2163,13 @@ generic_function_linear(double a, double offset,
     \note
     - Not super efficient because of copies
 ***************************************************************/
-void generic_function_array_orth1d_columns(struct GenericFunction ** f,
-                                           struct GenericFunction ** funcs,
-                                           enum function_class fc,
-                                           void * st, size_t nrows,
-                                           size_t ncols, double lb,
-                                           double ub)
+void 
+generic_function_array_orth1d_columns(struct GenericFunction ** f,
+                                      struct GenericFunction ** funcs,
+                                      enum function_class fc,
+                                      void * st, size_t nrows,
+                                      size_t ncols, double lb,
+                                      double ub)
 {
     
     struct Interval ob;
@@ -2211,9 +2213,9 @@ void generic_function_array_orth1d_columns(struct GenericFunction ** f,
                              function_class, sub_type, etc.
 ************************************************************/
 void 
-generic_function_array_orth(size_t n, enum function_class fc, void * st,
-                            struct GenericFunction ** gfarray, void * args)
-
+generic_function_array_orth(size_t n,enum function_class fc,void * st,
+                            struct GenericFunction ** gfarray, 
+                            void * args)
 {
     size_t ii;
     double lb, ub;

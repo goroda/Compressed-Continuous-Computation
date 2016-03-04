@@ -48,7 +48,7 @@
 #include "lib_funcs.h"
 #include "array.h"
 
-#define ZERO 1e4*DBL_EPSILON
+#define ZERO 1e2*DBL_EPSILON
 
 int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
 {
@@ -76,7 +76,7 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         V->funcs[ii] = generic_function_alloc_base(1);    
     }
 
-    double s, rho, alpha, sigma;
+    double s, rho, alpha, sigma,v;
     for (ii = 0; ii < ncols; ii++){
 //        printf("ii = %zu \n", ii);
 
@@ -86,7 +86,7 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
                                            (*Q)->funcs+ii*nrows,1,
                                            A->funcs+ii*nrows);
         
-//        printf("rho = %G\n alpha=%G\n",rho,alpha);
+        //printf("rho = %G\n alpha=%G\n",rho,alpha);
         if (fabs(alpha) < ZERO){
             alpha = 0.0;
             s = 0.0;
@@ -100,21 +100,35 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
         }
 
 //        printf("s = %G\n",s);
-        //should be able to get sigma without doing computation
+
+        for (kk = 0; kk < nrows; kk++){
+            generic_function_weighted_sum_pa(
+                rho,(*Q)->funcs[ii*nrows+kk],-1.0,
+                A->funcs[ii*nrows+kk],
+                &(V->funcs[ii*nrows+kk]));
+        }
+
+        //improve orthogonality
+        for (size_t zz = 0; zz < ii; zz++){
+            v = generic_function_inner_sum(nrows,1,
+                                           V->funcs+ii*nrows,
+                                           1, (*Q)->funcs+zz*nrows);
+            generic_function_array_axpy(nrows,-v,(*Q)->funcs+zz*nrows,
+                                    V->funcs+ii*nrows);
+        }
+
         sigma = 0.0;
         for (kk = 0; kk < nrows; kk++){
-//            printf("kk = %zu\n",kk);
-            generic_function_weighted_sum_pa(
-                rho,(*Q)->funcs[ii*nrows+kk],-1.0,A->funcs[ii*nrows+kk],
-                &(V->funcs[ii*nrows+kk]));
-//            printf("v is null? %d \n",V->funcs[ii*nrows+kk]->f == NULL);
             sigma += generic_function_inner(V->funcs[ii*nrows+kk],
                                             V->funcs[ii*nrows+kk]);
-//            printf("take innert = %zu\n",kk);
         }
-        sigma = sqrt(sigma);
 
+        sigma = sqrt(sigma);
+        // weird that this line is needed for stabilization
+        // Need to add reorthoganlization
+        //sigma = sigma + 1e-16;
         if (fabs(sigma) < ZERO){
+            //printf("less than zero sigma = %G,Zero=%G\n",sigma,ZERO);
             //V=E
             for (kk = 0; kk < nrows; kk++){
                 generic_function_free(V->funcs[ii*nrows+kk]);
@@ -125,7 +139,8 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
             }
         }
         else{
-            generic_function_array_scale(1.0/sigma,V->funcs+ii*nrows, nrows);
+            generic_function_array_scale(1.0/sigma,V->funcs+ii*nrows,
+                                         nrows);
         }
         
         //printf("start inner loop\n");
@@ -133,9 +148,10 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
                                                (*Q)->funcs+ii*nrows,1,
                                                V->funcs+ii*nrows);
         for (kk = ii+1; kk < ncols; kk++){
-            double temp = generic_function_inner_sum(nrows,1,
-                                                     V->funcs+ii*nrows,1,
-                                                     A->funcs+kk*nrows);
+            double temp = 
+                generic_function_inner_sum(nrows,1,
+                                           V->funcs+ii*nrows,1,
+                                           A->funcs+kk*nrows);
             (*R)[kk*ncols+ii]=
                 generic_function_inner_sum(nrows,1,
                                            (*Q)->funcs+ii*nrows,1,
@@ -150,8 +166,11 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
                     return 1;
                 }
                 //assert (success == 0);
-                success = generic_function_axpy(-(*R)[kk*ncols+ii],
-                        (*Q)->funcs[ii*nrows+ll],A->funcs[kk*nrows+ll]);
+                success = generic_function_axpy(
+                    -(*R)[kk*ncols+ii],
+                    (*Q)->funcs[ii*nrows+ll],
+                    A->funcs[kk*nrows+ll]);
+
                 if (success == 1){
                     return 1;
                 }
@@ -209,7 +228,7 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
         V->funcs[ii] = generic_function_alloc_base(1);    
     }
 
-    double s, rho, alpha, sigma;
+    double s, rho, alpha, sigma, v;
     for (ii = 0; ii < nrows; ii++){
         //printf("ii = %zu \n", ii);
 
@@ -229,17 +248,36 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
             }
         }
         
-        //should be able to get sigma without doing computation
-        sigma = 0.0;
         for (kk = 0; kk < ncols; kk++){
             generic_function_weighted_sum_pa(
-                rho,(*Q)->funcs[kk*nrows+ii],-1.0,A->funcs[kk*nrows+ii],
+                rho,(*Q)->funcs[kk*nrows+ii],-1.0,
+                A->funcs[kk*nrows+ii],
                 &(V->funcs[kk*nrows+ii]));
-                sigma += generic_function_inner(V->funcs[kk*nrows+ii],V->funcs[kk*nrows+ii]);
         }
-        sigma = sqrt(sigma);
 
+        //improve orthogonality
+        for (size_t zz = 0; zz < ii; zz++){
+            v = generic_function_inner_sum(ncols,nrows,
+                                           V->funcs+ii,
+                                           nrows, (*Q)->funcs+zz);
+            for (size_t ll = 0; ll < ncols; ll++){
+                generic_function_axpy(-v,(*Q)->funcs[ll*nrows+zz],
+                                      V->funcs[ll*nrows+ii]);
+            }
+        }
+
+        sigma = 0.0;
+        for (kk = 0; kk < ncols;kk++){
+            sigma += generic_function_inner(V->funcs[kk*nrows+ii],
+                                            V->funcs[kk*nrows+ii]);
+        }
+
+        sigma = sqrt(sigma);
+        // weird that this line is needed for stabilization
+        // Need to add reorthoganlization
+        //sigma = sigma + ZERO*1e-3;
         if (fabs(sigma) < ZERO){
+            //printf("less than zero sigma = %G,Zero=%G\n",sigma,ZERO);
             //V=E
             for (kk = 0; kk < ncols; kk++){
                 generic_function_free(V->funcs[kk*nrows+ii]);

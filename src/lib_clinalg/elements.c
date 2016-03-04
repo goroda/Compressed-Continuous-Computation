@@ -820,7 +820,8 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
 
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     struct Qmarray * qmtemp = qmarray_alloc(ncols,1);
-    generic_function_array_orth1d_columns(qm->funcs,qmtemp->funcs,fc,st,nrows,ncols,lb,ub);
+    generic_function_array_orth1d_columns(qm->funcs,qmtemp->funcs,
+                                          fc,st,nrows,ncols,lb,ub);
     
     qmarray_free(qmtemp); qmtemp = NULL;
     return qm;

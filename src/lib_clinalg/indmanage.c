@@ -175,7 +175,7 @@ struct CrossNode * cross_index_get_node(struct CrossIndex * c, size_t ind)
 }
 
 struct CrossIndex *
-cross_index_create_nested(int newfirst, int left, 
+cross_index_create_nested(int method, int left, 
                           size_t sizenew, size_t nopts,
                           double * newopts, struct CrossIndex * old)
 {
@@ -184,9 +184,8 @@ cross_index_create_nested(int newfirst, int left,
     size_t dold = old->d;
     struct CrossIndex * ci = cross_index_alloc(dold+1);
     
-    // add new options before reusing nodes from old
-
-    if (newfirst == 1){
+    
+    if (method == 1){ // add new options before reusing nodes from old
         struct CrossNode * oc = old->nodes;
         for (size_t ii = 0; ii < old->n; ii++){
             for (size_t jj = 0; jj < nopts; jj++){
@@ -198,7 +197,7 @@ cross_index_create_nested(int newfirst, int left,
             oc = oc->next;
         }
     }
-    else{
+    else if(method == 0){ // add old opts before reusing nodes from old
         for (size_t jj = 0; jj < nopts; jj++){
             struct CrossNode * oc = old->nodes;
             for (size_t ii = 0; ii < old->n; ii++){
@@ -210,13 +209,39 @@ cross_index_create_nested(int newfirst, int left,
             }
         }
     }
-    fprintf(stderr,"Something went wrong creating a nested index set\n");
-    cross_index_free(ci);
-    return NULL;
+    else if (method == 2){
+        assert (sizenew <= nopts);
+        if (old->n < sizenew){
+            struct CrossNode * oc = old->nodes;
+            for (size_t jj = 0; jj < old->n; jj++){
+                cross_index_add_nested(ci,left,oc->n,oc->x,newopts[jj]);
+                oc = oc->next;
+            }
+            oc = old->nodes;
+            for (size_t jj = old->n; jj < sizenew; jj++){
+                cross_index_add_nested(ci,left,oc->n,oc->x,newopts[jj]);
+            }
+        }
+        else{
+            struct CrossNode * oc = old->nodes;
+            for (size_t jj = 0; jj < sizenew; jj++){
+                cross_index_add_nested(ci,left,oc->n,oc->x,newopts[jj]);
+                oc = oc->next;
+            }
+        }
+
+    }
+    else{
+        fprintf(stderr,"Something wrong creating a nested index set\n");
+        cross_index_free(ci);
+        return NULL;
+    }
+    return ci;
 }
 
 struct CrossIndex *
-cross_index_create_nested_ind(int left, size_t sizenew, size_t * indold,
+cross_index_create_nested_ind(int left, size_t sizenew, 
+                              size_t * indold,
                               double * newx, struct CrossIndex * old)
 {
     size_t dold = old->d;
@@ -230,7 +255,8 @@ cross_index_create_nested_ind(int left, size_t sizenew, size_t * indold,
 }
 
 double **
-cross_index_merge_wspace(struct CrossIndex * left, struct CrossIndex * right)
+cross_index_merge_wspace(struct CrossIndex * left,
+                         struct CrossIndex * right)
 {
     double ** vals = NULL;
     if ( (left != NULL) && (right != NULL) ){
@@ -326,6 +352,7 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
                                   size_t * sizes, double ** vals)
 {
 
+    int newfirst = 2;
     if (allnull == 1){
         for (size_t ii = 0; ii < dim; ii++){
             ci[ii] = NULL;
@@ -344,9 +371,10 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
             ind = ind-1;
             //printf("ind = %zu size=%zu, vals = \n",ind,sizes[ind+1]);
             //dprint(sizes[ind+1],vals[ind+1]);
-            ci[ind] = cross_index_create_nested(1,1,sizes[ind+1],
-                                                sizes[ind+1],
-                                                vals[ind+1], ci[ind+1]);
+            ci[ind] = 
+                cross_index_create_nested(newfirst,1,sizes[ind+1],
+                                          sizes[ind+1],
+                                          vals[ind+1], ci[ind+1]);
             
         }
     }
