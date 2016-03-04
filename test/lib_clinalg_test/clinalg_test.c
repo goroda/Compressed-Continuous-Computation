@@ -2762,7 +2762,6 @@ void Test_ftapprox_cross_linelm2(CuTest * tc)
      
     size_t dim = 6;
     struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-    size_t ii,jj,kk,ll;
 
     struct FunctionMonitor * fm = 
         function_monitor_initnd(func_not_all,NULL,

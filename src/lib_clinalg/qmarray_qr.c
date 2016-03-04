@@ -260,9 +260,9 @@ int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L)
             v = generic_function_inner_sum(ncols,nrows,
                                            V->funcs+ii,
                                            nrows, (*Q)->funcs+zz);
-            for (size_t ll = 0; ll < ncols; ll++){
-                generic_function_axpy(-v,(*Q)->funcs[ll*nrows+zz],
-                                      V->funcs[ll*nrows+ii]);
+            for (size_t llz = 0; llz < ncols; llz++){
+                generic_function_axpy(-v,(*Q)->funcs[llz*nrows+zz],
+                                      V->funcs[llz*nrows+ii]);
             }
         }
 
