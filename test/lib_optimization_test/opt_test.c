@@ -232,19 +232,20 @@ void Test_pg_bfgs(CuTest * tc)
     double beta = 0.9;
     int verbose = 0;
     
-    double lb[2] = {-5.0,-5.0};
-    double ub[2] = {5.0,5.0};
+    double lb[2] = {-10000.0,-10000.0};
+    double ub[2] = {10000.0,10000.0};
     double start[2] = {2.0,1.0};
     double grad[2];
     double invhess[4] = {1.0,0.0,0.0,1.0};
     double space[4*2];
 
+    int res;
     double val;
     
-    int res = box_damp_bfgs(dim,lb,ub,start,&val,grad,invhess,
-                            space,rosen2d,NULL,rosen2dGrad2,
-                            tol,maxiter,maxsubiter, 
-                            alpha,beta,verbose); 
+    res = box_damp_bfgs(dim,lb,ub,start,&val,grad,invhess,
+                        space,rosen2d,NULL,rosen2dGrad2,
+                        tol,maxiter,maxsubiter,
+                        alpha,beta,verbose);
     
     CuAssertIntEquals(tc,0,res);
     CuAssertDblEquals(tc,1.0,start[0],1e-3);
@@ -259,6 +260,7 @@ void Test_pg_bfgs(CuTest * tc)
     invhess[1] = 0.0;
     invhess[2] = 0.0;
     invhess[3] = 1.0;
+
     res = box_damp_bfgs(dim,lb,ub,start,&val,grad,invhess,
                         space,quad2d,NULL,quad2dGrad2,
                         tol,maxiter,maxsubiter,
@@ -270,7 +272,6 @@ void Test_pg_bfgs(CuTest * tc)
     CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);
 
 }
-
 
 double f_grad_desc(double * x, void * args)
 {
@@ -340,6 +341,95 @@ void Test_box_grad_descent(CuTest * tc)
     CuAssertDblEquals(tc,1.0,start[0],1e-13);
     CuAssertDblEquals(tc,0.5,start[1],1e-13);
     CuAssertIntEquals(tc,0,res);
+}
+
+double c3opt_f(size_t dx, double * x,double * grad, void * args)
+{
+    (void)(args);
+    (void)(dx);
+    double out =  pow(x[0]-3.0,2.0) + pow(x[1]-2.0,2.0);
+    if (grad != NULL){
+        grad[0] = 2.0 * (x[0] - 3.0);
+        grad[1] = 2.0 * (x[1] - 2.0);        
+    }
+    return out;
+}
+
+
+double c3opt_rosen2d(size_t d, double * x, double * grad, void * args)
+{
+    (void)(args);
+    (void)(d);
+
+    double out = pow(1.0-x[0],2.0) + 
+                 100.0*pow(x[1]-pow(x[0],2.0),2.0);
+
+    if (grad != NULL){
+        grad[0] = -2.0 * (1.0 - x[0]) + 100.0 * 2.0 * (x[1] - pow(x[0],2.0)) * (-2.0 * x[0]);
+        grad[1] = 100.0 * 2.0 * (x[1] - pow(x[0],2.0));
+    }
+    return out;
+}
+
+void Test_c3opt_bfgs(CuTest * tc)
+{
+    printf("Testing Function: bfgs projected gradient with c3opt interface \n");
+    
+    size_t dim = 2;
+    size_t maxiter = 100;
+    
+    double lb[2] = {-5.0,-5.0};
+    double ub[2] = {5.0,5.0};
+    double start[2] = {2.0,1.0};
+
+    int res;
+    double val;
+
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,c3opt_f,NULL);
+    c3opt_set_verbose(opt,0);
+
+
+    res = c3opt_minimize(opt,start,&val);
+    
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,3.0,start[0],1e-3);
+    CuAssertDblEquals(tc,2.0,start[1],1e-3);
+    CuAssertDblEquals(tc,0.0,val,1e-4);
+
+
+    start[0] = 2.0;
+    start[1] = 1.0;
+    c3opt_add_objective(opt,c3opt_rosen2d,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    
+    res = c3opt_minimize(opt,start,&val);
+
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,1.0,start[0],1e-3);
+    CuAssertDblEquals(tc,1.0,start[1],1e-3);
+    CuAssertDblEquals(tc,0.0,val,1e-4);
+
+    start[0] = 1.0;
+    start[1] = -2.0;
+    ub[0] = 2.0;
+    ub[1] = 1.0;
+    c3opt_add_objective(opt,c3opt_f,NULL);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_set_verbose(opt,0);
+
+    res = c3opt_minimize(opt,start,&val);
+    
+    CuAssertIntEquals(tc,0,res);
+    CuAssertDblEquals(tc,2,start[0],1e-3);
+    CuAssertDblEquals(tc,1,start[1],1e-3);
+    CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);
+
+    c3opt_free(opt); opt = NULL;
 
 }
 
@@ -353,5 +443,6 @@ CuSuite * OptGetSuite(){
     SUITE_ADD_TEST(suite, Test_pg_bfgs);
     SUITE_ADD_TEST(suite, Test_grad_descent);
     SUITE_ADD_TEST(suite, Test_box_grad_descent);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs);
     return suite;
 }

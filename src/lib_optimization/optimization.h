@@ -35,6 +35,23 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
+
+enum c3opt_alg {NEWTON, BFGS};
+struct c3Opt;
+struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
+void c3opt_free(struct c3Opt *);
+void c3opt_add_lb(struct c3Opt *, double *);
+void c3opt_add_ub(struct c3Opt *, double *);
+void c3opt_add_objective(struct c3Opt *,
+                         double (*)(size_t, double *, double *,void *),
+                         void *);
+void c3opt_set_verbose(struct c3Opt *, int);
+void c3opt_set_maxiter(struct c3Opt *, size_t);
+int c3opt_minimize(struct c3Opt *, double *, double *);
+
+double * c3opt_get_lb(struct c3Opt *);
+double * c3opt_get_ub(struct c3Opt *);
+
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),
