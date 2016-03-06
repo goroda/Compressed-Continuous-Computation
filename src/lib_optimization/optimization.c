@@ -283,6 +283,12 @@ double c3opt_get_relftol(struct c3Opt * opt)
     return opt->relftol;
 }
 
+void c3opt_set_gtol(struct c3Opt * opt, double gtol)
+{
+    assert (opt != NULL);
+    opt->gtol = gtol;
+}
+
 double c3opt_get_gtol(struct c3Opt * opt)
 {
     assert (opt != NULL);
@@ -317,7 +323,7 @@ size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
     Add objective function
 ***************************************************************/
 void c3opt_add_objective(struct c3Opt * opt,
-                         double (*f)(size_t, double *, double *,void *),
+                         double(*f)(size_t,double *,double *,void *),
                          void * farg)
 {
     assert (opt != NULL);
@@ -333,8 +339,6 @@ double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
     double out = opt->f(opt->d,x,grad,opt->farg);
     return out;
 }
-
-
 
 /***********************************************************//**
     Backtracking Line search with projection onto box constraints
@@ -365,6 +369,7 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     size_t d = c3opt_get_d(opt);
     size_t maxiter = c3opt_ls_get_maxiter(opt);
     double absxtol = c3opt_get_absxtol(opt);
+    int verbose = c3opt_get_verbose(opt);
     
     *info = 0;
     if ((alpha <= 0.0) || (alpha >= 0.5)){
@@ -397,8 +402,10 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     do{
         if (iter >= maxiter){
             *info = 1;
-            printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
-            printf("t = %G\n",t);
+            if (verbose > 1){
+                printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
+                printf("t = %G\n",t);
+            }
             break;
         }
         else if (iter > 1){
@@ -585,6 +592,9 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                 //printf("converged gradient\n");
                 converged = 1;
             }
+            else if (diff < relftol){
+                converged = 1;
+            }
         }
         
         
@@ -594,7 +604,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
             printf("\t eta =         = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
-            printf("\t x = "); dprint(2,x);
+            //printf("\t x = "); dprint(2,x);
         }
         
     }

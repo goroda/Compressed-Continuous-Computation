@@ -108,11 +108,11 @@ struct BoundingBox * bounding_box_init(size_t dim, double lb, double ub)
 /*******************************************************//**
     Initialize a bound structure with each dimension bounded by [lb[i],ub[i]]
 
-    \param dim [in] - dimension
-    \param lb [in] - lower bounds
-    \param ub [in] - upper bounds
+    \param[in] dim - dimension
+    \param[in] lb  - lower bounds
+    \param[in] ub  - upper bounds
         
-    \return b - bounds
+    \return  bounds
 ***********************************************************/
 struct BoundingBox * bounding_box_vec(size_t dim, double * lb, double *ub)
 {
@@ -136,7 +136,7 @@ struct BoundingBox * bounding_box_vec(size_t dim, double * lb, double *ub)
 /********************************************************//**
     Free memory allocated for bounding box
 
-    \param b [inout] - bounds
+    \param[in,out] b - bounds
 ************************************************************/
 void bounding_box_free(struct BoundingBox * b)
 {
@@ -145,6 +145,22 @@ void bounding_box_free(struct BoundingBox * b)
         free(b->ub);
         free(b);
     }
+}
+
+/********************************************************//**
+    Return a reference to the lower bounds
+************************************************************/
+double * bounding_box_get_lb(struct BoundingBox * b)
+{
+    return b->lb;
+}
+
+/********************************************************//**
+    Return a reference to the upper bounds
+************************************************************/
+double * bounding_box_get_ub(struct BoundingBox * b)
+{
+    return b->ub;
 }
 
 /********************************************************//**

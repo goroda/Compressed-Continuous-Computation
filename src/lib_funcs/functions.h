@@ -81,6 +81,8 @@ struct BoundingBox * bounding_box_init_std(size_t);
 struct BoundingBox * bounding_box_init(size_t,double, double);
 struct BoundingBox * bounding_box_vec(size_t, double *, double *);
 void bounding_box_free(struct BoundingBox *);
+double * bounding_box_get_lb(struct BoundingBox *);
+double * bounding_box_get_ub(struct BoundingBox *);
 
 /** \struct GenericFunction
  * \brief Interface between the world and specific functions such as polynomials, radial

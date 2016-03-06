@@ -1079,7 +1079,6 @@ void Test_lin_elem_exp_serialize(CuTest * tc){
     double ub = 2.0;
 
     struct counter c1 = {0};
-    struct counter c2 = {0};
     size_t N1 = 10;
     double * x1 = linspace(lb,ub,N1);
     double f1[1000];
