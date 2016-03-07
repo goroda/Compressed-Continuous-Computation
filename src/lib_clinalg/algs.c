@@ -4011,6 +4011,36 @@ void ft_cross_args_init(struct FtCrossArgs * fca)
     fca->optargs = NULL;
 }
 
+struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs * fca)
+{
+    if (fca == NULL){
+        return NULL;
+    }
+    else{
+        struct FtCrossArgs * f2 = malloc(sizeof(struct FtCrossArgs));
+        assert (f2 != NULL);
+        f2->dim = fca->dim;
+        f2->ranks = calloc_size_t(fca->dim+1);
+        memmove(f2->ranks,fca->ranks,(fca->dim+1) * sizeof(size_t));
+        f2->epsilon = fca->epsilon;
+        f2->maxiter = fca->maxiter;
+        f2->epsround = fca->epsround;
+        f2->kickrank = fca->kickrank;
+        f2->maxiteradapt=fca->maxiteradapt;
+        f2->verbose = fca->verbose;
+        f2->optargs = fca->optargs;
+        return f2;
+    }
+}
+
+void ft_cross_args_free(struct FtCrossArgs * fca)
+{
+    if (fca != NULL){
+        free(fca->ranks); fca->ranks = NULL;
+        free(fca); fca = NULL;
+    }
+}
+
 /***********************************************************//**
     An interface for cross approximation of a function
 
@@ -4044,7 +4074,6 @@ function_train_cross(double (*f)(double *, void *), void * args,
     struct FtCrossArgs temp;
     struct FtApproxArgs * fapp = NULL;
     
-
     double * init_coeff = darray_val(dim,1.0/ (double) dim);
     struct FunctionTrain * ftref = 
             function_train_constant(dim, 1.0, bds, apargs);
@@ -4107,6 +4136,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
     
+    //exit(1);
     /* for (size_t ii = 0; ii < dim; ii++) */
     /* { */
     /*     printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n"); */
@@ -4352,7 +4382,7 @@ ft1d_array_cross(double (*f)(double *, size_t, void *), void * args,
                 size_t nfuncs,
                 struct BoundingBox * bds,
                 double ** xstart,
-                struct FtCrossArgs * fca,
+                struct FtCrossArgs * fcain,
                 struct FtApproxArgs * apargs)
 {   
     struct vfdata data;
@@ -4362,7 +4392,9 @@ ft1d_array_cross(double (*f)(double *, size_t, void *), void * args,
     struct FT1DArray * fta = ft1d_array_alloc(nfuncs);
     for (size_t ii = 0; ii < nfuncs; ii++){
         data.ind = ii;
+        struct FtCrossArgs * fca = ft_cross_args_copy(fcain);
         fta->ft[ii] = function_train_cross(vfunc_eval,&data,bds,xstart,fca,apargs);
+        ft_cross_args_free(fca); fca = NULL;
     }
     return fta;
 }
