@@ -271,10 +271,22 @@ size_t c3opt_get_maxiter(struct c3Opt * opt)
     return opt->maxiter;
 }
 
+void c3opt_set_absxtol(struct c3Opt * opt, double absxtol)
+{
+    assert (opt != NULL);
+    opt->absxtol = absxtol;
+}
+
 double c3opt_get_absxtol(struct c3Opt * opt)
 {
     assert (opt != NULL);
     return opt->absxtol;
+}
+
+void c3opt_set_relftol(struct c3Opt * opt, double relftol)
+{
+    assert (opt != NULL);
+    opt->relftol = relftol;
 }
 
 double c3opt_get_relftol(struct c3Opt * opt)
@@ -483,7 +495,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     /* printf("lb = "); dprint(2,lb); */
     /* printf("ub = "); dprint(2,ub); */
 
-    int ret;
+    int ret = C3OPT_SUCCESS;;
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
     if (verbose > 0){
         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);

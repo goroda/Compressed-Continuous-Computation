@@ -58,6 +58,8 @@ void c3opt_add_objective(struct c3Opt *,
                          void *);
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
+void c3opt_set_absxtol(struct c3Opt *, double);
+void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
 int c3opt_minimize(struct c3Opt *, double *, double *);
 
