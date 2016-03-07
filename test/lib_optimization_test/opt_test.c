@@ -394,11 +394,10 @@ void Test_c3opt_bfgs(CuTest * tc)
 
     res = c3opt_minimize(opt,start,&val);
     
-    CuAssertIntEquals(tc,0,res);
+    CuAssertIntEquals(tc,1,res>-1);
     CuAssertDblEquals(tc,3.0,start[0],1e-3);
     CuAssertDblEquals(tc,2.0,start[1],1e-3);
     CuAssertDblEquals(tc,0.0,val,1e-4);
-
 
     start[0] = 2.0;
     start[1] = 1.0;
@@ -408,7 +407,7 @@ void Test_c3opt_bfgs(CuTest * tc)
     
     res = c3opt_minimize(opt,start,&val);
 
-    CuAssertIntEquals(tc,0,res);
+    CuAssertIntEquals(tc,1,res>-1);
     CuAssertDblEquals(tc,1.0,start[0],1e-3);
     CuAssertDblEquals(tc,1.0,start[1],1e-3);
     CuAssertDblEquals(tc,0.0,val,1e-4);
@@ -424,7 +423,7 @@ void Test_c3opt_bfgs(CuTest * tc)
 
     res = c3opt_minimize(opt,start,&val);
     
-    CuAssertIntEquals(tc,0,res);
+    CuAssertIntEquals(tc,1,res>-1);
     CuAssertDblEquals(tc,2,start[0],1e-3);
     CuAssertDblEquals(tc,1,start[1],1e-3);
     CuAssertDblEquals(tc,quad2d(start,NULL),val,1e-14);

@@ -37,6 +37,17 @@
 
 
 enum c3opt_alg {NEWTON, BFGS};
+enum c3opt_return {
+    C3OPT_LS_PARAM_INVALID=-4,
+    C3OPT_LS_MAXITER_REACHED=-3,
+    C3OPT_X_BOUND_VIOLATED=-2,
+    C3OPT_MAXITER_REACHED=-1,
+    C3OPT_SUCCESS=0,
+    C3OPT_FTOL_REACHED=1,
+    C3OPT_XTOL_REACHED=2,
+    C3OPT_GTOL_REACHED=3
+};
+
 struct c3Opt;
 struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 void c3opt_free(struct c3Opt *);

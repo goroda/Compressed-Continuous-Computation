@@ -483,14 +483,14 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     /* printf("lb = "); dprint(2,lb); */
     /* printf("ub = "); dprint(2,ub); */
 
-    
+    int ret;
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
     if (verbose > 0){
         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);
     }
 
     if ( (eta*eta/2.0) < gtol){
-        return 0;
+        return C3OPT_GTOL_REACHED;
     }
 
     size_t iter = 1;
@@ -523,7 +523,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         /* } */
         iter += 1;
         if (iter > maxiter){
-            return 1;
+            return C3OPT_MAXITER_REACHED;
         }
 
         c3opt_eval(opt,x,workspace+2*d);
@@ -574,6 +574,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             //dprint(2,grad);
             if (diff < relftol){
                 //printf("converged close?\n");
+                ret = C3OPT_FTOL_REACHED;
                 converged = 1;
             }
             else{
@@ -582,6 +583,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                     eta += pow(x[ii]-workspace[ii],2);
                 }
                 if (eta < absxtol){
+                    ret = C3OPT_XTOL_REACHED;
                     //printf("converged xclose\n");
                     converged = 1;
                 }
@@ -589,14 +591,15 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         }
         else{
             if ( (eta*eta/2.0) < pow(gtol,2)){
+                ret = C3OPT_GTOL_REACHED;
                 //printf("converged gradient\n");
                 converged = 1;
             }
             else if (diff < relftol){
+                ret = C3OPT_FTOL_REACHED;
                 converged = 1;
             }
         }
-        
         
         if (verbose > 0){
             printf("Iteration:%zu/%zu\n",iter,maxiter);
@@ -609,7 +612,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         
     }
 
-    return 0;
+    return ret;
 }
 
 int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
