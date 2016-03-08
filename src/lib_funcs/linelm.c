@@ -622,7 +622,8 @@ double lin_elem_exp_min(struct LinElemExp * f, double * x)
     
     \return value
 *************************************************************/
-double lin_elem_exp_absmax(struct LinElemExp * f, double * x, void * optargs)
+double lin_elem_exp_absmax(struct LinElemExp * f, double * x,
+                           void * optargs)
 {
     if (optargs == NULL){
 

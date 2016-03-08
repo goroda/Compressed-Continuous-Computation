@@ -374,11 +374,11 @@ int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix of one dimensional functions (Townsend 2015)
 
-    \param A [in] - quasimatrix to decompose
-    \param L [inout] - quasimatrix representing L factor
-    \param u [inout] - allocated space for U factor
-    \param p [inout] - pivots 
-    \param[in] optargs - optimization arguments
+    \param[in]     A       - quasimatrix to decompose
+    \param[in,out] L       - quasimatrix representing L factor
+    \param[in,out] u       - allocated space for U factor
+    \param[in,out] p       - pivots 
+    \param[in]     optargs - optimization arguments
 
     \return inno
 
@@ -1733,14 +1733,22 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     // and one at piv[upto],piv[upto] less than one every else
 //    printf("creating any L!\n");
 
-    if (optargs != NULL){
-        printf("Warning: optargs is not null in create_any_L_linelm so\n");
-        printf("         might not be able to guarantee that the new px\n");
-        printf("         is going to lie on a desired node\n");
-    }
-    piv[upto] = 0;
-    px[upto] = lb + ub/(ub-lb) * randu();
 
+    struct c3Vector * optnodes = NULL;
+    piv[upto] = 0;
+    if (optargs != NULL){
+        /* printf("Warning: optargs is not null in create_any_L_linelm so\n"); */
+        /* printf("         might not be able to guarantee that the new px\n"); */
+        /* printf("         is going to lie on a desired node\n"); */
+        optnodes = optargs;
+        assert (optnodes->size > 3);
+        px[upto] = optnodes->elem[1];
+    }
+    else{
+        px[upto] = lb + ub/(ub-lb) * randu();
+    }
+
+    
     double * zeros = calloc_double(upto);
     size_t iz = 0;
     for (size_t ii = 0; ii < upto; ii++){
@@ -1753,22 +1761,32 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     }
 
     int exists = 0;
+    size_t count = 2;
     do {
         exists = 0;
+        if (optargs != NULL){
+            assert (count < optnodes->size);
+        }
         for (size_t ii = 0; ii < iz; ii++){
             if (fabs(px[ii] - px[upto]) < 1e-15){
                 exists = 1;
-                px[upto] = lb + ub/(ub-lb)*randu();
+                if (optargs != NULL){
+                    px[upto] = optnodes->elem[count];
+                }
+                else{
+                    px[upto] = lb + ub/(ub-lb) * randu();
+                }
+                count++;
                 break;
             }
         }
     }while (exists == 1);
         
-//    printf("before\n");
-//    dprint(upto,px);
-//    iprint_sz(upto,piv);
-//    printf("%G\n",px[upto]);
-//    dprint(iz,zeros);
+    /* printf("before\n"); */
+    /* dprint(upto,px); */
+    /* iprint_sz(upto,piv); */
+    /* printf("%G\n",px[upto]); */
+    /* dprint(iz,zeros); */
     L[0] = generic_function_onezero(LINELM,px[upto],iz,zeros,lb,ub);
 
     for (size_t ii = 1; ii < nrows;ii++){
@@ -2068,7 +2086,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
     qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval,optargs);
     if (VQMAMAXVOL){
-        printf("maxrow=%zu maxcol=%zu maxval=%G\n",maxrow, maxcol, maxval);
+        printf("maxx=%G,maxrow=%zu maxcol=%zu maxval=%G\n",maxx,maxrow, maxcol, maxval);
     }
     size_t maxiter = 10;
     size_t iter =0;
@@ -2096,7 +2114,10 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         qmarray_free(B); B = NULL;
         B = qmam(A,Asinv,r);
         qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2,optargs);
-
+        if (VQMAMAXVOL){
+            printf("maxx=%G,maxrow=%zu maxcol=%zu maxval=%G\n",maxx,maxrow, maxcol, maxval);
+        }
+        
         if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){
             break;
         }
@@ -2106,6 +2127,12 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         maxval = maxval2;
         //printf("maxval=%G\n",maxval);
         iter++;
+    }
+
+    if (VQMAMAXVOL){
+        printf("qmarray_maxvol indices and pivots before removing duplicates\n");
+        iprint_sz(r,pivi);
+        dprint(r,pivx);
     }
     //printf("done\n");
     //if ( r < 0){
@@ -2120,6 +2147,12 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
             }
         }
         pinv(r,r,r,U,Asinv,ZEROTHRESH);
+    }
+
+    if (VQMAMAXVOL){
+        printf("qmarray_maxvol indices and pivots after removing duplicates\n");
+        iprint_sz(r,pivi);
+        dprint(r,pivx);
     }
     //printf("done with maxval = %3.4f\n", maxval);
 
@@ -3776,6 +3809,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 printf("indices and pivots\n");
                 iprint_sz(ft->ranks[ii+1],pivind);
                 dprint(ft->ranks[ii+1],pivx);
+
             }
 
             if (info < 0){
@@ -4367,7 +4401,7 @@ double vfunc_eval(double * x, void * args)
     \param[in] bds    - bounding box 
     \param[in] xstart - location for first fibers 
                         (if null then middle of domain)
-    \param[in] fca    - cross approximation args, if NULL then 
+    \param[in] fcain  - cross approximation args, if NULL then 
                         default exists
     \param[in] apargs - function approximation arguments 
                         (if null then defaults)
