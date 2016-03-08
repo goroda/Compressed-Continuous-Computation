@@ -61,6 +61,10 @@ void c3opt_set_maxiter(struct c3Opt *, size_t);
 void c3opt_set_absxtol(struct c3Opt *, double);
 void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
+void c3opt_ls_set_alpha(struct c3Opt *,double);
+double c3opt_ls_get_alpha(struct c3Opt *);
+void c3opt_ls_set_beta(struct c3Opt *,double);
+double c3opt_ls_get_beta(struct c3Opt *);
 int c3opt_minimize(struct c3Opt *, double *, double *);
 
 double * c3opt_get_lb(struct c3Opt *);

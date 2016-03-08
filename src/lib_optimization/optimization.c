@@ -313,10 +313,22 @@ double * c3opt_get_workspace(struct c3Opt * opt)
     return opt->workspace;
 }
 
+void c3opt_ls_set_alpha(struct c3Opt * opt, double alpha)
+{
+    assert (opt != NULL);
+    c3ls_set_alpha(opt->ls,alpha);
+}
+
 double c3opt_ls_get_alpha(struct c3Opt * opt)
 {
     assert (opt != NULL);
     return c3ls_get_alpha(opt->ls);
+}
+
+void c3opt_ls_set_beta(struct c3Opt * opt, double beta)
+{
+    assert (opt != NULL);
+    c3ls_set_beta(opt->ls,beta);
 }
 
 double c3opt_ls_get_beta(struct c3Opt * opt)
@@ -324,6 +336,7 @@ double c3opt_ls_get_beta(struct c3Opt * opt)
     assert (opt != NULL);
     return c3ls_get_beta(opt->ls);
 }
+
 
 size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
 {
@@ -535,6 +548,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         /* } */
         iter += 1;
         if (iter > maxiter){
+            //printf("iter = %zu,verbose=%d\n",iter,verbose);
             return C3OPT_MAXITER_REACHED;
         }
 
@@ -580,7 +594,10 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                 break;
             }
         }
-        double diff = fabs(*fval - fvaltemp);///fabs(fvaltemp);
+        double diff = fabs(*fval - fvaltemp);
+        if (fabs(fvaltemp) > 1e-10){
+            diff /= fvaltemp;
+        }
         if (onbound == 1){
             //printf("grad = ");
             //dprint(2,grad);
@@ -619,7 +636,10 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
             printf("\t eta =         = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
-            //printf("\t x = "); dprint(2,x);
+            if (verbose > 1){
+                printf("\t x = "); dprint(d,x);
+            }
+
         }
         
     }

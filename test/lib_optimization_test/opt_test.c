@@ -373,10 +373,10 @@ double c3opt_rosen2d(size_t d, double * x, double * grad, void * args)
 
 void Test_c3opt_bfgs(CuTest * tc)
 {
-    printf("Testing Function: bfgs projected gradient with c3opt interface \n");
+    printf("Testing Function: bfgs projected gradient with c3opt interface (1)\n");
     
     size_t dim = 2;
-    size_t maxiter = 100;
+    size_t maxiter = 1000;
     
     double lb[2] = {-5.0,-5.0};
     double ub[2] = {5.0,5.0};
@@ -404,6 +404,8 @@ void Test_c3opt_bfgs(CuTest * tc)
     c3opt_add_objective(opt,c3opt_rosen2d,NULL);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,maxiter);
+    c3opt_ls_set_alpha(opt,0.2);
+    c3opt_ls_set_beta(opt,0.2);
     
     res = c3opt_minimize(opt,start,&val);
 
@@ -432,6 +434,126 @@ void Test_c3opt_bfgs(CuTest * tc)
 
 }
 
+double sum_squares(size_t dim, double * x, double * grad, void * arg)
+{
+
+    (void)(arg);
+    double ind = 1.0;
+    double out = 0.0;
+    for (size_t ii = 0; ii < dim; ii++){
+        out += (ind * pow(x[ii],2));
+        if (grad != NULL){
+            grad[ii] = ind * 2.0 * x[ii];
+        }
+        ind = ind + 1.0;
+    }
+
+    return out;
+}
+
+void Test_c3opt_bfgs2(CuTest * tc)
+{
+    printf("Testing Function: bfgs projected gradient with c3opt interface (2)\n");
+    
+    size_t dim = 5;
+    size_t maxiter = 1000;
+    
+    double lb[5];
+    double ub[5];
+    double start[5];
+    for (size_t ii = 0; ii < dim; ii++)
+    {
+        lb[ii] = -10.0;
+        ub[ii] = 10.0;
+        start[ii] = 20.0*randu()-10;
+    }
+
+    int res;
+    double val;
+
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,sum_squares,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    c3opt_set_relftol(opt,1e-15);
+    c3opt_set_gtol(opt,1e-15);
+    c3opt_ls_set_alpha(opt,0.4);
+    c3opt_ls_set_beta(opt,0.5);
+
+    res = c3opt_minimize(opt,start,&val);
+//    printf("res = %d",res);
+    CuAssertIntEquals(tc,1,res>-1);
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,0.0,start[ii],1e-7);
+    }
+    CuAssertDblEquals(tc,0.0,val,1e-7);
+}
+
+double sum_diff_powers(size_t dim, double * x, double * grad, void * arg)
+{
+
+    (void)(arg);
+    double out = 0.0;
+    int ex = 2;
+    for (size_t ii = 0; ii < dim; ii++){
+        out += pow(fabs(x[ii]),ex);
+        if (grad != NULL){
+            if (x[ii] > 0){
+                grad[ii] = (ex) * pow(x[ii],ex-1);
+            }
+            else if (x[ii] < 0)
+            {
+                grad[ii] = -(ex) * pow(-x[ii],ex-1);
+            }
+        }
+        ex = ex + 1;
+    }
+
+    return out;
+}
+
+void Test_c3opt_bfgs3(CuTest * tc)
+{
+    printf("Testing Function: bfgs projected gradient with c3opt interface (3)\n");
+    
+    size_t dim = 5;
+    size_t maxiter = 1000;
+    
+    double lb[5];
+    double ub[5];
+    double start[5];
+    for (size_t ii = 0; ii < dim; ii++)
+    {
+        lb[ii] = -1.0;
+        ub[ii] = 1.0;
+        start[ii] = 2.0*randu()-1.0;
+    }
+
+    int res;
+    double val;
+
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,sum_diff_powers,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    c3opt_set_relftol(opt,1e-13);
+    c3opt_set_gtol(opt,1e-13);
+    c3opt_ls_set_alpha(opt,0.4);
+    c3opt_ls_set_beta(opt,0.9);
+
+    res = c3opt_minimize(opt,start,&val);
+    // printf("res = %d",res);
+    CuAssertIntEquals(tc,1,res>-1);
+    for (size_t ii = 0; ii < dim; ii++){
+        //printf("ii =%zu\n",ii);
+        CuAssertDblEquals(tc,0.0,start[ii],1e-2);
+    }
+    CuAssertDblEquals(tc,0.0,val,1e-7);
+}
 
 CuSuite * OptGetSuite(){
     //printf("----------------------------\n");
@@ -443,5 +565,7 @@ CuSuite * OptGetSuite(){
     SUITE_ADD_TEST(suite, Test_grad_descent);
     SUITE_ADD_TEST(suite, Test_box_grad_descent);
     SUITE_ADD_TEST(suite, Test_c3opt_bfgs);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs2);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs3);
     return suite;
 }
