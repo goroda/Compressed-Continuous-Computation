@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,9 +33,6 @@
 
 //Code
 
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -50,8 +47,8 @@
 *     Compute trapezoidal rule weights for uniformly distributed quadrature 
 *     points
 *
-*     \param N [in] - number of elements
-*     \param h [in] - distance between  neighboring points
+*     \param[in] N - number of elements
+*     \param[in] h - distance between  neighboring points
 *   
 *     \return weights - weights of the trapezoidal rule
 *****************************************************************/
@@ -71,8 +68,8 @@ double * trap_w(size_t N, double h)
 *     Compute Simpson rule weights for uniformly distributed 
 *     quadrature points
 *
-*     \param N [in] - number of elements
-*     \param h [in] - distance between neighboring points
+*     \param[in] N - number of elements
+*     \param[in] h - distance between neighboring points
 *
 *     \return weights  - weights of the Simpson rule
 *************************************************************/
@@ -104,9 +101,9 @@ double * simpson_w(size_t N, double h)
 /***********************************************************//**
 *     Compute the points and weights of Chebyshev-Gauss quadrature
 *
-*       \param N [in] - number of elements
-*       \param pts [inout] - quadrature nodes (space already alloc)
-*       \param weights [inout] - weights (space alread alloc)
+*       \param[in]     N       - number of elements
+*       \param[in,out] pts     - quadrature nodes (space already alloc)
+*       \param[in,out] weights - weights (space alread alloc)
 *************************************************************/
 void cheb_gauss(size_t N, double * pts, double * weights){
     size_t ii;
@@ -120,9 +117,9 @@ void cheb_gauss(size_t N, double * pts, double * weights){
 /***********************************************************//**
 *     Compute the points and weights of Clenshaw-Curtis quadrature
 *              
-*     \param N [in] - number of elements
-*     \param pts [inout] - quadrature nodes (space already alloc)
-*     \param weights [inout] - weights (space alread alloc)
+*     \param[in]     N       - number of elements
+*     \param[in,out] pts     - quadrature nodes (space already alloc)
+*     \param[in,out] weights - weights (space alread alloc)
 *************************************************************/
 void clenshaw_curtis(size_t N, double * pts, double * weights){
     size_t ii, jj;
@@ -167,11 +164,11 @@ void clenshaw_curtis(size_t N, double * pts, double * weights){
 /***********************************************************//**
 *     Rescale Clenshaw-Curtis quadrature to lie between [a,b]
 *
-*       \param N [in]       - number of elements
-*       \param pts [inout] - quadrature nodes (space already alloc)
-*       \param wts [inout]   - weights (space alread alloc)
-*       \param a [in]       - lower bound
-*       \param b [in]       - upper bound
+*       \param[in]     N   - number of elements
+*       \param[in,out] pts - quadrature nodes (space already alloc)
+*       \param[in,out] wts - weights (space alread alloc)
+*       \param[in]     a   - lower bound
+*       \param[in]     b   - upper bound
 *************************************************************/
 void rescale_cc(size_t N, double * pts, double * wts, double a, double b){
     
@@ -185,9 +182,9 @@ void rescale_cc(size_t N, double * pts, double * wts, double a, double b){
 /***********************************************************//**
 *     Compute the points and weights of Fejer second rule 
 *              
-*     \param N [in] - number of elements
-*     \param pts [inout] - quadrature nodes (space already alloc)
-*     \param weights [inout] - weights (space alread alloc)
+*     \param[in]     N       - number of elements
+*     \param[in,out] pts     - quadrature nodes (space already alloc)
+*     \param[in,out] weights - weights (space alread alloc)
 *************************************************************/
 void fejer2(size_t N, double * pts, double * weights){
     if (N > 2){
@@ -209,10 +206,9 @@ void fejer2(size_t N, double * pts, double * weights){
 /***********************************************************//**
 *     Compute the points and weights of Gauss-Hermite quadrature
 *
-*     Parameters:
-*       \param N [in] - number of elements
-*       \param pts [inout] - quadrature nodes (space already alloc)
-*       \param weights [inout] - weights (space alread alloc)
+*     \param[in]     N       - number of elements
+*     \param[in,out] pts     - quadrature nodes (space already alloc)
+*     \param[in,out] weights - weights (space alread alloc)
 *************************************************************/
 void gauss_hermite(size_t N, double * pts, double * weights){
     
@@ -239,19 +235,19 @@ void gauss_hermite(size_t N, double * pts, double * weights){
     }
     
     for (ii = 0; ii < N; ii++){
-        weights[ii] = evec[ii] * evec[ii];
+        weights[ii] = evec[ii*N] * evec[ii*N] * sqrt(2*M_PI);
     }
-    free(offdiag);
-    free(evec);
-    free(work);
+    free(offdiag); offdiag = NULL;
+    free(evec); evec = NULL;
+    free(work); work = NULL;
 }
 
 /***********************************************************//**
 *     Compute the points and weights of Gauss-Legendre quadrature
 *
-*     \param N [in]       - number of elements
-*     \param pts [inout] - quadrature nodes (space already alloc)
-*     \param weights [inout]   - weights (space alread alloc)
+*     \param[in]     N       - number of elements
+*     \param[in,out] pts     - quadrature nodes (space already alloc)
+*     \param[in,out] weights - weights (space alread alloc)
 *
 *     \note
 *            Here the quadrature and the points are computed 
@@ -308,9 +304,9 @@ void gauss_legendre(size_t N, double * pts, double * weights){
             //weights[ii] = 2.0* evec[ii] * evec[ii];
             weights[ii] =  evec[ii*N] * evec[ii*N];
         }
-        free(offdiag);
-        free(evec);
-        free(work);
+        free(offdiag); offdiag = NULL;
+        free(evec); evec = NULL;
+        free(work); work = NULL;
     }
 }
 

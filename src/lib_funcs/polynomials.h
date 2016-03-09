@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -47,9 +47,9 @@
 #include <stdlib.h>
 
 /** \enum poly_type
- * contains LEGENDRE, CHEBYSHEV, STANDARD
+ * contains LEGENDRE, CHEBYSHEV, STANDARD, HERMITE
  */
-enum poly_type {LEGENDRE, CHEBYSHEV, STANDARD};
+enum poly_type {LEGENDRE, CHEBYSHEV, HERMITE, STANDARD};
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis

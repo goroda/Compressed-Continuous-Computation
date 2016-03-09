@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,19 +33,18 @@
 
 //Code
 
-/** \file lib_funcs.h
- * Groups header files of function library together
+/** \file hpoly.h
+ * Provides header files and structure definitions for functions in in hpoly.c
  */
 
 
-#ifndef LIB_ONEDFUNCS_H
-#define LIB_ONEDFUNCS_H
+#ifndef HPOLY_H
+#define HPOLY_H
 
 #include "polynomials.h"
-#include "hpoly.h"
-#include "piecewisepoly.h"
-#include "linelm.h"
-#include "functions.h"
-#include "monitoring.h"
+
+struct OrthPoly * init_hermite_poly();
+double hermite_poly_expansion_eval(struct OrthPolyExpansion *, double);
+double hermite_integrate(struct OrthPolyExpansion *);
 
 #endif

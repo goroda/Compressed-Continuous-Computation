@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 file(GLOB SRC_FILES 
     polynomials.c
     piecewisepoly.c
+    hpoly.c
     linelm.c
     functions.c
     monitoring.c)

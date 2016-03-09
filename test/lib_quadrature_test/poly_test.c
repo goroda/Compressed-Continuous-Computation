@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -32,9 +32,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
-
-
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -216,7 +213,28 @@ void Test_gauss_legendre(CuTest * tc){
     //printf("wts = "); dprint(N3, w3);
     //double p3s[4] = {sqrt(15.0 - )/5.0, 0.0, -sqrt(15.0)/5.0};
     //double w3s[4] = {5.0/9.0, 8.0/9.0, 5.0/9.0};
+}
 
+
+void Test_gauss_hermite(CuTest * tc){
+    printf("Testing function: gauss_hermite\n");
+    size_t N = 10;
+    double p1[10];
+    double w1[10];
+    
+    gauss_hermite(N,p1,w1);
+
+    /* printf("x = "); dprint(N,p1); */
+    /* printf("w = "); dprint(N,w1); */
+    double val = 0.0;
+    double val2 = 0.0;
+    for (size_t ii = 0; ii < N; ii++){
+        val += w1[ii]*p1[ii]*p1[ii]*p1[ii];
+        val2 += w1[ii]*p1[ii]*p1[ii];
+    }
+
+    CuAssertDblEquals(tc,0.0, val, 1e-14);
+    CuAssertDblEquals(tc,sqrt(2*M_PI), val2, 1e-14);
 
 }
 
@@ -228,7 +246,8 @@ CuSuite * QuadGetSuite(){
     SUITE_ADD_TEST(suite, Test_clenshaw_curtis);
     SUITE_ADD_TEST(suite, Test_fejer_nestedness);
     SUITE_ADD_TEST(suite, Test_fejer2);
-    //SUITE_ADD_TEST(suite, Test_gauss_legendre);
+    SUITE_ADD_TEST(suite, Test_gauss_legendre);
+    SUITE_ADD_TEST(suite, Test_gauss_hermite);
     return suite;
 }
 
