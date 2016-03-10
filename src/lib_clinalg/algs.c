@@ -3239,7 +3239,8 @@ struct FunctionTrain * function_train_afpb(double a, double b,
 {
     struct BoundingBox * bds = function_train_bds(f);
 
-    struct FunctionTrain * off = function_train_constant(f->dim,b,bds,NULL);
+    struct FunctionTrain * off = function_train_constant(POLYNOMIAL,LEGENDRE,
+                                                         f->dim,b,bds,NULL);
     struct FunctionTrain * af = function_train_copy(f);
     function_train_scale(af,a);
 
@@ -4109,8 +4110,6 @@ function_train_cross(double (*f)(double *, void *), void * args,
     struct FtApproxArgs * fapp = NULL;
     
     double * init_coeff = darray_val(dim,1.0/ (double) dim);
-    struct FunctionTrain * ftref = 
-            function_train_constant(dim, 1.0, bds, apargs);
     
     size_t ii;
 
@@ -4169,6 +4168,9 @@ function_train_cross(double (*f)(double *, void *), void * args,
     struct CrossIndex * isr[1000];
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
+
+    struct FunctionTrain * ftref = 
+        function_train_constant_d(fapp,1.0, bds);
     
     //exit(1);
     /* for (size_t ii = 0; ii < dim; ii++) */
@@ -4506,14 +4508,9 @@ void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
 {
 
     size_t ii;
-    if (y == NULL){
-        struct BoundingBox * bds = function_train_bds(x);
-        y = function_train_constant(x->dim,0.0, bds,NULL);
-        bounding_box_free(bds);
-    }
-    else{
-        function_train_scale(y,beta);
-    }
+    assert (y != NULL);
+    function_train_scale(y,beta);
+    
 
     if (epsilon > 0){
         struct FunctionTrain * runinit = function_train_product(A->ft[0],x);
@@ -4574,15 +4571,8 @@ void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,
                 size_t incx, double * y, size_t incy, double beta,
                 struct FunctionTrain ** z, double epsilon)
 {
-    if (*z == NULL)
-    {
-        struct BoundingBox * bds = function_train_bds(x->ft[0]);
-        *z = function_train_constant(x->ft[0]->dim,0.0, bds,NULL);
-        bounding_box_free(bds); bds = NULL;
-    }
-    else{
-        function_train_scale(*z,beta);
-    }
+    assert (*z != NULL);
+    function_train_scale(*z,beta);
 
     size_t ii;
     for (ii = 0; ii < n; ii++){
@@ -4605,16 +4595,9 @@ void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
                 struct FT1DArray * y, size_t incy, double beta,
                 struct FunctionTrain ** z, double epsilon)
 {
-    if (*z == NULL)
-    {
-        struct BoundingBox * bds = function_train_bds(x->ft[0]);
-        *z = function_train_constant(x->ft[0]->dim,0.0, bds,NULL);
-        bounding_box_free(bds); bds = NULL;
-    }
-    else{
-        function_train_scale(*z,beta);
-    }
-    
+    assert (*z != NULL);
+    function_train_scale(*z,beta);
+        
     size_t ii;
 
     if (epsilon > 0){
@@ -4663,19 +4646,9 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
 {
 
     size_t ii;
-    if (*y == NULL){
-        *y = ft1d_array_alloc(m);
-        assert (incy == 1);
-        struct BoundingBox * bds = function_train_bds(x->ft[0]);
-        for (ii = 0; ii < m; ii++){
-            (*y)->ft[ii] = function_train_constant(bds->dim,0.0, bds,NULL);
-        }
-        bounding_box_free(bds);
-    }
-    else{
-        ft1d_array_scale(*y,m,incy,beta);
-    }
-
+    assert (*y != NULL);
+    ft1d_array_scale(*y,m,incy,beta);
+    
     struct FT1DArray * run = ft1d_array_alloc(m); 
     for (ii = 0; ii < m; ii++){
         struct FT1DArray ftatemp;
@@ -4703,19 +4676,9 @@ void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
         struct FT1DArray ** y, size_t incy, double epsilon)
 {
     size_t ii;
-    if (*y == NULL){
-        assert(incy == 1);
-        *y = ft1d_array_alloc(m);
-        struct BoundingBox * bds = function_train_bds(B->ft[0]);
-        for (ii = 0; ii < m; ii++){
-            (*y)->ft[ii] = function_train_constant(bds->dim,0.0, bds,NULL);
-        }
-        bounding_box_free(bds);
-    }
-    else{
-        ft1d_array_scale(*y,m,incy,beta);
-    }
-    
+    assert (*y != NULL);
+    ft1d_array_scale(*y,m,incy,beta);
+        
     if (trans == 0){
         for (ii = 0; ii < m; ii++){
             c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon);

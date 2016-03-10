@@ -1009,7 +1009,8 @@ void Test_qmarray_qr1(CuTest * tc)
     size_t r2 = 7;
     size_t maxorder = 10;
 
-    struct Qmarray * A = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2,
+                                            maxorder,lb,ub);
     struct Qmarray * Acopy = qmarray_copy(A);
 
     struct Qmarray * Q = NULL;
@@ -1062,7 +1063,9 @@ void Test_qmarray_qr2(CuTest * tc)
     size_t r2 = 5;
     size_t maxorder = 10;
 
-    struct Qmarray * A = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,
+                                            r1,r2,maxorder,
+                                            lb,ub);
     struct Qmarray * Acopy = qmarray_copy(A);
 
     struct Qmarray * Q = NULL;
@@ -1168,7 +1171,8 @@ void Test_qmarray_lq(CuTest * tc)
     size_t r2 = 7;
     size_t maxorder = 10;
 
-    struct Qmarray * A = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2,
+                                            maxorder,lb,ub);
     struct Qmarray * Acopy = qmarray_copy(A);
 
     struct Qmarray * Q = NULL;
@@ -1983,7 +1987,8 @@ void Test_function_train_linear(CuTest * tc)
     struct BoundingBox * bounds = bounding_box_init_std(3);
 
     double coeffs[3] = {1.0, 2.0, 3.0};
-    struct FunctionTrain * f =function_train_linear(3, bounds, coeffs,NULL);
+    struct FunctionTrain * f =function_train_linear(POLYNOMIAL,LEGENDRE,3,
+                                                    bounds, coeffs,NULL);
     
     double pt[3] = { -0.1, 0.4, 0.2 };
     double eval = function_train_eval(f,pt);
@@ -2017,7 +2022,8 @@ void Test_function_train_quadratic(CuTest * tc)
             quad[ii*dim+jj] = randu();
         }
     }
-    struct FunctionTrain * f = function_train_quadratic(dim, bounds, quad,
+    struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,LEGENDRE,dim,
+                                                        bounds, quad,
                                                         coeff,NULL);
     size_t N = 10;
     double * xtest = linspace(lb,ub,N);
@@ -2066,7 +2072,9 @@ void Test_function_train_quadratic2(CuTest * tc)
             quad[ii*dim+jj] = randu();
         }
     }
-    struct FunctionTrain * f = function_train_quadratic(dim, bounds, quad,coeff,NULL);
+    enum poly_type ptype = LEGENDRE;
+    struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,&ptype,dim,
+                                                        bounds, quad,coeff,NULL);
     size_t N = 10;
     double * xtest = linspace(lb,ub,N);
     double * pt = calloc_double(dim);
@@ -2107,11 +2115,15 @@ void Test_function_train_sum_function_train_round(CuTest * tc)
     
     struct BoundingBox * bounds = bounding_box_init_std(3);
 
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
     double coeffs[3] = {1.0, 2.0, 3.0};
-    struct FunctionTrain * a =function_train_linear(3, bounds, coeffs,NULL);
+    struct FunctionTrain * a =
+        function_train_linear(fc,&ptype,3,bounds,coeffs,NULL);
 
     double coeffsb[3] = {1.5, -0.2, 3.310};
-    struct FunctionTrain * b = function_train_linear(3,bounds,coeffsb,NULL);
+    struct FunctionTrain * b = 
+        function_train_linear(fc,&ptype,3,bounds,coeffsb,NULL);
     
     struct FunctionTrain * c = function_train_sum(a,b);
     CuAssertIntEquals(tc,1,c->ranks[0]);
@@ -2521,8 +2533,10 @@ void Test_ftapprox_cross3(CuTest * tc)
     double coeffs[2] = {0.5, 0.5};
     size_t ranks[3] = {1, 2, 1};
 
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
     struct FunctionTrain * ftref = 
-            function_train_linear(dim, bds, coeffs,NULL);
+        function_train_linear(fc,&ptype,dim, bds, coeffs,NULL);
             
     struct FunctionMonitor * fm = 
             function_monitor_initnd(disc2d,NULL,dim,1000*dim);
@@ -2558,7 +2572,6 @@ void Test_ftapprox_cross3(CuTest * tc)
     aopts.nregions = 5;
     aopts.pts = NULL;
 
-    enum poly_type ptype = LEGENDRE;
     struct FtApproxArgs * fapp = 
        ft_approx_args_createpwpoly(dim,&ptype,&aopts);
 
@@ -2860,7 +2873,9 @@ void Test_sin10dint(CuTest * tc)
     //print_index_set_array(dim,isl);
 
     double coeffs[10] = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.4, 0.3, 0.2, 1.0};
-    struct FunctionTrain * ftref =function_train_linear(dim, bds, coeffs,NULL);
+    enum function_class fc = POLYNOMIAL;
+    struct FunctionTrain * ftref = 
+        function_train_linear(fc,&ptype,dim, bds, coeffs,NULL);
 
 
     struct FunctionTrain * ft = ftapprox_cross(sin10d,NULL,bds,ftref,
@@ -3331,8 +3346,10 @@ void Test_fast_mat_kron(CuTest * tc)
     size_t k = 5;
     double diff; 
     
-    struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat1 = qmarray_poly_randu(LEGENDRE,r11,r12,
+                                               maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
 
     double * mat = drandu(k*r11*r21);
 
@@ -3365,8 +3382,10 @@ void Test_fast_kron_mat(CuTest * tc)
     size_t k = 2;
     double diff; 
     
-    struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat1 = 
+        qmarray_poly_randu(LEGENDRE,r11,r12,maxorder,lb,ub);
+    struct Qmarray * mat2 = 
+        qmarray_poly_randu(LEGENDRE,r21,r22,maxorder,lb,ub);
 
     double * mat = drandu(k*r12*r22);
 
@@ -3411,9 +3430,11 @@ void Test_block_kron_mat1(CuTest * tc)
     for (ii = 0; ii < nblocks; ii++){
         sum_rl1 += rl1[ii];
         sum_rl2 += rl2[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl1*r21);
 
     struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
@@ -3479,9 +3500,10 @@ void Test_block_kron_mat2(CuTest * tc)
     size_t ii;
     for (ii = 0; ii < nblocks; ii++){
         sum_rl2 += rl2[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl1*r21);
 
     struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
@@ -3547,9 +3569,11 @@ void Test_block_kron_mat3(CuTest * tc)
     size_t ii;
     for (ii = 0; ii < nblocks; ii++){
         sum_rl1 += rl1[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl1*r21);
 
     struct Qmarray * is = qmarray_alloc(k, sum_rl2 * r22);
@@ -3606,9 +3630,11 @@ void Test_block_kron_mat4(CuTest * tc)
     for (ii = 0; ii < nblocks; ii++){
         sum_rl1 += rl1[ii];
         sum_rl2 += rl2[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl2*r22);
 
     struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
@@ -3675,9 +3701,11 @@ void Test_block_kron_mat5(CuTest * tc)
     size_t ii;
     for (ii = 0; ii < nblocks; ii++){
         sum_rl2 += rl2[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl2*r22);
 
     struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
@@ -3742,9 +3770,11 @@ void Test_block_kron_mat6(CuTest * tc)
     size_t ii;
     for (ii = 0; ii < nblocks; ii++){
         sum_rl1 += rl1[ii];
-        mat1[ii] = qmarray_poly_randu(rl1[ii],rl2[ii],maxorder,lb,ub);
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
     }
-    struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
     double * mat = drandu(k*sum_rl2*r22);
 
     struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
@@ -3798,7 +3828,10 @@ void Test_dmrg_prod(CuTest * tc)
     struct FunctionTrain * fcopy = function_train_copy(ft);
     struct FunctionTrain * rounded = function_train_round(ft,1e-12);
 
-    struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
+    struct FunctionTrain * start = 
+        function_train_constant(fc,&ptype,dim,1.0,bds,NULL);
     struct FunctionTrain * finish = dmrg_product(start,a,a,1e-10,10,1e-12,0);
 
     double diff = function_train_relnorm2diff(finish,fcopy);
@@ -3846,10 +3879,12 @@ void Test_diffusion_midleft(CuTest * tc)
     size_t r = 8;
     double diff; 
     
-    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * a = qmarray_poly_randu(LEGENDRE,r11,r12,
+                                            maxorder,lb,ub);
     struct Qmarray * da = qmarray_deriv(a);
 
-    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * f = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                            maxorder,lb,ub);
     struct Qmarray * df = qmarray_deriv(f);
     struct Qmarray * ddf = qmarray_deriv(df);
  
@@ -3861,7 +3896,8 @@ void Test_diffusion_midleft(CuTest * tc)
 
     qmarray_axpy(1.0,af2a, af2b);
 
-    struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+    struct Qmarray * zer = qmarray_zeros(LEGENDRE,af->nrows,
+                                         af->ncols,lb,ub);
     struct Qmarray * c1 = qmarray_stackv(af,af2b);
     struct Qmarray * c2 = qmarray_stackv(zer,af);
     struct Qmarray * comb = qmarray_stackh(c1,c2);
@@ -3915,10 +3951,12 @@ void Test_diffusion_lastleft(CuTest * tc)
     size_t r = 8;
     double diff; 
     
-    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * a = qmarray_poly_randu(LEGENDRE,r11,r12,
+                                            maxorder,lb,ub);
     struct Qmarray * da = qmarray_deriv(a);
 
-    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * f = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                            maxorder,lb,ub);
     struct Qmarray * df = qmarray_deriv(f);
     struct Qmarray * ddf = qmarray_deriv(df);
  
@@ -3976,10 +4014,10 @@ void Test_diffusion_midright(CuTest * tc)
     size_t r = 8;
     double diff; 
     
-    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * a = qmarray_poly_randu(LEGENDRE,r11,r12,maxorder,lb,ub);
     struct Qmarray * da = qmarray_deriv(a);
 
-    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * f = qmarray_poly_randu(LEGENDRE,r21,r22,maxorder,lb,ub);
     struct Qmarray * df = qmarray_deriv(f);
     struct Qmarray * ddf = qmarray_deriv(df);
  
@@ -3990,7 +4028,7 @@ void Test_diffusion_midright(CuTest * tc)
     struct Qmarray * af2b = qmarray_kron(a,ddf);
     qmarray_axpy(1.0,af2a, af2b);
 
-    struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+    struct Qmarray * zer = qmarray_zeros(LEGENDRE,af->nrows,af->ncols,lb,ub);
     struct Qmarray * c1 = qmarray_stackv(af,af2b);
     struct Qmarray * c2 = qmarray_stackv(zer,af);
     struct Qmarray * comb = qmarray_stackh(c1,c2);
@@ -4044,10 +4082,10 @@ void Test_diffusion_firstright(CuTest * tc)
     size_t r = 6;
     double diff; 
     
-    struct Qmarray * a = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
+    struct Qmarray * a = qmarray_poly_randu(LEGENDRE,r11,r12,maxorder,lb,ub);
     struct Qmarray * da = qmarray_deriv(a);
 
-    struct Qmarray * f = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+    struct Qmarray * f = qmarray_poly_randu(LEGENDRE,r21,r22,maxorder,lb,ub);
     struct Qmarray * df = qmarray_deriv(f);
     struct Qmarray * ddf = qmarray_deriv(df);
  
@@ -4102,7 +4140,7 @@ void Test_diffusion_op_struct(CuTest * tc)
     struct FunctionTrain * f = 
         function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
     struct FunctionTrain * a = 
-        function_train_poly_randu(bds,ranks,maxorder);
+        function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     struct FT1DArray * fgrad = function_train_gradient(f);
    
@@ -4159,7 +4197,8 @@ void Test_diffusion_op_struct(CuTest * tc)
             struct Qmarray * dadf = qmarray_kron(da[ii],df[ii]);
             qmarray_axpy(1.0,addf,dadf);
             struct Qmarray * af = qmarray_kron(a->cores[ii],f->cores[ii]);
-            struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+            struct Qmarray * zer = qmarray_zeros(LEGENDRE,af->nrows,af->ncols,
+                                                 lb,ub);
             struct Qmarray * l3l1 = qmarray_stackv(af,dadf);
             struct Qmarray * zl3 = qmarray_stackv(zer,af);
             is->cores[ii] = qmarray_stackh(l3l1,zl3);
@@ -4216,7 +4255,8 @@ void Test_diffusion_dmrg(CuTest * tc)
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
 
     struct FunctionTrain * f = function_train_cross(funcCheck2,NULL,bds,NULL,NULL,NULL);
-    struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,
+                                                         maxorder);
 
     struct FunctionTrain * is = dmrg_diffusion(a,f,1e-5,5,1e-10,0);
     struct FunctionTrain * shouldbe = exact_diffusion(a,f);

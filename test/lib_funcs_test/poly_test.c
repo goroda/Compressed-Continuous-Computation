@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -1082,7 +1082,53 @@ void Test_hermite_axpy(CuTest * tc){
     FREE_CHEB(cpoly2);
 }
 
+void Test_hermite_linear(CuTest * tc){
 
+    printf("Testing function: orth_poly_expansion_quadratic with hermite poly \n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+
+    struct OrthPolyExpansion * poly = NULL;
+    double a = 2.0;
+    double offset = 3.0;
+    poly = orth_poly_expansion_linear(a,offset,HERMITE,lb,ub);
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(poly,pts[ii]);
+        double eval2 = a*pts[ii] + offset;
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-7);
+    }
+
+    free(pts); pts = NULL;
+    orth_poly_expansion_free(poly);
+}
+
+void Test_hermite_quadratic(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_quadratic with hermite poly \n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+
+    struct OrthPolyExpansion * poly = NULL;
+    double a = 2.0;
+    double offset = 3.0;
+    poly = orth_poly_expansion_quadratic(a,offset,HERMITE,lb,ub);
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(poly,pts[ii]);
+        double eval2 = a*pow(pts[ii] - offset,2);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-7);
+    }
+
+    free(pts); pts = NULL;
+    orth_poly_expansion_free(poly);
+}
     
 CuSuite * HermGetSuite(){
 
@@ -1098,6 +1144,8 @@ CuSuite * HermGetSuite(){
     SUITE_ADD_TEST(suite, Test_hermite_norm);
     SUITE_ADD_TEST(suite, Test_hermite_product);
     SUITE_ADD_TEST(suite, Test_hermite_axpy);
+    SUITE_ADD_TEST(suite, Test_hermite_linear);
+    SUITE_ADD_TEST(suite, Test_hermite_quadratic);
 
     return suite;
 }
@@ -1485,8 +1533,9 @@ void Test_lin_elem_exp_serialize(CuTest * tc){
     for (size_t ii = 0; ii < N1; ii++){
         f1[ii] = func3(x1[ii],&c1);
     }
-    struct LinElemExp * pl = lin_elem_exp_init(N1,x1,f1);
 
+    struct LinElemExp * pl = lin_elem_exp_init(N1,x1,f1);
+    free(x1); x1 = NULL;
     //print_lin_elem_exp(pl,4,NULL,stdout);
       
     unsigned char * text = NULL;

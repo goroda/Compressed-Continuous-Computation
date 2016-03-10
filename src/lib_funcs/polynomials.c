@@ -761,7 +761,8 @@ orth_poly_expansion_constant(double a, enum poly_type ptype, double lb,
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, double lb, 
+orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, 
+                           double lb, 
                            double ub)
 {
     struct OrthPolyExpansion * p = 
@@ -775,6 +776,10 @@ orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, double
         //printf("mycalc[0] = %G\n",offset-a/m*off);
         p->coeff[1] = a/m;
         p->coeff[0] = offset-off*p->coeff[1];
+    }
+    else if (ptype == HERMITE){
+        p->coeff[0] = offset;
+        p->coeff[1] = a;
     }
     else{
         struct lin_func lf;
@@ -792,17 +797,17 @@ orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, double
 *   Generate a linear orthonormal polynomial expansion
     a * (x-offset)^2
 *
-*   \param a [in] - value of the slope function
-*   \param offset [in] - offset
-*   \param ptype [in] - type of polynomial
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] a      - value of the slope function
+*   \param[in] offset - offset
+*   \param[in] ptype  - type of polynomial
+*   \param[in] lb     - lower bound
+*   \param[in] ub     - upper bound
 *
-*   \return p - orthogonal polynomial expansion
+*   \return quadratic polynomial
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, double lb, 
-                                double ub)
+orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, 
+                              double lb, double ub)
 {
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(ptype, 3, lb, ub);
@@ -814,6 +819,11 @@ orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, dou
         p->coeff[2] = 2.0*a/3.0/m/m;
         p->coeff[1] = (-2.0 * a * offset - (3.0 *m * off * p->coeff[2]))/m;
         p->coeff[0] = (a*offset*offset - p->coeff[2]/2.0*(3*off*off-1.0) - p->coeff[1] * off);
+    }
+    else if(ptype == HERMITE){
+        p->coeff[0]= a*offset*offset+a;
+        p->coeff[1] = -2.0*a*offset;
+        p->coeff[2] = a;
     }
     else{
         struct quad_func qf;

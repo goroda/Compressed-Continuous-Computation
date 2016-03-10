@@ -136,8 +136,9 @@ struct Qmarray {
 };
 
 struct Qmarray * qmarray_alloc(size_t, size_t); 
-struct Qmarray * qmarray_zeros(size_t, size_t,double,double);
-struct Qmarray * qmarray_poly_randu(size_t, size_t, size_t, double, double);
+struct Qmarray * qmarray_zeros(enum poly_type,size_t, size_t,double,double);
+struct Qmarray * 
+qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
 struct Qmarray * qmarray_copy(struct Qmarray *);
 void qmarray_free(struct Qmarray *); 
 
@@ -247,7 +248,7 @@ struct FunctionTrain * function_train_copy(struct FunctionTrain *);
 void function_train_free(struct FunctionTrain *);
 
 struct FunctionTrain *
-function_train_poly_randu(struct BoundingBox *, size_t *, size_t);
+function_train_poly_randu(enum poly_type,struct BoundingBox *, size_t *, size_t);
 
 struct FunctionTrain * function_train_initsum(size_t, 
         double (**)(double, void *), void **, struct BoundingBox *,
@@ -261,24 +262,27 @@ struct FunctionTrain *
 function_train_rankone(size_t,  double (*)(double, size_t, void *), 
         void *, struct BoundingBox *, struct FtApproxArgs *);
 
-
-
 struct FunctionTrain * 
 function_train_linear2(size_t, struct BoundingBox *, 
         double *, size_t, double *, size_t,struct FtApproxArgs *);
 
 struct FunctionTrain * 
-function_train_constant(size_t, double, struct BoundingBox *,  
-                        struct FtApproxArgs *);
-
-struct FunctionTrain * function_train_linear(size_t, struct BoundingBox *,
-                    double *, struct FtApproxArgs * ); 
-
-struct FunctionTrain * function_train_quadratic(size_t, struct BoundingBox *,
-                    double *, double *, struct FtApproxArgs * ); 
+function_train_constant(enum function_class, void *,
+                        size_t, double, struct BoundingBox *,void*);
 struct FunctionTrain * 
-function_train_quadratic_aligned(struct BoundingBox *, double *, 
-                                 double *, struct FtApproxArgs *);
+function_train_constant_d(struct FtApproxArgs *,double,
+                          struct BoundingBox *);                      
+struct FunctionTrain * 
+function_train_linear(enum function_class, void *,size_t, struct BoundingBox *,
+                      double *, void* ); 
+
+struct FunctionTrain * 
+function_train_quadratic(enum function_class, void *,size_t, struct BoundingBox *,
+                         double *, double *,void *); 
+struct FunctionTrain * 
+function_train_quadratic_aligned(enum function_class, void *,
+                                 struct BoundingBox *, double *, 
+                                 double *, void *);
 
 unsigned char * 
 function_train_serialize(unsigned char *, struct FunctionTrain *, size_t *);

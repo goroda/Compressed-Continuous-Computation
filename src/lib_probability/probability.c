@@ -1341,7 +1341,8 @@ struct Likelihood * likelihood_linear_regression(size_t dim, size_t N,
     pt[0] = 1.0;
     for (ii = 0; ii < N; ii++){
         memmove(pt+1,covariates + ii*dim,dim*sizeof(double));    
-        meanfunc->ft[ii] = function_train_linear(dim+1,bds,pt,NULL);
+        meanfunc->ft[ii] = 
+            function_train_linear(POLYNOMIAL,LEGENDRE,dim+1,bds,pt,NULL);
     }
 
     struct Likelihood * like = 

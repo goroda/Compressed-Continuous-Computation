@@ -96,7 +96,8 @@ int main( void )
                 ft_approx_args_createpoly(dim,&ptype,&ao);
 
             struct FunctionTrain * ftref = 
-                    function_train_linear(dim, bds, coeffs,NULL);
+                function_train_linear(POLYNOMIAL,LEGENDRE,dim,
+                                      bds, coeffs,NULL);
             
             struct FunctionMonitor * fm = 
                     function_monitor_initnd(sinsum,&dim,dim,1000*dim);

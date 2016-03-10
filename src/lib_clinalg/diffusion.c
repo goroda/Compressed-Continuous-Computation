@@ -446,13 +446,14 @@ struct FunctionTrain * exact_diffusion(
     qmarray_free(l3); l3 = NULL;
     
     for (ii = 1; ii < dim-1; ii++){
+        enum poly_type ptype = LEGENDRE;
         double lb = generic_function_get_lower_bound(f->cores[ii]->funcs[0]);
         double ub = generic_function_get_upper_bound(f->cores[ii]->funcs[0]);
         struct Qmarray * addf = qmarray_kron(a->cores[ii],ddf[ii]);
         struct Qmarray * dadf = qmarray_kron(da[ii],df[ii]);
         qmarray_axpy(1.0,addf,dadf);
         struct Qmarray * af = qmarray_kron(a->cores[ii],f->cores[ii]);
-        struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,lb,ub);
+        struct Qmarray * zer = qmarray_zeros(ptype,af->nrows,af->ncols,lb,ub);
         struct Qmarray * l3l1 = qmarray_stackv(af,dadf);
         struct Qmarray * zl3 = qmarray_stackv(zer,af);
         out->cores[ii] = qmarray_stackh(l3l1,zl3);

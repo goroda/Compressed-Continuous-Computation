@@ -122,7 +122,7 @@ struct GenericFunction * generic_function_approximate1d(
                 double (*f)(double,void *), void *, enum function_class, 
                 void *, double lb, double ub, void *);
 struct GenericFunction * 
-generic_function_poly_randu(size_t, double, double);
+generic_function_poly_randu(enum poly_type,size_t, double, double);
 
 struct GenericFunction * generic_function_copy(struct GenericFunction *);
 void generic_function_copy_pa(struct GenericFunction *, struct GenericFunction *);

@@ -28,7 +28,7 @@ int main( void )
                 quad[ii*dim+jj] = randu();
             }
         }
-        struct FunctionTrain * f = function_train_quadratic(dim, bounds, quad,coeff,NULL);
+        struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,LEGENDRE,dim, bounds, quad,coeff,NULL);
         struct FunctionTrain * fr = function_train_round(f,1e-8);
         
         size_t maxrank = fr->ranks[1];

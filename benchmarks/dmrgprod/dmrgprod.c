@@ -21,7 +21,9 @@ int main(int argc, char * argv[])
        printf("\t \"2\": time vs r comparison for just dmrg\n");
        return 0;
     }
-    
+
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;    
     if (strcmp(argv[1],"0") == 0){
         size_t dim = 4;
         struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
@@ -47,10 +49,13 @@ int main(int argc, char * argv[])
             double time2 = 0.0;
             double mrank = 0.0;
             size_t ii;
+            
             for (ii = 0; ii < nrepeat; ii++){
 
-                struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
-                struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+                struct FunctionTrain * a = NULL;
+                a = function_train_poly_randu(ptype,bds,ranks,maxorder);
+                struct FunctionTrain * start = NULL;
+                a = function_train_constant(fc,&ptype,dim,1.0,bds,NULL);
 
                 clock_t tic = clock();
                 struct FunctionTrain * at = function_train_product(a,a);
@@ -99,8 +104,11 @@ int main(int argc, char * argv[])
         size_t ranks[5] = {1,15,15,15,1};
         size_t maxorder = 10;
 
-        struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
-        struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+
+        struct FunctionTrain * a = function_train_poly_randu(ptype,bds,ranks,
+                                                             maxorder);
+        struct FunctionTrain * start = function_train_constant(fc,&ptype,dim,1.0,
+                                                               bds,NULL);
 
         clock_t tic = clock();
         struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
@@ -138,8 +146,10 @@ int main(int argc, char * argv[])
             size_t ii;
             for (ii = 0; ii < nrepeat; ii++){
 
-                struct FunctionTrain * a = function_train_poly_randu(bds,ranks,maxorder);
-                struct FunctionTrain * start = function_train_constant(dim,1.0,bds,NULL);
+                struct FunctionTrain * a = NULL;
+                a = function_train_poly_randu(ptype,bds,ranks,maxorder);
+                struct FunctionTrain * start = NULL;
+                start = function_train_constant(fc,&ptype,dim,1.0,bds,NULL);
 
                 clock_t tic = clock();
                 struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);

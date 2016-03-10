@@ -46,8 +46,12 @@ int main(int argc, char * argv[])
             
             for (jj = 0; jj < nrepeats; jj++){
                 double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+                struct Qmarray * mat1 = 
+                    qmarray_poly_randu(LEGENDRE,r11,r12,
+                                       maxorder,lb,ub);
+                struct Qmarray * mat2 = 
+                    qmarray_poly_randu(LEGENDRE,r21,r22,
+                                       maxorder,lb,ub);
             
 
                 // method 1
@@ -93,8 +97,12 @@ int main(int argc, char * argv[])
             
             for (jj = 0; jj < nrepeats; jj++){
                 double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+                struct Qmarray * mat1 = 
+                    qmarray_poly_randu(LEGENDRE,r11,r12,
+                                       maxorder,lb,ub);
+                struct Qmarray * mat2 = 
+                    qmarray_poly_randu(LEGENDRE,r21,r22,
+                                       maxorder,lb,ub);
             
 
                 // method 1
@@ -144,8 +152,8 @@ int main(int argc, char * argv[])
             
             for (jj = 0; jj < nrepeats; jj++){
                 double * mat = drandu(k*r11*r21);
-                struct Qmarray * mat1 = qmarray_poly_randu(r11,r12,maxorder,lb,ub);
-                struct Qmarray * mat2 = qmarray_poly_randu(r21,r22,maxorder,lb,ub);
+                struct Qmarray * mat1 = qmarray_poly_randu(LEGENDRE,r11,r12,maxorder,lb,ub);
+                struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,maxorder,lb,ub);
             
 
                 // method 1

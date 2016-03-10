@@ -91,7 +91,7 @@ int main()
         ranks[0] = 1; ranks[dim] = 1;
         
         struct FunctionTrain * ftref = 
-            function_train_linear(dim, bds, coeffs,NULL);
+            function_train_linear(POLYNOMIAL,LEGENDRE,dim, bds, coeffs,NULL);
         
         struct FunctionMonitor * fm = 
             function_monitor_initnd(discnd,&dim,dim,1000*dim);

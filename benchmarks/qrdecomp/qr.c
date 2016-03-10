@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
             results[ii] = maxorder;
             
             for (jj = 0; jj < nrepeats; jj++){
-                struct Qmarray * mat = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+                struct Qmarray * mat = qmarray_poly_randu(LEGENDRE,r1,r2,maxorder,lb,ub);
                 double * R = NULL;//calloc_double(r2 * r2);
                 struct Qmarray * Q = NULL;
 
@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
             results[ii] = r1;
             
             for (jj = 0; jj < nrepeats; jj++){
-                struct Qmarray * mat = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+                struct Qmarray * mat = qmarray_poly_randu(LEGENDRE,r1,r2,maxorder,lb,ub);
                 double * R = calloc_double(r2 * r2);
 
                 // method 1
@@ -100,7 +100,7 @@ int main(int argc, char * argv[])
             results[ii] = r2;
             
             for (jj = 0; jj < nrepeats; jj++){
-                struct Qmarray * mat = qmarray_poly_randu(r1,r2,maxorder,lb,ub);
+                struct Qmarray * mat = qmarray_poly_randu(LEGENDRE,r1,r2,maxorder,lb,ub);
                 double * R = calloc_double(r2 * r2);
 
                 // method 1

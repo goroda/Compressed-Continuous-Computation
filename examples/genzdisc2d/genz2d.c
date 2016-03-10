@@ -41,7 +41,8 @@ int main(void)
     size_t ranks[3] = {1, 1, 1};
 
     struct FunctionTrain * ftref = 
-            function_train_linear(dim, bds, coeffs,NULL);
+        function_train_linear(POLYNOMIAL,LEGENDRE,dim,
+                              bds,coeffs,NULL);
             
     struct FunctionMonitor * fm = 
             function_monitor_initnd(disc2d,NULL,dim,1000*dim);

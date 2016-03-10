@@ -54,7 +54,7 @@
 /*******************************************************//**
     Initialize a bounds tructure with each dimension bounded by [-1,1]
 
-    \param dim [in] - dimension
+    \param[in] dim - dimension
         
     \return b - bounds
 ***********************************************************/
@@ -186,7 +186,7 @@ struct GenericFunction * generic_function_alloc_base(size_t dim)
 /********************************************************//**
     Allocate memory for a generic function array
     
-    \param size [in] - size of array
+    \param[in] size - size of array
 
     \return out - generic function
 ************************************************************/
@@ -307,7 +307,8 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
         gf->fargs = NULL;
         break;
     case POLYNOMIAL:
-        gf->f = orth_poly_expansion_approx_adapt(f,args, gf->sub_type.ptype, lb, ub, aopts);
+        gf->f = orth_poly_expansion_approx_adapt(f,args, gf->sub_type.ptype,
+                                                 lb, ub, aopts);
         gf->fargs = NULL;
         //printf("done\n");
         break;
@@ -327,6 +328,7 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
 /********************************************************//**
     Create a pseudo-random polynomial generic function 
 
+*   \param[in] ptype    - polynomial type
 *   \param[in] maxorder - maximum order of the polynomial
 *   \param[in] lower    - lower bound of input
 *   \param[in] upper    - upper bound of input
@@ -334,12 +336,12 @@ generic_function_approximate1d( double (*f)(double,void *), void * args,
     \return gf - generic function
 ************************************************************/
 struct GenericFunction * 
-generic_function_poly_randu(size_t maxorder, double lower, double upper)
+generic_function_poly_randu(enum poly_type ptype,
+                            size_t maxorder, double lower, double upper)
 {
     enum function_class fc = POLYNOMIAL;
-    enum poly_type sub_type = LEGENDRE;
-    struct GenericFunction * gf = generic_function_alloc(1,fc,&sub_type);
-    gf->f = orth_poly_expansion_randu(sub_type,maxorder,lower,upper);
+    struct GenericFunction * gf = generic_function_alloc(1,fc,&ptype);
+    gf->f = orth_poly_expansion_randu(ptype,maxorder,lower,upper);
     gf->fargs = NULL;
     return gf;
 }
@@ -419,7 +421,8 @@ generic_function_copy(struct GenericFunction * gf)
     \param[in,out] gfpa - preallocated function
 
 ************************************************************/
-void generic_function_copy_pa(struct GenericFunction * gf, struct GenericFunction * gfpa)
+void generic_function_copy_pa(struct GenericFunction * gf, 
+                              struct GenericFunction * gfpa)
 {
     switch (gf->fc){
     case PIECEWISE:
@@ -442,7 +445,6 @@ void generic_function_copy_pa(struct GenericFunction * gf, struct GenericFunctio
         break;
     }
 }
-
 
 /********************************************************//**
     Free memory for generic function
@@ -712,7 +714,7 @@ double generic_function_norm(struct GenericFunction * f){
  *   \return out - norm of difference
  ************************************************************/
  double generic_function_norm2diff(struct GenericFunction * f1, 
-                                     struct GenericFunction * f2)
+                                   struct GenericFunction * f2)
  {
      struct GenericFunction * f3 = generic_function_daxpby(1.0,f1,-1.0,f2);
      double out = generic_function_norm(f3);
@@ -883,7 +885,8 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
              bb[ii] = b[ii*ldb]->f;
          }
 
-         struct GenericFunction * gf = generic_function_alloc(1,a[0]->fc,&(a[0]->sub_type.ptype));
+         struct GenericFunction * gf = 
+             generic_function_alloc(1,a[0]->fc,&(a[0]->sub_type.ptype));
          gf->f = orth_poly_expansion_sum_prod(n,1,aa,1,bb);
          gf->fargs = NULL;
          free(aa); aa = NULL;
@@ -1155,7 +1158,8 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
  *   \param[in,out] a   - array of functions
  ************************************************************/
  void 
- generic_function_array_flip_sign(size_t n, size_t lda, struct GenericFunction ** a){
+ generic_function_array_flip_sign(size_t n, size_t lda, 
+                                  struct GenericFunction ** a){
      size_t ii;
      for (ii = 0; ii < n; ii++){
          generic_function_flip_sign(a[ii*lda]);
@@ -1658,20 +1662,21 @@ generic_function_array_daxpby(size_t n, double a, size_t ldx,
 /********************************************************//**
 *   Compute axpby for a an array of generic functions and overwrite into z
 *
-*   \param n [in] - number of functions
-*   \param a [in] - scaling for x
-*   \param ldx [in] -  stride of functions to use in a
-*   \param x [in] - functions
-*   \param b [in] - scaling for y
-*   \param ldy [in] - stride of functions to use in a
-*   \param y [in] - functions
-*   \param ldz [in] - stride for z
-*   \param z [inout] -  locations for resulting functions
+*   \param[in]     n   - number of functions
+*   \param[in]     a   - scaling for x
+*   \param[in]     ldx -  stride of functions to use in a
+*   \param[in]     x   - functions
+*   \param[in]     b   - scaling for y
+*   \param[in]     ldy - stride of functions to use in a
+*   \param[in]     y   - functions
+*   \param[in]     ldz - stride for z
+*   \param[in,out] z   -  locations for resulting functions
 *************************************************************/
 void
 generic_function_array_daxpby2(size_t n, double a, size_t ldx, 
         struct GenericFunction ** x, double b, size_t ldy, 
-        struct GenericFunction ** y, size_t ldz, struct GenericFunction ** z)
+        struct GenericFunction ** y, size_t ldz, 
+                               struct GenericFunction ** z)
 {
     size_t ii;
     if ( y == NULL){
@@ -1823,7 +1828,8 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 }
 
 /********************************************************//**
-    Compute the location and value of the maximum, in absolute value, element of a generic function 
+    Compute the location and value of the maximum, 
+    in absolute value, element of a generic function 
 
     \param[in]     f       - function
     \param[in,out] x       - location of maximum
@@ -1870,7 +1876,8 @@ double generic_function_absmax(struct GenericFunction * f, double * x, void * op
 ************************************************************/
 double 
 generic_function_array_absmax(size_t n, size_t lda, 
-                              struct GenericFunction ** a, size_t * ind,  double * x,
+                              struct GenericFunction ** a, 
+                              size_t * ind,  double * x,
                               void * optargs)
 {
     size_t ii = 0;

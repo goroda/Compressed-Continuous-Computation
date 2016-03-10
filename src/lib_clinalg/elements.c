@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -624,10 +624,10 @@ double skeleton_decomp_eval(struct SkeletonDecomp * skd, double x, double y)
 /***********************************************************//**
     Allocate space for a qmarray
 
-    \param nrows [in] - number of rows of quasimatrix
-    \param ncols [in] - number of cols of quasimatrix
+    \param[in] nrows - number of rows of quasimatrix
+    \param[in] ncols - number of cols of quasimatrix
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
 struct Qmarray * qmarray_alloc(size_t nrows, size_t ncols){
     
@@ -652,20 +652,22 @@ struct Qmarray * qmarray_alloc(size_t nrows, size_t ncols){
 /***********************************************************//**
     Create a Qmarray of zero functions
 
-    \param nrows [in] - number of rows of quasimatrix
-    \param ncols [in] - number of cols of quasimatrix
-    \param lb [in] - lower bound of functions
-    \param ub [in] - upper bound of functions
+    \param[in] ptype - polynomial type
+    \param[in] nrows - number of rows of quasimatrix
+    \param[in] ncols - number of cols of quasimatrix
+    \param[in] lb    - lower bound of functions
+    \param[in] ub    - upper bound of functions
 
-    \return qm - qmarray
+    \return qmarray
 ***************************************************************/
-struct Qmarray * qmarray_zeros(size_t nrows, size_t ncols,double lb, double ub){
+struct Qmarray * qmarray_zeros(enum poly_type ptype,size_t nrows,
+                               size_t ncols,double lb, double ub){
     
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     size_t ii;
-    enum poly_type ptype = LEGENDRE;
     for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_constant(0.0,POLYNOMIAL,&ptype,lb,ub,NULL);
+        qm->funcs[ii] = generic_function_constant(0.0,POLYNOMIAL,
+                                                  &ptype,lb,ub,NULL);
     }
     return qm;
 }
@@ -673,22 +675,25 @@ struct Qmarray * qmarray_zeros(size_t nrows, size_t ncols,double lb, double ub){
 /********************************************************//**
 *    Create a qmarray consisting of pseudo-random orth poly expansion
 *   
-*   \param nrows [in] - number of rows
-*   \param ncols [in] - number of columns
-*   \param maxorder [in] - maximum order of the polynomial
-*   \param lower [in] - lower bound of input
-*   \param upper [in] - upper bound of input
+*   \param[in] ptype    - polynomial type
+*   \param[in] nrows    - number of rows
+*   \param[in] ncols    - number of columns
+*   \param[in] maxorder - maximum order of the polynomial
+*   \param[in] lower    - lower bound of input
+*   \param[in] upper    - upper bound of input
 *
 *   \return qm - qmarray
 ************************************************************/
 struct Qmarray *
-qmarray_poly_randu(size_t nrows, size_t ncols, 
-    size_t maxorder, double lower, double upper)
+qmarray_poly_randu(enum poly_type ptype, 
+                   size_t nrows, size_t ncols, 
+                   size_t maxorder, double lower, double upper)
 {
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     size_t ii;
     for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_poly_randu(maxorder,lower,upper);
+        qm->funcs[ii] = generic_function_poly_randu(ptype, maxorder,
+                                                    lower,upper);
     }
     return qm;
 }
@@ -1257,6 +1262,7 @@ void function_train_free(struct FunctionTrain * ft)
 /********************************************************//**
 *    Create a functiontrain consisting of pseudo-random orth poly expansion
 *   
+*   \param[in] ptype    - polynomial type
 *   \param[in] bds      - boundaries
 *   \param[in] ranks    - (dim+1,1) array of ranks
 *   \param[in] maxorder - maximum order of the polynomial
@@ -1264,7 +1270,8 @@ void function_train_free(struct FunctionTrain * ft)
 *   \return function train
 ************************************************************/
 struct FunctionTrain *
-function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxorder)
+function_train_poly_randu(enum poly_type ptype,struct BoundingBox * bds,
+                          size_t * ranks, size_t maxorder)
 {
     size_t dim = bds->dim;
     struct FunctionTrain * ft = function_train_alloc(dim);
@@ -1272,8 +1279,9 @@ function_train_poly_randu(struct BoundingBox * bds, size_t * ranks, size_t maxor
 
     size_t ii;
     for (ii = 0; ii < dim; ii++){
-        ft->cores[ii] = qmarray_poly_randu(ranks[ii],ranks[ii+1],maxorder,
-                            bds->lb[ii],bds->ub[ii]);
+        ft->cores[ii] = 
+            qmarray_poly_randu(ptype,ranks[ii],ranks[ii+1],maxorder,
+                               bds->lb[ii],bds->ub[ii]);
     }
     return ft;
 }
@@ -1664,10 +1672,12 @@ function_train_linear2(size_t dim, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
 
-    \param[in] dim    - dimension of function train
-    \param[in] a      - value of tensor train
-    \param[in] bds    - boundarys of each dimension
-    \param[in] ftargs - parameters for computation
+    \param[in] fc       - function class
+    \param[in] sub_type - sub type of function class
+    \param[in] dim      - dimension of function train
+    \param[in] a        - value of tensor train
+    \param[in] bds      - boundarys of each dimension
+    \param[in] aopts    - oapproximation options in each dimension
 
     \return function train
 
@@ -1675,52 +1685,80 @@ function_train_linear2(size_t dim, struct BoundingBox * bds,
     Puts the constant into the first core
 ***************************************************************/
 struct FunctionTrain * 
-function_train_constant(size_t dim, double a, struct BoundingBox * bds,  
-                        struct FtApproxArgs * ftargs)
+function_train_constant(enum function_class fc,
+                        void * sub_type, size_t dim, double a, 
+                        struct BoundingBox * bds, void * aopts)
 {
-    struct FtApproxArgs * ftargs_use;
-    if (ftargs == NULL){
-        enum poly_type ptype = LEGENDRE;
-        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
-    }
-    else{
-        ftargs_use = ftargs;
-    }
-    enum function_class fc;
-    void * sub_type = NULL;
-    //void * approx_opts = NULL;
-    
     struct FunctionTrain * ft = function_train_alloc(dim);
     
-    //double val = pow(a,1.0/(double) dim);
-    //printf("a = %G\n",a);
-    //printf("val = %G\n",val);
-
     size_t onDim = 0;
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    //approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
+        //approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
 
     ft->ranks[onDim] = 1;
     ft->cores[onDim] = qmarray_alloc(1,1);
-    ft->cores[onDim]->funcs[0] = generic_function_constant(a,
-               fc, sub_type, bds->lb[onDim], bds->ub[onDim], NULL);
+    ft->cores[onDim]->funcs[0] =
+        generic_function_constant(a,fc,sub_type,bds->lb[onDim],bds->ub[onDim],
+                                  aopts);
 
     for (onDim = 1; onDim < dim; onDim++){
-        fc = ft_approx_args_getfc(ftargs_use, onDim);
-        sub_type = ft_approx_args_getst(ftargs_use, onDim);
         //approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
 
         ft->ranks[onDim] = 1;
         ft->cores[onDim] = qmarray_alloc(1,1);
-        ft->cores[onDim]->funcs[0] = generic_function_constant(1,
-                   fc, sub_type, bds->lb[onDim], bds->ub[onDim], NULL);
+        ft->cores[onDim]->funcs[0] = 
+            generic_function_constant(1,fc,sub_type,
+                                      bds->lb[onDim],bds->ub[onDim],aopts);
     }
     ft->ranks[dim] = 1;
 
-    if (ftargs == NULL){
-        ft_approx_args_free(ftargs_use);
+    return ft;
+}
+
+ 
+/***********************************************************//**
+    Compute a function train representation of \f$ a \f$ 
+
+    \param[in] aopts - approximation arguments for each dimension
+    \param[in] a        - value of tensor train
+    \param[in] bds      - boundarys of each dimension
+
+    \return function train
+
+    \note 
+    Puts the constant into the first core
+***************************************************************/
+struct FunctionTrain * 
+function_train_constant_d(struct FtApproxArgs * fta, double a,
+                          struct BoundingBox * bds)
+{
+    assert (fta != NULL);
+    size_t dim = fta->dim;
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    
+    size_t onDim = 0;
+
+    enum function_class fc = ft_approx_args_getfc(fta, onDim);
+    void * sub_type = ft_approx_args_getst(fta, onDim);
+    void * aopts = ft_approx_args_getaopts(fta,onDim);
+
+    ft->ranks[onDim] = 1;
+    ft->cores[onDim] = qmarray_alloc(1,1);
+    ft->cores[onDim]->funcs[0] =
+        generic_function_constant(a,fc,sub_type,bds->lb[onDim],bds->ub[onDim],
+                                  aopts);
+
+    for (onDim = 1; onDim < dim; onDim++){
+
+        fc = ft_approx_args_getfc(fta, onDim);
+        sub_type = ft_approx_args_getst(fta, onDim);
+        aopts = ft_approx_args_getaopts(fta,onDim);
+
+        ft->ranks[onDim] = 1;
+        ft->cores[onDim] = qmarray_alloc(1,1);
+        ft->cores[onDim]->funcs[0] = generic_function_constant(1,fc,sub_type,
+                                     bds->lb[onDim],bds->ub[onDim],aopts);
     }
+    ft->ranks[dim] = 1;
 
     return ft;
 }
@@ -1728,36 +1766,26 @@ function_train_constant(size_t dim, double a, struct BoundingBox * bds,
 /***********************************************************//**
     Compute a tensor train representation of \f$ x_1c_1 + x_2c_2 + .... + x_dc_d \f$
 
-    \param[in] dim    - dimension of function train
-    \param[in] bds    - boundarys of each dimension
-    \param[in] coeffs - slope of the function in each dimension
-    \param[in] ftargs - parameters for computation
+    \param[in] fc       - function class
+    \param[in] sub_type - sub type of function class
+    \param[in] dim      - dimension of function train
+    \param[in] bds      - boundarys of each dimension
+    \param[in] coeffs   - slope of the function in each dimension
+    \param[in] aopts    - approximation options
 
     \return function train
+    
+    \note same parameterization for each dimension
 ***************************************************************/
 struct FunctionTrain * 
-function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs, 
-                        struct FtApproxArgs * ftargs)
+function_train_linear(enum function_class fc, void * sub_type,
+                      size_t dim, struct BoundingBox * bds, double * coeffs, 
+                      void * aopts)
 {
-    
-    struct FtApproxArgs * ftargs_use;
-    if (ftargs == NULL){
-        enum poly_type ptype = LEGENDRE;
-        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
-    }
-    else{
-        ftargs_use = ftargs;
-    }
-    enum function_class fc;
-    void * sub_type = NULL;
-    void * approx_opts = NULL;
     
     struct FunctionTrain * ft = function_train_alloc(dim);
 
     size_t onDim = 0;
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
     ft->ranks[onDim] = 1;
 
     if (dim == 1){
@@ -1770,68 +1798,61 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
     if (dim > 1){
         ft->cores[onDim]->funcs[0] = generic_function_linear(coeffs[onDim], 0.0, 
                                         fc, sub_type, bds->lb[onDim], 
-                                        bds->ub[onDim], approx_opts);
+                                        bds->ub[onDim], aopts);
         ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
-                                     bds->lb[onDim], bds->ub[onDim], approx_opts);
+                                     bds->lb[onDim], bds->ub[onDim], aopts);
         
         for (onDim = 1; onDim < dim-1; onDim++){
-            fc = ft_approx_args_getfc(ftargs_use, onDim);
-            sub_type = ft_approx_args_getst(ftargs_use, onDim);
-            approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
             ft->ranks[onDim] = 2;
             ft->cores[onDim] = qmarray_alloc(2,2);
 
             ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                        sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
 
             ft->cores[onDim]->funcs[1] = generic_function_linear(coeffs[onDim],0.0,
                                         fc, sub_type, bds->lb[onDim], 
-                                        bds->ub[onDim], approx_opts);
+                                        bds->ub[onDim], aopts);
 
-            ft->cores[onDim]->funcs[2] = generic_function_constant(0.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+            ft->cores[onDim]->funcs[2] = 
+                generic_function_constant(0.0, fc, 
+                                          sub_type,bds->lb[onDim],bds->ub[onDim],
+                                          aopts);
             ft->cores[onDim]->funcs[3] = generic_function_constant(1.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                        sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
         }
 
         onDim = dim-1;
-
-        fc = ft_approx_args_getfc(ftargs_use, onDim);
-        sub_type = ft_approx_args_getst(ftargs_use, onDim);
-        approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
 
         ft->ranks[onDim] = 2;
         ft->ranks[onDim+1] = 1;
         ft->cores[onDim] = qmarray_alloc(2,1);
 
         ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
         ft->cores[onDim]->funcs[1] = generic_function_linear(coeffs[onDim], 0.0,
                                     fc, sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
 
     }
     else{
         ft->cores[onDim]->funcs[0] = generic_function_linear(coeffs[onDim], 0.0, 
                                         fc, sub_type, bds->lb[onDim], 
-                                        bds->ub[onDim], approx_opts);
+                                        bds->ub[onDim], aopts);
     }
 
-    if (ftargs == NULL){
-        ft_approx_args_free(ftargs_use);
-    }
     return ft;
 }
 
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$
 
-    \param[in] dim    - dimension of function train
-    \param[in] bds    - boundarys of each dimension
-    \param[in] coeffs - Q matrix
-    \param[in] m      - m (dim,)
-    \param[in] ftargs - parameters for computation
+    \param[in] fc       - function class
+    \param[in] sub_type - sub type of function class
+    \param[in] dim      - dimension of function train
+    \param[in] bds      - boundarys of each dimension
+    \param[in] coeffs   - Q matrix
+    \param[in] m        - m (dim,)
+    \param[in] aopts    - approximation options
 
     \returns function train
 
@@ -1839,33 +1860,16 @@ function_train_linear(size_t dim, struct BoundingBox * bds, double * coeffs,
     Could be more efficient with a better distribution of ranks
 ***************************************************************/
 struct FunctionTrain * 
-function_train_quadratic(size_t dim, struct BoundingBox * bds, 
+function_train_quadratic(enum function_class fc, void * sub_type, size_t dim, 
+                         struct BoundingBox * bds, 
                          double * coeffs, 
-                         double * m, struct FtApproxArgs * ftargs)
+                         double * m, void * aopts)
 {
     assert (dim > 1); //
-    struct FtApproxArgs * ftargs_use;
-    if (ftargs == NULL){
-        enum poly_type ptype = LEGENDRE;
-        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
-    }
-    else{
-        ftargs_use = ftargs;
-    }
-    enum function_class fc;
-    void * sub_type = NULL;
-    void * approx_opts = NULL;
     double temp;
-    
     struct FunctionTrain * ft = function_train_alloc(dim);
-    
     size_t kk,ll;
-
     size_t onDim = 0;
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
 
     ft->ranks[onDim] = 1;
     ft->cores[onDim] = qmarray_alloc(1,dim+1);
@@ -1874,7 +1878,7 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
     ft->cores[onDim]->funcs[0] = generic_function_quadratic(
                 coeffs[onDim*dim+onDim], m[onDim],
                 fc, sub_type, bds->lb[onDim], 
-                bds->ub[onDim], approx_opts);
+                bds->ub[onDim], aopts);
 
     for (kk = 1; kk < dim; kk++)
     {
@@ -1883,17 +1887,14 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
         ft->cores[onDim]->funcs[kk] = 
                 generic_function_linear(temp,-temp*m[onDim], fc, 
                                     sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
     }
 
     ft->cores[onDim]->funcs[dim] = generic_function_constant(1.0, fc, sub_type, 
-                                 bds->lb[onDim], bds->ub[onDim], approx_opts);
+                                 bds->lb[onDim], bds->ub[onDim], aopts);
     
     for (onDim = 1; onDim < dim-1; onDim++){
         //printf("on dimension (%zu/%zu)\n",onDim+1,dim);
-        fc = ft_approx_args_getfc(ftargs_use, onDim);
-        sub_type = ft_approx_args_getst(ftargs_use, onDim);
-        approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
 
         ft->ranks[onDim] = dim-onDim+2;
         ft->cores[onDim] = qmarray_alloc(dim-onDim+2,dim-onDim+1);
@@ -1903,19 +1904,18 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
                 if ( (ll == 0) && (kk == 0)){ // upper left corner
                     ft->cores[onDim]->funcs[kk*ft->cores[onDim]->nrows+ll] = 
                             generic_function_constant(1.0, fc, 
-                            sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
-
+                            sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
                 }
                 else if ( (kk == 0) && (ll == 1) ){ // first element of lower diagonal
                     ft->cores[onDim]->funcs[kk*ft->cores[onDim]->nrows+ll] = 
                             generic_function_linear(1.0,-m[onDim], fc, 
                                                 sub_type, bds->lb[onDim], 
-                                                bds->ub[onDim], approx_opts);
+                                                bds->ub[onDim], aopts);
                 }
                 else if (ll == (kk+1)){ // lower diagonal
                     ft->cores[onDim]->funcs[kk*ft->cores[onDim]->nrows+ll] = 
                             generic_function_constant(1.0, fc, 
-                            sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                            sub_type, bds->lb[onDim], bds->ub[onDim],aopts);
                 }
                 else if ( (ll == (dim-onDim+1)) && (kk == 0)){ //lower left corner
                     //quadratic
@@ -1923,7 +1923,7 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
                                 generic_function_quadratic(
                                 coeffs[onDim*dim+onDim], m[onDim],
                                 fc, sub_type, bds->lb[onDim], 
-                                bds->ub[onDim], approx_opts);
+                                bds->ub[onDim], aopts);
                 }
                 else if ( ll == (dim-onDim+1) ){ // rest of bottom row
                     temp = coeffs[onDim*dim+onDim+kk] + 
@@ -1932,12 +1932,12 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
                     ft->cores[onDim]->funcs[kk*ft->cores[onDim]->nrows+ll] = 
                         generic_function_linear(temp,-temp*m[onDim], fc, 
                                     sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
                 }
                 else{ // zeros
                     ft->cores[onDim]->funcs[kk*ft->cores[onDim]->nrows+ll] = 
                             generic_function_constant(0.0, fc, 
-                            sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                            sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
                 }
                 //printf("generic function for core %zu num (%zu,%zu) \n",onDim,ll,kk);
                 //print_generic_function(ft->cores[onDim]->funcs[kk*dim+ll],0,NULL);
@@ -1947,68 +1947,48 @@ function_train_quadratic(size_t dim, struct BoundingBox * bds,
 
     onDim = dim-1;
 
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
     ft->ranks[onDim] = dim-onDim+2;
     ft->cores[onDim] = qmarray_alloc(dim-onDim+2,1);
 
     ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
 
     ft->cores[onDim]->funcs[1] = generic_function_linear(1.0, -m[onDim],
                                     fc, sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
 
     ft->cores[onDim]->funcs[2] = generic_function_quadratic(
                                 coeffs[onDim*dim+onDim], m[onDim],
                                 fc, sub_type, bds->lb[onDim], 
-                                bds->ub[onDim], approx_opts);
+                                bds->ub[onDim], aopts);
     ft->ranks[dim] = 1;
-    if (ftargs == NULL){
-        ft_approx_args_free(ftargs_use);
-    }
     return ft;
 }
 
 /***********************************************************//**
     Compute a tensor train representation of \f[ (x_1-m_1)^2c_1 + (x_2-m_2)^2c_2 + .... + (x_d-m_d)^2c_d \f]
 
-    \param[in] bds    - boundarys of each dimension
-    \param[in] coeffs - coefficients for each dimension
-    \param[in] m      - offset in each dimension
-    \param[in] ftargs - parameters for computation
+    \param[in] fc       - function class
+    \param[in] sub_type - sub type of function class
+    \param[in] bds      - boundarys of each dimension
+    \param[in] coeffs   - coefficients for each dimension
+    \param[in] m        - offset in each dimension
+    \param[in] aopts    - approximation arguments
 
     \return a function train
 ***************************************************************/
 struct FunctionTrain * 
-function_train_quadratic_aligned(struct BoundingBox * bds, 
+function_train_quadratic_aligned(enum function_class fc, 
+                                 void * sub_type,struct BoundingBox * bds, 
                                  double * coeffs, double * m,
-                                 struct FtApproxArgs * ftargs)
+                                 void * aopts)
 {
     size_t dim = bds->dim;
-
-    struct FtApproxArgs * ftargs_use;
-    if (ftargs == NULL){
-        enum poly_type ptype = LEGENDRE;
-        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
-    }
-    else{
-        ftargs_use = ftargs;
-    }
-    enum function_class fc;
-    void * sub_type = NULL;
-    void * approx_opts = NULL;
     
     struct FunctionTrain * ft = function_train_alloc(dim);
 
     size_t onDim = 0;
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
     ft->ranks[onDim] = 1;
-
     if (dim == 1){
         ft->cores[onDim] = qmarray_alloc(1,1);
     }
@@ -2016,64 +1996,52 @@ function_train_quadratic_aligned(struct BoundingBox * bds,
         ft->cores[onDim] = qmarray_alloc(1,2);
     }
     
-    
     if (dim > 1){
         ft->cores[onDim]->funcs[0] = generic_function_quadratic(
                                     coeffs[onDim], m[onDim],
                                     fc, sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
         ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, fc, sub_type, 
-                                     bds->lb[onDim], bds->ub[onDim], approx_opts);
+                                     bds->lb[onDim], bds->ub[onDim], aopts);
         for (onDim = 1; onDim < dim-1; onDim++){
-            fc = ft_approx_args_getfc(ftargs_use, onDim);
-            sub_type = ft_approx_args_getst(ftargs_use, onDim);
-            approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
             ft->ranks[onDim] = 2;
             ft->cores[onDim] = qmarray_alloc(2,2);
 
             ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                        sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
 
             ft->cores[onDim]->funcs[1] = generic_function_quadratic(
                                 coeffs[onDim], m[onDim],
                                 fc, sub_type, bds->lb[onDim], 
-                                bds->ub[onDim], approx_opts);
+                                bds->ub[onDim], aopts);
 
             ft->cores[onDim]->funcs[2] = generic_function_constant(0.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                        sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
             ft->cores[onDim]->funcs[3] = generic_function_constant(1.0, fc, 
-                        sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                        sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
         }
 
         onDim = dim-1;
-
-        fc = ft_approx_args_getfc(ftargs_use, onDim);
-        sub_type = ft_approx_args_getst(ftargs_use, onDim);
-        approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
 
         ft->ranks[onDim] = 2;
         ft->ranks[onDim+1] = 1;
         ft->cores[onDim] = qmarray_alloc(2,1);
 
         ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
         ft->cores[onDim]->funcs[1] = generic_function_quadratic(
                             coeffs[onDim], m[onDim],
                             fc, sub_type, bds->lb[onDim], 
-                            bds->ub[onDim], approx_opts);
+                            bds->ub[onDim], aopts);
 
     }
     else{
         ft->cores[onDim]->funcs[0] = generic_function_quadratic(
                                     coeffs[onDim], m[onDim],
                                     fc, sub_type, bds->lb[onDim], 
-                                    bds->ub[onDim], approx_opts);
+                                    bds->ub[onDim], aopts);
     }
 
-    if (ftargs == NULL){
-        ft_approx_args_free(ftargs_use);
-    }
     return ft;
 }
 

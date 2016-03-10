@@ -89,6 +89,8 @@ int main(int argc, char * argv[])
         printf("Running Benchmark for a Core DMRG \n");
     }
 
+//    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
     if (benchmark == 0)
     {
         double delta = 1e-8;
@@ -125,8 +127,10 @@ int main(int argc, char * argv[])
                 size_t maxrank = 1;
                 time = 0.0;
                 for (jj = 0; jj < nrepeat; jj++){
-                    struct FunctionTrain * a = function_train_poly_randu(bds,aranks,maxorder);
-                    struct FunctionTrain * f = function_train_poly_randu(bds,franks,maxorder);
+                    struct FunctionTrain * a = NULL; 
+                    a = function_train_poly_randu(ptype,bds,aranks,maxorder);
+                    struct FunctionTrain * f = NULL;
+                    f = function_train_poly_randu(ptype,bds,franks,maxorder);
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
@@ -196,8 +200,10 @@ int main(int argc, char * argv[])
                 double aroundrank = 1.0;
                 time = 0.0;
                 for (jj = 0; jj < nrepeat; jj++){
-                    struct FunctionTrain * a = function_train_poly_randu(bds,aranks,maxorder);
-                    struct FunctionTrain * f = function_train_poly_randu(bds,franks,maxorder);
+                    struct FunctionTrain * a = NULL;
+                    a = function_train_poly_randu(ptype,bds,aranks,maxorder);
+                    struct FunctionTrain * f = NULL;
+                    f = function_train_poly_randu(ptype,bds,franks,maxorder);
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
@@ -269,8 +275,10 @@ int main(int argc, char * argv[])
                 size_t maxrank = 1;
                 time = 0.0;
                 for (jj = 0; jj < nrepeat; jj++){
-                    struct FunctionTrain * a = function_train_poly_randu(bds,aranks,maxorder);
-                    struct FunctionTrain * f = function_train_poly_randu(bds,franks,maxorder);
+                    struct FunctionTrain * a = NULL;
+                    a = function_train_poly_randu(ptype, bds,aranks,maxorder);
+                    struct FunctionTrain * f = NULL;
+                    f = function_train_poly_randu(ptype,bds,franks,maxorder);
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
@@ -308,10 +316,7 @@ int main(int argc, char * argv[])
             darray_save(nPs,3,results,"time_vs_order.dat",1);
             free(results); results = NULL;
         }
-
-
     }
     
-
     return 0;
 }
