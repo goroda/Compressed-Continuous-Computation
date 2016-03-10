@@ -41,6 +41,7 @@
 #ifndef HPOLY_H
 #define HPOLY_H
 
+#include <float.h>
 #include "polynomials.h"
 
 struct OrthPoly * init_hermite_poly();

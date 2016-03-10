@@ -282,7 +282,7 @@ double *
 orth_poly_expansion_real_roots(struct OrthPolyExpansion *, size_t *);
 double orth_poly_expansion_max(struct OrthPolyExpansion *, double *);
 double orth_poly_expansion_min(struct OrthPolyExpansion *, double *);
-double orth_poly_expansion_absmax(struct OrthPolyExpansion *, double *);
+double orth_poly_expansion_absmax(struct OrthPolyExpansion *, double *,void*);
 
 /////////////////////////////////////////////////////////
 // Utilities

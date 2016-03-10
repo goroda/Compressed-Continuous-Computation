@@ -1870,7 +1870,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         free(allprods); allprods=NULL;
     }
     else{
-        printf("OrthPolyExpansion product greater than order 100 is slow\n");
+//        printf("OrthPolyExpansion product greater than order 100 is slow\n");
         struct OrthPolyExpansion * comb[2];
         comb[0] = a;
         comb[1] = b;
@@ -2096,10 +2096,10 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 *   Weighted inner product between two polynomial 
 *   expansions of the same type
 *
-*   \param a [in] - first polynomial
-*   \param b [in] - second polynomai
+*   \param[in] a - first polynomial
+*   \param[in] b - second polynomai
 *
-*   \return out - inner product
+*   \return inner product
 *
 *   \note
 *       Computes \f[ \int_{lb}^ub  a(x)b(x) w(x) dx \f]
@@ -2118,24 +2118,28 @@ orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
         out += a->coeff[ii] * b->coeff[ii] * a->p->norm(ii); 
     }
 
-    double m = (a->upper_bound - a->lower_bound) / 
-                    (a->p->upper - a->p->lower);
-    //printf("m=%3.15f\n",m);
-    out *= m;
+    if (a->p->ptype != HERMITE){
+        double m = (a->upper_bound - a->lower_bound) / 
+            (a->p->upper - a->p->lower);
+        //printf("m=%3.15f\n",m);
+        out *= m;
+    }
     return out;
 }
 
 /********************************************************//**
 *   Inner product between two polynomial expansions of the same type
 *
-*   \param a [in] - first polynomial
-*   \param b [in] - second polynomai
+*   \param[in] a - first polynomial
+*   \param[in] b - second polynomai
 *
-*   \return out - inner product
+*   \return  inner product
 *
-*   Notes: 
-*          Computes  \f$ \int_{lb}^ub  a(x)b(x) dx \f$ by first
-*          converting each polynomial to a Legendre polynomial
+*   \note
+*   If the polynomial is NOT HERMITE then
+*   Computes  \f$ \int_{lb}^ub  a(x)b(x) dx \f$ by first
+*   converting each polynomial to a Legendre polynomial
+*   Otherwise it computes the error with respect to gaussia weight
 *************************************************************/
 double
 orth_poly_expansion_inner(struct OrthPolyExpansion * a,
@@ -2143,7 +2147,10 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 {   
     struct OrthPolyExpansion * t1 = NULL;
     struct OrthPolyExpansion * t2 = NULL;
-    
+
+    if ((a->p->ptype == HERMITE) && (b->p->ptype == HERMITE)){
+        return orth_poly_expansion_inner_w(a,b);
+    }
     int c1 = 0;
     int c2 = 0;
     if (a->p->ptype == CHEBYSHEV){
@@ -2195,7 +2202,7 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 *   expansion with respect to family weighting 
 *   function
 *
-*   \param p [in] - polynomial to integrate
+*   \param[in] p - polynomial to integrate
 *
 *   \return out - norm of function
 *
@@ -2209,15 +2216,18 @@ double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
         out += pow(p->coeff[ii],2.0) * p->p->norm(ii);
     }
 
-    double m = (p->upper_bound - p->lower_bound) / 
-                    (p->p->upper - p->p->lower);
-    out = out * m;
+    if (p->p->ptype != HERMITE){
+        double m = (p->upper_bound - p->lower_bound) / 
+            (p->p->upper - p->p->lower);
+        out = out * m;
+    }
     return sqrt(out);
 }
 
 /********************************************************//**
 *   Compute the norm of an orthogonal polynomial
-*   expansion with respect to uniform weighting
+*   expansion with respect to uniform weighting 
+*   (except in case of HERMITE, then do gaussian weighting)
 *
 *   \param[in] p - polynomial of which to obtain norm
 *
@@ -2235,7 +2245,8 @@ double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
             out = orth_poly_expansion_norm_w(p) * sqrt(2.0);
             break;
         case HERMITE:
-            assert (1 == 0);
+            out = orth_poly_expansion_norm_w(p);
+            break;
         case CHEBYSHEV:
             temp = orth_poly_expansion_init(LEGENDRE, p->num_poly,
                     p->lower_bound, p->upper_bound);
@@ -3047,21 +3058,54 @@ double orth_poly_expansion_min(struct OrthPolyExpansion * p, double * x)
 /********************************************************//**
 *   Obtain the maximum in absolute value of an orthogonal polynomial expansion
 *
-*   \param p [in] - orthogonal polynomial expansion
-*   \param x [inout] - location of maximum
+*   \param[in]     p     - orthogonal polynomial expansion
+*   \param[in,out] x     - location of maximum
+*   \param[in]     oargs - optimization arguments 
+*                          required for HERMITE otherwise can set NULL
 *
 *   \return maxval : maximum value (absolute value)
 *
 *   \note
 *       if no roots then either lower or upper bound
 *************************************************************/
-double orth_poly_expansion_absmax(struct OrthPolyExpansion * p, double * x)
+double orth_poly_expansion_absmax(
+    struct OrthPolyExpansion * p, double * x, void * oargs)
 {
 
     //printf("in absmax\n");
    // print_orth_poly_expansion(p,3,NULL);
     //printf("%G\n", orth_poly_expansion_norm(p));
-    
+
+    enum poly_type ptype = p->p->ptype;
+    if (oargs != NULL){
+
+        struct c3Vector * optnodes = oargs;
+        double mval = fabs(orth_poly_expansion_eval(p,optnodes->elem[0]));
+        double cval = mval;
+        if (ptype == HERMITE){
+            mval *= exp(-pow(optnodes->elem[0],2)/2.0);
+        }
+        *x = optnodes->elem[0];
+        for (size_t ii = 0; ii < optnodes->size; ii++){
+            double val = fabs(orth_poly_expansion_eval(p,optnodes->elem[ii]));
+            double tval = val;
+            if (ptype == HERMITE){
+                val *= exp(-pow(optnodes->elem[0],2)/2.0);
+            }
+            if (val > mval){
+                cval = tval;
+                *x = optnodes->elem[ii];
+            }
+        }
+        return cval;
+    }
+    else if (ptype == HERMITE){
+        fprintf(stderr,"Must specify optimizatino arguments\n");
+        fprintf(stderr,"In the form of candidate points for \n");
+        fprintf(stderr,"finding the absmax of hermite expansion\n");
+        exit(1);
+        
+    }
     double maxval;
     double norm = orth_poly_expansion_norm(p);
     

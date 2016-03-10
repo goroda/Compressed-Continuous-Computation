@@ -1,3 +1,4 @@
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -53,7 +54,7 @@ double hermortho(size_t n)
 {
     double val = 1.0;
     for (size_t ii = 1; ii < n; ii++){
-        val *= ii;
+        val *= (ii+1);
     }
     return sqrt(2*M_PI)*val;
 }
@@ -75,14 +76,14 @@ struct OrthPoly * init_hermite_poly(){
     p->bn = &zero_seq11;
     p->cn = &hermc_seq;
     
-    p->lower = -HUGE_VAL;
-    p->upper = HUGE_VAL;
+    p->lower = -DBL_MAX;
+    p->upper = DBL_MAX;
 
     p->const_term = 1.0;
     p->lin_coeff = 1.0;
     p->lin_const = 0.0;
 
-    p->norm = &hermortho;
+    p->norm = hermortho;
 
     return p;
 }
@@ -130,6 +131,6 @@ double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *************************************************************/
 double hermite_integrate(struct OrthPolyExpansion * poly)
 {
-    double out = poly->coeff[0]/sqrt(2.0*M_PI);
+    double out = poly->coeff[0]*sqrt(2.0*M_PI);
     return out;
 }

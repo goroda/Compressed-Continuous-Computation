@@ -106,7 +106,7 @@ double piecewise_poly_integrate(struct PiecewisePoly *);
 double * piecewise_poly_real_roots(struct PiecewisePoly *, size_t *);
 double piecewise_poly_max(struct PiecewisePoly *, double *);
 double piecewise_poly_min(struct PiecewisePoly *, double *);
-double piecewise_poly_absmax(struct PiecewisePoly *, double *);
+double piecewise_poly_absmax(struct PiecewisePoly *, double *,void*);
 double piecewise_poly_norm(struct PiecewisePoly *);
 void piecewise_poly_flip_sign(struct PiecewisePoly *);
 

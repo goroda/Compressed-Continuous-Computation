@@ -270,6 +270,19 @@ void Test_cheb_norm(CuTest * tc){
     FREE_CHEB(cpoly);
 }
 
+CuSuite * ChebGetSuite(){
+
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_cheb_approx);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird);
+    SUITE_ADD_TEST(suite, Test_cheb_integrate);
+    SUITE_ADD_TEST(suite, Test_cheb_inner);
+    SUITE_ADD_TEST(suite, Test_cheb_norm);
+
+    return suite;
+}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -292,7 +305,7 @@ void Test_legendre_approx(CuTest * tc){
         errNorm += pow(func(xtest[ii],&c),2);
     }
     err = sqrt(err) / errNorm;
-    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
     FREE_CHEB(cpoly);
     free(xtest);
 }
@@ -667,20 +680,6 @@ void Test_legendre_norm(CuTest * tc){
     FREE_CHEB(cpoly);
 }
 
-CuSuite * ChebGetSuite(){
-
-    CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_cheb_approx);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird);
-    SUITE_ADD_TEST(suite, Test_cheb_integrate);
-    SUITE_ADD_TEST(suite, Test_cheb_inner);
-    SUITE_ADD_TEST(suite, Test_cheb_norm);
-
-    return suite;
-}
-
 CuSuite * LegGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -698,6 +697,407 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_norm);
     SUITE_ADD_TEST(suite, Test_legendre_product);
     SUITE_ADD_TEST(suite, Test_legendre_axpy);
+
+    return suite;
+}
+
+double fh1(double x, void * arg)
+{
+    (void)(arg);
+    return x + x*x;
+}
+
+void Test_hermite_approx(CuTest * tc){
+
+    printf("Testing function: hermite_approx\n");
+    size_t N = 20;
+    opoly_t * cpoly = orth_poly_expansion_init(HERMITE,N,-DBL_MAX,DBL_MAX);
+
+
+    orth_poly_expansion_approx(fh1,NULL,cpoly);
+    double * xtest = linspace(-1,1,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        double diff = pow(CHEB_EVAL(cpoly,xtest[ii]) - fh1(xtest[ii],NULL),2);
+        err += diff;
+        errNorm += pow(fh1(xtest[ii],NULL),2);
+    }
+    err = sqrt(err) / errNorm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    FREE_CHEB(cpoly);
+    free(xtest);
+}
+
+int f1hvec(size_t N, double * x, double * out,void * arg)
+{
+    (void)(arg);
+    for (size_t ii = 0; ii < N;ii++){
+        out[ii] = fh1(x[ii],arg);
+    }
+    return 0;
+}
+
+void Test_hermite_approx_vec(CuTest * tc){
+
+    printf("Testing function: hermite_approx_vec\n");
+    size_t N = 50;
+    opoly_t * cpoly = orth_poly_expansion_init(HERMITE,N,-DBL_MAX,DBL_MAX);
+
+    orth_poly_expansion_approx_vec(f1hvec,NULL, cpoly);
+
+    double * xtest = linspace(-1,1,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(CHEB_EVAL(cpoly,xtest[ii]) - fh1(xtest[ii],NULL),2);
+        errNorm += pow(fh1(xtest[ii],NULL),2);
+    }
+    err = sqrt(err) / errNorm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
+    FREE_CHEB(cpoly);
+    free(xtest);
+}
+
+double f2h(double x, void * arg)
+{
+    struct counter * c = arg;
+    c->N = c->N + 1;
+    double out = sin(2.0*x);
+    return out;
+}
+
+void Test_hermite_approx_adapt(CuTest * tc){
+
+    printf("Testing function: hermite_approx_adapt\n");
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 5;
+    opts.coeffs_check= 5;
+    opts.tol = 1e-16;
+
+    struct counter c;
+    c.N = 0;
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f2h, &c,
+                            HERMITE,-DBL_MAX,DBL_MAX, &opts);
+
+    //  print_orth_poly_expansion(cpoly,3,NULL);
+    double * xtest = linspace(-1,1,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(CHEB_EVAL(cpoly,xtest[ii]) - f2h(xtest[ii],&c),2);
+        errNorm += pow(f2h(xtest[ii],&c),2);
+    }
+    //printf("num polys adapted=%zu\n",cpoly->num_poly);
+    err = err / errNorm;
+//    printf("err = %G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-10);
+    FREE_CHEB(cpoly);
+    free(xtest);
+}
+
+
+/* void Test_hermite_approx_nonnormal_vec(CuTest * tc){ */
+
+/*     printf("Testing function: hermite_approx_vec on (a,b)\n"); */
+/*     size_t N = 50; */
+/*     double lb = -2; */
+/*     double ub = 3; */
+/*     opoly_t * cpoly = orth_poly_expansion_init(HERMITE,N,lb,ub); */
+
+/*     struct counter c; */
+/*     c.N = 0; */
+/*     orth_poly_expansion_approx_vec(func_vec,&c, cpoly); */
+    
+/*     double * xtest = linspace(lb,ub,1000); */
+/*     size_t ii; */
+/*     double err = 0.0; */
+/*     double errNorm = 0.0; */
+/*     for (ii = 0; ii < 1000; ii++){ */
+/*         err += pow(CHEB_EVAL(cpoly,xtest[ii]) - func(xtest[ii],&c),2); */
+/*         errNorm += pow(func(xtest[ii],&c),2); */
+/*     } */
+/*     err = sqrt(err) / errNorm; */
+/*     CuAssertDblEquals(tc, 0.0, err, 1e-15); */
+/*     FREE_CHEB(cpoly); */
+/*     free(xtest); */
+/* } */
+
+/* void Test_hermite_derivative_consistency(CuTest * tc) */
+/* { */
+/*     printf("Testing functions: legen_deriv and legen_deriv_upto  on (a,b)\n"); */
+
+/*     size_t order = 10; */
+/*     double x = 0.5; */
+/*     double * derivvals = orth_poly_deriv_upto(HERMITE,order,x); */
+     
+/*     size_t ii; */
+/*     for (ii = 0; ii < order+1; ii++){ */
+/*         double val = deriv_legen(x,ii); */
+/*         //printf("consistency ii=%zu\n",ii); */
+/*         //printf("in arr = %G, loner = %G \n ", val, derivvals[ii]); */
+/*         CuAssertDblEquals(tc,val, derivvals[ii],1e-14); */
+/*         //printf("got it\n"); */
+/*     } */
+/*     free(derivvals); derivvals = NULL; */
+/* } */
+
+/* void Test_hermite_derivative(CuTest * tc){ */
+
+/*     printf("Testing function: orth_poly_expansion_deriv  on (a,b)\n"); */
+/*     double lb = -2.0; */
+/*     double ub = -1.0; */
+
+/*     struct OpeAdaptOpts opts; */
+/*     opts.start_num = 10; */
+/*     opts.coeffs_check= 4; */
+/*     opts.tol = 1e-9; */
+
+/*     struct counter c; */
+/*     c.N = 0; */
+/*     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c,  */
+/*                             HERMITE,lb,ub, &opts); */
+    
+/*     opoly_t * der = orth_poly_expansion_deriv(cpoly); */
+
+/*     size_t N = 100; */
+/*     double * xtest = linspace(lb,ub,N); */
+/*     size_t ii; */
+/*     double err = 0.0; */
+/*     double errNorm = 0.0; */
+/*     for (ii = 0; ii < N; ii++){ */
+/*         err += pow(CHEB_EVAL(der,xtest[ii]) - funcderiv(xtest[ii], NULL),2); */
+/*         errNorm += pow(funcderiv(xtest[ii],NULL),2); */
+
+/*         //printf("pt= %G err = %G \n",xtest[ii], err); */
+/*     } */
+/*     //printf("num polys adapted=%zu\n",cpoly->num_poly); */
+/*     err = err / errNorm; */
+/*     //printf("err = %G\n",err); */
+/*     CuAssertDblEquals(tc, 0.0, err, 1e-12); */
+/*     FREE_CHEB(cpoly); */
+/*     FREE_CHEB(der); */
+/*     free(xtest); */
+/* } */
+
+double f3h(double x, void * args)
+{
+    (void)(args);
+    double out = (sin(2*x+3) + 3*pow(x,3));
+    return out;
+}
+
+
+void Test_hermite_integrate(CuTest * tc){
+
+    printf("Testing function: hermite_integrate\n");
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f3h, NULL,
+                            HERMITE,-DBL_MAX,DBL_MAX,&opts);
+    
+    double intshould = sqrt(2*M_PI)*sin(3)/exp(2);
+    double intis = hermite_integrate(cpoly);
+    CuAssertDblEquals(tc, intshould, intis, 1e-13);
+    FREE_CHEB(cpoly);
+}
+
+
+double f4h(double x, void * arg)
+{
+    (void)(arg);
+    double out = sin(2.0*x+3.0);
+    return out;
+}
+
+double f5h(double x, void * arg)
+{
+    (void)(arg);
+    double out = 3*pow(x,3);
+    return out;
+}
+
+void Test_hermite_inner(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_inner with hermite poly \n");
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+   
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f4h,NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f5h,NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    double intshould = -6.0*sqrt(2.0*M_PI)*cos(3)/exp(2.0);
+    double intis = orth_poly_expansion_inner(cpoly,cpoly2);
+    CuAssertDblEquals(tc, intshould, intis, 1e-10);
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+}
+
+double f6h(double x, void * arg)
+{
+    (void)(arg);
+    return pow(x,2)*sin(x+0.5);
+}
+
+void Test_hermite_norm_w(CuTest * tc){
+    
+    printf("Testing function: orth_poly_expansion_norm_w with hermite poly\n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    double intshould = sqrt(M_PI/2.0)*(3*exp(2)+5*cos(1))/exp(2);
+    double intis = orth_poly_expansion_norm_w(cpoly);
+    CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
+    FREE_CHEB(cpoly);
+}
+
+void Test_hermite_norm(CuTest * tc){
+    
+    printf("Testing function: orth_poly_expansion_norm with hermite poly\n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    double intshould = sqrt(M_PI/2.0)*(3*exp(2)+5*cos(1))/exp(2);
+    double intis = orth_poly_expansion_norm(cpoly);
+    CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
+    FREE_CHEB(cpoly);
+}
+
+double f7h(double x, void * args)
+{
+    (void)(args);
+    return pow(x,2);
+}
+double f8h(double x, void * args)
+{
+    (void)(args);
+    return (2 + 3.0*pow(x,5));
+}
+
+void Test_hermite_product(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_product with hermite poly \n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-10;
+
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f7h, NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f8h,NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    opoly_t * cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly3,pts[ii]);
+        double eval2 = orth_poly_expansion_eval(cpoly,pts[ii]) *
+                        orth_poly_expansion_eval(cpoly2,pts[ii]);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+    FREE_CHEB(cpoly3);
+}
+
+void Test_hermite_axpy(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_axpy with hermite poly \n");
+    double lb = -DBL_MAX;
+    double ub = DBL_MAX;
+//    printf("lb=%G, ub = %G\n",lb,ub);
+
+    struct OpeAdaptOpts opts;
+    opts.start_num = 10;
+    opts.coeffs_check= 4;
+    opts.tol = 1e-15;
+
+    opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f7h, NULL,
+                            HERMITE,lb,ub, &opts);
+    
+    int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
+    CuAssertIntEquals(tc,0,success);
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = orth_poly_expansion_eval(cpoly,pts[ii]);
+        double eval2 = 2.0 * f7h(pts[ii],NULL) + f6h(pts[ii],NULL);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-7);
+    }
+
+    free(pts); pts = NULL;
+    FREE_CHEB(cpoly);
+    FREE_CHEB(cpoly2);
+}
+
+
+    
+CuSuite * HermGetSuite(){
+
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_hermite_approx);
+//    SUITE_ADD_TEST(suite, Test_hermite_approx_vec);
+    SUITE_ADD_TEST(suite, Test_hermite_approx_adapt);
+    /* SUITE_ADD_TEST(suite, Test_hermite_derivative); */
+    /* SUITE_ADD_TEST(suite, Test_hermite_derivative_consistency); */
+    SUITE_ADD_TEST(suite, Test_hermite_integrate);
+    SUITE_ADD_TEST(suite, Test_hermite_inner);
+    SUITE_ADD_TEST(suite, Test_hermite_norm_w);
+    SUITE_ADD_TEST(suite, Test_hermite_norm);
+    SUITE_ADD_TEST(suite, Test_hermite_product);
+    SUITE_ADD_TEST(suite, Test_hermite_axpy);
 
     return suite;
 }
@@ -1323,7 +1723,7 @@ void Test_maxmin_poly_expansion(CuTest * tc){
     double loc;
     double max = orth_poly_expansion_max(pl, &loc);
     double min = orth_poly_expansion_min(pl, &loc);
-    double absmax = orth_poly_expansion_absmax(pl, &loc);
+    double absmax = orth_poly_expansion_absmax(pl, &loc,NULL);
 
     double diff;
 
@@ -1862,7 +2262,7 @@ void Test_pw_integrate(CuTest * tc){
             piecewise_poly_approx1_adapt(pw_disc2, NULL, lb, ub, &aopts);
     double ints = piecewise_poly_integrate(p2);
 
-    CuAssertDblEquals(tc, sol, ints, 1e-7);
+    CuAssertDblEquals(tc, sol, ints, 1e-6);
     piecewise_poly_free(p2);
     p2 = NULL;
 }
@@ -2200,7 +2600,7 @@ void Test_maxmin_pw(CuTest * tc){
     double loc;
     double max = piecewise_poly_max(pl, &loc);
     double min = piecewise_poly_min(pl, &loc);
-    double absmax = piecewise_poly_absmax(pl, &loc);
+    double absmax = piecewise_poly_absmax(pl, &loc,NULL);
 
     
     CuAssertDblEquals(tc, 1.0, max, 1e-10);
@@ -2429,6 +2829,7 @@ void RunAllTests(void) {
     
     CuSuite * cheb = ChebGetSuite();
     CuSuite * leg = LegGetSuite();
+    CuSuite * herm = HermGetSuite();
     CuSuite * lelm = LelmGetSuite();
     CuSuite * sp = StandardPolyGetSuite();
     CuSuite * alg = PolyAlgorithmsGetSuite();
@@ -2439,6 +2840,7 @@ void RunAllTests(void) {
 	
     CuSuiteAddSuite(suite, cheb);
     CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, herm);
     CuSuiteAddSuite(suite, lelm);
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
@@ -2454,6 +2856,7 @@ void RunAllTests(void) {
     
     CuSuiteDelete(cheb);
     CuSuiteDelete(leg);
+    CuSuiteDelete(herm);
     CuSuiteDelete(lelm);
     CuSuiteDelete(sp);
     CuSuiteDelete(alg);

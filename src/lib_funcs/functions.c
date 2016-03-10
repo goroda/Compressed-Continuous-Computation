@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -1839,19 +1839,11 @@ double generic_function_absmax(struct GenericFunction * f, double * x, void * op
     switch (f->fc){
     case PIECEWISE:
         pw = f->f;
-        if (optargs != NULL){
-            printf("Warning: optimization arguments not yet defined for piecewise polynomials\n");
-            exit(1);
-        }
-        out = piecewise_poly_absmax(pw,x);
+        out = piecewise_poly_absmax(pw,x,optargs);
         break;
     case POLYNOMIAL:
         op = f->f;
-        if (optargs != NULL){
-            printf("Warning: optimization arguments not yed defined for polynomials\n");
-            exit(1);
-        }
-        out = orth_poly_expansion_absmax(op,x);
+        out = orth_poly_expansion_absmax(op,x,optargs);
         break;
     case LINELM:
         out = lin_elem_exp_absmax(f->f,x,optargs);

@@ -811,17 +811,17 @@ double piecewise_poly_min(struct PiecewisePoly * p, double * x)
 /********************************************************//**
 *   Obtain the absolute maximum of a pw polynomial
 *
-*   \param p [in] - pw polynomial
-*   \param x [inout] - location of absolute maximum
+*   \param[in]     p       - pw polynomial
+*   \param[in,out] x       - location of absolute maximum
+*   \param[in]     optargs - optimization arguments
 *
 *   \return val - absolute maximum
 *   
 *   \note
 *       if constant function then just returns the left most point
 *************************************************************/
-double piecewise_poly_absmax(struct PiecewisePoly * p, double * x)
+double piecewise_poly_absmax(struct PiecewisePoly * p, double * x, void * optargs)
 {
-    
     //printf("here!\n");
     double locfinal, valfinal;
     if ( p->leaf == 1){
@@ -832,17 +832,17 @@ double piecewise_poly_absmax(struct PiecewisePoly * p, double * x)
         //    return 0.0;
         //}
         //print_orth_poly_expansion(p->ope,3,NULL);
-        double maxval = orth_poly_expansion_absmax(p->ope, x);
+        double maxval = orth_poly_expansion_absmax(p->ope, x,optargs);
         //printf("max is %G \n",maxval);
         return maxval;
     }
     else{
         double loc2, val2;
         size_t ii = 0;
-        valfinal = piecewise_poly_absmax(p->branches[0],&locfinal);
+        valfinal = piecewise_poly_absmax(p->branches[0],&locfinal,optargs);
         //printf("nbranches = %zu\n",p->nbranches);
         for (ii = 1; ii < p->nbranches;ii++){
-            val2 = piecewise_poly_absmax(p->branches[ii],&loc2);
+            val2 = piecewise_poly_absmax(p->branches[ii],&loc2,optargs);
             if (val2 > valfinal){
                 valfinal = val2;
                 locfinal = loc2;
