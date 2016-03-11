@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -998,6 +998,66 @@ void Test_qmarray_householder_linelm(CuTest * tc){
     qmarray_free(Acopy);
 }
 
+void Test_qmarray_householder_hermite1(CuTest * tc){
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("Testing function: qmarray_householder for hermite (1)\n");
+
+    double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    void * args[4] = {&c, &c2, &c3, &c4};
+
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = HERMITE;
+    struct Qmarray* T = qmarray_orth1d_columns(fc,&ptype,2,2,-DBL_MAX,DBL_MAX);
+    double * tmat= qmatqma_integrate(T,T);
+    CuAssertDblEquals(tc,1.0,tmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,tmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,tmat[3],1e-14);
+//    printf("tmat = \n");
+//    dprint2d_col(2,2,tmat);
+    qmarray_free(T); T = NULL;
+    free(tmat); tmat = NULL;
+    
+    size_t nr = 2;
+    size_t nc = 2;
+    struct Qmarray * A = qmarray_approx1d(
+        nr, nc, funcs, args, fc, &ptype, -1.0, 1.0, NULL);
+    
+    struct Qmarray * Acopy = qmarray_copy(A);
+    
+    double * R = calloc_double(nc*nc);
+    struct Qmarray * Q = qmarray_householder_simple("QR",Acopy,R);
+    struct Qmarray * Anew = qmam(Q,R,nc);
+
+    double * qmat = qmatqma_integrate(Q,Q);
+    
+    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
+    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
+    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
+    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
+
+    CuAssertDblEquals(tc,1.0,qmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,qmat[3],1e-14);
+
+    CuAssertDblEquals(tc,0.0,diff1,1e-13);
+    CuAssertDblEquals(tc,0.0,diff2,1e-13);
+    CuAssertDblEquals(tc,0.0,diff3,1e-13);
+    CuAssertDblEquals(tc,0.0,diff4,1e-10);
+
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    free(qmat); qmat = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
+}
 
 void Test_qmarray_qr1(CuTest * tc)
 {
@@ -1310,6 +1370,61 @@ void Test_qmarray_householder_rows(CuTest * tc){
     qmarray_free(Acopy);
     free(R);
 }
+void Test_qmarray_householder_rows_hermite(CuTest * tc){
+
+    printf("Testing function: qmarray_householder_rows with hermite polynomials \n");
+
+    double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    void * args[4] = {&c, &c2, &c3, &c4};
+
+
+    enum poly_type p = HERMITE;
+    struct Qmarray * A = qmarray_approx1d(
+                        2, 2, funcs, args, POLYNOMIAL, &p,
+                        -DBL_MAX, DBL_MAX, NULL);
+    
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double * R = calloc_double(2*2);
+
+    struct Qmarray * Q = qmarray_householder_simple("LQ", Acopy,R);
+
+    CuAssertIntEquals(tc,2,Q->nrows);
+    CuAssertIntEquals(tc,2,Q->ncols);
+    struct Qmarray * Anew = mqma(R,Q,2);
+    double * qmat = qmaqmat_integrate(Q,Q);
+
+    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
+    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
+    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
+    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
+
+    CuAssertDblEquals(tc,1.0,qmat[0],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[1],1e-14);
+    CuAssertDblEquals(tc,0.0,qmat[2],1e-14);
+    CuAssertDblEquals(tc,1.0,qmat[3],1e-14);
+
+    /* print_qmarray(A,0,NULL); */
+    /* printf("*************\n"); */
+    /* print_qmarray(Anew,0,NULL) */;
+    
+    CuAssertDblEquals(tc,0.0,diff1,1e-14);
+    CuAssertDblEquals(tc,0.0,diff2,1e-12);
+    CuAssertDblEquals(tc,0.0,diff3,1e-12);
+    CuAssertDblEquals(tc,0.0,diff4,1e-12);
+    
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    free(qmat); qmat = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+
+}
 
 void Test_qmarray_householder_rowslinelm(CuTest * tc){
     
@@ -1351,7 +1466,6 @@ void Test_qmarray_householder_rowslinelm(CuTest * tc){
     struct Qmarray * Q = qmarray_householder_simple("LQ",Acopy,R);
 
     struct Qmarray * Anew = mqma(R,Q,nr);
-
 
     double * qmat = qmaqmat_integrate(Q,Q);
 
@@ -1459,40 +1573,93 @@ void Test_qmarray_lu1d2(CuTest * tc){
     
     double eval;
     
-    //print_qmarray(A,0,NULL);
     // check pivots
-    /* printf("U = \n"); */
-    /* dprint2d_col(3,3,U); */
     size_t ii,jj;
     for (ii = 0; ii < 3; ii++){
-        //printf("Checking column %zu \n",ii);
-        //printf("---------------\n");
         for (jj = 0; jj < ii; jj++){
-            //printf("Should have zero at (%zu,%G)\n",pivi[jj],pivx[jj]);
             eval = generic_function_1d_eval(L->funcs[2*ii+pivi[jj]], pivx[jj]);
             CuAssertDblEquals(tc,0.0,eval,1e-14);
-            //printf("eval = %G\n",eval);
         }
-        //printf("Should have one at (%zu,%G)\n",pivi[ii],pivx[ii]);
+
         eval = generic_function_1d_eval(L->funcs[2*ii+pivi[ii]], pivx[ii]);
         CuAssertDblEquals(tc,1.0,eval,1e-14);
-        //printf("eval = %G\n",eval);
     }
-    /*
-    eval = generic_function_1d_eval(L->funcs[2+ pivi[0]], pivx[0]);
-    printf("eval = %G\n",eval);
-    eval = generic_function_1d_eval(L->funcs[4+ pivi[1]], pivx[1]);
-    printf("eval = %G\n",eval);
-    eval = generic_function_1d_eval(L->funcs[4+ pivi[0]], pivx[0]);
-    printf("eval = %G\n",eval);
-    */
-
-    //CuAssertDblEquals(tc, 0.0, eval, 1e-13);
     
     struct Qmarray * Comb = qmam(L,U,3);
     double difff = qmarray_norm2diff(Comb,Acopy);
-    //printf("difff = %G\n",difff);
     CuAssertDblEquals(tc,difff,0,1e-13);
+    
+    //exit(1);
+    qmarray_free(Acopy);
+    qmarray_free(A);
+    qmarray_free(Comb);
+    qmarray_free(L);
+    free(U);
+    free(pivx);
+    free(pivi);
+}
+
+void Test_qmarray_lu1d_hermite(CuTest * tc){
+
+    printf("Testing function: qmarray_lu1d with hermite (1)\n");
+    //this is column ordered when convertest to Qmarray
+    double (*funcs [6])(double, void *) = {&func,  &func4, &func6, 
+                                           &func4, &func5, &func3};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    struct counter c5; c5.N = 0;
+    struct counter c6; c6.N = 0;
+    void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6};
+
+
+    enum poly_type p = HERMITE;
+    struct Qmarray * A = qmarray_approx1d(
+        2, 3, funcs, args, POLYNOMIAL, &p, -DBL_MAX, DBL_MAX, NULL);
+    //printf("A = (%zu,%zu)\n",A->nrows,A->ncols);
+
+    struct Qmarray * L = qmarray_alloc(2,3);
+
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double * U = calloc_double(3*3);
+    size_t * pivi = calloc_size_t(3);
+    double * pivx = calloc_double(3);
+
+    size_t nopt = 60;
+    double * xopt = linspace(-10.0,10.0,nopt);
+    struct c3Vector * c3v = c3vector_alloc(nopt,xopt);
+    qmarray_lu1d(A,L,U,pivi,pivx,c3v);
+    free(xopt); xopt = NULL;
+    c3vector_free(c3v); c3v = NULL;
+    
+    double eval;
+
+    /* printf("pivots "); */
+    /* iprint_sz(3,pivi); */
+    /* printf("pivot x"); */
+    /* dprint(3,pivx); */
+    //dprint2d_col(3,3,U);
+    // check pivots
+    size_t ii,jj;
+    for (ii = 0; ii < 3; ii++){
+        for (jj = 0; jj < ii; jj++){
+            eval = generic_function_1d_eval(L->funcs[2*ii+pivi[jj]], pivx[jj]);
+            double nt = generic_function_array_norm(2,1,L->funcs+2*ii);
+            //printf("nt = %G\n",nt);
+            CuAssertDblEquals(tc,0.0,eval,1e-13);
+        }
+
+        eval = generic_function_1d_eval(L->funcs[2*ii+pivi[ii]], pivx[ii]);
+        CuAssertDblEquals(tc,1.0,eval,1e-14);
+    }
+    
+    struct Qmarray * Comb = qmam(L,U,3);
+    double diff = qmarray_norm2diff(Comb,Acopy);
+    double norm1 = qmarray_norm2(Acopy);
+    //printf("diff=%G, reldiff=%G\n",diff,diff/norm1);
+    CuAssertDblEquals(tc,0.0,diff/norm1,1e-13);
     
     //exit(1);
     qmarray_free(Acopy);
@@ -1674,6 +1841,58 @@ void Test_qmarray_maxvol1d2(CuTest * tc){
     free(pivi);
 }
 
+void Test_qmarray_maxvol1d_hermite1(CuTest * tc){
+
+    printf("Testing function: qmarray_maxvol1d with hermite poly (1) \n");
+
+    double (*funcs [6])(double, void *) =
+        {&func, &func2, &func3, &func4,
+         &func4, &func4};
+    struct counter c; c.N = 0;
+    struct counter c2; c2.N = 0;
+    struct counter c3; c3.N = 0;
+    struct counter c4; c4.N = 0;
+    struct counter c5; c5.N = 0;
+    struct counter c6; c6.N = 0;
+    void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6};
+
+
+    enum poly_type p = HERMITE;
+    struct Qmarray * A = 
+        qmarray_approx1d(
+            1, 6, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
+    
+
+    double * Asinv = calloc_double(6*6);
+    size_t * pivi = calloc_size_t(6);
+    double * pivx= calloc_double(6);
+
+    size_t nopt = 40;
+    double * xopt = linspace(-10.0,10.0,nopt);
+    struct c3Vector * c3v = c3vector_alloc(nopt,xopt);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,c3v);
+     
+    /*
+    printf("pivots at = \n");
+    iprint_sz(6,pivi); 
+    dprint(6,pivx);
+    */
+
+    struct Qmarray * B = qmam(A,Asinv,2);
+    double maxval, maxloc;
+    size_t maxrow, maxcol;
+    qmarray_absmax1d(B,&maxloc,&maxrow,&maxcol,&maxval,c3v);
+    //printf("Less = %d", 1.0+1e-2 > maxval);
+    CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
+
+    free(xopt); xopt = NULL;
+    c3vector_free(c3v); c3v;
+    qmarray_free(B);
+    qmarray_free(A);
+    free(Asinv);
+    free(pivx);
+    free(pivi);
+}
 
 void Test_qmarray_maxvol1d_linelm(CuTest * tc){
 
@@ -1703,7 +1922,6 @@ void Test_qmarray_maxvol1d_linelm(CuTest * tc){
     struct Qmarray * C = NULL;
     qmarray_deserialize(text,&C);
     free(text); text = NULL;
-
 
     double diff = qmarray_norm2diff(A,C);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
@@ -1906,17 +2124,21 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_householder3);
     SUITE_ADD_TEST(suite, Test_qmarray_householder4);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1);
     SUITE_ADD_TEST(suite, Test_qmarray_qr1);
     SUITE_ADD_TEST(suite, Test_qmarray_qr2);
     SUITE_ADD_TEST(suite, Test_qmarray_qr3);
     SUITE_ADD_TEST(suite, Test_qmarray_lq);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_svd);
     SUITE_ADD_TEST(suite, Test_qmarray_serialize);
@@ -4303,13 +4525,13 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-//    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
+    /* CuSuiteAddSuite(suite, clin); */
+    /* CuSuiteAddSuite(suite, qma); */
     CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
+    /* CuSuiteAddSuite(suite, cind); */
+    /* CuSuiteAddSuite(suite, fta); */
+    /* CuSuiteAddSuite(suite, dmrg); */
+    /* CuSuiteAddSuite(suite, diff); */
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);

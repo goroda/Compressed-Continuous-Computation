@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -54,7 +54,7 @@
 #define ZEROTHRESH 1e2*DBL_EPSILON
 //#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e-14
-//#define ZEROTHRESH 1e-20
+//#define ZEROTHRESH 1e-20S
 
 #ifndef VQMALU
     #define VQMALU 0
@@ -1714,7 +1714,8 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
         //}
     }
 
-    double tval = generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
+    //double tval =
+    generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
     px[upto] = xval;
     piv[upto] = amind;
     double val = generic_function_1d_eval(L[piv[upto]],px[upto]);
@@ -1722,9 +1723,9 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
     if (VQMALU){
         printf("got new val = %G\n", val);
         printf("Values of new array at indices\n ");
-        for (size_t ii = 0; ii < upto+1; ii++){
-            double eval = generic_function_1d_eval(L[piv[ii]],px[ii]);
-            printf("\t ind=%zu x=%G val=%G\n",piv[ii],px[ii],eval);
+        for (size_t zz = 0; zz < upto+1; zz++){
+            double eval = generic_function_1d_eval(L[piv[zz]],px[zz]);
+            printf("\t ind=%zu x=%G val=%G\n",piv[zz],px[zz],eval);
         }
     }
 
@@ -1857,14 +1858,18 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
         piv[kk] = amind;
         px[kk] = amloc;
         //printf("absmax\n");
+
+        val = generic_function_1d_eval(A->funcs[kk*A->nrows+amind], amloc);
         if (VQMALU){
             printf("locmax=%3.15G\n",amloc);
             printf("amindmax=%zu\n",amind);
             printf("val of max =%3.15G\n",val);
-            print_generic_function(A->funcs[kk*A->nrows+amind],0,NULL);
-        }
+            struct GenericFunction ** At = A->funcs+kk*L->nrows;
+            double eval2 = generic_function_1d_eval(At[amind],amloc);
+            printf("eval of thing %G\n",eval2);
 
-        val = generic_function_1d_eval(A->funcs[kk*A->nrows+amind], amloc);
+            //print_generic_function(A->funcs[kk*A->nrows+amind],0,NULL);
+        }
         //printf("val = %G\n", val);
         //assert(fabs(val) > ZEROTHRESH); // dont deal with zero functions yet
         if (fabs(val) <= ZEROTHRESH) {
@@ -1900,6 +1905,18 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
                                            0.0, 1, NULL, 1, 
                                            L->funcs + kk * L->nrows);
         }
+
+        if (VQMALU){
+            // printf("got new val = %G\n", val);
+            printf("Values of new array at indices\n ");
+            struct GenericFunction ** Lt = L->funcs+kk*L->nrows;
+
+            for (size_t zz = 0; zz < kk; zz++){
+                double eval = generic_function_1d_eval(Lt[piv[zz]],px[zz]);
+                printf("\t ind=%zu x=%G val=%G\n",piv[zz],px[zz],eval);
+            }
+        }
+
         //printf("k start here\n");
         for (ii = 0; ii < A->ncols; ii++){
             if (VQMALU){
@@ -1924,13 +1941,14 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
                             A->funcs + ii*A->nrows, 
                             -u[ii*A->ncols+kk], 1, L->funcs+ kk*L->nrows);
             if (VQMALU){
-                print_generic_function(A->funcs[ii*A->nrows],0,NULL);
-                printf("norm pre=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
+                //print_generic_function(A->funcs[ii*A->nrows],0,NULL);
+                //printf("norm pre=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
             }
             //printf("got this daxpby\n");
             qmarray_set_column_gf(A,ii,temp);
-            if (VQMALU)
-                printf("norm post=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
+            if (VQMALU){
+                //printf("norm post=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
+            }
             generic_function_array_free(temp,A->nrows);
         }
     }
@@ -2658,7 +2676,9 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         }
 
         if (polyorth == 1){
-            Q = qmarray_orth1d_columns(POLYNOMIAL, &ptype, A->nrows,
+            Q = qmarray_orth1d_columns(POLYNOMIAL,
+                                       &(A->funcs[0]->sub_type.ptype),
+                                       A->nrows,
                                        ncols, lb, ub);   
             if (fastqr == 1){
                 out = qmarray_qr(A,&Q,&R);
@@ -2700,8 +2720,9 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
         }
       
         if (polyorth == 1){
-            Q = qmarray_orth1d_rows(POLYNOMIAL, 
-                                    &ptype, A->nrows, ncols,
+            Q = qmarray_orth1d_rows(POLYNOMIAL,
+                                    &(A->funcs[0]->sub_type.ptype),
+                                    A->nrows, ncols,
                                     lb, ub); 
             if (fastqr == 1){
                 //free(R); R = NULL;
@@ -3248,7 +3269,8 @@ struct FunctionTrain * function_train_afpb(double a, double b,
 {
     struct BoundingBox * bds = function_train_bds(f);
 
-    struct FunctionTrain * off = function_train_constant(POLYNOMIAL,LEGENDRE,
+    enum poly_type ptype = LEGENDRE;
+    struct FunctionTrain * off = function_train_constant(POLYNOMIAL,&ptype,
                                                          f->dim,b,bds,NULL);
     struct FunctionTrain * af = function_train_copy(f);
     function_train_scale(af,a);
@@ -4087,6 +4109,38 @@ void ft_cross_args_free(struct FtCrossArgs * fca)
 
 /***********************************************************//**
     An interface for cross approximation of a function
+    on an unbounded domain
+
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, 
+                        if NULL then default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
+
+    \return function train decomposition of f
+
+    \note
+    Nested indices both left and right
+***************************************************************/
+struct FunctionTrain *
+function_train_cross_ub(double (*f)(double *, void *), void * args,
+                        size_t dim,
+                        double ** xstart,
+                        struct FtCrossArgs * fcain,
+                        struct FtApproxArgs * apargsin,
+                        struct FiberOptArgs * foptin)
+{
+
+    
+    
+    
+}
+
+/***********************************************************//**
+    An interface for cross approximation of a function
 
     \param[in] f      - function
     \param[in] args   - function arguments
@@ -4181,15 +4235,6 @@ function_train_cross(double (*f)(double *, void *), void * args,
     struct FunctionTrain * ftref = 
         function_train_constant_d(fapp,1.0, bds);
     
-    //exit(1);
-    /* for (size_t ii = 0; ii < dim; ii++) */
-    /* { */
-    /*     printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n"); */
-    /*     printf("dim = %zu\n",ii); */
-    /*     print_cross_index(isl[ii]); */
-    /*     print_cross_index(isr[ii]); */
-    /*     printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n"); */
-    /* } */
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
                                   isr,fcause,fapp);

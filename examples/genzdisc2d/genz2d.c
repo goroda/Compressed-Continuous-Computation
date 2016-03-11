@@ -40,8 +40,9 @@ int main(void)
     double coeffs[2] = {0.5, 0.5};
     size_t ranks[3] = {1, 1, 1};
 
+    enum poly_type ptype = LEGENDRE;
     struct FunctionTrain * ftref = 
-        function_train_linear(POLYNOMIAL,LEGENDRE,dim,
+        function_train_linear(POLYNOMIAL,&ptype,dim,
                               bds,coeffs,NULL);
             
     struct FunctionMonitor * fm = 
@@ -76,7 +77,6 @@ int main(void)
     aopts.epsilon=1e-3;
     aopts.other = NULL;
 
-    enum poly_type ptype = LEGENDRE;
     struct FtApproxArgs * fapp = ft_approx_args_createpwpoly(dim,&ptype,&aopts);
 
     struct FunctionTrain * ft = ftapprox_cross(function_monitor_eval, fm,

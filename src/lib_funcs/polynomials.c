@@ -189,11 +189,11 @@ double eval_quad_func(double x, void * args)
 /********************************************************//**
 *   Initialize a standard basis polynomial
 *
-*   \param num_poly [in] - number of basis
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] num_poly - number of basis
+*   \param[in] lb       - lower bound
+*   \param[in] ub       - upper bound
 *
-*   \return  p - polynomial
+*   \return  standard polynomial
 *************************************************************/
 struct StandardPoly * 
 standard_poly_init(size_t num_poly, double lb, double ub){
@@ -215,9 +215,9 @@ standard_poly_init(size_t num_poly, double lb, double ub){
 *   Create the polynomial representing the derivative
 *   of the standard polynomial
 *
-*   \param p [in] - polynomial
+*   \param[in] p - polynomial
 *
-*   \return dp  - derivative polynomial
+*   \return  derivative polynomial
 *************************************************************/
 struct StandardPoly * 
 standard_poly_deriv(struct StandardPoly * p){
@@ -249,7 +249,7 @@ standard_poly_deriv(struct StandardPoly * p){
 /********************************************************//**
 *   free memory allocated to a standard polynomial
 *
-*   \param p [inout] - polynomial structure 
+*   \param[in,out] p - polynomial structure 
 *
 *************************************************************/
 void 
@@ -320,12 +320,13 @@ struct OrthPoly * init_leg_poly(){
 /********************************************************//**
 *   free memory allocated to a polynomial
 *
-*   \param p [inout]- polynomial structure to free
+*   \param[in,out] p - polynomial structure to free
 *************************************************************/
-void 
-free_orth_poly(struct OrthPoly * p)
+void free_orth_poly(struct OrthPoly * p)
 {
-    free(p);
+    if (p != NULL){
+        free(p); p = NULL;
+    }
 }
 
 /********************************************************//**
@@ -915,7 +916,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 /********************************************************//**
 *   Evaluate the derivative of an orth poly expansion
 *
-*   \param[in] p- orthogonal polynomial expansion
+*   \param[in] p - orthogonal polynomial expansion
 *   
 *   \return derivative
 *
@@ -2197,6 +2198,8 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
     }
     else{
         fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
+        fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
+        exit(1);
     }
 
     if (b->p->ptype == CHEBYSHEV){
@@ -2211,6 +2214,8 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
     }
     else{
         fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
+        fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
+        exit(1);
     }
     
     /*
@@ -3119,6 +3124,7 @@ double orth_poly_expansion_absmax(
 
         struct c3Vector * optnodes = oargs;
         double mval = fabs(orth_poly_expansion_eval(p,optnodes->elem[0]));
+        *x = optnodes->elem[0];
         double cval = mval;
         if (ptype == HERMITE){
             mval *= exp(-pow(optnodes->elem[0],2)/2.0);
@@ -3128,13 +3134,17 @@ double orth_poly_expansion_absmax(
             double val = fabs(orth_poly_expansion_eval(p,optnodes->elem[ii]));
             double tval = val;
             if (ptype == HERMITE){
-                val *= exp(-pow(optnodes->elem[0],2)/2.0);
+                val *= exp(-pow(optnodes->elem[ii],2)/2.0);
+                //printf("ii=%zu, x = %G. val=%G, tval=%G\n",ii,optnodes->elem[ii],val,tval);
             }
             if (val > mval){
+//                printf("min achieved\n");
+                mval = val;
                 cval = tval;
                 *x = optnodes->elem[ii];
             }
         }
+//        printf("optloc=%G .... cval = %G\n",*x,cval);
         return cval;
     }
     else if (ptype == HERMITE){

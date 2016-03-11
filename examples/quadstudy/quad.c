@@ -16,6 +16,7 @@ int main( void )
     size_t ii,jj, dim;
     double lb = -1.0;
     double ub = 1.0;
+    enum poly_type ptype = LEGENDRE;
     for (dim = start; dim < (start+nDims); dim+=4){
         struct BoundingBox * bounds = bounding_box_init_std(dim);
         double * quad = calloc_double(dim * dim);
@@ -28,7 +29,8 @@ int main( void )
                 quad[ii*dim+jj] = randu();
             }
         }
-        struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,LEGENDRE,dim, bounds, quad,coeff,NULL);
+        struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,&ptype,
+                                                            dim,bounds,quad,coeff,NULL);
         struct FunctionTrain * fr = function_train_round(f,1e-8);
         
         size_t maxrank = fr->ranks[1];

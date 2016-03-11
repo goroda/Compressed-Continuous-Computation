@@ -1718,9 +1718,9 @@ function_train_constant(enum function_class fc,
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$ 
 
-    \param[in] aopts - approximation arguments for each dimension
-    \param[in] a        - value of tensor train
-    \param[in] bds      - boundarys of each dimension
+    \param[in] fta - approximation arguments for each dimension
+    \param[in] a   - value of tensor train
+    \param[in] bds - boundarys of each dimension
 
     \return function train
 

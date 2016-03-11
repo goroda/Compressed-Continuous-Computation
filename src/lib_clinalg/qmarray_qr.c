@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -59,7 +59,7 @@ int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R)
     double ub = generic_function_get_upper_bound(A->funcs[0]);
     size_t nrows = A->nrows;
     size_t ncols = A->ncols;
-    enum poly_type ptype = LEGENDRE;
+    enum poly_type ptype = LEGENDRE;//A->funcs[0]->sub_type.LEGENDRE;
     if ( (*Q) == NULL){
         *Q = qmarray_orth1d_columns(POLYNOMIAL,&ptype,nrows,ncols,
                                     lb,ub); 

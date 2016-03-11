@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -1323,18 +1323,19 @@ struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
 
     \f$ f(x) = a_0 + \sum_{i=1}^d a_i x_i \f$
 
-    \param dim [in] - dimension of *x*
-    \param N [in] - number of data points
-    \param data [in] - array of one dimensional data points
-    \param covariates [in] - (dim * N) array of *x* locations
-    \param noise [in] - standard deviation of noise
-    \param bds [in] - boundaries for inference of coefficients *a_i*
+    \param[in] dim        - dimension of *x*
+    \param[in] N          - number of data points
+    \param[in] data       - array of one dimensional data points
+    \param[in] covariates - (dim * N) array of *x* locations
+    \param[in] noise      - standard deviation of noise
+    \param[in] bds        - boundaries for inference of coefficients *a_i*
 
     \return like - likelihood function
 ***************************************************************/
 struct Likelihood * likelihood_linear_regression(size_t dim, size_t N, 
     double * data, double * covariates, double noise, struct BoundingBox * bds)
 {
+    enum poly_type ptype = LEGENDRE;
     struct FT1DArray * meanfunc = ft1d_array_alloc(N);
     size_t ii;
     double * pt = calloc_double(dim+1);
@@ -1342,7 +1343,7 @@ struct Likelihood * likelihood_linear_regression(size_t dim, size_t N,
     for (ii = 0; ii < N; ii++){
         memmove(pt+1,covariates + ii*dim,dim*sizeof(double));    
         meanfunc->ft[ii] = 
-            function_train_linear(POLYNOMIAL,LEGENDRE,dim+1,bds,pt,NULL);
+            function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL);
     }
 
     struct Likelihood * like = 
