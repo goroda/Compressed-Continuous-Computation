@@ -2041,13 +2041,13 @@ generic_function_constant(double a, enum function_class fc, void * st,
     struct GenericFunction * gf = NULL;
     switch (fc){
     case PIECEWISE:
-        assert (aopts == NULL); // am not expecting this here
+        //assert (aopts == NULL); // am not expecting this here
         gf = generic_function_alloc(1,fc,st);
         gf->f = piecewise_poly_constant(a,gf->sub_type.ptype,lb,ub);
         gf->fargs = NULL;
         break;
     case POLYNOMIAL:
-        assert (aopts == NULL); // am not expecting this here
+        //assert (aopts == NULL); // am not expecting this here
         gf = generic_function_alloc(1,fc,st);
         gf->f = orth_poly_expansion_constant(a,gf->sub_type.ptype,lb,ub);
         gf->fargs = NULL;

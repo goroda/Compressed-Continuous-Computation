@@ -79,8 +79,8 @@
 /***********************************************************//**
     Quasimatrix - vector multiplication
 
-    \param Q [in] - quasimatrix
-    \param v [in] - array
+    \param[in] Q - quasimatrix
+    \param[in] v - array
 
     \return f -  generic function
 ***************************************************************/
@@ -1708,20 +1708,29 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
     if (VQMALU){
         printf("inside of creatin g any L \n");
         printf("nrows = %zu \n",nrows);
-        for (ii = 0; ii < nrows; ii++){
-            print_generic_function(L[ii],3,NULL);
+
+        //for (ii = 0; ii < nrows; ii++){
+        //    print_generic_function(L[ii],3,NULL);
+        //}
+    }
+
+    double tval = generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
+    px[upto] = xval;
+    piv[upto] = amind;
+    double val = generic_function_1d_eval(L[piv[upto]],px[upto]);
+    generic_function_array_scale(1.0/val,L,nrows);
+    if (VQMALU){
+        printf("got new val = %G\n", val);
+        printf("Values of new array at indices\n ");
+        for (size_t ii = 0; ii < upto+1; ii++){
+            double eval = generic_function_1d_eval(L[piv[ii]],px[ii]);
+            printf("\t ind=%zu x=%G val=%G\n",piv[ii],px[ii],eval);
         }
     }
 
-    double val = generic_function_array_absmax(nrows, 1, L,&amind, &xval,optargs);
-    if (VQMALU){
-        printf("got new val = %G\n", val);
-    }
 
-    px[upto] = xval;
-    piv[upto] = amind;
-    assert (val > ZEROTHRESH);
-    generic_function_array_scale(1.0/val,L,nrows);
+    assert (fabs(val) > ZEROTHRESH);
+
 }
 
 void create_any_L_linelm(struct GenericFunction ** L, size_t nrows, 

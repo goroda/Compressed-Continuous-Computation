@@ -1084,7 +1084,7 @@ void Test_hermite_axpy(CuTest * tc){
 
 void Test_hermite_linear(CuTest * tc){
 
-    printf("Testing function: orth_poly_expansion_quadratic with hermite poly \n");
+    printf("Testing function: orth_poly_expansion_linear with hermite poly \n");
     double lb = -DBL_MAX;
     double ub = DBL_MAX;
 

@@ -1461,8 +1461,8 @@ void Test_qmarray_lu1d2(CuTest * tc){
     
     //print_qmarray(A,0,NULL);
     // check pivots
-    //printf("U = \n");
-    //dprint2d_col(2,2,U);
+    /* printf("U = \n"); */
+    /* dprint2d_col(3,3,U); */
     size_t ii,jj;
     for (ii = 0; ii < 3; ii++){
         //printf("Checking column %zu \n",ii);
@@ -1987,7 +1987,9 @@ void Test_function_train_linear(CuTest * tc)
     struct BoundingBox * bounds = bounding_box_init_std(3);
 
     double coeffs[3] = {1.0, 2.0, 3.0};
-    struct FunctionTrain * f =function_train_linear(POLYNOMIAL,LEGENDRE,3,
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
+    struct FunctionTrain * f =function_train_linear(fc,&ptype,3,
                                                     bounds, coeffs,NULL);
     
     double pt[3] = { -0.1, 0.4, 0.2 };
@@ -2022,7 +2024,9 @@ void Test_function_train_quadratic(CuTest * tc)
             quad[ii*dim+jj] = randu();
         }
     }
-    struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,LEGENDRE,dim,
+    enum function_class fc = POLYNOMIAL;
+    enum poly_type ptype = LEGENDRE;
+    struct FunctionTrain * f = function_train_quadratic(fc,&ptype,dim,
                                                         bounds, quad,
                                                         coeff,NULL);
     size_t N = 10;
@@ -2072,8 +2076,9 @@ void Test_function_train_quadratic2(CuTest * tc)
             quad[ii*dim+jj] = randu();
         }
     }
+    enum function_class fc = POLYNOMIAL;
     enum poly_type ptype = LEGENDRE;
-    struct FunctionTrain * f = function_train_quadratic(POLYNOMIAL,&ptype,dim,
+    struct FunctionTrain * f = function_train_quadratic(fc,&ptype,dim,
                                                         bounds, quad,coeff,NULL);
     size_t N = 10;
     double * xtest = linspace(lb,ub,N);
@@ -4298,7 +4303,7 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-    CuSuiteAddSuite(suite, clin);
+//    CuSuiteAddSuite(suite, clin);
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, cind);

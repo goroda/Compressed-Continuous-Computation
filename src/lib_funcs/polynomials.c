@@ -762,8 +762,7 @@ orth_poly_expansion_constant(double a, enum poly_type ptype, double lb,
 *************************************************************/
 struct OrthPolyExpansion * 
 orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, 
-                           double lb, 
-                           double ub)
+                           double lb, double ub)
 {
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(ptype, 2, lb, ub);
@@ -839,10 +838,10 @@ orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype,
 *   Generate a polynomial expansion with only the
 *   *order* coefficient being nonzero
 *
-*   \param ptype [in] - type of polynomial
-*   \param order [in] - order of the polynomial
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] ptype - type of polynomial
+*   \param[in] order - order of the polynomial
+*   \param[in] lb    - lower bound
+*   \param[in] ub    - upper bound
 *
 *   \return p - orthogonal polynomial expansion
 *
@@ -856,14 +855,28 @@ orth_poly_expansion_genorder(enum poly_type ptype, size_t order, double lb, doub
     //printf("whhhh\n");
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(ptype, order+1, lb, ub);
+    double m;
+    switch (ptype){
+    case LEGENDRE:
+        m = (p->upper_bound - p->lower_bound) / 
+            (p->p->upper - p->p->lower);
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+        break;
+    case HERMITE:
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order));
+        break;
+    case CHEBYSHEV:
+        fprintf(stderr,"cannot generate orthonormal polynomial of\n");
+        fprintf(stderr,"order for CHEBYSHEV type\n;");
+        exit(1);
+    case STANDARD:
+        fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
+        fprintf(stderr,"order for STANDARD type\n;");
+        exit(1);
+    }
     //printf("wherhhh\n");
     
-    double m = (p->upper_bound - p->lower_bound) / 
-                    (p->p->upper - p->p->lower);
-    //printf("here \n");
-    //printf("order = %zu\n",order);
-    //printf("nalloc = %zu\n",p->nalloc);
-    p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+
     //printf("there \n");
     return p;
 }
@@ -872,14 +885,15 @@ orth_poly_expansion_genorder(enum poly_type ptype, size_t order, double lb, doub
 /********************************************************//**
 *   Evaluate the derivative of an orthogonal polynomial expansion
 *
-*   \param x [in] - location at which to evaluate
-*   \param args [in] - pointer to orth poly expansion
+*   \param[in] x    - location at which to evaluate
+*   \param[in] args - pointer to orth poly expansion
 *
 *   \return out - value of derivative
 *************************************************************/
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
     struct OrthPolyExpansion * p = args;
+    assert (p->p->ptype != HERMITE);
     double out = 0.0;
     size_t ii;
     double m = (p->p->upper - p->p->lower) / (p->upper_bound - p->lower_bound);
@@ -901,9 +915,9 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 /********************************************************//**
 *   Evaluate the derivative of an orth poly expansion
 *
-*   \param p [in] - orthogonal polynomial expansion
+*   \param[in] p- orthogonal polynomial expansion
 *   
-*   \return out - orthonormal polynomial expansion 
+*   \return derivative
 *
 *   \note
 *       Could speed this up slightly by using partial sum
@@ -912,6 +926,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
+    assert (p->p->ptype != HERMITE);
     struct OrthPolyExpansion * out = NULL;
     if ( p == NULL ){
         return out;
@@ -952,20 +967,22 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 /********************************************************//**
 *   free the memory of an orthonormal polynomial expansion
 *
-*   \param p [inout] - orthogonal polynomial expansion
+*   \param[in,out] p - orthogonal polynomial expansion
 *************************************************************/
 void orth_poly_expansion_free(struct OrthPolyExpansion * p){
-    free_orth_poly(p->p);
-    free(p->coeff);
-    free(p);
+    if (p != NULL){
+        free_orth_poly(p->p); p->p = NULL;
+        free(p->coeff); p->coeff = NULL;
+        free(p); p = NULL;
+    }
 }
 
 /********************************************************//**
 *   Serialize orth_poly_expansion
 *   
-*   \param ser [in] - location to which to serialize
-*   \param p [in] - polynomial
-*   \param totSizeIn - if not null then only return total size of array without serialization! if NULL then serialiaze
+*   \param[in] ser       - location to which to serialize
+*   \param[in] p         - polynomial
+*   \param[in] totSizeIn - if not null then only return total size of array without serialization! if NULL then serialiaze
 *
 *   \return ptr : pointer to end of serialization
 *************************************************************/
@@ -1772,7 +1789,8 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
 *   \return poly
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder, double lower, double upper)
+orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder, 
+                          double lower, double upper)
 {
     struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
                                         maxorder+1, lower, upper);
@@ -1786,7 +1804,7 @@ orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder, double lower, d
 /********************************************************//**
 *   Integrate a Chebyshev approximation
 *
-*   \param poly [in] - polynomial to integrate
+*   \param[in] poly - polynomial to integrate
 *
 *   \return out - integral of approximation
 *************************************************************/
@@ -1826,8 +1844,8 @@ legendre_integrate(struct OrthPolyExpansion * poly)
 /********************************************************//**
 *   Compute the product of two polynomial expansion
 *
-*   \param a [in] - first polynomial
-*   \param b [in] - second polynomial
+*   \param[in] a - first polynomial
+*   \param[in] b - second polynomial
 *
 *   \return c - polynomial expansion
 *
@@ -1924,18 +1942,17 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
 /********************************************************//**
 *   Compute the sum of the product between the functions in two arraysarrays
 *
-*   \param n [in] - number of functions
-*   \param lda [in] - stride of first array
-*   \param a [in] - array of orthonormal polynomial expansions
-*   \param ldb [in] - stride of second array
-*   \param b [in] - array of orthonormal polynomial expansions
+*   \param[in] n   - number of functions
+*   \param[in] lda - stride of first array
+*   \param[in] a   - array of orthonormal polynomial expansions
+*   \param[in] ldb - stride of second array
+*   \param[in] b   - array of orthonormal polynomial expansions
 *
 *   \return c - polynomial expansion
 *
 *   \note 
-*       If both arrays do not consist of only LEGENDRE polynomials
-*       return NULL. All the functions need to have the same lower 
-*       and upper bounds
+*       All the functions need to have the same lower 
+*       and upper bounds and be of the same type
 *
 *       If the maximum order of the polynomials is greater than 25 then this is
 *       inefficient because I haven't precomputed triple product rules
@@ -1946,6 +1963,8 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         struct OrthPolyExpansion ** b)
 {
 
+    enum poly_type ptype;
+    ptype = a[0]->p->ptype;
     struct OrthPolyExpansion * c = NULL;
     double lb = a[0]->lower_bound;
     double ub = a[0]->upper_bound;
@@ -1956,9 +1975,12 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
     size_t maxorder = 0;
     //int legen = 1;
     for (ii = 0; ii < n; ii++){
-        if ((a[ii*lda]->p->ptype != LEGENDRE) || (b[ii*ldb]->p->ptype != LEGENDRE)){
-            //legen = 0;
+
+        if (a[ii*lda]->p->ptype !=  b[ii*ldb]->p->ptype){
             return c; // cant do it
+        }
+        else if (a[ii*lda]->p->ptype != ptype){
+            return c;
         }
         size_t neworder = a[ii*lda]->num_poly + b[ii*ldb]->num_poly;
         if (neworder > maxorder){
@@ -1971,8 +1993,7 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
             maxorderb = b[ii*ldb]->num_poly;
         }
     }
-
-    if ( (maxordera > 99) || (maxorderb > 99)){
+    if ( (maxordera > 99) || (maxorderb > 99) || (ptype != LEGENDRE)){
         printf("OrthPolyExpansion sum_product greater than order 100 is slow\n");
         c = orth_poly_expansion_prod(a[0],b[0]);
         for (ii = 1; ii< n; ii++){
@@ -2014,11 +2035,11 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
 /********************************************************//**
 *   Compute a linear combination of generic functions
 *
-*   \param n [in] - number of functions
-*   \param ldx [in] - stride of first array
-*   \param x [in] - functions
-*   \param ldc [in] - stride of coefficients
-*   \param c [in] - scaling coefficients
+*   \param[in] n   - number of functions
+*   \param[in] ldx - stride of first array
+*   \param[in] x   - functions
+*   \param[in] ldc - stride of coefficients
+*   \param[in] c   - scaling coefficients
 *
 *   \return  out  = \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 *
@@ -2036,12 +2057,12 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
     struct OrthPolyExpansion * out = NULL;
     double lb = x[0]->lower_bound;
     double ub = x[0]->upper_bound;
-
+    enum poly_type ptype = x[0]->p->ptype;
     size_t ii;
     size_t maxorder = 0;
     //int legen = 1;
     for (ii = 0; ii < n; ii++){
-        if (x[ii*ldx]->p->ptype != LEGENDRE){
+        if (x[ii*ldx]->p->ptype != ptype){
             //legen = 0;
             return out; // cant do it
         }
@@ -2051,8 +2072,8 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
         }
     }
     
-    enum poly_type p = LEGENDRE;
-    out = orth_poly_expansion_init(p, maxorder, lb, ub);
+
+    out = orth_poly_expansion_init(ptype, maxorder, lb, ub);
     size_t kk;
     for (kk = 0; kk < n; kk++){
         for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
@@ -2062,8 +2083,6 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
     orth_poly_expansion_round(&out);
     return out;
 }
-
-
 
 /********************************************************//**
 *   Integrate an orthogonal polynomial expansion 
@@ -2157,7 +2176,10 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 {   
     struct OrthPolyExpansion * t1 = NULL;
     struct OrthPolyExpansion * t2 = NULL;
-
+    
+//    assert (a->ptype == b->ptype);
+//    enum poly_type ptype = a->ptype;
+//    switch (ptype)
     if ((a->p->ptype == HERMITE) && (b->p->ptype == HERMITE)){
         return orth_poly_expansion_inner_w(a,b);
     }
@@ -2311,7 +2333,7 @@ void orth_poly_expansion_scale(double a, struct OrthPolyExpansion * x)
 *   \param[in] b  - scaling factor for second polynomial
 *   \param[in] y  - second polynomial
 *   \param[in] c  - scaling factor for third polynomial
-*   \param [in]z  - third polynomial
+*   \param[in] z  - third polynomial
 *
 *************************************************************/
 void
@@ -2452,7 +2474,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 *       
 **************************************************************/
 int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
-                        struct OrthPolyExpansion * y)
+                             struct OrthPolyExpansion * y)
 {
         
     assert (y != NULL);
@@ -2963,14 +2985,20 @@ double *
 orth_poly_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
 {
     double * real_roots = NULL;
-    if (p->p->ptype == LEGENDRE){
+    enum poly_type ptype = p->p->ptype;
+    switch(ptype){
+    case LEGENDRE:
         real_roots = legendre_expansion_real_roots(p,nkeep);   
-    }
-    else{
-        struct StandardPoly * sp = 
-            orth_poly_expansion_to_standard_poly(p);
-        real_roots = standard_poly_real_roots(sp,nkeep);
-        standard_poly_free(sp);
+        break;
+    case STANDARD:
+        assert (1 == 0);
+        //x need to convert polynomial to standard polynomial first
+        //real_roots = standard_poly_real_roots(sp,nkeep);
+        //break;
+    case CHEBYSHEV:
+        assert (1 == 0);
+    case HERMITE:
+        assert (1 == 0);
     }
     return real_roots;
 }
@@ -2988,7 +3016,7 @@ orth_poly_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
 *************************************************************/
 double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
 {
-
+    
     double maxval;
     double tempval;
 
@@ -3025,8 +3053,8 @@ double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
 /********************************************************//**
 *   Obtain the minimum of an orthogonal polynomial expansion
 *
-*   \param p [in] - orthogonal polynomial expansion
-*   \param x [inout] - location of minimum value
+*   \param[in]     p - orthogonal polynomial expansion
+*   \param[in,out] x - location of minimum value
 *
 *   \return minval - minimum value
 *************************************************************/
