@@ -462,6 +462,10 @@ eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1,
     else{
         out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2;
     }
+    
+    /* if (rec->ptype == HERMITE){ *\/ */
+    /*      out /= sqrt(sqrt(2.0*M_PI)); *\/ */
+    /* /\* } *\/ */
     return out;
 }
 

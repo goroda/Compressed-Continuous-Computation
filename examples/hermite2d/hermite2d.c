@@ -44,7 +44,7 @@ double f2(double * x, void * args)
 {
     (void)(args);
     double out;
-    out = sin(x[0] * x[1] );
+    out = sin(x[0] * x[1]);
     //double out = x[0]*x[1] + pow(x[0],2)*pow(x[1],2) + pow(x[1],3)*sin(x[0]);
     
     return out;

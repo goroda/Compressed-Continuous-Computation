@@ -57,6 +57,7 @@ double hermortho(size_t n)
         val *= (ii+1);
     }
     return sqrt(2*M_PI)*val;
+//    return val;
 }
 
 /********************************************************//**
@@ -88,7 +89,6 @@ struct OrthPoly * init_hermite_poly(){
     return p;
 }
 
-
 /********************************************************//**
 *   Evaluate a hermite polynomial expansion 
 *
@@ -105,17 +105,17 @@ double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
         
     size_t iter = 0;
     p[0] = 1.0;
-    out += p[0] * poly->coeff[iter];
+    out += p[0] * poly->coeff[iter];// * SQRTPIINV;
     iter++;
     if (poly->num_poly > 1){
         p[1] = x;
-        out += p[1] * poly->coeff[iter];
+        out += p[1] * poly->coeff[iter];// * SQRTPIINV;
         iter++;
     }   
     for (iter = 2; iter < poly->num_poly; iter++){
         
         pnew = x * p[1] - (double)(iter-1) * p[0];
-        out += poly->coeff[iter] * pnew;
+        out += poly->coeff[iter] * pnew;// * SQRTPIINV;
         p[0] = p[1];
         p[1] = pnew;
     }
@@ -131,6 +131,6 @@ double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *************************************************************/
 double hermite_integrate(struct OrthPolyExpansion * poly)
 {
-    double out = poly->coeff[0]*sqrt(2.0*M_PI);
+    double out = poly->coeff[0];//sqrt(2.0*M_PI);
     return out;
 }
