@@ -1474,6 +1474,8 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
             pt = calloc_double(nquad);
             wt = calloc_double(nquad);
             gauss_hermite(nquad,pt,wt);
+//            printf("point = ");
+//            dprint(nquad,pt);
             break;
         case STANDARD:
             fprintf(stderr, "Cannot call orth_poly_expansion_approx for STANDARD type\n");
@@ -1513,6 +1515,7 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     }
     else{
         for (ii = 0; ii < nquad; ii++){
+
             poly->coeff[0] += fvals[ii] *poly->p->const_term;
         }
         poly->coeff[0] /= poly->p->norm(0);
@@ -1637,6 +1640,61 @@ orth_poly_expansion_approx_vec(
     return return_val;
 }
 
+struct OpeAdaptOpts * ope_adapt_opts_alloc()
+{
+    struct OpeAdaptOpts * ao;
+    if ( NULL == (ao = malloc(sizeof(struct OpeAdaptOpts)))){
+        fprintf(stderr, "failed to allocate memory for poly exp.\n");
+        exit(1);
+    }
+
+    ao->start_num = 5;
+    ao->coeffs_check = 2;
+    ao->tol = 1e-10;
+    ao->max_num = 40;
+    return ao;
+}
+
+void ope_adapt_opts_free(struct OpeAdaptOpts * ope)
+{
+    if (ope != NULL){
+        free(ope); ope = NULL;
+    }
+}
+
+void ope_adapt_opts_set_start(struct OpeAdaptOpts * ope, size_t start)
+{
+    assert (ope != NULL);
+    ope->start_num = start;
+}
+void ope_adapt_opts_set_maxnum(struct OpeAdaptOpts * ope, size_t maxnum)
+{
+    assert (ope != NULL);
+    ope->max_num = maxnum;
+}
+
+size_t ope_adapt_opts_get_maxnum(struct OpeAdaptOpts * ope)
+{
+    assert (ope != NULL);
+    assert (ope->max_num < 1000); // really a check if it exists
+    
+    return ope->max_num;
+}
+
+void ope_adapt_opts_set_coeffs_check(struct OpeAdaptOpts * ope, size_t num)
+{
+    assert (ope != NULL);
+    ope->coeffs_check = num;
+}
+
+void ope_adapt_opts_set_tol(struct OpeAdaptOpts * ope, double tol)
+{
+    assert (ope != NULL);
+    ope->tol = tol;
+}
+
+
+
 /********************************************************//**
 *   Create an approximation adaptively
 *
@@ -1661,13 +1719,12 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     int default_opts = 0;
     struct OpeAdaptOpts * aopts;
     if (aoptsin == NULL){
-        if ( NULL == (aopts = malloc(sizeof(struct OpeAdaptOpts)))){
-            fprintf(stderr, "failed to allocate memory for poly exp.\n");
-            exit(1);
-        }
-        aopts->start_num = 8;
-        aopts->coeffs_check = 2;
-        aopts->tol = 1e-10;
+        aopts = ope_adapt_opts_alloc();
+        ope_adapt_opts_set_start(aopts,8);
+        ope_adapt_opts_set_maxnum(aopts,40);
+        ope_adapt_opts_set_coeffs_check(aopts,2);
+        ope_adapt_opts_set_tol(aopts,1e-10);
+
         //aopts->tol = 1e-1;  
         default_opts = 1;
     }
@@ -1700,7 +1757,8 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         }
     }
     //printf("TOL SPECIFIED IS %G\n",aopts->tol);
-    while (coeffs_too_big == 1){
+    size_t maxnum = ope_adapt_opts_get_maxnum(aopts);
+    while ((coeffs_too_big == 1) && (N < maxnum)){
         coeffs_too_big = 0;
 	
         free(poly->coeff); poly->coeff = NULL;
@@ -1755,26 +1813,26 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     orth_poly_expansion_round(&poly);
 
     // verify
-    double pt = (upper - lower)*randu() + lower;
-    double val_true = A(pt,args);
-    double val_test = orth_poly_expansion_eval(poly,pt);
-    double diff = val_true-val_test;
-    double err = fabs(diff);
-    if (fabs(val_true) > 1.0){
-    //if (fabs(val_true) > ZEROTHRESH){
-        err /= fabs(val_true);
-    }
-    if (err > 100.0*aopts->tol){
-        //fprintf(stderr, "Approximating at point %G in (%3.15G,%3.15G)\n",pt,lower,upper);
-        //fprintf(stderr, "leads to error %G, while tol is %G \n",err,aopts->tol);
-        //fprintf(stderr, "actual value is %G \n",val_true);
-        //fprintf(stderr, "predicted value is %3.15G \n",val_test);
-        //fprintf(stderr, "%zu N coeffs, last coeffs are %3.15G,%3.15G \n",N,poly->coeff[N-2],poly->coeff[N-1]);
-        //exit(1);
-    }
+    /* double pt = (upper - lower)*randu() + lower; */
+    /* double val_true = A(pt,args); */
+    /* double val_test = orth_poly_expansion_eval(poly,pt); */
+    /* double diff = val_true-val_test; */
+    /* double err = fabs(diff); */
+    /* if (fabs(val_true) > 1.0){ */
+    /* //if (fabs(val_true) > ZEROTHRESH){ */
+    /*     err /= fabs(val_true); */
+    /* } */
+    /* if (err > 100.0*aopts->tol){ */
+    /*     //fprintf(stderr, "Approximating at point %G in (%3.15G,%3.15G)\n",pt,lower,upper); */
+    /*     //fprintf(stderr, "leads to error %G, while tol is %G \n",err,aopts->tol); */
+    /*     //fprintf(stderr, "actual value is %G \n",val_true); */
+    /*     //fprintf(stderr, "predicted value is %3.15G \n",val_test); */
+    /*     //fprintf(stderr, "%zu N coeffs, last coeffs are %3.15G,%3.15G \n",N,poly->coeff[N-2],poly->coeff[N-1]); */
+    /*     //exit(1); */
+    /* } */
 
     if (default_opts == 1){
-        free(aopts);
+        ope_adapt_opts_free(aopts);
     }
     return poly;
 }

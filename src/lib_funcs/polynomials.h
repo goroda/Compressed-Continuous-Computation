@@ -220,12 +220,22 @@ orth_poly_expansion_approx_vec(
 struct OpeAdaptOpts{
     
     size_t start_num;
+    size_t max_num;
     size_t coeffs_check;
     double tol;
 };
+struct OpeAdaptOpts * ope_adapt_opts_alloc();
+void ope_adapt_opts_free(struct OpeAdaptOpts *);
+void ope_adapt_opts_set_start(struct OpeAdaptOpts *, size_t);
+void ope_adapt_opts_set_maxnum(struct OpeAdaptOpts *, size_t);
+size_t ope_adapt_opts_get_maxnum(struct OpeAdaptOpts *);
+void ope_adapt_opts_set_coeffs_check(struct OpeAdaptOpts *, size_t);
+void ope_adapt_opts_set_tol(struct OpeAdaptOpts *, double);
 
-struct OrthPolyExpansion * orth_poly_expansion_approx_adapt(double (*A)(double,void *), 
-        void *, enum poly_type, double, double, struct OpeAdaptOpts *);
+struct OrthPolyExpansion * 
+orth_poly_expansion_approx_adapt(double (*A)(double,void *), 
+                                 void *, enum poly_type, double, 
+                                 double, struct OpeAdaptOpts *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_randu(enum poly_type, size_t, double, double);

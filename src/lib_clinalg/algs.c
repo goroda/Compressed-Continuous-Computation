@@ -4260,7 +4260,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
     struct FtCrossArgs temp;
     struct FtApproxArgs * aparg = NULL;
     struct FiberOptArgs * fopt  = NULL;
-    struct OpeAdaptOpts aopts;    
+    struct OpeAdaptOpts * aopts = NULL;
     double ** startnodes = NULL;;
     size_t * init_ranks = NULL;
     struct c3Vector * optnodes = NULL;
@@ -4270,7 +4270,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
     else{
         // default pivot / fiber locations
         size_t N = 100;
-        double * x = linspace(-4.0,4.0,N);
+        double * x = linspace(-10.0,10.0,N);
         optnodes = c3vector_alloc(N,x);
         fopt = fiber_opt_args_bf_same(dim,optnodes);
         free(x); x = NULL;
@@ -4280,11 +4280,12 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         aparg =apargsin;
     }
     else{
-
-        aopts.start_num = 10;
-        aopts.coeffs_check = 3;
-        aopts.tol = 1e-9;
-        aparg = ft_approx_args_createpoly(dim,&ptype,&aopts);
+        aopts = ope_adapt_opts_alloc();
+        ope_adapt_opts_set_start(aopts,5);
+        ope_adapt_opts_set_maxnum(aopts,30);
+        ope_adapt_opts_set_coeffs_check(aopts,2);
+        ope_adapt_opts_set_tol(aopts,1e-5);
+        aparg = ft_approx_args_createpoly(dim,&ptype,aopts);
         
     }
 
@@ -4339,6 +4340,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         fiber_opt_args_free(fopt); fopt = NULL;
     }
     if (apargsin == NULL){
+        ope_adapt_opts_free(aopts); aopts = NULL;
         ft_approx_args_free(aparg); aparg = NULL;
     }
     if (fcain == NULL){

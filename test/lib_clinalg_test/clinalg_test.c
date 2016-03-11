@@ -2988,9 +2988,10 @@ void Test_ftapprox_cross_hermite1(CuTest * tc)
 double funch2(double * x, void * arg)
 {
     (void)(arg);
-    //double out = x[0]*x[1] + x[2]*x[3];
+    double out = x[0]*x[1] + x[2]*x[3] +  x[1]*pow(x[2],5) + 
+        pow(x[1],8)*pow(x[3],2);
 //    double out = x[0]*x[1] + x[2]*x[3] + x[0]*exp(-x[2]*x[3]);
-    double out = x[0]*x[1] + x[2]*x[3] + x[0]*sin(x[1]*x[2]);
+//    double out = x[0]*x[1] + x[2]*x[3] + x[0]*sin(x[1]*x[2]);
     /* printf("x = "); dprint(4,x); */
     /* printf("out = %G\n",out); */
     return out;
@@ -3001,7 +3002,6 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
     printf("Testing Function: ftapprox_cross for hermite (2) \n");
      
     size_t dim = 4;
-    size_t ii,jj,kk,ll;
 
     struct FunctionTrain * ft = NULL;
     ft = function_train_cross_ub(funch2,NULL,dim,NULL,NULL,NULL,NULL);
@@ -3021,11 +3021,11 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
         double diff = eval-function_train_eval(ft,pt);
         den += pow(eval,2.0);
         err += pow(diff,2);
-        //printf("pt = "); dprint(dim,pt);
-        //printf("eval = %G, diff=%G\n",eval,diff);
-        //if (fabs(diff) > 1e-1){
-        //    exit(1);
-        //}
+//        printf("pt = "); dprint(dim,pt);
+//        printf("eval = %G, diff=%G\n",eval,diff);
+//        if (fabs(diff) > 1e-1){
+//            exit(1);
+//        }
     }
     err = err/den;
     //printf("err=%G\n",err);
