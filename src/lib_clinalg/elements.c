@@ -2409,6 +2409,9 @@ void ft1d_array_free(struct FT1DArray * fta)
     }
 }
 
+/***********************************************************//**
+  Allocate fiber optimization options
+***************************************************************/
 struct FiberOptArgs * fiber_opt_args_alloc()
 {
     struct FiberOptArgs * fopt = NULL;

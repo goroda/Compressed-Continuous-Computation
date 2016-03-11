@@ -1729,7 +1729,6 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
         }
     }
 
-
     assert (fabs(val) > ZEROTHRESH);
 
 }
@@ -4107,37 +4106,7 @@ void ft_cross_args_free(struct FtCrossArgs * fca)
     }
 }
 
-/***********************************************************//**
-    An interface for cross approximation of a function
-    on an unbounded domain
 
-    \param[in] f      - function
-    \param[in] args   - function arguments
-    \param[in] xstart - location for first fibers 
-                        (if null then middle of domain)
-    \param[in] fca    - cross approximation args, 
-                        if NULL then default exists
-    \param[in] apargs - function approximation arguments 
-                        (if null then defaults)
-
-    \return function train decomposition of f
-
-    \note
-    Nested indices both left and right
-***************************************************************/
-struct FunctionTrain *
-function_train_cross_ub(double (*f)(double *, void *), void * args,
-                        size_t dim,
-                        double ** xstart,
-                        struct FtCrossArgs * fcain,
-                        struct FtApproxArgs * apargsin,
-                        struct FiberOptArgs * foptin)
-{
-
-    
-    
-    
-}
 
 /***********************************************************//**
     An interface for cross approximation of a function
@@ -4256,6 +4225,129 @@ function_train_cross(double (*f)(double *, void *), void * args,
         cross_index_free(isr[ii]);
     }
     free(init_coeff); init_coeff = NULL;
+    return ft;
+}
+
+
+/***********************************************************//**
+    An interface for cross approximation of a function
+    on an unbounded domain
+
+    \param[in] f      - function
+    \param[in] args   - function arguments
+    \param[in] xstart - location for first fibers 
+                        (if null then middle of domain)
+    \param[in] fca    - cross approximation args, 
+                        if NULL then default exists
+    \param[in] apargs - function approximation arguments 
+                        (if null then defaults)
+
+    \return function train decomposition of f
+
+    \note
+    Nested indices both left and right
+***************************************************************/
+struct FunctionTrain *
+function_train_cross_ub(double (*f)(double *, void *), void * args,
+                        size_t dim,
+                        double ** xstart,
+                        struct FtCrossArgs * fcain,
+                        struct FtApproxArgs * apargsin,
+                        struct FiberOptArgs * foptin)
+{
+    enum poly_type ptype = HERMITE;
+    struct FtCrossArgs  * fca   = NULL;
+    struct FtCrossArgs temp;
+    struct FtApproxArgs * aparg = NULL;
+    struct FiberOptArgs * fopt  = NULL;
+    struct OpeAdaptOpts aopts;    
+    double ** startnodes = NULL;;
+    size_t * init_ranks = NULL;
+    struct c3Vector * optnodes = NULL;
+    if (foptin != NULL){
+        fopt = foptin;
+    }
+    else{
+        // default pivot / fiber locations
+        size_t N = 100;
+        double * x = linspace(-4.0,4.0,N);
+        optnodes = c3vector_alloc(N,x);
+        fopt = fiber_opt_args_bf_same(dim,optnodes);
+        free(x); x = NULL;
+    }
+
+    if (apargsin != NULL){
+        aparg =apargsin;
+    }
+    else{
+
+        aopts.start_num = 10;
+        aopts.coeffs_check = 3;
+        aopts.tol = 1e-9;
+        aparg = ft_approx_args_createpoly(dim,&ptype,&aopts);
+        
+    }
+
+    if (fcain != NULL){
+        fca = fcain;
+    }
+    else{
+        size_t init_rank = 5;
+        init_ranks = calloc_size_t(dim+1);
+        for (size_t ii = 0; ii < dim ;ii++){
+            init_ranks[ii] = init_rank;
+        }
+        init_ranks[0] = 1;
+        init_ranks[dim] = 1;
+        
+        ft_cross_args_init(&temp);
+        temp.dim = dim;
+        temp.ranks = init_ranks;
+        temp.epsilon = 1e-10;
+        temp.maxiter = 5;
+        temp.verbose = 0;
+        
+        temp.epsround = 1e-10;
+        temp.kickrank = 3;
+        temp.maxiteradapt = 5;
+
+        fca = &temp;
+    }
+    fca->optargs = fopt;
+
+    if (xstart != NULL){
+        startnodes = xstart;
+    }
+    else{
+        startnodes = malloc_dd(dim);
+        double lbs = -2.0;
+        double ubs = 2.0;
+        startnodes[0] = calloc_double(fca->ranks[1]); 
+        for (size_t ii = 0; ii < dim-1; ii++){
+            startnodes[ii+1] = linspace(lbs,ubs,fca->ranks[ii+1]);
+        }
+    }
+
+    struct BoundingBox * bds = bounding_box_init(dim,-DBL_MAX,DBL_MAX);
+    
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(f,args,bds,startnodes,fca,aparg);
+    bounding_box_free(bds); bds = NULL;
+
+    if (foptin == NULL){
+        c3vector_free(optnodes); optnodes = NULL;
+        fiber_opt_args_free(fopt); fopt = NULL;
+    }
+    if (apargsin == NULL){
+        ft_approx_args_free(aparg); aparg = NULL;
+    }
+    if (fcain == NULL){
+        free(init_ranks); init_ranks = NULL;
+    }
+    if (xstart == NULL){
+        free_dd(dim,startnodes);
+        startnodes = NULL;
+    }
     return ft;
 }
 

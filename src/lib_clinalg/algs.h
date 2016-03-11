@@ -234,8 +234,13 @@ function_train_cross(double (*)(double *, void *), void *,
         struct BoundingBox *, double **,
         struct FtCrossArgs *, struct FtApproxArgs *);
 
-struct FT1DArray * function_train_hessian(struct FunctionTrain *);
-
+struct FunctionTrain *
+function_train_cross_ub(double (*)(double *, void *), void *,
+                        size_t,
+                        double **,
+                        struct FtCrossArgs *,
+                        struct FtApproxArgs *,
+                        struct FiberOptArgs *);
 struct FunctionTrain *
 ftapprox_cross_rankadapt(double (*)(double *, void *), void *,
                 struct BoundingBox *, 

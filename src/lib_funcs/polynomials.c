@@ -1440,7 +1440,6 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     double m = 1.0;
     double off = 0.0;
 
-
     double * fvals = NULL;
     double * pt_un = NULL; // unormalized point
     double * pt = NULL;
@@ -1677,7 +1676,8 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     }
     size_t ii;
     size_t N = aopts->start_num;
-    
+//    printf("Nstart = %zu\n",N);
+//    printf("N coeff check = %zu\n",aopts->coeffs_check);
     //printf("pre ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
     if ((int)ptype > 10){
         printf("Warning: for some reason ptype is\n");
@@ -1703,14 +1703,15 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     while (coeffs_too_big == 1){
         coeffs_too_big = 0;
 	
-        free(poly->coeff);
+        free(poly->coeff); poly->coeff = NULL;
         //N = N * 2 - 1; // for nested cc
         //N = N * 2 + 1; // 
         N = N + 5;
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
+        //      printf("N = %zu\n",N);
         poly->coeff = calloc_double(poly->nalloc);
-        //printf("Number of coefficients to check = %zu\n",aopts->coeffs_check);
+//        printf("Number of coefficients to check = %zu\n",aopts->coeffs_check);
         orth_poly_expansion_approx(A, args, poly);
 	    double sum_coeff_squared = 0.0;
         for (ii = 0; ii < N; ii++){ 

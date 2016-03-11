@@ -1646,7 +1646,7 @@ void Test_qmarray_lu1d_hermite(CuTest * tc){
     for (ii = 0; ii < 3; ii++){
         for (jj = 0; jj < ii; jj++){
             eval = generic_function_1d_eval(L->funcs[2*ii+pivi[jj]], pivx[jj]);
-            double nt = generic_function_array_norm(2,1,L->funcs+2*ii);
+//            double nt = generic_function_array_norm(2,1,L->funcs+2*ii);
             //printf("nt = %G\n",nt);
             CuAssertDblEquals(tc,0.0,eval,1e-13);
         }
@@ -1886,7 +1886,7 @@ void Test_qmarray_maxvol1d_hermite1(CuTest * tc){
     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
 
     free(xopt); xopt = NULL;
-    c3vector_free(c3v); c3v;
+    c3vector_free(c3v); c3v = NULL;
     qmarray_free(B);
     qmarray_free(A);
     free(Asinv);
@@ -2922,6 +2922,156 @@ void Test_ftapprox_cross4(CuTest * tc)
     free(xtest);
 }
 
+double funch1(double * x, void * arg)
+{
+    (void)(arg);
+    double out = x[0]+x[1]+x[2]+x[3];
+    return out;
+}
+
+void Test_ftapprox_cross_hermite1(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for hermite (1) \n");
+     
+    size_t dim = 4;
+    size_t ii,jj,kk,ll;
+
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross_ub(funch1,NULL,dim,NULL,NULL,NULL,NULL);
+
+    size_t N = 10;
+    double * xtest = linspace(-2.0,2.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double pt[4];
+    
+    for (ii = 0; ii < N; ii++){
+        for (jj = 0; jj < N; jj++){
+            for (kk = 0; kk < N; kk++){
+                for (ll = 0; ll < N; ll++){
+                    pt[0] = xtest[ii]; pt[1] = xtest[jj]; 
+                    pt[2] = xtest[kk]; pt[3] = xtest[ll];
+                    den += pow(funch1(pt,NULL),2.0);
+                    err += pow(funch1(pt,NULL)-function_train_eval(ft,pt),2.0);
+                    //printf("err=%G\n",err);
+                }
+            }
+        }
+    }
+    err = err/den;
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc,0.0,err,1e-10);
+    //CuAssertDblEquals(tc,0.0,0.0,1e-15);
+
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+    
+    function_train_free(ft);
+    free(xtest);
+}
+
+double funch2(double * x, void * arg)
+{
+    (void)(arg);
+    //double out = x[0]*x[1] + x[2]*x[3];
+//    double out = x[0]*x[1] + x[2]*x[3] + x[0]*exp(-x[2]*x[3]);
+    double out = x[0]*x[1] + x[2]*x[3] + x[0]*sin(x[1]*x[2]);
+    /* printf("x = "); dprint(4,x); */
+    /* printf("out = %G\n",out); */
+    return out;
+}
+
+void Test_ftapprox_cross_hermite2(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for hermite (2) \n");
+     
+    size_t dim = 4;
+    size_t ii,jj,kk,ll;
+
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross_ub(funch2,NULL,dim,NULL,NULL,NULL,NULL);
+
+//    size_t N = 10;
+//    double * xtest = linspace(-2.0,2.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double pt[4];
+    
+    size_t nsamples = 100000;
+    for (size_t ii = 0; ii < nsamples; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randn();
+        }
+        double eval = funch2(pt,NULL);
+        double diff = eval-function_train_eval(ft,pt);
+        den += pow(eval,2.0);
+        err += pow(diff,2);
+        //printf("pt = "); dprint(dim,pt);
+        //printf("eval = %G, diff=%G\n",eval,diff);
+        //if (fabs(diff) > 1e-1){
+        //    exit(1);
+        //}
+    }
+    err = err/den;
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc,0.0,err,1e-3);
+    /* err = 0.0; */
+    /* den = 0.0; */
+    /* for (ii = 0; ii < N; ii++){ */
+    /*     for (jj = 0; jj < N; jj++){ */
+    /*         for (kk = 0; kk < N; kk++){ */
+    /*             for (ll = 0; ll < N; ll++){ */
+    /*                 pt[0] = xtest[ii]; pt[1] = xtest[jj];  */
+    /*                 pt[2] = xtest[kk]; pt[3] = xtest[ll]; */
+    /*                 den += pow(funch2(pt,NULL),2.0); */
+    /*                 err += pow(funch2(pt,NULL)-function_train_eval(ft,pt),2.0); */
+    /*                 //printf("err=%G\n",err/den); */
+    /*             } */
+    /*         } */
+    /*     } */
+    /* } */
+    /* err = err/den; */
+    /* //printf("err=%G\n",err); */
+    /* CuAssertDblEquals(tc,0.0,err,1e-10); */
+    /* //CuAssertDblEquals(tc,0.0,0.0,1e-15); */
+
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+    
+    function_train_free(ft);
+    //  free(xtest);
+}
+
 void Test_ftapprox_cross_linelm1(CuTest * tc)
 {
     printf("Testing Function: ftapprox_cross for linelm (1) \n");
@@ -3272,6 +3422,8 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
     SUITE_ADD_TEST(suite, Test_sin10dint);
@@ -4525,13 +4677,13 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
-    /* CuSuiteAddSuite(suite, clin); */
-    /* CuSuiteAddSuite(suite, qma); */
+    CuSuiteAddSuite(suite, clin);
+    CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);
-    /* CuSuiteAddSuite(suite, cind); */
-    /* CuSuiteAddSuite(suite, fta); */
-    /* CuSuiteAddSuite(suite, dmrg); */
-    /* CuSuiteAddSuite(suite, diff); */
+    CuSuiteAddSuite(suite, cind);
+    CuSuiteAddSuite(suite, fta);
+    CuSuiteAddSuite(suite, dmrg);
+    CuSuiteAddSuite(suite, diff);
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);

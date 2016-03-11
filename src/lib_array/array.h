@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -85,6 +85,7 @@ struct c3Vector
 
 struct c3Vector * c3vector_alloc(size_t, double *);
 struct c3Vector ** c3vector_alloc_array(size_t);
+void c3vector_free(struct c3Vector *);
 void c3vector_free_array(struct c3Vector **, size_t);
 
 //RANDOM NUMBERS
