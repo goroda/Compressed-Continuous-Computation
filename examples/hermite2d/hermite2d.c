@@ -18,9 +18,10 @@ void print_code_usage (FILE * stream, int exit_code)
             " -h --help      Display this usage information.\n"
             " -d --directory Output directory (defaults to .)\n"
             " -f --function  Which function to approximate \n"
-            "                0: (default) x + y \n"
+            "                0: (default) x + y + 2.0\n"
             "                1: x*y \n"
             "                2: sin(xy)\n"
+            "                3: 1/sqrt(2pi)exp(-0.5 (3x^2 + 0.5xy + y^2)\n"
             " -v --verbose   Output words (default 0)\n"
         );
     exit (exit_code);
@@ -28,23 +29,32 @@ void print_code_usage (FILE * stream, int exit_code)
 
 double f0(double *x, void * args)
 {
-    assert(args == NULL);
-    return x[0] + x[1];
+    (void)(args);
+    //return x[0] + x[1]+2.0;
+    return 1.0;
 }
 
 double f1(double *x, void * args)
 {
-    assert(args == NULL);
+    (void)(args);
     return x[0] * x[1];
 }
 
 double f2(double * x, void * args)
 {
-    assert (args == NULL);
+    (void)(args);
     double out;
     out = sin(x[0] * x[1] );
     //double out = x[0]*x[1] + pow(x[0],2)*pow(x[1],2) + pow(x[1],3)*sin(x[0]);
     
+    return out;
+}
+
+double f3(double * x, void * args)
+{
+    (void)(args);
+    double quad = 3.0*x[0]*x[0] + 0.5 * x[0]*x[1]  + 1.0*x[1]*x[1];
+    double out = 1/sqrt(2.0*M_PI) * exp(-quad/2.0);
     return out;
 }
 
@@ -105,6 +115,10 @@ int main(int argc, char * argv[])
         fm = function_monitor_initnd(f2,NULL,dim,1000*dim);
         ff = f2;
     }
+    else if (function == 3){
+        fm = function_monitor_initnd(f3,NULL,dim,1000*dim);
+        ff = f3;
+    }
     else{
         printf("Function %zu not yet implemented\n",function);
         return 1;
@@ -157,8 +171,8 @@ int main(int argc, char * argv[])
     double pt[2];
     double v1,v2;
     for (size_t ii = 0; ii < Ntest; ii++){
-        pt[0] = randn()*0.5;
-        pt[1] = randn()*0.5;
+        pt[0] = randn();
+        pt[1] = randn();
         v1 = ff(pt,NULL);
         v2 = function_train_eval(ft,pt);
         fprintf(fp2, "%3.5f %3.5f %3.5f %3.5f %3.5f \n", 
@@ -169,6 +183,8 @@ int main(int argc, char * argv[])
 
     if (verbose == 1){
         printf("RMS Error of Final = %G\n", out1/den);
+        double integral = function_train_integrate(ft);
+        printf("Expectation is %G\n",integral);
     }
 
 

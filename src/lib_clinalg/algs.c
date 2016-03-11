@@ -4308,7 +4308,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         temp.maxiter = 5;
         temp.verbose = 0;
         
-        temp.epsround = 1e-10;
+        temp.epsround = 1e-7;
         temp.kickrank = 3;
         temp.maxiteradapt = 5;
 
