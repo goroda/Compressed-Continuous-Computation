@@ -261,11 +261,12 @@ int main( int argc, char *argv[])
 
     // One dimensional approximation arguments
     enum poly_type ptype = LEGENDRE;
-    struct OpeAdaptOpts ao;
-    ao.start_num = 7;
-    ao.coeffs_check = 2;
-    ao.tol = 1e-7;
-    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,&ao);
+    struct OpeAdaptOpts * ao = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(ao,7);
+    ope_adapt_opts_set_coeffs_check(ao,2);
+    ope_adapt_opts_set_tol(ao,1e-7);
+
+    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,ao);
 
     /*
     struct PwPolyAdaptOpts aopts;
@@ -344,6 +345,7 @@ int main( int argc, char *argv[])
     function_monitor_free(fm); fm = NULL;
     bounding_box_free(bds); bds = NULL;
     ft_approx_args_free(fapp); fapp = NULL;
+    ope_adapt_opts_free(ao);
     free(fca.ranks); fca.ranks = NULL;
     //free(center); center = NULL;
     function_train_free(ft); ft = NULL;

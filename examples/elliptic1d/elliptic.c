@@ -386,11 +386,12 @@ int main(int argc, char *argv[])
             size_t dim = rargs.dim;
 
             enum poly_type ptype = LEGENDRE;
-            struct OpeAdaptOpts ope;
-            ope.start_num = 3;
-            ope.coeffs_check = 1;
-            ope.tol=approxtol[jjj];
-            struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,&ope);
+            struct OpeAdaptOpts * ope = ope_adapt_opts_alloc();
+            ope_adapt_opts_set_start(ope,3);
+            ope_adapt_opts_set_coeffs_check(ope,1);
+            ope_adapt_opts_set_tol(ope,approxtol[jjj]);
+
+            struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,ope);
 
             size_t init_ranks = 5;
             struct FtCrossArgs fca;
@@ -484,6 +485,7 @@ int main(int argc, char *argv[])
                 darray_save(rargs.dim+1,2,data,fff,1);
             }
             
+            ope_adapt_opts_free(ope); ope = NULL;
             function_monitor_free(fm); fm = NULL;
             ft_approx_args_free(app); app = NULL;
             function_train_free(ft); ft = NULL;

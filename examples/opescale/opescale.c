@@ -46,16 +46,18 @@ int main ()
     size_t ii;
     size_t N = 7;
     for (ii = 0; ii < N; ii++){
-        struct OpeAdaptOpts aopts;
-        aopts.start_num = 6;
-        aopts.coeffs_check = 1;
-        aopts.tol = 1e-3;
+        struct OpeAdaptOpts * aopts = ope_adapt_opts_alloc();
+        ope_adapt_opts_set_start(aopts,6);
+        ope_adapt_opts_set_coeffs_check(aopts,1);
+        ope_adapt_opts_set_tol(aopts,1e-3);
+
         double coeff [2] = {1.0, scale[ii]};
         struct OrthPolyExpansion * ope = 
-            orth_poly_expansion_approx_adapt(myexp,coeff,ptype,lb,ub,&aopts);
+            orth_poly_expansion_approx_adapt(myexp,coeff,ptype,lb,ub,aopts);
         double err = checkError(ope,coeff);
         printf("Err = %3.15G\n",err);
         orth_poly_expansion_free(ope);
+        ope_adapt_opts_free(aopts);
     }
     
 }

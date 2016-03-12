@@ -33,10 +33,10 @@ int main( void )
     enum poly_type ptype = LEGENDRE;
     size_t start_num = 6;
     size_t c_check = 2;
-    struct OpeAdaptOpts ao;
-    ao.start_num = start_num;
-    ao.coeffs_check = c_check;
-   
+    struct OpeAdaptOpts * ao = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(ao,start_num);
+    ope_adapt_opts_set_coeffs_check(ao,c_check);
+
     size_t ntols = 10;
     double * epsilons = logspace(-13, -1, ntols);
     
@@ -90,10 +90,10 @@ int main( void )
             assert (isr != NULL);
             cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
             cross_index_array_initialize(dim,isr,0,1,ranks,yr);
-
-            ao.tol = epsilons[jj]; 
+            
+            ope_adapt_opts_set_tol(ao,epsilons[jj]);
             struct FtApproxArgs * fapp = 
-                ft_approx_args_createpoly(dim,&ptype,&ao);
+                ft_approx_args_createpoly(dim,&ptype,ao);
 
             struct FunctionTrain * ftref = 
                 function_train_linear(POLYNOMIAL,&ptype,dim,
@@ -134,7 +134,8 @@ int main( void )
         free_dd(dim,yr); yr = NULL;
         free(coeffs); coeffs = NULL;
     }
-
+    
+    ope_adapt_opts_free(ao);
     free(epsilons);
     fclose(fp);
     return 0;

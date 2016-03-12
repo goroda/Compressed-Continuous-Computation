@@ -79,11 +79,10 @@ int main( int argc, char *argv[])
     double * pivx = linspace(-1.0,1.0, rank);
     double * pivy = linspace(-1.0,1.0, rank);
     
-    struct OpeAdaptOpts opts;
-    opts.start_num = 5;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-4;
-
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-4);
 
     enum function_class fc = POLYNOMIAL;
     enum poly_type p = LEGENDRE;
@@ -95,7 +94,7 @@ int main( int argc, char *argv[])
     for (kk = 0; kk < dim; kk++){
         cargs.fclass[kk] = fc;
         cargs.sub_type[kk] = &p;
-        cargs.approx_args[kk] = &opts;
+        cargs.approx_args[kk] = opts;
     }
     cargs.verbose = 2;
     
@@ -185,6 +184,7 @@ int main( int argc, char *argv[])
     printf("RMS Error of Initial = %G\n", out2/den);
     printf("RMS Error of Final = %G\n", out1/den);
     
+    ope_adapt_opts_free(opts);
     fclose(fp2);
     free(pivx);
     free(pivy);
