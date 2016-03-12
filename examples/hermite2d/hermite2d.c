@@ -30,8 +30,8 @@ void print_code_usage (FILE * stream, int exit_code)
 double f0(double *x, void * args)
 {
     (void)(args);
-    //return x[0] + x[1]+2.0;
-    return 1.0;
+    return x[0] + x[1]+2.0;
+//    return 1.0;
 }
 
 double f1(double *x, void * args)
