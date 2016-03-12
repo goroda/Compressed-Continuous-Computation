@@ -56,8 +56,8 @@ double hermortho(size_t n)
     for (size_t ii = 1; ii < n; ii++){
         val *= (ii+1);
     }
-    return sqrt(2*M_PI)*val;
-    //return val;
+    //return sqrt(2*M_PI)*val;
+    return val;
 }
 
 /********************************************************//**

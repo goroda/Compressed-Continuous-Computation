@@ -141,15 +141,15 @@ void Test_cheb_approx_adapt(CuTest * tc){
 
     printf("Testing function: cheb_approx_adapt\n");
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-13;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c, 
-                            CHEBYSHEV,-1.0,1.0, &opts);
+                            CHEBYSHEV,-1.0,1.0,opts);
     
     double * xtest = linspace(-1,1,1000);
     size_t ii;
@@ -164,6 +164,7 @@ void Test_cheb_approx_adapt(CuTest * tc){
     CuAssertDblEquals(tc, 0.0, err, 1e-13);
     FREE_CHEB(cpoly);
     free(xtest);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_cheb_approx_adapt_weird(CuTest * tc){
@@ -172,15 +173,15 @@ void Test_cheb_approx_adapt_weird(CuTest * tc){
     double lb = -2;
     double ub = -1.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c, 
-                            CHEBYSHEV,lb,ub, &opts);
+                            CHEBYSHEV,lb,ub,opts);
     
     double * xtest = linspace(lb,ub,1000);
     size_t ii;
@@ -195,6 +196,8 @@ void Test_cheb_approx_adapt_weird(CuTest * tc){
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
+
+    ope_adapt_opts_free(opts);
 }
 
 void Test_cheb_integrate(CuTest * tc){
@@ -203,20 +206,21 @@ void Test_cheb_integrate(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            CHEBYSHEV,lb,ub, &opts);
+                            CHEBYSHEV,lb,ub,opts);
     
     double intshould = (pow(ub,3) - pow(lb,3))/3;
     double intis = cheb_integrate2(cpoly);
     CuAssertDblEquals(tc, intshould, intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_cheb_inner(CuTest * tc){
@@ -225,20 +229,20 @@ void Test_cheb_inner(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,4);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            CHEBYSHEV,lb,ub, &opts);
+                            CHEBYSHEV,lb,ub, opts);
 
     struct counter c2;
     c2.N = 0;
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, (void*)(&c2), 
-                            CHEBYSHEV,lb,ub, &opts);
+                            CHEBYSHEV,lb,ub, opts);
     
     
     double intshould = (pow(ub,6) - pow(lb,6))/3;
@@ -246,6 +250,7 @@ void Test_cheb_inner(CuTest * tc){
     CuAssertDblEquals(tc, intshould, intis, 1e-10);
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_cheb_norm(CuTest * tc){
@@ -254,20 +259,21 @@ void Test_cheb_norm(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            CHEBYSHEV,lb,ub, &opts);
+                            CHEBYSHEV,lb,ub, opts);
     
     double intshould = (pow(ub,5) - pow(lb,5))/5;
     double intis = orth_poly_expansion_norm(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-10);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 CuSuite * ChebGetSuite(){
@@ -340,15 +346,15 @@ void Test_legendre_approx_adapt(CuTest * tc){
 
     printf("Testing function: legendre_approx_adapt\n");
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c, 
-                            LEGENDRE,-1.0,1.0, &opts);
+                            LEGENDRE,-1.0,1.0, opts);
     
     double * xtest = linspace(-1,1,1000);
     size_t ii;
@@ -363,6 +369,7 @@ void Test_legendre_approx_adapt(CuTest * tc){
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_legendre_approx_adapt_weird(CuTest * tc){
@@ -371,15 +378,15 @@ void Test_legendre_approx_adapt_weird(CuTest * tc){
     double lb = -2;
     double ub = -1.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-8);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     double * xtest = linspace(lb,ub,1000);
     size_t ii;
@@ -394,6 +401,7 @@ void Test_legendre_approx_adapt_weird(CuTest * tc){
     CuAssertDblEquals(tc, 0.0, err, 1e-15);
     FREE_CHEB(cpoly);
     free(xtest);
+    ope_adapt_opts_free(opts); opts = NULL;
 }
 
 void Test_legendre_approx_vec(CuTest * tc){
@@ -471,15 +479,15 @@ void Test_legendre_derivative(CuTest * tc){
     double lb = -2.0;
     double ub = -1.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-9;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     opoly_t * der = orth_poly_expansion_deriv(cpoly);
 
@@ -501,6 +509,7 @@ void Test_legendre_derivative(CuTest * tc){
     FREE_CHEB(cpoly);
     FREE_CHEB(der);
     free(xtest);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_legendre_integrate(CuTest * tc){
@@ -509,48 +518,50 @@ void Test_legendre_integrate(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     double intshould = (pow(ub,3) - pow(lb,3))/3;
     double intis = legendre_integrate(cpoly);
     CuAssertDblEquals(tc, intshould, intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_legendre_inner(CuTest * tc){
 
     printf("Testing function: orth_poly_expansion_inner with legendre poly \n");
     double lb = -2;
-    double ub = 3.0;
+    double ub = 3;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     struct counter c2;
     c2.N = 0;
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     double intshould = (pow(ub,6) - pow(lb,6))/3;
     double intis = orth_poly_expansion_inner(cpoly,cpoly2);
     CuAssertDblEquals(tc, intshould, intis, 1e-10);
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
+    ope_adapt_opts_free(opts);
 }
 
 
@@ -560,20 +571,21 @@ void Test_legendre_norm_w(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     double intshould = (pow(ub,5) - pow(lb,5))/5/2.0;
     double intis = orth_poly_expansion_norm_w(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_legendre_product(CuTest * tc){
@@ -582,20 +594,20 @@ void Test_legendre_product(CuTest * tc){
     double lb = -3.0;
     double ub = 2.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     struct counter c2;
     c2.N = 0;
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     opoly_t * cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2);
     //print_orth_poly_expansion(cpoly3,0,NULL);
@@ -615,6 +627,7 @@ void Test_legendre_product(CuTest * tc){
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
     FREE_CHEB(cpoly3);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_legendre_axpy(CuTest * tc){
@@ -623,20 +636,20 @@ void Test_legendre_axpy(CuTest * tc){
     double lb = -3.0;
     double ub = 2.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-10);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     struct counter c2;
     c2.N = 0;
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(func3, &c2, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
     CuAssertIntEquals(tc,0,success);
@@ -655,6 +668,7 @@ void Test_legendre_axpy(CuTest * tc){
     free(pts); pts = NULL;
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
+    ope_adapt_opts_free(opts);
 }
 
 
@@ -664,20 +678,21 @@ void Test_legendre_norm(CuTest * tc){
     double lb = -2;
     double ub = 3.0;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,10);
+    ope_adapt_opts_set_coeffs_check(opts,4);
+    ope_adapt_opts_set_tol(opts,1e-9);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(func2, &c, 
-                            LEGENDRE,lb,ub, &opts);
+                            LEGENDRE,lb,ub, opts);
     
     double intshould = (pow(ub,5) - pow(lb,5))/5;
     double intis = orth_poly_expansion_norm(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-10);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 CuSuite * LegGetSuite(){
@@ -773,15 +788,15 @@ void Test_hermite_approx_adapt(CuTest * tc){
 
     printf("Testing function: hermite_approx_adapt\n");
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 5;
-    opts.coeffs_check= 5;
-    opts.tol = 1e-16;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     struct counter c;
     c.N = 0;
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f2h, &c,
-                            HERMITE,-DBL_MAX,DBL_MAX, &opts);
+                            HERMITE,-DBL_MAX,DBL_MAX, opts);
 
     //  print_orth_poly_expansion(cpoly,3,NULL);
     double * xtest = linspace(-1,1,1000);
@@ -798,6 +813,7 @@ void Test_hermite_approx_adapt(CuTest * tc){
     CuAssertDblEquals(tc, 0.0, err, 1e-10);
     FREE_CHEB(cpoly);
     free(xtest);
+    ope_adapt_opts_free(opts);
 }
 
 
@@ -896,19 +912,21 @@ void Test_hermite_integrate(CuTest * tc){
 
     printf("Testing function: hermite_integrate\n");
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
 
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f3h, NULL,
-                            HERMITE,-DBL_MAX,DBL_MAX,&opts);
+                            HERMITE,-DBL_MAX,DBL_MAX,opts);
     
-    double intshould = sqrt(2*M_PI)*sin(3)/exp(2);
+    double intshould = sin(3)/exp(2);
     double intis = hermite_integrate(cpoly);
     CuAssertDblEquals(tc, intshould, intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 
@@ -930,25 +948,26 @@ void Test_hermite_inner(CuTest * tc){
 
     printf("Testing function: orth_poly_expansion_inner with hermite poly \n");
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     double lb = -DBL_MAX;
     double ub = DBL_MAX;
    
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f4h,NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f5h,NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
-    double intshould = -6.0*sqrt(2.0*M_PI)*cos(3)/exp(2.0);
+    double intshould = -6.0*cos(3)/exp(2.0);
     double intis = orth_poly_expansion_inner(cpoly,cpoly2);
     CuAssertDblEquals(tc, intshould, intis, 1e-10);
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
+    ope_adapt_opts_free(opts);
 }
 
 double f6h(double x, void * arg)
@@ -963,18 +982,19 @@ void Test_hermite_norm_w(CuTest * tc){
     double lb = -DBL_MAX;
     double ub = DBL_MAX;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
-    double intshould = sqrt(M_PI/2.0)*(3*exp(2)+5*cos(1))/exp(2);
+    double intshould = 5*cos(1)/2/exp(2) + 3.0/2.0;
     double intis = orth_poly_expansion_norm_w(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_hermite_norm(CuTest * tc){
@@ -983,18 +1003,19 @@ void Test_hermite_norm(CuTest * tc){
     double lb = -DBL_MAX;
     double ub = DBL_MAX;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
-                            HERMITE,lb,ub, &opts);
-    
-    double intshould = sqrt(M_PI/2.0)*(3*exp(2)+5*cos(1))/exp(2);
+                            HERMITE,lb,ub, opts);
+
+    double intshould = 5*cos(1)/2/exp(2) + 3.0/2.0;    
     double intis = orth_poly_expansion_norm(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
     FREE_CHEB(cpoly);
+    ope_adapt_opts_free(opts);
 }
 
 double f7h(double x, void * args)
@@ -1014,16 +1035,16 @@ void Test_hermite_product(CuTest * tc){
     double lb = -DBL_MAX;
     double ub = DBL_MAX;
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-10;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f7h, NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f8h,NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
     opoly_t * cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2);
     //print_orth_poly_expansion(cpoly3,0,NULL);
@@ -1043,6 +1064,7 @@ void Test_hermite_product(CuTest * tc){
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
     FREE_CHEB(cpoly3);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_hermite_axpy(CuTest * tc){
@@ -1052,16 +1074,16 @@ void Test_hermite_axpy(CuTest * tc){
     double ub = DBL_MAX;
 //    printf("lb=%G, ub = %G\n",lb,ub);
 
-    struct OpeAdaptOpts opts;
-    opts.start_num = 10;
-    opts.coeffs_check= 4;
-    opts.tol = 1e-15;
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,5);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-15);
 
     opoly_t * cpoly = orth_poly_expansion_approx_adapt(f6h, NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
     opoly_t * cpoly2 = orth_poly_expansion_approx_adapt(f7h, NULL,
-                            HERMITE,lb,ub, &opts);
+                            HERMITE,lb,ub, opts);
     
     int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
     CuAssertIntEquals(tc,0,success);
@@ -1080,6 +1102,7 @@ void Test_hermite_axpy(CuTest * tc){
     free(pts); pts = NULL;
     FREE_CHEB(cpoly);
     FREE_CHEB(cpoly2);
+    ope_adapt_opts_free(opts);
 }
 
 void Test_hermite_linear(CuTest * tc){
@@ -1723,13 +1746,13 @@ void Test_orth_poly_expansion_real_roots(CuTest * tc){
     double lb = -3.0;
     double ub = 2.0;
     
-    struct OpeAdaptOpts aopts;
-    aopts.start_num = 8;
-    aopts.coeffs_check = 2;
-    aopts.tol = 1e-10;  
+    struct OpeAdaptOpts * opts = ope_adapt_opts_alloc();
+    ope_adapt_opts_set_start(opts,8);
+    ope_adapt_opts_set_coeffs_check(opts,2);
+    ope_adapt_opts_set_tol(opts,1e-10);
 
     struct OrthPolyExpansion * pl = 
-            orth_poly_expansion_approx_adapt(func6, NULL,LEGENDRE,lb,ub,&aopts);
+            orth_poly_expansion_approx_adapt(func6, NULL,LEGENDRE,lb,ub,opts);
 
     size_t nroots;
     double * roots = orth_poly_expansion_real_roots(pl, &nroots);
@@ -1748,6 +1771,7 @@ void Test_orth_poly_expansion_real_roots(CuTest * tc){
 
     free(roots);
     orth_poly_expansion_free(pl);
+    ope_adapt_opts_free(opts);
 }
 
 double func7(double x, void * args)

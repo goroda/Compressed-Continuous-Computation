@@ -98,7 +98,6 @@ void Test_cc_nestedness(CuTest * tc){
     }
 }
 
-
 void Test_clenshaw_curtis(CuTest * tc){
     printf("Testing function: clenshaw_curtis\n");
 
@@ -234,7 +233,7 @@ void Test_gauss_hermite(CuTest * tc){
     }
 
     CuAssertDblEquals(tc,0.0, val, 1e-14);
-    CuAssertDblEquals(tc,sqrt(2*M_PI), val2, 1e-14);
+    CuAssertDblEquals(tc,1, val2, 1e-14);
 
 }
 

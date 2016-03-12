@@ -209,6 +209,9 @@ void fejer2(size_t N, double * pts, double * weights){
 *     \param[in]     N       - number of elements
 *     \param[in,out] pts     - quadrature nodes (space already alloc)
 *     \param[in,out] weights - weights (space alread alloc)
+*
+*     \note
+*     weight function is \f$ w(x) = \frac{1}{\sqrt{2\pi}}e^{-x^2/2}\f$
 *************************************************************/
 void gauss_hermite(size_t N, double * pts, double * weights){
     
@@ -235,7 +238,7 @@ void gauss_hermite(size_t N, double * pts, double * weights){
     }
     
     for (ii = 0; ii < N; ii++){
-        weights[ii] = evec[ii*N] * evec[ii*N] * sqrt(2*M_PI);
+        weights[ii] = evec[ii*N] * evec[ii*N];// * sqrt(2*M_PI);
     }
     free(offdiag); offdiag = NULL;
     free(evec); evec = NULL;
