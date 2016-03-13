@@ -4233,14 +4233,15 @@ function_train_cross(double (*f)(double *, void *), void * args,
     An interface for cross approximation of a function
     on an unbounded domain
 
-    \param[in] f      - function
-    \param[in] args   - function arguments
-    \param[in] xstart - location for first fibers 
-                        (if null then middle of domain)
-    \param[in] fca    - cross approximation args, 
-                        if NULL then default exists
-    \param[in] apargs - function approximation arguments 
-                        (if null then defaults)
+    \param[in] f        - function
+    \param[in] args     - function arguments
+    \param[in] xstart   - location for first fibers 
+                          (if null then middle of domain)
+    \param[in] fcain    - cross approximation args, 
+                          if NULL then default exists
+    \param[in] apargsin - function approximation arguments 
+                          (if null then defaults)
+    \param[in] foptin   - optimization arguments                          
 
     \return function train decomposition of f
 
