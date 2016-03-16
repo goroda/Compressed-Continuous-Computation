@@ -4066,6 +4066,56 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
 }
 
 /***********************************************************//**
+   Allocate space for cross approximation arguments
+   Set elements to a default value
+***************************************************************/
+struct FtCrossArgs * ft_cross_args_alloc(size_t dim, size_t start_rank)
+{
+
+    struct FtCrossArgs * ftc = malloc(sizeof(struct FtCrossArgs));
+    if (ftc == NULL){
+        fprintf(stderr,"Failure allocating FtCrossArgs\n");
+        exit(1);
+    }
+    
+    ftc->dim = dim;
+    ftc->ranks = calloc_size_t(dim+1);
+    ftc->ranks[0] = 1;
+    for (size_t ii = 1; ii < dim; ii++){
+        ftc->ranks[ii] = start_rank;
+    }
+    ftc->ranks[dim] = 1;
+    ftc->epsilon = 1e-10;
+    ftc->maxiter = 5;
+    
+    ftc->epsround = 1e-10;
+    ftc->kickrank = 5;
+    ftc->maxiteradapt = 5;
+
+    ftc->verbose = 0;
+
+    ftc->optargs = NULL;
+
+    return ftc;
+}
+
+/***********************************************************//**
+    Set a reference to optimization arguments
+***************************************************************/
+void ft_cross_args_set_optargs(struct FtCrossArgs * fca, void * fopt)
+{
+    fca->optargs = fopt;
+}
+
+/***********************************************************//**
+    Set the verbosity level
+***************************************************************/
+void ft_cross_args_set_verbose(struct FtCrossArgs * fca, int verbose)
+{
+    fca->verbose = verbose;
+}
+
+/***********************************************************//**
     Initialize a baseline cross-approximation args
 
     \param[in,out] fca - cross approximation arguments 
@@ -4076,6 +4126,9 @@ void ft_cross_args_init(struct FtCrossArgs * fca)
     fca->optargs = NULL;
 }
 
+/***********************************************************//**
+    Copy cross approximation arguments
+***************************************************************/
 struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs * fca)
 {
     if (fca == NULL){
@@ -4093,11 +4146,15 @@ struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs * fca)
         f2->kickrank = fca->kickrank;
         f2->maxiteradapt=fca->maxiteradapt;
         f2->verbose = fca->verbose;
+
         f2->optargs = fca->optargs;
         return f2;
     }
 }
 
+/***********************************************************//**
+    free cross approximation arguments
+***************************************************************/
 void ft_cross_args_free(struct FtCrossArgs * fca)
 {
     if (fca != NULL){
@@ -4105,8 +4162,6 @@ void ft_cross_args_free(struct FtCrossArgs * fca)
         free(fca); fca = NULL;
     }
 }
-
-
 
 /***********************************************************//**
     An interface for cross approximation of a function
@@ -4135,10 +4190,8 @@ function_train_cross(double (*f)(double *, void *), void * args,
 {   
     size_t dim = bds->dim;
     
-    size_t * init_ranks = NULL;
     double ** init_x = NULL;
     struct FtCrossArgs * fcause = NULL;
-    struct FtCrossArgs temp;
     struct FtApproxArgs * fapp = NULL;
     
     double * init_coeff = darray_val(dim,1.0/ (double) dim);
@@ -4146,30 +4199,11 @@ function_train_cross(double (*f)(double *, void *), void * args,
     size_t ii;
 
     if (fca != NULL){
-        fcause = fca;
+        fcause = ft_cross_args_copy(fca);
     }
     else{
         size_t init_rank = 5;
-        init_ranks = calloc_size_t(dim+1);
-        for (ii = 0; ii < dim ;ii++){
-            init_ranks[ii] = init_rank;
-        }
-        init_ranks[0] = 1;
-        init_ranks[dim] = 1;
-        
-        ft_cross_args_init(&temp);
-        temp.dim = dim;
-        temp.ranks = init_ranks;
-        temp.epsilon = 1e-5;
-        temp.maxiter = 5;
-        temp.verbose = 0;
-        
-        temp.epsround = 1e-10;
-        temp.kickrank = 10;
-        temp.maxiteradapt = 5;
-        
-        temp.optargs = NULL;
-        fcause = &temp;
+        fcause = ft_cross_args_alloc(dim,init_rank);
     }
 
     if ( xstart == NULL) {
@@ -4215,9 +4249,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
     if (apargs == NULL){
         ft_approx_args_free(fapp); fapp = NULL;
     }
-    if (fca == NULL){
-        free(init_ranks); init_ranks = NULL;
-    }
+    ft_cross_args_free(fcause);
 
     function_train_free(ftref); ftref = NULL;
     for (ii = 0; ii < dim;ii++){
@@ -4258,12 +4290,10 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
 {
     enum poly_type ptype = HERMITE;
     struct FtCrossArgs  * fca   = NULL;
-    struct FtCrossArgs temp;
     struct FtApproxArgs * aparg = NULL;
     struct FiberOptArgs * fopt  = NULL;
     struct OpeAdaptOpts * aopts = NULL;
     double ** startnodes = NULL;;
-    size_t * init_ranks = NULL;
     struct c3Vector * optnodes = NULL;
     if (foptin != NULL){
         fopt = foptin;
@@ -4291,31 +4321,14 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
     }
 
     if (fcain != NULL){
-        fca = fcain;
+        fca = ft_cross_args_copy(fcain);
     }
     else{
         size_t init_rank = 5;
-        init_ranks = calloc_size_t(dim+1);
-        for (size_t ii = 0; ii < dim ;ii++){
-            init_ranks[ii] = init_rank;
-        }
-        init_ranks[0] = 1;
-        init_ranks[dim] = 1;
-        
-        ft_cross_args_init(&temp);
-        temp.dim = dim;
-        temp.ranks = init_ranks;
-        temp.epsilon = 1e-10;
-        temp.maxiter = 5;
-        temp.verbose = 0;
-        
-        temp.epsround = 1e-7;
-        temp.kickrank = 3;
-        temp.maxiteradapt = 5;
-
-        fca = &temp;
+        fca = ft_cross_args_alloc(dim,init_rank);
     }
-    fca->optargs = fopt;
+    ft_cross_args_set_optargs(fca,fopt);
+
 
     if (xstart != NULL){
         startnodes = xstart;
@@ -4344,9 +4357,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         ope_adapt_opts_free(aopts); aopts = NULL;
         ft_approx_args_free(aparg); aparg = NULL;
     }
-    if (fcain == NULL){
-        free(init_ranks); init_ranks = NULL;
-    }
+    ft_cross_args_free(fca); fca = NULL;
     if (xstart == NULL){
         free_dd(dim,startnodes);
         startnodes = NULL;

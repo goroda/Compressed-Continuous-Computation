@@ -104,7 +104,12 @@ struct FtCrossArgs
 
     struct FiberOptArgs * optargs;
 };
-
+struct FtCrossArgs * ft_cross_args_alloc(size_t, size_t);
+void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
+void ft_cross_args_set_optargs(struct FtCrossArgs *, void*);
+struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs *);
+void ft_cross_args_free(struct FtCrossArgs *);
+void ft_cross_args_init(struct FtCrossArgs *);
 
 // (quasimatrix - vector multiplication
 struct GenericFunction * qmv(struct Quasimatrix *, double *);
@@ -228,7 +233,7 @@ ftapprox_cross(double (*)(double *, void *), void *,
     struct CrossIndex **, struct CrossIndex **, 
     struct FtCrossArgs *, struct FtApproxArgs *);
 
-void ft_cross_args_init(struct FtCrossArgs *);
+
 struct FunctionTrain *
 function_train_cross(double (*)(double *, void *), void *, 
         struct BoundingBox *, double **,

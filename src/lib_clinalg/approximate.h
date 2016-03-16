@@ -33,21 +33,18 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file approximate.h
+ * Provides header files and structure definitions for functions in in approximate.c
  */
 
+#ifndef C3_APPROX_H
+#define C3_APPROX_H
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "elements.h"
-#include "indmanage.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "dmrgprod.h"
-#include "qmarray_qr.h"
-#include "diffusion.h"
-#include "approximate.h"
+enum C3ATYPE { CROSS, REGRESS };
+struct C3Approx;
+struct C3Approx * c3approx_create(enum C3ATYPE, size_t, double *, double *);
+void c3approx_destroy(struct C3Approx *);
+void c3approx_init_poly(struct C3Approx *, enum poly_type);
+void c3approx_init_cross(struct C3Approx *, size_t, size_t);
 
 #endif
