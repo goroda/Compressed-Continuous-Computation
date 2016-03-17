@@ -262,9 +262,6 @@ struct FunctionTrain *
 function_train_rankone(size_t,  double (*)(double, size_t, void *), 
         void *, struct BoundingBox *, struct FtApproxArgs *);
 
-struct FunctionTrain * 
-function_train_linear2(size_t, struct BoundingBox *, 
-        double *, size_t, double *, size_t,struct FtApproxArgs *);
 
 struct FunctionTrain * 
 function_train_constant(enum function_class, void *,
@@ -275,6 +272,10 @@ function_train_constant_d(struct FtApproxArgs *,double,
 struct FunctionTrain * 
 function_train_linear(enum function_class, void *,size_t, struct BoundingBox *,
                       double *, void* ); 
+
+struct FunctionTrain * 
+function_train_linear2(enum function_class, void *,size_t, struct BoundingBox *, 
+                       double *, size_t, double *, size_t,void*);
 
 struct FunctionTrain * 
 function_train_quadratic(enum function_class, void *,size_t, struct BoundingBox *,

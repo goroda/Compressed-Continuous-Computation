@@ -45,6 +45,7 @@ struct C3Approx;
 struct C3Approx * c3approx_create(enum C3ATYPE, size_t, double *, double *);
 void c3approx_destroy(struct C3Approx *);
 void c3approx_init_poly(struct C3Approx *, enum poly_type);
-void c3approx_init_cross(struct C3Approx *, size_t, size_t);
-
+void c3approx_init_cross(struct C3Approx *, size_t, int);
+struct FunctionTrain *
+c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);
 #endif

@@ -1561,113 +1561,6 @@ function_train_initsum2(size_t dim,  double (*f)(double, size_t, void *),
     return ft;
 }
 
-/***********************************************************//**
-    Compute a tensor train representation of 
-    \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
-
-    \param[in] dim    - dimension of function train
-    \param[in] bds    - boundarys of each dimension
-    \param[in] c      -  slope of the function in each dimension (ldc x dim)
-    \param[in] ldc    - stride of coefficients in array of c
-    \param[in] a      - offset of the function in each dimension (ldc x dim)
-    \param[in] lda    - stride of coefficients in array a
-    \param[in] ftargs - parameters for computation
-
-    \return function train
-***************************************************************/
-struct FunctionTrain * 
-function_train_linear2(size_t dim, struct BoundingBox * bds, 
-        double * c, size_t ldc, double * a, size_t lda,
-        struct FtApproxArgs * ftargs)
-{
-    struct FtApproxArgs * ftargs_use;
-    if (ftargs == NULL){
-        enum poly_type ptype = LEGENDRE;
-        ftargs_use = ft_approx_args_createpoly(dim,&ptype,NULL);
-    }
-    else{
-        ftargs_use = ftargs;
-    }
-    enum function_class fc;
-    void * sub_type = NULL;
-    void * approx_opts = NULL;
-    
-    struct FunctionTrain * ft = function_train_alloc(dim);
-
-    size_t onDim = 0;
-    fc = ft_approx_args_getfc(ftargs_use, onDim);
-    sub_type = ft_approx_args_getst(ftargs_use, onDim);
-    approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-    ft->ranks[onDim] = 1;
-
-    if (dim == 1){
-        ft->cores[onDim] = qmarray_alloc(1,1);
-    }
-    else{
-        ft->cores[onDim] = qmarray_alloc(1,2);
-    }
-    
-    ft->cores[onDim]->funcs[0] = 
-        generic_function_linear(c[onDim*ldc], a[onDim*lda], 
-                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
-                            approx_opts);
-    
-    if (dim > 1){
-
-        ft->cores[onDim]->funcs[1] = 
-            generic_function_constant(1.0, fc, sub_type, 
-                bds->lb[onDim], bds->ub[onDim], approx_opts);
-    
-        for (onDim = 1; onDim < dim-1; onDim++){
-            fc = ft_approx_args_getfc(ftargs_use, onDim);
-            sub_type = ft_approx_args_getst(ftargs_use, onDim);
-            approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
-            ft->ranks[onDim] = 2;
-            ft->cores[onDim] = qmarray_alloc(2,2);
-
-            ft->cores[onDim]->funcs[0] = 
-                generic_function_constant(1.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
-
-
-            ft->cores[onDim]->funcs[1] = 
-                generic_function_linear(c[onDim*ldc], a[onDim*lda], 
-                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
-                            approx_opts);
-
-            ft->cores[onDim]->funcs[2] = 
-                generic_function_constant(0.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
-            ft->cores[onDim]->funcs[3] = 
-                generic_function_constant(1.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
-        }
-
-        onDim = dim-1;
-
-        fc = ft_approx_args_getfc(ftargs_use, onDim);
-        sub_type = ft_approx_args_getst(ftargs_use, onDim);
-        approx_opts = ft_approx_args_getaopts(ftargs_use, onDim);
-
-        ft->ranks[onDim] = 2;
-        ft->ranks[onDim+1] = 1;
-        ft->cores[onDim] = qmarray_alloc(2,1);
-
-        ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
-                    sub_type, bds->lb[onDim], bds->ub[onDim], approx_opts);
-
-        ft->cores[onDim]->funcs[1] = 
-            generic_function_linear(c[onDim*ldc], a[onDim*lda], 
-                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
-                            approx_opts);
-    }
-
-    if (ftargs == NULL){
-        ft_approx_args_free(ftargs_use);
-    }
-    return ft;
-}
  
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
@@ -1842,6 +1735,92 @@ function_train_linear(enum function_class fc, void * sub_type,
 
     return ft;
 }
+
+/***********************************************************//**
+    Compute a tensor train representation of 
+    \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
+
+    \param[in] fc       - function class
+    \param[in] sub_type - sub type of function class
+    \param[in] dim      - dimension of function train
+    \param[in] bds      - boundarys of each dimension
+    \param[in] c        - slope of the function in each dimension (ldc x dim)
+    \param[in] ldc      - increment between coefficients in array of c
+    \param[in] a        - offset of the function in each dimension (ldc x dim)
+    \param[in] lda      - increment between coefficients in array a
+    \param[in] aopts    - approximation arguments
+
+    \return function train
+***************************************************************/
+struct FunctionTrain * 
+function_train_linear2(enum function_class fc, void * sub_type, size_t dim,
+                       struct BoundingBox * bds, 
+                       double * c, size_t ldc, double * a, size_t lda,
+                       void * aopts)
+{
+    struct FunctionTrain * ft = function_train_alloc(dim);
+
+    size_t onDim = 0;
+    ft->ranks[onDim] = 1;
+
+    if (dim == 1){
+        ft->cores[onDim] = qmarray_alloc(1,1);
+    }
+    else{
+        ft->cores[onDim] = qmarray_alloc(1,2);
+    }
+    
+    ft->cores[onDim]->funcs[0] = 
+        generic_function_linear(c[onDim*ldc], a[onDim*lda], 
+                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
+                            aopts);
+    
+    if (dim > 1){
+
+        ft->cores[onDim]->funcs[1] = 
+            generic_function_constant(1.0, fc, sub_type, 
+                bds->lb[onDim], bds->ub[onDim], aopts);
+    
+        for (onDim = 1; onDim < dim-1; onDim++){
+            ft->ranks[onDim] = 2;
+            ft->cores[onDim] = qmarray_alloc(2,2);
+
+            ft->cores[onDim]->funcs[0] = 
+                generic_function_constant(1.0, fc, 
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
+
+
+            ft->cores[onDim]->funcs[1] = 
+                generic_function_linear(c[onDim*ldc], a[onDim*lda], 
+                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
+                            aopts);
+
+            ft->cores[onDim]->funcs[2] = 
+                generic_function_constant(0.0, fc, 
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
+            ft->cores[onDim]->funcs[3] = 
+                generic_function_constant(1.0, fc, 
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
+        }
+
+        onDim = dim-1;
+
+        ft->ranks[onDim] = 2;
+        ft->ranks[onDim+1] = 1;
+        ft->cores[onDim] = qmarray_alloc(2,1);
+
+        ft->cores[onDim]->funcs[0] = generic_function_constant(1.0, fc, 
+                    sub_type, bds->lb[onDim], bds->ub[onDim], aopts);
+
+        ft->cores[onDim]->funcs[1] = 
+            generic_function_linear(c[onDim*ldc], a[onDim*lda], 
+                            fc, sub_type, bds->lb[onDim], bds->ub[onDim],
+                            aopts);
+    }
+
+    return ft;
+}
+
 
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$

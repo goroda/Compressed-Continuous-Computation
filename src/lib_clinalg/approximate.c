@@ -45,16 +45,17 @@
 
 #include "array.h"
 #include "algs.h"
+#include "lib_funcs.h"
 
 enum C3ATYPE { CROSS, REGRESS };
 struct C3Approx
 {
     size_t dim;
-    double * lb;
-    double * ub;
+    struct BoundingBox * bds;
         
     enum C3ATYPE type;
-    
+
+    enum poly_type ptype;
     // approximation stuff
     struct OpeAdaptOpts * aopts;
     struct FtApproxArgs * fapp;
@@ -88,13 +89,9 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim, double * lb, do
     }
 
     c3a->type = type;
+    c3a->ptype = LEGENDRE;
     c3a->dim = dim;
-    c3a->lb = calloc_double(dim);
-    c3a->ub = calloc_double(dim);
-    for (size_t ii = 0; ii < dim; ii++){
-        c3a->lb[ii] = lb[ii];
-        c3a->ub[ii] = ub[ii];
-    }
+    c3a->bds = bounding_box_vec(dim,lb,ub);
     c3a->aopts = NULL;
     c3a->fapp = NULL;
 
@@ -112,8 +109,7 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim, double * lb, do
 void c3approx_destroy(struct C3Approx * c3a)
 {
     if (c3a != NULL){
-        free(c3a->lb); c3a->lb = NULL;
-        free(c3a->ub); c3a->ub = NULL;
+        bounding_box_free(c3a->bds); c3a->bds = NULL;
         ope_adapt_opts_free(c3a->aopts); c3a->aopts = NULL;
         ft_approx_args_free(c3a->fapp); c3a->fapp = NULL;
         c3vector_free(c3a->optnodes); c3a->optnodes = NULL;
@@ -137,14 +133,16 @@ void c3approx_destroy(struct C3Approx * c3a)
 ***************************************************************/
 void c3approx_init_poly(struct C3Approx * c3a, enum poly_type ptype)
 {
-    
+
     if (c3a != NULL){
+        c3a->ptype = ptype;
         c3a->aopts = ope_adapt_opts_alloc();
         ope_adapt_opts_set_start(c3a->aopts,5);
         ope_adapt_opts_set_maxnum(c3a->aopts,30);
         ope_adapt_opts_set_coeffs_check(c3a->aopts,2);
         ope_adapt_opts_set_tol(c3a->aopts,1e-10);
-        c3a->fapp = ft_approx_args_createpoly(c3a->dim,&ptype,c3a->aopts);
+        c3a->fapp = ft_approx_args_createpoly(c3a->dim,&(c3a->ptype),c3a->aopts);
+
 
         if (ptype == HERMITE)
         {
@@ -167,7 +165,7 @@ void c3approx_init_poly(struct C3Approx * c3a, enum poly_type ptype)
     \param[in]     init_rank - starting rank of approximation
     \param[in]     verbose   - verbosity level from cross approximation
 x***************************************************************/
-void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, size_t verbose)
+void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
 {
     if (c3a != NULL){
         c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
@@ -176,4 +174,13 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, size_t verbose
     }
 }
 
-
+/***********************************************************//**
+    Perform cross approximation of a function
+x***************************************************************/
+struct FunctionTrain *
+c3approx_do_cross(struct C3Approx * c3a, double (*f)(double*,void*),void*arg)
+{
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(f,arg,c3a->bds,NULL,c3a->fca,c3a->fapp);
+    return ft;
+}

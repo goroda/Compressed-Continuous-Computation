@@ -858,7 +858,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
     double * mean = NULL;
-
+    enum poly_type ptype = LEGENDRE;
     struct BoundingBox * bds = bounding_box_init_std(dimft);
     for (ii = 0; ii < dimft; ii++){
         bds->lb[ii] = 
@@ -873,8 +873,9 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii];
             struct FunctionTrain * ftlin = 
-                function_train_linear2(dimft,bds,pdf->lt->A+ii,dimpdf,
-                        offset,1,NULL);
+                function_train_linear2(POLYNOMIAL,&ptype,dimft,
+                                       bds,pdf->lt->A+ii,dimpdf,
+                                       offset,1,NULL);
             mean[ii] = function_train_inner(ftlin,pdf->pdf);
             //printf("mean[%zu]=%G\n",ii,mean[ii]);
             function_train_free(ftlin);
@@ -882,7 +883,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
         free(offset);
     }
     else{
-        enum poly_type ptype = LEGENDRE;
+
         mean = calloc_double(dimft);
         for (ii = 0; ii < dimpdf; ii++){
             struct Qmarray * temp = qmarray_copy(pdf->pdf->cores[ii]);
@@ -926,7 +927,8 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
     double * cov = NULL;
-
+    enum poly_type ptype =LEGENDRE;
+    
     struct BoundingBox * bds = bounding_box_init_std(dimft);
     for (ii = 0; ii < dimft; ii++){
         bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]);
@@ -943,7 +945,8 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii] - mean[ii];
             struct FunctionTrain * ftleft = 
-                function_train_linear2(dimft,bds,pdf->lt->A+ii,dimpdf,offset,1,NULL);
+                function_train_linear2(POLYNOMIAL,&ptype,dimft,bds,
+                                       pdf->lt->A+ii,dimpdf,offset,1,NULL);
 
             struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
             cov[ii*dimpdf+ii] = function_train_inner(temp,pdf->pdf);
@@ -952,7 +955,8 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
             for (jj = ii+1; jj < dimpdf; jj++){
                 offset[0] = pdf->lt->b[jj] - mean[jj];
                 struct FunctionTrain * ftright = 
-                    function_train_linear2(dimft,bds,pdf->lt->A+jj,dimpdf,offset,1,NULL);
+                    function_train_linear2(POLYNOMIAL,&ptype,
+                                           dimft,bds,pdf->lt->A+jj,dimpdf,offset,1,NULL);
 
                 struct FunctionTrain * ftprod = function_train_product(ftleft,ftright);
                 cov[ii*dimpdf+jj] = function_train_inner(ftprod,pdf->pdf);
@@ -970,7 +974,7 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
     }
     else{
         cov = calloc_double(dimpdf * dimpdf);
-        enum poly_type ptype = LEGENDRE;
+//        enum poly_type ptype = LEGENDRE;
         struct FunctionTrain * ftc = function_train_copy(pdf->pdf);
         struct FunctionTrain * xvals = function_train_alloc(dimft);
         for (ii = 0; ii < dimpdf; ii++){
@@ -1028,6 +1032,7 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
 double * probability_density_var(struct ProbabilityDensity * pdf)
 {
 
+    enum poly_type ptype = LEGENDRE;
     size_t ii;
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
@@ -1049,7 +1054,8 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii] - mean[ii];
             struct FunctionTrain * ftleft = 
-                function_train_linear2(dimft,bds,pdf->lt->A+ii,dimpdf,offset,1,NULL);
+                function_train_linear2(POLYNOMIAL,&ptype,dimft,bds,
+                                       pdf->lt->A+ii,dimpdf,offset,1,NULL);
 
             struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
             var[ii] = function_train_inner(temp,pdf->pdf);
@@ -1060,7 +1066,7 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
     }
     else{
         var = calloc_double(dimpdf);
-        enum poly_type ptype = LEGENDRE;
+
         struct FunctionTrain * ftc = function_train_copy(pdf->pdf);
         struct FunctionTrain * xvals = function_train_alloc(dimft);
         for (ii = 0; ii < dimpdf; ii++){
