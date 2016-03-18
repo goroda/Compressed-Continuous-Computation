@@ -218,7 +218,7 @@ struct GenericFunction ** generic_function_array_alloc(size_t size)
 ************************************************************/
 struct GenericFunction *
 generic_function_alloc(size_t dim, enum function_class fc, 
-                       void * sub_type){
+                       const void * sub_type){
     struct GenericFunction * out;
     if (NULL == ( out = malloc(sizeof(struct GenericFunction)))){
         fprintf(stderr, "failed to allocate for a generic function.\n");
@@ -2034,8 +2034,8 @@ void generic_function_kronh2(int left, size_t r, size_t m, size_t n, size_t l,
     \return gf  - constant function
 ************************************************************/
 struct GenericFunction * 
-generic_function_constant(double a, enum function_class fc, void * st,
-                          double lb, double ub, void * aopts)
+generic_function_constant(double a, enum function_class fc, const void * st,
+                          double lb, double ub, const void * aopts)
 {   
     
     struct GenericFunction * gf = NULL;
@@ -2081,8 +2081,8 @@ generic_function_constant(double a, enum function_class fc, void * st,
 ************************************************************/
 struct GenericFunction * 
 generic_function_quadratic(double a, double offset,
-                           enum function_class fc, void * st,
-                           double lb, double ub, void * aopts)
+                           enum function_class fc, const void * st,
+                           double lb, double ub, const void * aopts)
 {   
     
     struct GenericFunction * gf = NULL;
@@ -2130,8 +2130,8 @@ generic_function_quadratic(double a, double offset,
 ***********************************************************/
 struct GenericFunction * 
 generic_function_linear(double a, double offset,
-                        enum function_class fc, void * st,
-                        double lb, double ub, void * aopts)
+                        enum function_class fc, const void * st,
+                        double lb, double ub, const void * aopts)
 {   
     
     struct GenericFunction * gf = NULL;

@@ -274,8 +274,8 @@ function_train_linear(enum function_class, void *,size_t, struct BoundingBox *,
                       double *, void* ); 
 
 struct FunctionTrain * 
-function_train_linear2(enum function_class, void *,size_t, struct BoundingBox *, 
-                       double *, size_t, double *, size_t,void*);
+function_train_linear2(enum function_class,const void *,size_t, const struct BoundingBox *, 
+                       const double *, size_t, const double *, size_t,void*);
 
 struct FunctionTrain * 
 function_train_quadratic(enum function_class, void *,size_t, struct BoundingBox *,

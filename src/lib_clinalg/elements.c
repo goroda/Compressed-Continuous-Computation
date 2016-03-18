@@ -1753,9 +1753,9 @@ function_train_linear(enum function_class fc, void * sub_type,
     \return function train
 ***************************************************************/
 struct FunctionTrain * 
-function_train_linear2(enum function_class fc, void * sub_type, size_t dim,
-                       struct BoundingBox * bds, 
-                       double * c, size_t ldc, double * a, size_t lda,
+function_train_linear2(enum function_class fc, const void * sub_type, size_t dim,
+                       const struct BoundingBox * bds, 
+                       const double * c, size_t ldc, const double * a, size_t lda,
                        void * aopts)
 {
     struct FunctionTrain * ft = function_train_alloc(dim);

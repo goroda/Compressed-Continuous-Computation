@@ -823,7 +823,7 @@ lin_elem_exp_approx(double (*f)(double,void*), void * args,
 *************************************************************/
 struct LinElemExp * 
 lin_elem_exp_constant(double a, double lb, double ub,
-                      struct LinElemExpAopts * opts)
+                      const struct LinElemExpAopts * opts)
 {
     size_t N;
     if (opts == NULL){

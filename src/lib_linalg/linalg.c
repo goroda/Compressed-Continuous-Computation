@@ -333,20 +333,16 @@ size_t truncated_svd(size_t m, size_t n, size_t lda, double *a,
 }
 
 /*************************************************************//**
-    Function pinv
+    Compute the Pseudoinverse 
 
-    Purpose: Compute the Pseudoinverse 
+    \param[in]     m      - Number of rows of a matrix
+    \param[in]     n      - Number of columns of a matrix
+    \param[in]     lda    - stride of matrix
+    \param[in,out] a      - matrix in column order (gets destroyed/overwritten)
+    \param[in,out] ainv   - pseudoinverse (M*N)
+    \param[in]     cutoff - singular value cutoff
 
-    Parameters:
-        - M (IN)        - Number of rows of a matrix
-        - N (IN)        - Number of columns of a matrixt
-        - lda (IN)      - LDA (see lapack)
-        - a (in/out)    - matrix in column order (FORTRAN) 
-                        gets destroyed by SVD call
-        - ainv (in/out) - pseudoinverse in column order (M x N)
-        - cutoff (in)   - value of singular value cutoff
-
-    Returns: rank of matrix
+    \returns rank of matrix
 **************************************************************/
 size_t
 pinv(size_t m, size_t n, size_t lda, double *a, double * ainv, double cutoff){

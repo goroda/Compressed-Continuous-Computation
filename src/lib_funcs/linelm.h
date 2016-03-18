@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -115,7 +115,7 @@ void lin_elem_exp_flip_sign(struct LinElemExp *);
 void lin_elem_exp_orth_basis(size_t, struct LinElemExp **);
 struct LinElemExp *
 lin_elem_exp_constant(double, double, double,
-                      struct LinElemExpAopts *);
+                      const struct LinElemExpAopts *);
 double lin_elem_exp_lb(struct LinElemExp *);
 double lin_elem_exp_ub(struct LinElemExp *);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -112,7 +112,7 @@ struct GenericFunction {
 
 struct GenericFunction * generic_function_alloc_base(size_t);
 struct GenericFunction ** generic_function_array_alloc(size_t);
-struct GenericFunction * generic_function_alloc(size_t, enum function_class, void *);
+struct GenericFunction * generic_function_alloc(size_t, enum function_class, const void *);
 void generic_function_roundt(struct GenericFunction **, double);
 
 struct GenericFunction * generic_function_deriv(struct GenericFunction *);
@@ -221,16 +221,16 @@ void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
 
 // more complicated operations
 struct GenericFunction * 
-generic_function_constant(double, enum function_class, void *,
-            double, double, void *);
+generic_function_constant(double, enum function_class, const void *,
+            double, double, const void *);
 struct GenericFunction * 
 generic_function_linear(double, double,
-            enum function_class, void *,
-            double, double, void *);
+            enum function_class, const void *,
+            double, double, const void *);
 struct GenericFunction * 
 generic_function_quadratic(double, double,
-            enum function_class, void *,
-            double, double, void *);
+            enum function_class,const void *,
+            double, double, const void *);
 
 void generic_function_array_orth1d_columns(
     struct GenericFunction **,
