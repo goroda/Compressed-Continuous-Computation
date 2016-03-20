@@ -104,6 +104,35 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim, double * lb, do
 }
 
 /***********************************************************//**
+    Get polynomial type
+***************************************************************/
+enum poly_type c3approx_get_ptype(const struct C3Approx * c3a)
+{
+    assert (c3a != NULL);
+    return c3a->ptype;
+}
+
+/***********************************************************//**
+    Get dimension
+***************************************************************/
+size_t c3approx_get_dim(const struct C3Approx * c3a)
+{
+    assert (c3a != NULL);
+    return c3a->dim;
+}
+
+/***********************************************************//**
+    Get Bounds
+***************************************************************/
+struct BoundingBox * c3approx_get_bds(const struct C3Approx * c3a)
+{
+    assert (c3a != NULL);
+    return c3a->bds;
+}
+
+
+
+/***********************************************************//**
     Free memory allocated to approximation structure
 ***************************************************************/
 void c3approx_destroy(struct C3Approx * c3a)

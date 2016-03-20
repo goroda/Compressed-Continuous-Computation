@@ -4212,9 +4212,15 @@ function_train_cross(double (*f)(double *, void *), void * args,
         init_x[0] = calloc_double(fcause->ranks[1]); 
         
         for (ii = 0; ii < dim-1; ii++){
+            /* assert(isnan(bds->lb[ii+1]) == 0); */
+            /* assert(isinf(bds->lb[ii+1]) == 0); */
+            /* assert(isnan(bds->ub[ii+1]) == 0); */
+            /* assert(isinf(bds->ub[ii+1]) == 0); */
             init_x[ii+1] = linspace(bds->lb[ii+1],bds->ub[ii+1],
                                     fcause->ranks[ii+1]);
+//            dprint(fcause->ranks[ii+1],init_x[ii+1]);
         }
+
     }
     else{
         init_x = xstart;
