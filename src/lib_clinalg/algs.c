@@ -4108,6 +4108,14 @@ void ft_cross_args_set_optargs(struct FtCrossArgs * fca, void * fopt)
 }
 
 /***********************************************************//**
+    Set the rounding tolerance
+***************************************************************/
+void ft_cross_args_set_epsround(struct FtCrossArgs * fca, double epsround)
+{
+    fca->epsround = epsround;
+}
+
+/***********************************************************//**
     Set the verbosity level
 ***************************************************************/
 void ft_cross_args_set_verbose(struct FtCrossArgs * fca, int verbose)
@@ -4225,7 +4233,12 @@ function_train_cross(double (*f)(double *, void *), void * args,
     else{
         init_x = xstart;
     }
-
+    
+    /* dprint(fcause->ranks[1],init_x[0]); */
+    /* for (size_t zz = 0; zz < dim-1; zz++){ */
+    /*     dprint(fcause->ranks[zz+1],init_x[zz+1]); */
+    /* } */
+    
     enum poly_type ptype;
     if (apargs != NULL){
         fapp = apargs;

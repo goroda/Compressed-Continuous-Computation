@@ -65,6 +65,7 @@ struct C3Approx
     struct FiberOptArgs * fopt;
 
     // cross approximation stuff
+    double ** start;
     struct FtCrossArgs * fca;
     
 };
@@ -98,6 +99,7 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim, double * lb, do
     c3a->optnodes = NULL;
     c3a->fopt = NULL;
 
+    c3a->start = NULL;
     c3a->fca = NULL;
 
     return c3a;
@@ -143,10 +145,9 @@ void c3approx_destroy(struct C3Approx * c3a)
         ft_approx_args_free(c3a->fapp); c3a->fapp = NULL;
         c3vector_free(c3a->optnodes); c3a->optnodes = NULL;
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
+        free_dd(c3a->dim,c3a->start); c3a->start = NULL;
         ft_cross_args_free(c3a->fca); c3a->fca = NULL;
-
     }
-
 }
 
 /***********************************************************//**
@@ -200,9 +201,27 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
         c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
         ft_cross_args_set_verbose(c3a->fca,verbose);
         ft_cross_args_set_optargs(c3a->fca,c3a->fopt);
+        ft_cross_args_set_epsround(c3a->fca,1e-14);
+        if (c3a->ptype == HERMITE){
+            c3a->start = malloc_dd(c3a->dim);
+            double lbs = -2.0;
+            double ubs = 2.0;
+            c3a->start[0] = calloc_double(init_rank); 
+            for (size_t ii = 0; ii < c3a->dim-1; ii++){
+                c3a->start[ii+1] = linspace(lbs,ubs,init_rank);
+            }
+        }
     }
 }
 
+void c3approx_set_epsround(struct C3Approx * c3a, double * epsround)
+{
+    assert (c3a != NULL);
+    if (c3a->fca == NULL){
+        fprintf(stderr,"Must cal c3approx_init_cross before setting epsround\n");
+        exit(1);
+    }
+}
 /***********************************************************//**
     Perform cross approximation of a function
 x***************************************************************/
@@ -210,6 +229,6 @@ struct FunctionTrain *
 c3approx_do_cross(struct C3Approx * c3a, double (*f)(double*,void*),void*arg)
 {
     struct FunctionTrain * ft = NULL;
-    ft = function_train_cross(f,arg,c3a->bds,NULL,c3a->fca,c3a->fapp);
+    ft = function_train_cross(f,arg,c3a->bds,c3a->start,c3a->fca,c3a->fapp);
     return ft;
 }
