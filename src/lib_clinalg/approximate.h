@@ -52,7 +52,15 @@ enum poly_type c3approx_get_ptype(const struct C3Approx *);
 size_t c3approx_get_dim(const struct C3Approx *);
 struct BoundingBox * c3approx_get_bds(const struct C3Approx *);
 
-//setting
+//setting cross approximation arguments
+void c3approx_set_round_tol(struct C3Approx *, double);
+void c3approx_set_cross_tol(struct C3Approx *, double);
+
+// setting fiber approximation arguments
+void c3approx_set_poly_adapt_nstart(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_nmax(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_ncheck(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_tol(struct C3Approx *,double);
 
 struct FunctionTrain *
 c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);

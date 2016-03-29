@@ -118,6 +118,7 @@ void c3approx_destroy(struct C3Approx * c3a)
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
         free_dd(c3a->dim,c3a->start); c3a->start = NULL;
         ft_cross_args_free(c3a->fca); c3a->fca = NULL;
+        free(c3a); c3a = NULL;
     }
 }
 
@@ -143,7 +144,6 @@ void c3approx_init_poly(struct C3Approx * c3a, enum poly_type ptype)
         ope_adapt_opts_set_coeffs_check(c3a->aopts,2);
         ope_adapt_opts_set_tol(c3a->aopts,1e-10);
         c3a->fapp = ft_approx_args_createpoly(c3a->dim,&(c3a->ptype),c3a->aopts);
-
 
         if (ptype == HERMITE)
         {
@@ -172,7 +172,7 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
         c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
         ft_cross_args_set_verbose(c3a->fca,verbose);
         ft_cross_args_set_optargs(c3a->fca,c3a->fopt);
-        ft_cross_args_set_epsround(c3a->fca,1e-14);
+        ft_cross_args_set_round_tol(c3a->fca,1e-14);
         if (c3a->ptype == HERMITE){
             c3a->start = malloc_dd(c3a->dim);
             double lbs = -2.0;
@@ -184,7 +184,6 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
         }
     }
 }
-
 
 /***********************************************************//**
     Get polynomial type
@@ -213,18 +212,89 @@ struct BoundingBox * c3approx_get_bds(const struct C3Approx * c3a)
     return c3a->bds;
 }
 
-
-void c3approx_set_epsround(struct C3Approx * c3a, double * epsround)
+/***********************************************************//**
+    Set rounding tolerance
+***************************************************************/
+void c3approx_set_round_tol(struct C3Approx * c3a, double epsround)
 {
     assert (c3a != NULL);
     if (c3a->fca == NULL){
         fprintf(stderr,"Must cal c3approx_init_cross before setting epsround\n");
         exit(1);
     }
+    ft_cross_args_set_round_tol(c3a->fca,epsround);
 }
+
+/***********************************************************//**
+    Set rounding tolerance
+***************************************************************/
+void c3approx_set_cross_tol(struct C3Approx * c3a, double tol)
+{
+    assert (c3a != NULL);
+    if (c3a->fca == NULL){
+        fprintf(stderr,"Must cal c3approx_init_cross before setting cross tolerance\n");
+        exit(1);
+    }
+    ft_cross_args_set_cross_tol(c3a->fca,tol);
+}
+
+/***********************************************************//**
+    Set nstart for polynomial adaptation
+***************************************************************/
+void c3approx_set_poly_adapt_nstart(struct C3Approx * c3a, size_t n)
+{
+    assert (c3a != NULL);
+    if (c3a->aopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_poly before changing adaptation arguments\n");
+        exit(1);
+    }
+    ope_adapt_opts_set_start(c3a->aopts,n);
+}
+
+/***********************************************************//**
+    Set maximum number of basis functions for polynomial adaptation
+***************************************************************/
+void c3approx_set_poly_adapt_nmax(struct C3Approx * c3a, size_t n)
+{
+    assert (c3a != NULL);
+    if (c3a->aopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_poly before changing adaptation arguments\n");
+        exit(1);
+    }
+    ope_adapt_opts_set_maxnum(c3a->aopts,n);
+        ope_adapt_opts_set_coeffs_check(c3a->aopts,2);
+        ope_adapt_opts_set_tol(c3a->aopts,1e-10);
+}
+
+/***********************************************************//**
+    Set number of coefficients to check for poly adaptation
+***************************************************************/
+void c3approx_set_poly_adapt_ncheck(struct C3Approx * c3a, size_t n)
+{
+    assert (c3a != NULL);
+    if (c3a->aopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_poly before changing adaptation arguments\n");
+        exit(1);
+    }
+    ope_adapt_opts_set_coeffs_check(c3a->aopts,n);
+}
+
+/***********************************************************//**
+    Set fiber adaptation tolerance for polynomial based adaptation
+***************************************************************/
+void c3approx_set_poly_adapt_tol(struct C3Approx * c3a, double tol)
+{
+    assert (c3a != NULL);
+    if (c3a->aopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_poly before changing adaptation arguments\n");
+        exit(1);
+    }
+    ope_adapt_opts_set_tol(c3a->aopts,tol);
+}
+
 /***********************************************************//**
     Perform cross approximation of a function
-x***************************************************************/
+***************************************************************/
 struct FunctionTrain *
 c3approx_do_cross(struct C3Approx * c3a, double (*f)(double*,void*),void*arg)
 {
