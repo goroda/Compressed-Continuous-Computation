@@ -51,6 +51,8 @@ struct BoundingBox * c3approx_get_bds(const struct C3Approx *);
 
     
 void c3approx_init_cross(struct C3Approx *, size_t, int);
+void c3approx_set_round_tol(struct C3Approx *, double);
+void c3approx_set_cross_tol(struct C3Approx *, double);
 struct FunctionTrain *
 c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);
 #endif

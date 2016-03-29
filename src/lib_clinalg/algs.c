@@ -3483,7 +3483,7 @@ double function_train_relnorm2diff(struct FunctionTrain * a,
         val /= den;
     }
     if (val < -ZEROTHRESH){
-        fprintf(stderr, "relative error between two FT should not be neg %G<-%G \n",val,-ZEROTHRESH);
+//        fprintf(stderr, "relative error between two FT should not be neg %G<-%G \n",val,-ZEROTHRESH);
 //        exit(1);
     }
     val = sqrt(fabs(val));
@@ -4110,9 +4110,17 @@ void ft_cross_args_set_optargs(struct FtCrossArgs * fca, void * fopt)
 /***********************************************************//**
     Set the rounding tolerance
 ***************************************************************/
-void ft_cross_args_set_epsround(struct FtCrossArgs * fca, double epsround)
+void ft_cross_args_set_round_tol(struct FtCrossArgs * fca, double epsround)
 {
     fca->epsround = epsround;
+}
+
+/***********************************************************//**
+    Set the cross approximation tolerance
+***************************************************************/
+void ft_cross_args_set_cross_tol(struct FtCrossArgs * fca, double tol)
+{
+    fca->epsilon = tol;
 }
 
 /***********************************************************//**

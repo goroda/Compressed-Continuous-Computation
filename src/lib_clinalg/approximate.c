@@ -201,7 +201,7 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
         c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
         ft_cross_args_set_verbose(c3a->fca,verbose);
         ft_cross_args_set_optargs(c3a->fca,c3a->fopt);
-        ft_cross_args_set_epsround(c3a->fca,1e-14);
+        ft_cross_args_set_round_tol(c3a->fca,1e-14);
         if (c3a->ptype == HERMITE){
             c3a->start = malloc_dd(c3a->dim);
             double lbs = -2.0;
@@ -214,14 +214,32 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
     }
 }
 
-void c3approx_set_epsround(struct C3Approx * c3a, double * epsround)
+/***********************************************************//**
+    Set rounding tolerance
+x***************************************************************/
+void c3approx_set_round_tol(struct C3Approx * c3a, double epsround)
 {
     assert (c3a != NULL);
     if (c3a->fca == NULL){
         fprintf(stderr,"Must cal c3approx_init_cross before setting epsround\n");
         exit(1);
     }
+    ft_cross_args_set_round_tol(c3a->fca,epsround);
 }
+
+/***********************************************************//**
+    Set rounding tolerance
+x***************************************************************/
+void c3approx_set_cross_tol(struct C3Approx * c3a, double tol)
+{
+    assert (c3a != NULL);
+    if (c3a->fca == NULL){
+        fprintf(stderr,"Must cal c3approx_init_cross before setting cross tolerance\n");
+        exit(1);
+    }
+    ft_cross_args_set_cross_tol(c3a->fca,tol);
+}
+
 /***********************************************************//**
     Perform cross approximation of a function
 x***************************************************************/
