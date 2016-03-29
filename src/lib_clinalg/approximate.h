@@ -42,15 +42,18 @@
 
 enum C3ATYPE { CROSS, REGRESS };
 struct C3Approx;
-struct C3Approx * c3approx_create(enum C3ATYPE, size_t, double *, double *);
+struct C3Approx * c3approx_create(enum C3ATYPE,size_t,double*,double *);
 void c3approx_destroy(struct C3Approx *);
 void c3approx_init_poly(struct C3Approx *, enum poly_type);
+void c3approx_init_cross(struct C3Approx *, size_t, int);
+
+//getting
 enum poly_type c3approx_get_ptype(const struct C3Approx *);
 size_t c3approx_get_dim(const struct C3Approx *);
 struct BoundingBox * c3approx_get_bds(const struct C3Approx *);
 
-    
-void c3approx_init_cross(struct C3Approx *, size_t, int);
+//setting
+
 struct FunctionTrain *
 c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);
 #endif
