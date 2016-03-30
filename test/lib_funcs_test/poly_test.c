@@ -1212,6 +1212,48 @@ void Test_linexp_approx(CuTest * tc){
     free(xtest);
 }
 
+double fleadapt(double x, void * args)
+{
+    struct counter * c = args;
+    c->N = c->N + 1;
+    double out = 1.0 / (pow(x - 0.3,2) + 0.01);
+    out += 1.0/(pow(x-0.9,2) + 0.04);
+    return out;
+}
+
+void Test_lin_elem_adapt(CuTest * tc){
+
+    printf("Testing function: lin_elem_adapt\n");
+
+    struct counter c;
+    c.N = 0;
+    
+    double xl = 0.0;
+    double fl = fleadapt(xl,&c);
+    double xr = 3.0;
+    double fr = fleadapt(xr,&c);
+    
+    double delta = 5e-2;
+    double hmin = 1e-3;
+    
+    struct LinElemXY * xy = NULL;
+    lin_elem_adapt(fleadapt,&c,xl,fl,xr,fr,delta,hmin,&xy);
+    struct LinElemXY * temp = xy;
+    size_t count = 0;
+//    printf("lets go!\n");
+    while (temp != NULL){
+        /* double x = lin_elem_xy_get_x(temp); */
+        /* double y = lin_elem_xy_get_y(temp); */
+//        printf("(x,y) = (%G,%G)\n",x,y);
+        count ++;
+        temp = lin_elem_xy_next(temp);
+    }
+    /* printf("count1 = %zu\n",count); */
+    /* printf("count2 = %zu\n",c.N); */
+    
+    CuAssertIntEquals(tc,count,c.N);
+    lin_elem_xy_free(xy); xy = NULL;
+}
 
 void Test_lin_elem_exp_integrate(CuTest * tc){
 
@@ -1594,6 +1636,7 @@ CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_linexp_approx);
+    SUITE_ADD_TEST(suite, Test_lin_elem_adapt);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
@@ -2911,16 +2954,16 @@ void RunAllTests(void) {
     CuSuite * pp = PiecewisePolyGetSuite();
     CuSuite * pap = PolyApproxSuite();
 	
-    CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg);
-    CuSuiteAddSuite(suite, herm);
+    /* CuSuiteAddSuite(suite, cheb); */
+    /* CuSuiteAddSuite(suite, leg); */
+    /* CuSuiteAddSuite(suite, herm); */
     CuSuiteAddSuite(suite, lelm);
-    CuSuiteAddSuite(suite, sp);
-    CuSuiteAddSuite(suite, alg);
-    CuSuiteAddSuite(suite, ser);
-    CuSuiteAddSuite(suite, ll);
-    CuSuiteAddSuite(suite, pp);
-    CuSuiteAddSuite(suite, pap);
+    /* CuSuiteAddSuite(suite, sp); */
+    /* CuSuiteAddSuite(suite, alg); */
+    /* CuSuiteAddSuite(suite, ser); */
+    /* CuSuiteAddSuite(suite, ll); */
+    /* CuSuiteAddSuite(suite, pp); */
+    /* CuSuiteAddSuite(suite, pap); */
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

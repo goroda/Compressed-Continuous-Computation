@@ -101,10 +101,22 @@ struct LinElemExpAopts
     size_t num_nodes;
     double * nodes;
     int adapt;
+
+    double delta;
+    double hmin;
 };
 
 struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
+
+struct LinElemXY;
+void lin_elem_adapt(double (*)(double,void*), void *,
+                    double, double,double, double,
+                    double, double,struct LinElemXY ** x);
+double lin_elem_xy_get_x(struct LinElemXY *);
+double lin_elem_xy_get_y(struct LinElemXY *);
+struct LinElemXY * lin_elem_xy_next(struct LinElemXY *);
+void lin_elem_xy_free(struct LinElemXY *);
 
 struct LinElemExp *
 lin_elem_exp_approx(double (*)(double,void*), void*,
