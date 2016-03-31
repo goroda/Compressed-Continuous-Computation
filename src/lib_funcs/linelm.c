@@ -989,7 +989,8 @@ void lin_elem_adapt(double (*f)(double,void*), void * args,
         double mid = (xl+xr)/2.0;
         double fmid = f(mid,args);
 
-        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
+//        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
+        if (fabs( (fl+fr)/2.0 - fmid) < delta){
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */

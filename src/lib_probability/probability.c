@@ -55,13 +55,13 @@
 /***********************************************************//**
     Allocate a linear transform Ax +b
 
-    \param dimin [in] - input dimension 
-    \param dimout [in] - output dimension
-    \param A [in] - slopes of transformation
-    \param b [in] - offset of transformation
-    \param det [in] - pointer to a double representing the determinant of A
+    \param[in] dimin  - input dimension 
+    \param[in] dimout - output dimension
+    \param[in] A      - slopes of transformation
+    \param[in] b      - offset of transformation
+    \param[in] det  - pointer to a double representing the determinant of A
 
-    \return lt - linear transform struct
+    \return linear transform struct
 
     \note
         Makes a copy of A/b. if A/b are NULL then allocates
@@ -101,7 +101,7 @@ linear_transform_alloc(size_t dimin, size_t dimout, double * A,
 /***********************************************************//**
     Copy a linear transform
 
-    \param lt [in] - linear transform to copy
+    \param[in] lt - linear transform to copy
 
     \return newlt - copied linear transform
 ***************************************************************/
@@ -124,7 +124,7 @@ struct LinearTransform * linear_transform_copy(struct LinearTransform * lt)
 /***********************************************************//**
     Frees memory allocated to Linear Transform
 
-    \param lt [inout] - linear transform to free
+    \param[in,out] lt - linear transform to free
 ***************************************************************/
 void linear_transform_free(struct LinearTransform * lt){
     
@@ -143,13 +143,13 @@ void linear_transform_free(struct LinearTransform * lt){
 /***********************************************************//**
     Apply a linear transform y = Ax + b
     
-    \param dimx [in] - dimension of input
-    \param dimb [in] - dimension of output
-    \param A [in] - A matrix
-    \param x [in] - input vector
-    \param b [in] - bvector
+    \param[in] dimx - dimension of input
+    \param[in] dimb - dimension of output
+    \param[in] A    - A matrix
+    \param[in] x    - input vector
+    \param[in] b    - bvector
 
-    \return xout - transformed vector
+    \return transformed vector
 
     \note should specialize this to particular transforms ...
 ***************************************************************/
@@ -168,7 +168,7 @@ linear_transform_apply(size_t dimx, size_t dimb, double * A,
 /***********************************************************//**
     Invert a linear transform
 
-    \param lt [inout] - linear transform 
+    \param[in,out] lt - linear transform 
 ***************************************************************/
 void linear_transform_invert(struct LinearTransform * lt)
 {
@@ -210,9 +210,9 @@ void linear_transform_invert(struct LinearTransform * lt)
 /***********************************************************//**
     Serialize a linear transform
 
-    \param ser [inout] - stream to serialize to
-    \param lt [in] - function train
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     lt        - function train
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of ytes
 ***************************************************************/
@@ -262,8 +262,8 @@ linear_transform_serialize(unsigned char * ser, struct LinearTransform * lt,
 /********************************************************//**
 *   deserialize a linear transform
 *
-*   \param ser [in] - string to deserialize
-*   \param lt [inout] - linear transform
+*   \param[in]     ser - string to deserialize
+*   \param[in,out] lt  - linear transform
 *
 *   \return ptr - ser + number of bytes of linear transform
 *************************************************************/
@@ -325,7 +325,7 @@ probability_density_alloc()
 /***********************************************************//**
     Frees memory allocated to ProbabilityDensity
 
-    \param pdf [inout] - pdf to free
+    \param[in,out] pdf - pdf to free
 ***************************************************************/
 void probability_density_free(struct ProbabilityDensity * pdf){
     
@@ -340,9 +340,9 @@ void probability_density_free(struct ProbabilityDensity * pdf){
 /***********************************************************//**
     Serialize a probability density function 
 
-    \param ser [inout] - stream to serialize to
-    \param pdf [in] - density function
-    \param totSizeIn [inout] - if NULL then serialize, if not NULL then return size
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     pdf       - density function
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL then return size
 
     \return ptr - ser shifted by number of bytes
 ***************************************************************/
@@ -372,8 +372,8 @@ probability_density_serialize(unsigned char * ser,
 /********************************************************//**
 *   deserialize a probability density function
 *
-*   \param ser [in] - string to deserialize
-*   \param pdf [inout] - density function
+*   \param[in] ser - string to deserialize
+*   \param[in] pdf - density function
 *
 *   \return ptr - ser + number of bytes of linear transform
 *************************************************************/
@@ -396,8 +396,8 @@ probability_density_deserialize(unsigned char * ser,
 /***********************************************************//**
     Save a probability density function to a file
     
-    \param pdf [in] - pdf to to save
-    \param filename [in] - name of file to save to
+    \param[in] pdf      - pdf to to save
+    \param[in] filename - name of file to save to
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
@@ -431,7 +431,7 @@ int probability_density_save(struct ProbabilityDensity * pdf, char * filename)
 /***********************************************************//**
     Load a probability density function from a file;
     
-    \param filename [in] - filename to load
+    \param[in] filename - filename to load
 
     \return pdf if successfull NULL otherwise
 ***************************************************************/
@@ -481,7 +481,7 @@ double pdf_stdmvn_helper(double x, size_t dim, void * args)
 /***********************************************************//**
     Construct a standard normal pdf
     
-    \param dim [in] - number of dimensions
+    \param[in] dim - number of dimensions
 
     \return gaussian pdf 
 ***************************************************************/
@@ -519,9 +519,9 @@ struct ProbabilityDensity * probability_density_standard_normal(size_t dim)
 /***********************************************************//**
     construct a multivariate normal distribution
     
-    \param dim [in] - number of dimensions
-    \param mean [in] - mean of distribution
-    \param cov [in] - covariance of distribution (lower triangular)
+    \param[in] dim  - number of dimensions
+    \param[in] mean - mean of distribution
+    \param[in] cov  - covariance of distribution (lower triangular)
 
     \return gaussian pdf 
 ***************************************************************/
@@ -561,7 +561,7 @@ probability_density_mvn(size_t dim, double * mean, double * cov)
 /***********************************************************//**
     Generate a Sample from a probability density function
     
-    \param pdf [in] - probability density function
+    \param[in] pdf - probability density function
 
     \return sample
 ***************************************************************/
@@ -589,11 +589,11 @@ double * probability_density_sample(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Construct a laplace approximation
     
-    \param gradLogPost [in] - function computes gradient of negative log posterior
-    \param hessLogPost [in] - function computes hessian of negative log posterior
-    \param args [in] - arguments to grad and hess functions
-    \param dim [in] - number of dimensions
-    \param start [in] - start of optimization
+    \param[in] gradLogPost - function computes gradient of negative log posterior
+    \param[in] hessLogPost - function computes hessian of negative log posterior
+    \param[in] args        - arguments to grad and hess functions
+    \param[in] dim         - number of dimensions
+    \param[in] start       - start of optimization
 
     \return gaussian pdf 
 ***************************************************************/
@@ -623,8 +623,8 @@ probability_density_laplace(double *(*gradLogPost)(double * x, void * args),
 /***********************************************************//**
     Evaluate the probability density function   
 
-    \param pdf [in] - pdf to evaluate
-    \param x [in] - location at which to evaluate
+    \param[in] pdf - pdf to evaluate
+    \param[in] x   - location at which to evaluate
 
     \return out - evaluation
 ***************************************************************/
@@ -688,8 +688,8 @@ double probability_density_eval(struct ProbabilityDensity * pdf, double * x)
 /***********************************************************//**
     Evaluate the gradient of the log probability density function   
 
-    \param pdf [in] - gradient of log(pdf) is obtained
-    \param x [in] - location at which to obtain the gradient
+    \param[in] pdf - gradient of log(pdf) is obtained
+    \param[in] x   - location at which to obtain the gradient
 
     \return out - gradient of log pdf at *x*
 ***************************************************************/
@@ -737,8 +737,8 @@ probability_density_log_gradient_eval(struct ProbabilityDensity * pdf,
 /***********************************************************//**
     Evaluate the hessian of the log probability density function   
 
-    \param pdf [in] - hessian of log(pdf) is obtained
-    \param x [in] - location at which to obtain the hessian
+    \param[in] pdf - hessian of log(pdf) is obtained
+    \param[in] x   - location at which to obtain the hessian
 
     \return out - hessian of log pdf at *x*
 ***************************************************************/
@@ -843,7 +843,7 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 /***********************************************************//**
     Compute the mean from the pdf
 
-    \param pdf [in] - pdf whose mean to compute
+    \param[in] pdf whose mean to compute
 
     \return out - mean of the pdf
 
@@ -883,7 +883,6 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
         free(offset);
     }
     else{
-
         mean = calloc_double(dimft);
         for (ii = 0; ii < dimpdf; ii++){
             struct Qmarray * temp = qmarray_copy(pdf->pdf->cores[ii]);
@@ -913,7 +912,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Compute the covariance from the pdf
 
-    \param pdf [in] - pdf whose mean to compute
+    \param[in] pdf - pdf whose mean to compute
 
     \return out - covariance matrix
 
@@ -1021,7 +1020,7 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Compute the variance (only diagonal of covariance matrix) from the pdf
 
-    \param pdf [in] - pdf whose mean to compute
+    \param[in] pdf - pdf whose mean to compute
 
     \return out - variance of all variables
 
@@ -1101,7 +1100,7 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Get the lower bounds of the underlying (transformed) pdf
 
-    \param pdf [in] - pdf whose lower bounds to obtain
+    \param[in] pdf - pdf whose lower bounds to obtain
 
     \return  lb - array of lower bounds
 ***************************************************************/
@@ -1120,7 +1119,7 @@ double * probability_density_lb_base(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Get the upper bounds of the underlying (transformed) pdf
 
-    \param pdf [in] - pdf whose lower bounds to obtain
+    \param[in] pdf - pdf whose lower bounds to obtain
 
     \return  ub - array of upper bounds
 ***************************************************************/
@@ -1135,8 +1134,6 @@ double * probability_density_ub_base(struct ProbabilityDensity * pdf)
     }
     return ub;
 }
-
-
 
 struct LikeParamDataCouple {
     double * param;
@@ -1156,14 +1153,14 @@ double like_poisson_helper(double x, size_t dim, void * args)
 /***********************************************************//**
     Allocate a likelihood function
 
-    \param datadim [in] - dimension of the data
-    \param data [in] - data
-    \param paramdim [in] - dimension of extra parameters
-    \param param [in] - parameters
-    \param inputdim [in] - dimension of the input
-    \param lb [in] - lower bound of each dimension
-    \param ub [in] - upper bound of each dimension
-    \param type [in] - likelihood type
+    \param[in] datadim  - dimension of the data
+    \param[in] data     - data
+    \param[in] paramdim - dimension of extra parameters
+    \param[in] param    - parameters
+    \param[in] inputdim - dimension of the input
+    \param[in] lb       - lower bound of each dimension
+    \param[in] ub       - upper bound of each dimension
+    \param[in] type     - likelihood type
 
     \return like - likelihood function
 ***************************************************************/
@@ -1222,16 +1219,16 @@ likelihood_alloc(size_t datadim, double * data, size_t paramdim,
 /***********************************************************//**
     Allocate and initialize a Gaussian likelihood
 
-    \param noise_type [in] - type of noise
-    \param ndata [in] - number of data points
-    \param datadim [in] - dimension of the data
-    \param data [in] - data (ndata * datadim,)
-    \param paramdim [in] - dimension of parameters 
-    \param param [in] - parameters defining noise
-    \param inputdim [in] - dimension of the input
-    \param meanfunc [in] - function array evaluate the mean of the Gaussian
+    \param[in] noise_type - type of noise
+    \param[in] ndata      - number of data points
+    \param[in] datadim    - dimension of the data
+    \param[in] data       - data (ndata * datadim,)
+    \param[in] paramdim   - dimension of parameters 
+    \param[in] param      - parameters defining noise
+    \param[in] inputdim   - dimension of the input
+    \param[in] meanfunc   - function array evaluate the mean of the Gaussian
                             (ndata * datadim,)
-    
+
     \return like - likelihood function
     
     \note 
@@ -1427,9 +1424,9 @@ double like_transform_helper(double * x, void * args)
 /***********************************************************//**
     Transform the likelihood using a linear variable transformation
 
-    \param like [in] - likelihood 
-    \param lt [in] - linear transformation
-    \param bds [in] - domain
+    \param[in] like - likelihood 
+    \param[in] lt   - linear transformation
+    \param[in] bds  - domain
 
     \return newlike - new likelihood
 ***************************************************************/
@@ -1494,8 +1491,8 @@ likelihood_transform(struct Likelihood * like, struct LinearTransform * lt,
 /***********************************************************//**
     Compute the gradient of the log posterior from bayes rule
     
-    \param x [in] - location at which to obtain the gradient log posterior
-    \param args [in] - BayesRule structure holding likelihood and prior
+    \param[in] x    - location at which to obtain the gradient log posterior
+    \param[in] args - BayesRule structure holding likelihood and prior
 
     \return out - gradient of log posterior
 ***************************************************************/
@@ -1537,8 +1534,8 @@ double * bayes_rule_log_gradient(double * x, void * args){
 /***********************************************************//**
     Compute the gradient of the negative log posterior from bayes rule
     
-    \param x [in] - location at which to obtain the hessian of log posterior
-    \param args [in] - BayesRule structure holding likelihood and prior
+    \param[in] x    - location at which to obtain the hessian of log posterior
+    \param[in] args - BayesRule structure holding likelihood and prior
 
     \return out - gradient of negative log posterior
 ***************************************************************/
@@ -1558,8 +1555,8 @@ double * bayes_rule_log_gradient_negative(double * x, void * args){
 /***********************************************************//**
     Compute the hessian of the log posterior from bayes rule
     
-    \param x [in] - location at which to obtain the hessian of log posterior
-    \param args [in] - BayesRule structure holding likelihood and prior
+    \param[in] x    - location at which to obtain the hessian of log posterior
+    \param[in] args - BayesRule structure holding likelihood and prior
 
     \return out - hessian of log posterior
 ***************************************************************/
