@@ -58,6 +58,7 @@ struct C3Approx
     enum poly_type ptype;
     // approximation stuff
     struct OpeAdaptOpts * aopts;
+    struct LinElemExpAopts * leopts;
     struct FtApproxArgs * fapp;
 
     // optimization stuff
@@ -94,6 +95,7 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim, double * lb, do
     c3a->dim = dim;
     c3a->bds = bounding_box_vec(dim,lb,ub);
     c3a->aopts = NULL;
+    c3a->leopts = NULL;
     c3a->fapp = NULL;
 
     c3a->optnodes = NULL;
@@ -113,6 +115,7 @@ void c3approx_destroy(struct C3Approx * c3a)
     if (c3a != NULL){
         bounding_box_free(c3a->bds); c3a->bds = NULL;
         ope_adapt_opts_free(c3a->aopts); c3a->aopts = NULL;
+        lin_elem_exp_aopts_free(c3a->leopts); c3a->leopts = NULL;
         ft_approx_args_free(c3a->fapp); c3a->fapp = NULL;
         c3vector_free(c3a->optnodes); c3a->optnodes = NULL;
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
@@ -158,6 +161,27 @@ void c3approx_init_poly(struct C3Approx * c3a, enum poly_type ptype)
         }
     }
 }
+
+/***********************************************************//**
+    Initialize a linear element based approximation
+
+    \param[in,out] c3a   - approx structure
+
+    \note
+    Initialize adaptation and approximation arguments
+    if ptype == HERMITE then it also initializes optimization of
+    fibers to optimize over a set of discrete nodes
+***************************************************************/
+void c3approx_init_lin_elem(struct C3Approx * c3a)
+{
+    if (c3a != NULL){
+        double delta = 1e-2;
+        double hmin = 1e-2;
+        c3a->leopts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+        c3a->fapp = ft_approx_args_create_le(c3a->dim,c3a->leopts);
+    }
+}
+
 
 /***********************************************************//**
     Initialize cross approximation arguments

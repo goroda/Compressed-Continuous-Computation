@@ -3138,6 +3138,78 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     free(xtest);
 }
 
+void Test_ftapprox_cross_linelm2(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for linelm (2) \n");
+     
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+    size_t ii,jj,kk,ll;
+
+    struct FunctionMonitor * fm = function_monitor_initnd(funcnd2,NULL,
+                                                          dim,1000);
+
+    double delta = 1e-2;
+    double hmin = 1e-2;
+    struct LinElemExpAopts * opts = NULL;
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,opts);
+//    printf("start cross\n");
+    struct FunctionTrain * ft = NULL;
+    ft = function_train_cross(function_monitor_eval,fm,bds,
+                              NULL,NULL,fapp);
+    function_monitor_free(fm);
+
+    //printf("finished !\n");
+    size_t N = 10;
+    double * xtest = linspace(-1.0,1.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double pt[4];
+    
+    for (ii = 0; ii < N; ii++){
+        for (jj = 0; jj < N; jj++){
+            for (kk = 0; kk < N; kk++){
+                for (ll = 0; ll < N; ll++){
+                    pt[0] = xtest[ii]; pt[1] = xtest[jj]; 
+                    pt[2] = xtest[kk]; pt[3] = xtest[ll];
+                    den += pow(funcnd2(pt,NULL),2.0);
+                    err += pow(funcnd2(pt,NULL)-function_train_eval(ft,pt),2.0);
+                    //printf("err=%G\n",err);
+                }
+            }
+        }
+    }
+    err = err/den;
+    //printf("err=%G\n",err);
+    CuAssertDblEquals(tc,0.0,err,1e-10);
+    //CuAssertDblEquals(tc,0.0,0.0,1e-15);
+
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+    
+    bounding_box_free(bds);
+    function_train_free(ft);
+    lin_elem_exp_aopts_free(opts);
+    ft_approx_args_free(fapp);
+    free(xtest);
+}
+
 double func_not_all(double * x, void * args)
 {
     (void)(args);
@@ -3146,9 +3218,9 @@ double func_not_all(double * x, void * args)
     return out;
 }
 
-void Test_ftapprox_cross_linelm2(CuTest * tc)
+void Test_ftapprox_cross_linelm3(CuTest * tc)
 {
-    printf("Testing Function: ftapprox_cross for linelm (2) \n");
+    printf("Testing Function: ftapprox_cross for linelm (3) \n");
      
     size_t dim = 6;
     struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
@@ -3426,6 +3498,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
     SUITE_ADD_TEST(suite, Test_sin10dint);
 
     //SUITE_ADD_TEST(suite, Test_sin100dint);

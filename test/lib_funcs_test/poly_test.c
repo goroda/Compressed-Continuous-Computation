@@ -1173,7 +1173,7 @@ CuSuite * HermGetSuite(){
     return suite;
 }
 
-void Test_linexp_approx(CuTest * tc){
+void Test_lin_elem_exp_approx(CuTest * tc){
 
     printf("Testing function: lin_elem_exp_init\n");
     size_t N = 50;
@@ -1221,7 +1221,7 @@ double fleadapt(double x, void * args)
     return out;
 }
 
-void Test_lin_elem_adapt(CuTest * tc){
+void Test_lin_elem_exp_adapt(CuTest * tc){
 
     printf("Testing function: lin_elem_adapt\n");
 
@@ -1253,6 +1253,84 @@ void Test_lin_elem_adapt(CuTest * tc){
     
     CuAssertIntEquals(tc,count,c.N);
     lin_elem_xy_free(xy); xy = NULL;
+}
+
+void Test_lin_elem_exp_approx_adapt(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_approx (1) \n");
+    
+    struct counter c;
+    c.N = 0;
+
+
+    double lb = -1.0;
+    double ub = 1.0;
+    double delta = 1e-2;
+    double hmin = 1e-1;
+    struct LinElemExpAopts * opts = NULL;
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+    
+    struct LinElemExp * fa = lin_elem_exp_approx(func,&c,lb,ub,opts);
+
+    CuAssertIntEquals(tc,c.N,fa->num_nodes);
+//    printf("N = %d\n",c.N);    
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+
+        double eval1 = lin_elem_exp_eval(fa,xtest[ii]);
+        double evalt = func(xtest[ii],&c);
+        err += pow(eval1-evalt,2);
+        errNorm += pow(evalt,2);
+    }
+    err = err/errNorm;
+//    printf("err = %G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-3);
+
+    lin_elem_exp_aopts_free(opts);
+    lin_elem_exp_free(fa);
+    free(xtest);
+}
+
+void Test_lin_elem_exp_approx_adapt2(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_approx (2) \n");
+    
+    struct counter c;
+    c.N = 0;
+
+
+    double lb = -1.0;
+    double ub = 1.0;
+    double delta = 1e-2;
+    double hmin = 1e-2;
+    struct LinElemExpAopts * opts = NULL;
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+    
+    struct LinElemExp * fa = lin_elem_exp_approx(fleadapt,&c,lb,ub,opts);
+
+    CuAssertIntEquals(tc,c.N,fa->num_nodes);
+//    printf("N = %d\n",c.N);    
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+
+        double eval1 = lin_elem_exp_eval(fa,xtest[ii]);
+        double evalt = fleadapt(xtest[ii],&c);
+        err += pow(eval1-evalt,2);
+        errNorm += pow(evalt,2);
+    }
+    err = err/errNorm;
+//    printf("err = %G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-3);
+
+    lin_elem_exp_aopts_free(opts);
+    lin_elem_exp_free(fa);
+    free(xtest);
 }
 
 void Test_lin_elem_exp_integrate(CuTest * tc){
@@ -1635,8 +1713,10 @@ void Test_lin_elem_exp_serialize(CuTest * tc){
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_linexp_approx);
-    SUITE_ADD_TEST(suite, Test_lin_elem_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
@@ -2954,16 +3034,16 @@ void RunAllTests(void) {
     CuSuite * pp = PiecewisePolyGetSuite();
     CuSuite * pap = PolyApproxSuite();
 	
-    /* CuSuiteAddSuite(suite, cheb); */
-    /* CuSuiteAddSuite(suite, leg); */
-    /* CuSuiteAddSuite(suite, herm); */
+    CuSuiteAddSuite(suite, cheb);
+    CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, herm);
     CuSuiteAddSuite(suite, lelm);
-    /* CuSuiteAddSuite(suite, sp); */
-    /* CuSuiteAddSuite(suite, alg); */
-    /* CuSuiteAddSuite(suite, ser); */
-    /* CuSuiteAddSuite(suite, ll); */
-    /* CuSuiteAddSuite(suite, pp); */
-    /* CuSuiteAddSuite(suite, pap); */
+    CuSuiteAddSuite(suite, sp);
+    CuSuiteAddSuite(suite, alg);
+    CuSuiteAddSuite(suite, ser);
+    CuSuiteAddSuite(suite, ll);
+    CuSuiteAddSuite(suite, pp);
+    CuSuiteAddSuite(suite, pap);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

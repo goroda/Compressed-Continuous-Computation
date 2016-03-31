@@ -107,7 +107,14 @@ struct LinElemExpAopts
 };
 
 struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
+struct LinElemExpAopts *
+lin_elem_exp_aopts_alloc_adapt(size_t,double *,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
+void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
+                                  size_t, double *);
+void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
+void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
+void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
 
 struct LinElemXY;
 void lin_elem_adapt(double (*)(double,void*), void *,

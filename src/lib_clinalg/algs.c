@@ -4264,7 +4264,7 @@ function_train_cross(double (*f)(double *, void *), void * args,
 
     struct FunctionTrain * ftref = 
         function_train_constant_d(fapp,1.0, bds);
-    
+
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
                                   isr,fcause,fapp);
