@@ -182,6 +182,32 @@ void c3approx_init_lin_elem(struct C3Approx * c3a)
     }
 }
 
+/***********************************************************//**
+    Set Linear element hmin
+***************************************************************/
+void c3approx_set_lin_elem_hmin(struct C3Approx * c3a, double hmin)
+{
+    assert (c3a != NULL);
+    if (c3a->leopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_lin_elem before changing adaptation arguments\n");
+        exit(1);
+    }
+    lin_elem_exp_aopts_set_hmin(c3a->leopts,hmin);
+}
+
+/***********************************************************//**
+    Set Linear element delta
+***************************************************************/
+void c3approx_set_lin_elem_delta(struct C3Approx * c3a, double delta)
+{
+    assert (c3a != NULL);
+    if (c3a->leopts == NULL){
+        fprintf(stderr,"Must run c3approx_init_lin_elem before changing adaptation arguments\n");
+        exit(1);
+    }
+    lin_elem_exp_aopts_set_delta(c3a->leopts,delta);
+}
+
 
 /***********************************************************//**
     Initialize cross approximation arguments
@@ -234,6 +260,19 @@ struct BoundingBox * c3approx_get_bds(const struct C3Approx * c3a)
 {
     assert (c3a != NULL);
     return c3a->bds;
+}
+
+/***********************************************************//**
+    Set verbosity level
+***************************************************************/
+void c3approx_set_verbose(struct C3Approx * c3a, int verbose)
+{
+    assert (c3a != NULL);
+    if (c3a->fca == NULL){
+        fprintf(stderr,"Must call c3approx_init_cross before setting epsround\n");
+        exit(1);
+    }
+    ft_cross_args_set_verbose(c3a->fca,verbose);
 }
 
 /***********************************************************//**

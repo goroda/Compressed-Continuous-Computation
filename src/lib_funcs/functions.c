@@ -974,10 +974,10 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      case LINELM:
          out = generic_function_alloc(a->dim,a->fc,&(a->sub_type.ptype));
          out->fargs = a->fargs;
-         fprintf(stderr,"lin_elem_exp_prod not yet implemeted\n");
-         exit(1);
- //        out->f = lin_elem_exp_prod(a->f,b->f);
-//         break;
+         out->f = lin_elem_exp_prod(a->f,b->f,NULL);
+         /* fprintf(stderr,"lin_elem_exp_prod not yet implemeted\n"); */
+         /* exit(1); */
+         break;
      case RATIONAL:
          break;
      case KERNEL:

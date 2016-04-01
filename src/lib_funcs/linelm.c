@@ -415,11 +415,11 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
                                         f->coeff, g->coeff);
     }
     else{
-        double xnew[1000];
-        double fnew[1000];
-        double gnew[1000];
+        double xnew[10000];
+        double fnew[10000];
+        double gnew[10000];
 //        printf("here\n");
-        assert ( (f->num_nodes + g->num_nodes) < 1000);
+        assert ( (f->num_nodes + g->num_nodes) < 10000);
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
                                                      xnew,fnew,gnew);
         if (nnodes > 2){
@@ -598,8 +598,8 @@ struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
     fg.f = f;
     fg.g = g;
     struct LinElemExpAopts * opts = NULL;
-    double hmin = 1e-14;
-    double delta = 1e-5;
+    double hmin = 1e-1;
+    double delta = 1e-3;
 //    printf("f->num_nodes = %zu\n",f->num_nodes);
     //  printf("f->nodes = "); dprint(f->num_nodes,f->nodes);
     //opts = lin_elem_exp_aopts_alloc_adapt(f->num_nodes,f->nodes,delta,hmin);
@@ -1066,8 +1066,8 @@ void lin_elem_adapt(double (*f)(double,void*), void * args,
         double mid = (xl+xr)/2.0;
         double fmid = f(mid,args);
 
-//        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
-        if (fabs( (fl+fr)/2.0 - fmid) < delta){
+        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
+//        if (fabs( (fl+fr)/2.0 - fmid) < delta){
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */
