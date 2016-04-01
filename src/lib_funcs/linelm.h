@@ -79,6 +79,8 @@ double lin_elem_exp_eval(struct LinElemExp *, double);
 double lin_elem_exp_integrate(struct LinElemExp *);
 double lin_elem_exp_inner(struct LinElemExp *,struct LinElemExp *);
 int lin_elem_exp_axpy(double, struct LinElemExp *,struct LinElemExp *);
+struct LinElemExp *
+lin_elem_exp_prod(struct LinElemExp *,struct LinElemExp *,void *);
 double lin_elem_exp_norm(struct LinElemExp *);
 double lin_elem_exp_max(struct LinElemExp *, double *);
 double lin_elem_exp_min(struct LinElemExp *, double *);
@@ -135,6 +137,9 @@ void lin_elem_exp_orth_basis(size_t, struct LinElemExp **);
 struct LinElemExp *
 lin_elem_exp_constant(double, double, double,
                       const struct LinElemExpAopts *);
+struct LinElemExp * 
+lin_elem_exp_linear(double, double, double, double,
+                    const struct LinElemExpAopts *);
 double lin_elem_exp_lb(struct LinElemExp *);
 double lin_elem_exp_ub(struct LinElemExp *);
 

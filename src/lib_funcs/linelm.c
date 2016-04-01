@@ -558,6 +558,59 @@ int lin_elem_exp_axpy(double a,
     return res;
 }
 
+struct lefg
+{
+    struct LinElemExp * f;
+    struct LinElemExp * g;
+};
+
+double leprod(double x, void * arg)
+{
+    /* printf("eval at %G\n ",x); */
+    struct lefg * fg = arg;
+    double val = lin_elem_exp_eval(fg->f,x);
+    val *= lin_elem_exp_eval(fg->g,x);
+    /* printf("val = %G\n ",val); */
+    return val;
+}
+
+/********************************************************//**
+   Multiply two functions
+    
+   \param[in] f   - first function
+   \param[in] g   - second function
+   \param[in] arg - extra arguments (not yet implemented)
+
+   \returns product
+            
+   \note 
+*************************************************************/
+struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
+                                      struct LinElemExp * g,
+                                      void * arg)
+{
+
+    (void)(arg);
+    double lb = f->nodes[0] < g->nodes[0] ? g->nodes[0] : f->nodes[0];
+    double ub = f->nodes[f->num_nodes-1] > g->nodes[g->num_nodes-1] ? g->nodes[g->num_nodes-1] : f->nodes[f->num_nodes-1];
+
+    struct lefg fg;
+    fg.f = f;
+    fg.g = g;
+    struct LinElemExpAopts * opts = NULL;
+    double hmin = 1e-14;
+    double delta = 1e-5;
+//    printf("f->num_nodes = %zu\n",f->num_nodes);
+    //  printf("f->nodes = "); dprint(f->num_nodes,f->nodes);
+    //opts = lin_elem_exp_aopts_alloc_adapt(f->num_nodes,f->nodes,delta,hmin);
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+//    printf("allocated! lb=%G, ub=%G\n",lb,ub);
+    struct LinElemExp * prod = lin_elem_exp_approx(leprod,&fg,lb,ub,opts);
+
+    lin_elem_exp_aopts_free(opts);
+    return prod;
+}
+
 /********************************************************//**
     Compute the norm of a function
 
@@ -901,12 +954,32 @@ void xy_append(struct LinElemXY ** xy, double x, double y)
 {
 
     if (*xy == NULL){
-//        printf("xy is null so initialize\n");
+        /* printf("xy is null so initialize\n"); */
         *xy = xy_init(x,y);
+        /* printf("got it\n"); */
     }
     else{
-//        printf("xy is not null!\n");
-        xy_append(&((*xy)->next),x,y);
+        /* printf("xy == NULL = %d\n",xy==NULL); */
+        /* printf("xy is not null!\n"); */
+        struct LinElemXY * temp = *xy;
+        /* printf("iterate\n"); */
+        while (temp->next != NULL){
+            /* printf("iterate\n"); */
+            temp = temp->next;
+        }
+        /* printf("done iterating\n"); */
+        temp->next = xy_init(x,y);
+
+        /* if ((*xy)->next == NULL){ */
+        /*     printf("next is null!\n"); */
+        /*     (*xy)->next = xy_init(x,y); */
+        /* } */
+        /* else{ */
+        /*     printf("next is not null!\n"); */
+        /*     xy_append(&((*xy)->next),x,y); */
+        /*     printf("appended next!\n"); */
+        /* } */
+        /* printf("got it2\n"); */
     }
 }
 
@@ -981,9 +1054,13 @@ void lin_elem_adapt(double (*f)(double,void*), void * args,
 {
     //xy_append(xy,xl,fl);
     if ((xr - xl) <= hmin){
-//        printf("adapt is within bounds!\n");
+        /* printf("adapt is within bounds!\n"); */
+        /* printf("adding left (xl,fl)=(%G,%G)\n",xl,fl); */
         xy_append(xy,xl,fl);
+        /* printf("added left (xl,fl)=(%G,%G)\n",xl,fl); */
+
         xy_append(xy,xr,fr);
+        /* printf("done!\n"); */
     }
     else{
         double mid = (xl+xr)/2.0;
@@ -1075,17 +1152,21 @@ lin_elem_exp_approx(double (*f)(double,void*), void * args,
                 double fr = f(xr,args);
                 lin_elem_adapt(f,args,xl,fl,xr,fr,opts->delta,opts->hmin,&xy);
                 for (size_t ii = 2; ii < opts->num_nodes; ii++){
+                    /* printf("on node = %zu\n",ii); */
                     xl = xr;
                     fl = fr;
                     xr = opts->nodes[ii];
                     fr = f(xr,args);
-                    struct LinElemXY * temp;
+                    /* printf("(xl,fl,xr,fr)=(%G,%G,%G,%G)\n",xl,fl,xr,fr); */
+                    struct LinElemXY * temp = NULL;
                     lin_elem_adapt(f,args,xl,fl,xr,fr,opts->delta,opts->hmin,&temp);
+                    /* printf("adapted\n"); */
                     if (temp != NULL){
                         xy_concat(&xy,temp->next);
                         free(temp);
                     }                    
                 }
+                /* printf("finished here\n"); */
                 lexp->num_nodes = lin_elem_xy_length(xy);
                 lexp->nodes = calloc_double(lexp->num_nodes);
                 lexp->coeff = calloc_double(lexp->num_nodes);
@@ -1110,8 +1191,6 @@ lin_elem_exp_approx(double (*f)(double,void*), void * args,
         }
 
     }
-
-    
 
     return lexp;
 }
@@ -1141,7 +1220,6 @@ lin_elem_exp_constant(double a, double lb, double ub,
         }
         
     }
-    
     struct LinElemExp * lexp = lin_elem_exp_alloc();
     lexp->num_nodes = N;
     lexp->nodes = linspace(lb,ub,N);
@@ -1153,7 +1231,37 @@ lin_elem_exp_constant(double a, double lb, double ub,
     return lexp;
 }
 
+/********************************************************//**
+    Create a linear function
+    \f[
+        y = ax + b
+    \f]
 
+    \param[in] a    - function value
+    \param[in] b    - y intercept
+    \param[in] lb   - input lower bound
+    \param[in] ub   - input upper bound
+    \param[in] opts - options
+
+    \return function
+*************************************************************/
+struct LinElemExp * 
+lin_elem_exp_linear(double a, double b, double lb, double ub,
+                    const struct LinElemExpAopts * opts)
+{
+    (void)(opts);
+    
+    struct LinElemExp * lexp = lin_elem_exp_alloc();
+    lexp->num_nodes = 2;
+    lexp->nodes = calloc_double(2);
+    lexp->nodes[0] = lb;
+    lexp->nodes[1] = ub;
+    lexp->coeff = calloc_double(2);
+    lexp->coeff[0] = a*lb+b;
+    lexp->coeff[1] = a*ub+b;
+
+    return lexp;
+}
 
 /********************************************************//**
     Multiply by -1

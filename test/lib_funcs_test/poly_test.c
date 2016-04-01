@@ -1333,6 +1333,47 @@ void Test_lin_elem_exp_approx_adapt2(CuTest * tc){
     free(xtest);
 }
 
+void Test_lin_elem_exp_prod(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_prod \n");
+    double lb = -3.0;
+    double ub = 2.0;
+
+    double delta = 1e-2;
+    double hmin = 1e-2;
+    struct LinElemExpAopts * opts = NULL;
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+
+    struct counter c;
+    c.N = 0;
+    struct LinElemExp * f1 = lin_elem_exp_approx(func2,&c,lb,ub,opts);
+
+    struct counter c2;
+    c2.N = 0;
+    struct LinElemExp * f2 = lin_elem_exp_approx(func3,&c2,lb,ub,opts);
+
+    struct LinElemExp * f3 = lin_elem_exp_prod(f1,f2,NULL);
+    
+    //print_orth_poly_expansion(cpoly3,0,NULL);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N); 
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = lin_elem_exp_eval(f3,pts[ii]);
+        double eval2 = lin_elem_exp_eval(f1,pts[ii]) * 
+                       lin_elem_exp_eval(f2,pts[ii]);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-4);
+    }
+
+    free(pts); pts = NULL;
+    lin_elem_exp_free(f1);
+    lin_elem_exp_free(f2);
+    lin_elem_exp_free(f3);
+    lin_elem_exp_aopts_free(opts);
+}
+
 void Test_lin_elem_exp_integrate(CuTest * tc){
 
     printf("Testing function: lin_elem_exp_integrate\n");
@@ -1717,6 +1758,7 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
