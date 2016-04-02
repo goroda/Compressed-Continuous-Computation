@@ -76,6 +76,7 @@ serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
 unsigned char * deserialize_lin_elem_exp(unsigned char *, 
                                          struct LinElemExp **);
 double lin_elem_exp_eval(struct LinElemExp *, double);
+struct LinElemExp * lin_elem_exp_deriv(struct LinElemExp *);
 double lin_elem_exp_integrate(struct LinElemExp *);
 double lin_elem_exp_inner(struct LinElemExp *,struct LinElemExp *);
 int lin_elem_exp_axpy(double, struct LinElemExp *,struct LinElemExp *);

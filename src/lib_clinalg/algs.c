@@ -3267,10 +3267,16 @@ struct FunctionTrain * function_train_afpb(double a, double b,
                         struct FunctionTrain * f, double epsilon)
 {
     struct BoundingBox * bds = function_train_bds(f);
-
-    enum poly_type ptype = LEGENDRE;
-    struct FunctionTrain * off = function_train_constant(POLYNOMIAL,&ptype,
-                                                         f->dim,b,bds,NULL);
+    struct FunctionTrain * off = NULL;
+    if (f->cores[0]->funcs[0]->fc != LINELM){
+        enum poly_type ptype = LEGENDRE;
+        off  = function_train_constant(POLYNOMIAL,&ptype,
+                                       f->dim,b,bds,NULL);
+    }
+    else{
+        off = function_train_constant(LINELM,NULL,
+                                       f->dim,b,bds,NULL);
+    }
     struct FunctionTrain * af = function_train_copy(f);
     function_train_scale(af,a);
 

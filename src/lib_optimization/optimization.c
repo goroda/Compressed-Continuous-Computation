@@ -901,7 +901,7 @@ newton(double ** start, size_t dim, double step_size, double tol,
         //diffrel = 0.0;
         den = 0.0;
         for (ii = 0; ii < dim; ii++){
-            //printf("sol[%zu]=%G\n",ii,grad[ii]);
+            printf("sol[%zu]=%G\n",ii,grad[ii]);
             den += pow((*start)[ii],2);
             (*start)[ii] = (*start)[ii] - step_size*grad[ii];
             diff += pow(step_size*grad[ii],2);

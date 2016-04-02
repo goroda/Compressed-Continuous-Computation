@@ -370,7 +370,9 @@ generic_function_deriv(struct GenericFunction * gf)
         out->fargs = NULL;
         break;
     case LINELM:
-        assert ( 1 == 0);
+        out = generic_function_alloc(1,gf->fc,&(gf->sub_type.ptype));
+        out->f = lin_elem_exp_deriv(gf->f);
+        out->fargs = NULL;
         break;
     case RATIONAL:
         break;

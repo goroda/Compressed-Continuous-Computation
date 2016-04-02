@@ -495,7 +495,7 @@ struct ProbabilityDensity * probability_density_standard_normal(size_t dim)
     }
 
     double hmin = 1e-3;
-    double delta = 1e-4;
+    double delta = 1e-5;
     size_t init_rank = 3;
     double round_tol = 1e-3;
     double cross_tol = 1e-8;
@@ -605,9 +605,19 @@ probability_density_laplace(double *(*gradLogPost)(double * x, void * args),
                             double *(*hessLogPost)(double * x, void * args),
                             void * args, size_t dim, double * start)
 {
-    double tol = 1e-12;
+    double tol = 1e-4;
     double * mean = calloc_double(dim);
     memmove(mean,start,dim*sizeof(double));
+
+    /* struct c3Opt * opt = c3opt_alloc(BFGS,dim); */
+    /* c3opt_add_lb(opt,lb); */
+    /* c3opt_add_ub(opt,ub); */
+    /* c3opt_add_objective(opt,c3opt_f,NULL); */
+    /* c3opt_set_verbose(opt,0); */
+
+    /* res = c3opt_minimize(opt,start,&val); */
+
+    printf("do newtons method\n");
     newton(&mean, dim, 1.0, tol, gradLogPost,hessLogPost,args);
     double * hess = hessLogPost(mean,args);
     double * cov = calloc_double(dim*dim);
@@ -1056,7 +1066,7 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
             struct FunctionTrain * ftleft = 
                 function_train_linear2(LINELM,NULL,dimft,bds,
                                        pdf->lt->A+ii,dimpdf,offset,1,NULL);
-
+            
             struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
             var[ii] = function_train_inner(temp,pdf->pdf);
             function_train_free(temp);
@@ -1261,14 +1271,14 @@ struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
     size_t ii,jj;
     like->logextra = 0.0;
     for (jj = 0; jj < ndata; jj++){
-        //printf("jj = %zu\n",jj);
+//        printf("jj = %zu\n",jj);
         struct FT1DArray * moff = ft1d_array_alloc(datadim);
         for (ii = 0; ii < datadim; ii++){
-            //printf("ii=%zu, data=%G \n",ii,data[jj*datadim+ii]);
+//            printf("ii=%zu, data=%G \n",ii,data[jj*datadim+ii]);
             moff->ft[ii] = function_train_afpb(1.0,-data[jj*datadim+ii],
                             meanfunc->ft[jj*datadim+ii],1e-12);
         }
-        //printf("got moff\n");
+//        printf("got moff\n");
 
         if (noise_type == 0){
             assert (paramdim == 1);
@@ -1339,15 +1349,15 @@ struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
 struct Likelihood * likelihood_linear_regression(size_t dim, size_t N, 
     double * data, double * covariates, double noise, struct BoundingBox * bds)
 {
-    enum poly_type ptype = LEGENDRE;
+//    enum poly_type ptype = LEGENDRE;
     struct FT1DArray * meanfunc = ft1d_array_alloc(N);
     size_t ii;
     double * pt = calloc_double(dim+1);
     pt[0] = 1.0;
     for (ii = 0; ii < N; ii++){
         memmove(pt+1,covariates + ii*dim,dim*sizeof(double));    
-        meanfunc->ft[ii] = 
-            function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL);
+//        meanfunc->ft[ii] = function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL);
+        meanfunc->ft[ii] = function_train_linear(LINELM,NULL,dim+1,bds,pt,NULL);
     }
 
     struct Likelihood * like = 
@@ -1437,36 +1447,50 @@ likelihood_transform(struct Likelihood * like, struct LinearTransform * lt,
 {
 
     struct LikeLinCouple lc = {like,lt};
-    struct FtCrossArgs temp;
-    struct FtApproxArgs * fapp = NULL;
-    
-    size_t ii;
+        
+
+//
     size_t dim = lt->dimin;
     size_t init_rank = 2;
-    size_t * init_ranks = calloc_size_t(dim+1);
-    for (ii = 0; ii < dim ;ii++){
-        init_ranks[ii] = init_rank;
-    }
-    init_ranks[0] = 1;
-    init_ranks[dim] = 1;
+    double hmin = 1e-2;
+    double delta = 1e-5;
+    double round_tol = 1e-3;
+    double cross_tol = 1e-5;
+    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
+    c3approx_init_lin_elem(c3a);
+    c3approx_set_lin_elem_delta(c3a,delta);
+    c3approx_set_lin_elem_hmin(c3a,hmin);
+    c3approx_init_cross(c3a,init_rank,0);
+    c3approx_set_round_tol(c3a,round_tol);
+    c3approx_set_cross_tol(c3a,cross_tol);
+
+    /* struct FtCrossArgs temp; */
+    /* struct FtApproxArgs * fapp = NULL; */
+    //size_t ii;
+    /* size_t * init_ranks = calloc_size_t(dim+1); */
+    /* for (ii = 0; ii < dim ;ii++){ */
+    /*     init_ranks[ii] = init_rank; */
+    /* } */
+    /* init_ranks[0] = 1; */
+    /* init_ranks[dim] = 1; */
         
-    struct OpeAdaptOpts aopts;
-    aopts.start_num = 10;
-    aopts.coeffs_check = 0;
-    aopts.tol = 1e-5;
+    /* struct OpeAdaptOpts aopts; */
+    /* aopts.start_num = 10; */
+    /* aopts.coeffs_check = 0; */
+    /* aopts.tol = 1e-5; */
 
-    enum poly_type ptype = LEGENDRE;
-    fapp = ft_approx_args_createpoly(dim,&ptype,&aopts);
+    /* enum poly_type ptype = LEGENDRE; */
+    /* fapp = ft_approx_args_createpoly(dim,&ptype,&aopts); */
 
-    temp.dim = dim;
-    temp.ranks = init_ranks;
-    temp.epsilon = 1e-5;
-    temp.maxiter = 10;
-    temp.verbose = 2;
+    /* temp.dim = dim; */
+    /* temp.ranks = init_ranks; */
+    /* temp.epsilon = 1e-5; */
+    /* temp.maxiter = 10; */
+    /* temp.verbose = 2; */
     
-    temp.epsround = 100.0*DBL_EPSILON;
-    temp.kickrank = 4;
-    temp.maxiteradapt = 5;
+    /* temp.epsround = 100.0*DBL_EPSILON; */
+    /* temp.kickrank = 4; */
+    /* temp.maxiteradapt = 5; */
     
     struct Likelihood * newlike = malloc(sizeof(struct Likelihood));
     if (newlike == NULL){
@@ -1479,12 +1503,12 @@ likelihood_transform(struct Likelihood * like, struct LinearTransform * lt,
     newlike->inputdim = dim;
     newlike->type = GENERIC_LIKE;
     //printf("here!!!\n");
-    newlike->like = 
-        function_train_cross(like_transform_helper,&lc,bds,NULL,&temp,fapp);
+    /* newlike->like = function_train_cross(like_transform_helper,&lc,bds,NULL,&temp,fapp); */
+    newlike->like = c3approx_do_cross(c3a,like_transform_helper,&lc);
     //printf("there!!!\n");
 
-    free(init_ranks); init_ranks = NULL;
-    ft_approx_args_free(fapp); fapp = NULL;
+    /* free(init_ranks); init_ranks = NULL; */
+    /* ft_approx_args_free(fapp); fapp = NULL; */
             
     return newlike; 
 }
@@ -1669,8 +1693,8 @@ double bayes_rule_evaluate(double * x, void * arg)
     double * xtemp = linear_transform_apply(brt->lt->dimout,
                 brt->lt->dimin, brt->lt->A, x, brt->lt->b);
     
-    printf("xtemp = \n");
-    dprint(brt->lt->dimin, xtemp);
+    /* printf("xtemp = \n"); */
+    /* dprint(brt->lt->dimin, xtemp); */
 
     double prior_val = probability_density_eval(brt->br->prior,xtemp);
     double like_val = function_train_eval(brt->br->like->like,xtemp);
@@ -1679,14 +1703,14 @@ double bayes_rule_evaluate(double * x, void * arg)
         like_val = exp(like_val + brt->br->like->logextra);
     }
 
-    printf("priorval = %G\n",prior_val);
-    printf("likeval = %G\n",like_val);
-    printf("brt->mult = %G\n",brt->mult);
+    /* printf("priorval = %G\n",prior_val); */
+    /* printf("likeval = %G\n",like_val); */
+    /* printf("brt->mult = %G\n",brt->mult); */
     
     free(xtemp); xtemp = NULL;
     double out = prior_val * like_val * brt->mult;
     
-    printf("out = %G\n",out);
+    /* printf("out = %G\n",out); */
 
     return out;
 }
@@ -1720,8 +1744,6 @@ double bayes_rule_log(double * x, void * arg)
     return out;
 }
 
-
-
 /***********************************************************//**
     Compute the posterior from Bayes Rule
 
@@ -1745,97 +1767,77 @@ struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
     memmove(posterior->lt->b, lap->lt->b, sizeof(double) * dim);
     memmove(posterior->lt->A, lap->lt->A, dim*dim*sizeof(double));
     posterior->lt->mt = lap->lt->mt;
-     
 
-    printf("mean = \n");
-    dprint(dim,posterior->lt->b);
-    
-    //struct BoundingBox * bds = bounding_box_init(dim,-10.0,10.0);
+    /* printf("mean = \n"); */
+    /* dprint(dim,posterior->lt->b); */
+        
     struct BrTrans brt;
     brt.br = br;
     brt.lt = posterior->lt;
     brt.mult = 1.0;
     
     //double normalize;
-    
     double prior_val = log(probability_density_eval(br->prior,lap->lt->b));
     double like_val = function_train_eval(br->like->like,lap->lt->b);
     if (br->like->loglike == 0){
         like_val = log(like_val);
     }
-    printf("log prior at map = %G\n",prior_val);
-    printf("log likelihood at map = %G\n",like_val);
+    /* printf("log prior at map = %G\n",prior_val); */
+    /* printf("log likelihood at map = %G\n",like_val); */
     br->like->logextra = -(like_val+prior_val);
-    printf("log extra = %G\n",br->like->logextra);
+    /* printf("log extra = %G\n",br->like->logextra); */
     double val_at_map = bayes_rule_evaluate(lap->lt->b,&brt);
-    printf("the value at the map is %G\n",val_at_map);
+    /* printf("the value at the map is %G\n",val_at_map); */
     brt.mult = 0.5/val_at_map;
     val_at_map = bayes_rule_evaluate(lap->lt->b,&brt);
-    printf("the value at the map 2 is %G\n",val_at_map);
+    /* printf("the value at the map 2 is %G\n",val_at_map); */
     
-    printf("BAYESRUL IS BROKE!!!\n");
-    exit(1);
+    /* printf("BAYESRUL IS BROKE!!!\n"); */
+    /* exit(1); */
     //
-    /*
-    struct PwPolyAdaptOpts aopts;
-    aopts.ptype = LEGENDRE;
-    aopts.maxorder = 4;
-    aopts.coeff_check = 2;
-    aopts.epsilon = 1e-3;
-    aopts.minsize = 3e-1;
-    aopts.nregions = 5;
-    aopts.pts = NULL;
-
-    enum poly_type ptype = LEGENDRE;
-    struct FtApproxArgs * fapp = 
-       ft_approx_args_createpwpoly(dim,&ptype,&aopts);
-
-    size_t init_ranks = 2;
-    struct FtCrossArgs fca;
-    fca.dim = dim;
-    fca.ranks = calloc_size_t(dim+1);
-    size_t ii;
-    fca.ranks[0] = 1;
-    for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
-    fca.ranks[dim] = 1;
-    fca.epsilon = 1e-3;
-    fca.maxiter = 5;
-    fca.epsround = 1e-5;
-    fca.kickrank = 4;
-    fca.maxiteradapt = 5;
-    fca.verbose = 2;
-
-    double * center = darray_val(dim,0.0);
-
-    struct FunctionTrain * roughpdf = 
-        function_train_cross(bayes_rule_log, &brt, bds,center,&fca,fapp);
+    struct BoundingBox * bds = bounding_box_init(dim,-6.0,6.0);
+    double hmin = 1e-2;
+    double delta = 1e-5;
+    size_t init_rank = 3;
+    double round_tol = 1e-3;
+    double cross_tol = 1e-8;
+    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
+    c3approx_init_lin_elem(c3a);
+    c3approx_set_lin_elem_delta(c3a,delta);
+    c3approx_set_lin_elem_hmin(c3a,hmin);
+    c3approx_init_cross(c3a,init_rank,0);
+    c3approx_set_round_tol(c3a,round_tol);
+    c3approx_set_cross_tol(c3a,cross_tol);
     
+    /* struct FunctionTrain * roughpdf = c3approx_do_cross(c3a,bayes_rule_log,&brt); */
+    
+    /* double * temp = calloc_double(dim); */
+    /* double postval = function_train_eval(roughpdf,temp); */
+    /* double postval_check = bayes_rule_log(temp,&brt); */
+    /* free(temp); temp = NULL; */
+    /* printf("log post at map = %G, %G\n", 1.0/postval,1.0/postval_check); */
 
-    double * temp = calloc_double(dim);
-    double postval = function_train_eval(roughpdf,temp);
-    double postval_check = bayes_rule_log(temp,&brt);
-    free(temp); temp = NULL;
-    printf("log post at map = %G, %G\n", 1.0/postval,1.0/postval_check);
+    /* double normalize = function_train_integrate(roughpdf); */
+    /* printf("normalizing constant is %G \n", normalize); */
+    /* printf("integral of log %G \n", normalize); */
 
-    normalize = function_train_integrate(roughpdf);
-    printf("normalizing constant is %G \n", normalize);
-    printf("integral of log %G \n", normalize);
+    /* brt.mult = fabs(1.0/normalize); */
+    /* function_train_free(roughpdf); roughpdf = NULL; */
 
-    brt.mult = fabs(1.0/normalize);
-    function_train_free(roughpdf); roughpdf = NULL;
+    /* exit(1); */
+    /* posterior->pdf =  */
+    /*     function_train_cross(bayes_rule_evaluate, &brt, bds, NULL,NULL,NULL); */
+    posterior->pdf = c3approx_do_cross(c3a,bayes_rule_evaluate,&brt);
 
-    posterior->pdf = 
-        function_train_cross(bayes_rule_evaluate, &brt, bds, NULL,NULL,NULL);
-
-    normalize = function_train_integrate(posterior->pdf);
-    printf("second normalizing constant is %G \n", normalize);
+    double normalize = function_train_integrate(posterior->pdf);
+    /* printf("second normalizing constant is %G \n", normalize); */
     function_train_scale(posterior->pdf,1.0/normalize);
 
-    exit(1);
-    */
-    //bounding_box_free(bds); bds = NULL;
-    //probability_density_free(lap); lap = NULL;
-    //return posterior;
+//    exit(1);
+
+    bounding_box_free(bds); bds = NULL;
+    probability_density_free(lap); lap = NULL;
+    return posterior;
 }
 
 

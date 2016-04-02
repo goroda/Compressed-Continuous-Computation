@@ -228,6 +228,73 @@ double lin_elem_exp_eval(struct LinElemExp * f, double x)
 }
 
 /********************************************************//**
+*   Take a derivative same nodes,
+*
+*   \param[in] f - function
+*
+*   \return integral
+*************************************************************/
+struct LinElemExp * lin_elem_exp_deriv(struct LinElemExp * f)
+{
+    struct LinElemExp * le = lin_elem_exp_init(f->num_nodes,
+                                               f->nodes,f->coeff);
+
+    assert(f->num_nodes > 1);
+    if (f->num_nodes <= 5){
+        //first order for first part
+        le->coeff[0] = (f->coeff[1]-f->coeff[0])/
+            (f->nodes[1]-f->nodes[0]);
+        // second order centeral
+        for (size_t ii = 1; ii < le->num_nodes-1; ii++){
+            le->coeff[ii] = (f->coeff[ii+1]-f->coeff[ii-1])/
+                (f->nodes[ii+1]-f->nodes[ii-1]);
+        }
+        // first order last
+        le->coeff[le->num_nodes-1] = 
+            (f->coeff[le->num_nodes-1] - f->coeff[le->num_nodes-2]) / 
+            (f->nodes[f->num_nodes-1] - f->nodes[f->num_nodes-2]);
+    }
+    else{ // mostly fourth order
+
+        //first order for first part
+        le->coeff[0] = (f->coeff[1]-f->coeff[0])/
+                       (f->nodes[1]-f->nodes[0]);
+        // second order
+        le->coeff[1] = (f->coeff[2]-f->coeff[0]) / (f->nodes[2]-f->nodes[0]);
+
+        // fourth order central
+        for (size_t ii = 2; ii < le->num_nodes-2; ii++){
+            double sum_all = f->nodes[ii+2]-f->nodes[ii-2];
+            double sum_mid = f->nodes[ii+1]-f->nodes[ii-1];
+            double r_num = pow(f->nodes[ii+2]-f->nodes[ii],3) +
+                pow(f->nodes[ii] - f->nodes[ii-2],3);
+            double r_den = pow(f->nodes[ii+1]-f->nodes[ii],3) + 
+                pow(f->nodes[ii]-f->nodes[ii-1],3);
+          
+            double r = r_num/r_den;
+        
+            double den = r*sum_mid - sum_all;
+            double num = r*(f->coeff[ii+1]-f->coeff[ii-1]) - 
+                           f->coeff[ii+2] + f->coeff[ii-2];
+            le->coeff[ii] = num/den;
+        }
+
+        // second order
+        le->coeff[f->num_nodes-2] = (f->coeff[f->num_nodes-1] - 
+                                     f->coeff[f->num_nodes-3]) / 
+                                    (f->nodes[f->num_nodes-1] - 
+                                     f->nodes[f->num_nodes-3]);
+
+        // first order last
+        le->coeff[le->num_nodes-1] = 
+            (f->coeff[le->num_nodes-1] - f->coeff[le->num_nodes-2]) / 
+            (f->nodes[f->num_nodes-1] - f->nodes[f->num_nodes-2]);
+    }
+
+    return le;
+}
+
+/********************************************************//**
 *   Integrate the Linear Element Approximation
 *
 *   \param[in] f - function
@@ -411,6 +478,7 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
     double value = 0.0;
     int samedisc = lin_elem_sdiscp(f,g);
     if (samedisc == 1){
+//        printf("here?!\n");
         value = lin_elem_exp_inner_same(f->num_nodes,f->nodes,
                                         f->coeff, g->coeff);
     }
@@ -423,6 +491,7 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
 
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
                                                      xnew,fnew,gnew);
+//        printf("nnodes = %zu\n",nnodes);
         if (nnodes > 2){
             //          printf("nnodes = %zu\n",nnodes);
             // dprint(nnodes,xnew);

@@ -1364,13 +1364,50 @@ void Test_lin_elem_exp_prod(CuTest * tc){
         double eval2 = lin_elem_exp_eval(f1,pts[ii]) * 
                        lin_elem_exp_eval(f2,pts[ii]);
         double diff= fabs(eval1-eval2);
-        CuAssertDblEquals(tc, 0.0, diff, 1e-4);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-2);
     }
 
     free(pts); pts = NULL;
     lin_elem_exp_free(f1);
     lin_elem_exp_free(f2);
     lin_elem_exp_free(f3);
+    lin_elem_exp_aopts_free(opts);
+}
+
+void Test_lin_elem_exp_derivative(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_deriv  on (a,b)\n");
+    double lb = -2.0;
+    double ub = -1.0;
+
+    double delta = 1e-2;
+    double hmin = 1e-3;
+    struct LinElemExpAopts * opts = NULL;
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
+
+    struct counter c;
+    c.N = 0;
+    struct LinElemExp * f1 = lin_elem_exp_approx(func,&c,lb,ub,opts);
+    struct LinElemExp * der = lin_elem_exp_deriv(f1);
+
+    size_t N = 100;
+    double * xtest = linspace(lb,ub,N);
+    size_t ii;
+    double err = 0.0;
+    double errNorm = 0.0;
+    for (ii = 0; ii < N; ii++){
+        err += pow(lin_elem_exp_eval(der,xtest[ii])-funcderiv(xtest[ii], NULL),2);
+        errNorm += pow(funcderiv(xtest[ii],NULL),2);
+        //printf("pt= %G err = %G \n",xtest[ii], err);
+    }
+    //printf("num polys adapted=%zu\n",cpoly->num_poly);
+    err = err / errNorm;
+//    printf("err = %G\n",err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-3);
+    
+    lin_elem_exp_free(f1);
+    lin_elem_exp_free(der);
+    free(xtest);
     lin_elem_exp_aopts_free(opts);
 }
 
@@ -1759,6 +1796,7 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_derivative);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
