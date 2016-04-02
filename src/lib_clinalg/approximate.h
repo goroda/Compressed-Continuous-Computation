@@ -49,6 +49,7 @@ void c3approx_init_lin_elem(struct C3Approx *);
 void c3approx_init_cross(struct C3Approx *, size_t, int);
 
 //getting
+struct FtApproxArgs * c3approx_get_approx_args(struct C3Approx *);
 enum poly_type c3approx_get_ptype(const struct C3Approx *);
 size_t c3approx_get_dim(const struct C3Approx *);
 struct BoundingBox * c3approx_get_bds(const struct C3Approx *);

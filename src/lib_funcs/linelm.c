@@ -415,11 +415,12 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
                                         f->coeff, g->coeff);
     }
     else{
-        double xnew[10000];
-        double fnew[10000];
-        double gnew[10000];
+        assert ( (f->num_nodes + g->num_nodes) < 100000);
+        double xnew[100000];
+        double fnew[100000];
+        double gnew[100000];
 //        printf("here\n");
-        assert ( (f->num_nodes + g->num_nodes) < 10000);
+
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
                                                      xnew,fnew,gnew);
         if (nnodes > 2){
@@ -598,8 +599,8 @@ struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
     fg.f = f;
     fg.g = g;
     struct LinElemExpAopts * opts = NULL;
-    double hmin = 1e-1;
-    double delta = 1e-3;
+    double hmin = 1e-3;
+    double delta = 1e-4;
 //    printf("f->num_nodes = %zu\n",f->num_nodes);
     //  printf("f->nodes = "); dprint(f->num_nodes,f->nodes);
     //opts = lin_elem_exp_aopts_alloc_adapt(f->num_nodes,f->nodes,delta,hmin);

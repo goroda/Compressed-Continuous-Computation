@@ -236,6 +236,15 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
 }
 
 /***********************************************************//**
+    Get approximation arguments
+***************************************************************/
+struct FtApproxArgs * c3approx_get_approx_args(struct C3Approx * c3a)
+{
+    assert (c3a != NULL);
+    return c3a->fapp;
+}
+
+/***********************************************************//**
     Get polynomial type
 ***************************************************************/
 enum poly_type c3approx_get_ptype(const struct C3Approx * c3a)

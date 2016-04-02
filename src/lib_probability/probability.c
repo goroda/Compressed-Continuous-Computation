@@ -487,17 +487,6 @@ double pdf_stdmvn_helper(double x, size_t dim, void * args)
 ***************************************************************/
 struct ProbabilityDensity * probability_density_standard_normal(size_t dim)
 {
-    enum poly_type ptype = LEGENDRE;
-    size_t start_num = 7;
-    size_t c_check = 2;
-    struct OpeAdaptOpts ao;
-    ao.start_num = start_num;
-    ao.coeffs_check = c_check;
-    ao.tol = 1e-13;
-    
-    struct FtApproxArgs * fapp = 
-            ft_approx_args_createpoly(dim,&ptype,&ao);
-    
     struct BoundingBox * bds = bounding_box_init_std(dim);
     size_t ii; 
     for (ii = 0; ii < dim; ii++){
@@ -505,12 +494,26 @@ struct ProbabilityDensity * probability_density_standard_normal(size_t dim)
         bds->ub[ii] = 10.0;
     }
 
+    double hmin = 1e-3;
+    double delta = 1e-4;
+    size_t init_rank = 3;
+    double round_tol = 1e-3;
+    double cross_tol = 1e-8;
+    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
+    c3approx_init_lin_elem(c3a);
+    c3approx_set_lin_elem_delta(c3a,delta);
+    c3approx_set_lin_elem_hmin(c3a,hmin);
+    c3approx_init_cross(c3a,init_rank,0);
+    c3approx_set_round_tol(c3a,round_tol);
+    c3approx_set_cross_tol(c3a,cross_tol);
+    
+    struct FtApproxArgs * fapp = c3approx_get_approx_args(c3a);
     struct ProbabilityDensity * pdf = probability_density_alloc();
     pdf->pdf = function_train_rankone(dim,pdf_stdmvn_helper,&dim,bds,fapp);
     pdf->type = GAUSSIAN;
     
     bounding_box_free(bds);
-    ft_approx_args_free(fapp);
+    c3approx_destroy(c3a);
 
     return pdf;
 }
@@ -853,12 +856,11 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 ***************************************************************/
 double * probability_density_mean(struct ProbabilityDensity * pdf)
 {
-
+    
     size_t ii;
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
     double * mean = NULL;
-    enum poly_type ptype = LEGENDRE;
     struct BoundingBox * bds = bounding_box_init_std(dimft);
     for (ii = 0; ii < dimft; ii++){
         bds->lb[ii] = 
@@ -873,7 +875,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii];
             struct FunctionTrain * ftlin = 
-                function_train_linear2(POLYNOMIAL,&ptype,dimft,
+                function_train_linear2(LINELM,NULL,dimft,
                                        bds,pdf->lt->A+ii,dimpdf,
                                        offset,1,NULL);
             mean[ii] = function_train_inner(ftlin,pdf->pdf);
@@ -888,7 +890,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
             struct Qmarray * temp = qmarray_copy(pdf->pdf->cores[ii]);
             struct Qmarray * tempx = qmarray_alloc(1,1);
             tempx->funcs[0] = 
-                generic_function_linear(1.0,0.0,POLYNOMIAL,&ptype,
+                generic_function_linear(1.0,0.0,LINELM,NULL,
                                     bds->lb[ii],bds->ub[ii],NULL);
 
             qmarray_free(pdf->pdf->cores[ii]);
@@ -914,7 +916,7 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
 
     \param[in] pdf - pdf whose mean to compute
 
-    \return out - covariance matrix
+    \return covariance matrix
 
     \note
         I can make this faster by precomputing the integrals of each
@@ -926,7 +928,6 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
     double * cov = NULL;
-    enum poly_type ptype =LEGENDRE;
     
     struct BoundingBox * bds = bounding_box_init_std(dimft);
     for (ii = 0; ii < dimft; ii++){
@@ -944,7 +945,7 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii] - mean[ii];
             struct FunctionTrain * ftleft = 
-                function_train_linear2(POLYNOMIAL,&ptype,dimft,bds,
+                function_train_linear2(LINELM,NULL,dimft,bds,
                                        pdf->lt->A+ii,dimpdf,offset,1,NULL);
 
             struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
@@ -954,10 +955,11 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
             for (jj = ii+1; jj < dimpdf; jj++){
                 offset[0] = pdf->lt->b[jj] - mean[jj];
                 struct FunctionTrain * ftright = 
-                    function_train_linear2(POLYNOMIAL,&ptype,
-                                           dimft,bds,pdf->lt->A+jj,dimpdf,offset,1,NULL);
+                    function_train_linear2(LINELM,NULL,dimft,bds,
+                                           pdf->lt->A+jj,dimpdf,offset,1,NULL);
 
-                struct FunctionTrain * ftprod = function_train_product(ftleft,ftright);
+                struct FunctionTrain * ftprod = NULL;
+                ftprod = function_train_product(ftleft,ftright);
                 cov[ii*dimpdf+jj] = function_train_inner(ftprod,pdf->pdf);
 
                 cov[jj*dimpdf+ii] = cov[ii*dimpdf+jj];
@@ -981,7 +983,7 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]);
             xvals->cores[ii] = qmarray_alloc(1,1);
             xvals->cores[ii]->funcs[0] = 
-                generic_function_linear(1.0,-mean[ii],POLYNOMIAL,&ptype,lb,ub,NULL);
+                generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL);
         }
 
         for (ii = 0; ii < dimpdf; ii++){
@@ -1031,7 +1033,6 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
 double * probability_density_var(struct ProbabilityDensity * pdf)
 {
 
-    enum poly_type ptype = LEGENDRE;
     size_t ii;
     size_t dimft = pdf->pdf->dim; // dimension of ft
     size_t dimpdf = dimft; // dimension of pdf variable
@@ -1053,7 +1054,7 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
         for (ii = 0; ii < dimpdf; ii++){
             offset[0] = pdf->lt->b[ii] - mean[ii];
             struct FunctionTrain * ftleft = 
-                function_train_linear2(POLYNOMIAL,&ptype,dimft,bds,
+                function_train_linear2(LINELM,NULL,dimft,bds,
                                        pdf->lt->A+ii,dimpdf,offset,1,NULL);
 
             struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
@@ -1073,7 +1074,7 @@ double * probability_density_var(struct ProbabilityDensity * pdf)
             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]);
             xvals->cores[ii] = qmarray_alloc(1,1);
             xvals->cores[ii]->funcs[0] = 
-                generic_function_linear(1.0,-mean[ii],POLYNOMIAL,&ptype,lb,ub,NULL);
+                generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL);
         }
 
         for (ii = 0; ii < dimpdf; ii++){
@@ -1634,7 +1635,7 @@ double * bayes_rule_log_hessian_negative(double * x, void * args){
 /***********************************************************//**
     Compute the Laplace approximation to Bayes rule
 
-    \param br [in] - Bayes Rule structure holding likelihood and prior
+    \param[in] br - Bayes Rule structure holding likelihood and prior
 
     \return posterior - posterior distribution
 ***************************************************************/

@@ -2151,9 +2151,12 @@ generic_function_linear(double a, double offset,
         gf->fargs = NULL;
         break;    
     case LINELM:
-        fprintf(stderr,"Linear LINELM not yet implemented\n");
-        exit(1);
-//        break;
+        gf = generic_function_alloc(1,fc,NULL);
+        gf->f = lin_elem_exp_linear(a,offset,lb,ub,NULL);
+        gf->fargs = NULL;
+        /* fprintf(stderr,"Linear LINELM not yet implemented\n"); */
+        /* exit(1); */
+        break;
     case RATIONAL:
         break;
     case KERNEL:
@@ -2161,7 +2164,6 @@ generic_function_linear(double a, double offset,
     }
 
     return gf;
-
 }
 
 /***********************************************************//**
