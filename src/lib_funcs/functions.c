@@ -2260,20 +2260,25 @@ generic_function_array_orth(size_t n,enum function_class fc,void * st,
         }
         break;
     case LINELM:
+        //printf("orth1d array n = %zu\n",n);
         lb = ((struct Interval *) args)->lb;
         ub = ((struct Interval *) args)->ub;
         struct LinElemExp *f[1000];
         assert (n <= 1000);
-        
-        double * nodes = linspace(lb,ub,n);
-        double * fvals = calloc_double(n);
+        size_t nnodes = n;
+        if (n == 1){
+            nnodes = 2;
+        }
+        double * nodes = linspace(lb,ub,nnodes);
+        double * fvals = calloc_double(nnodes);
         for (ii = 0; ii < n; ii++){
             gfarray[ii] = generic_function_alloc(1,fc,st);
-            gfarray[ii]->f = lin_elem_exp_init(n,nodes,fvals);
+            gfarray[ii]->f = lin_elem_exp_init(nnodes,nodes,fvals);
             gfarray[ii]->fargs = NULL;
             f[ii] = gfarray[ii]->f;
         }
         lin_elem_exp_orth_basis(n,f);
+        //printf("orth1d array done\n");
         free(nodes); nodes = NULL;
         free(fvals); fvals = NULL;
         break;

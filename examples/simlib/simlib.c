@@ -259,58 +259,28 @@ int main( int argc, char *argv[])
 
     struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
 
-    // One dimensional approximation arguments
-    enum poly_type ptype = LEGENDRE;
-    struct OpeAdaptOpts * ao = ope_adapt_opts_alloc();
-    ope_adapt_opts_set_start(ao,7);
-    ope_adapt_opts_set_coeffs_check(ao,2);
-    ope_adapt_opts_set_tol(ao,1e-7);
-
-    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,ao);
-
-    /*
-    struct PwPolyAdaptOpts aopts;
-    aopts.ptype = LEGENDRE;
-    aopts.maxorder = 7;
-    aopts.coeff_check = 2;
-    aopts.epsilon = 1e-4;
-    aopts.minsize = 1e-1;
-    aopts.nregions = 5;
-    aopts.pts = NULL;
-
-    enum poly_type ptype = LEGENDRE;
-    struct FtApproxArgs * fapp = 
-       ft_approx_args_createpwpoly(dim,&ptype,&aopts);
-   */
-
-    // Initialize cross approximation options
-    size_t init_ranks = 5;
-    struct FtCrossArgs fca;
-    ft_cross_args_init(&fca);
-    fca.dim = dim;
-    fca.ranks = calloc_size_t(dim+1);
-    size_t ii;
-    fca.ranks[0] = 1;
-    for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
-    fca.ranks[dim] = 1;
-    fca.epsilon = 1e-3;
-    fca.maxiter = 5;
-    fca.epsround = 1e-5;
-    fca.kickrank = 4;
-    fca.maxiteradapt = 5;
-    fca.verbose = 2;
+    size_t start_rank = 5;
+    int verbose = 1;
+    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
+    c3approx_init_poly(c3a,LEGENDRE);
+    c3approx_init_cross(c3a,start_rank,verbose);
+    c3approx_set_poly_adapt_nstart(c3a,7);
+    c3approx_set_poly_adapt_ncheck(c3a,2);
+    c3approx_set_poly_adapt_tol(c3a,1e-7);
+    c3approx_set_poly_adapt_nmax(c3a,15);
+    c3approx_set_cross_tol(c3a,1e-3);
+    c3approx_set_round_tol(c3a,1e-4);
 
     //double * center = darray_val(dim,0.0);
     
-    struct FunctionTrain * ft = 
-        function_train_cross(function_monitor_eval, fm, bds,NULL,&fca, fapp);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,function_monitor_eval,fm);
 
     size_t nvals = nstored_hashtable_cp(fm->evals);
     printf("number of evaluations = %zu \n", nvals);
     printf("ranks are ");
     iprint_sz(dim+1,ft->ranks);
     size_t nrand = 10000;
-    size_t jj;
+    size_t ii,jj;
     double * testpt = calloc_double(dim);
     double errnum = 0.0;
     double errden = 0.0;
@@ -344,9 +314,9 @@ int main( int argc, char *argv[])
 
     function_monitor_free(fm); fm = NULL;
     bounding_box_free(bds); bds = NULL;
-    ft_approx_args_free(fapp); fapp = NULL;
-    ope_adapt_opts_free(ao);
-    free(fca.ranks); fca.ranks = NULL;
+
+
+    c3approx_destroy(c3a);
     //free(center); center = NULL;
     function_train_free(ft); ft = NULL;
     free(testpt); testpt = NULL;

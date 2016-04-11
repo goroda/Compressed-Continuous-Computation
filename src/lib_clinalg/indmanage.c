@@ -358,8 +358,8 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
             ci[ii] = NULL;
         }
     }
-    else{
-        assert (reverse == 1);
+    else if (reverse == 1){
+        /* assert (reverse == 1); */
         assert (dim > 1);
         ci[dim-1] = NULL;
         ci[dim-2] = cross_index_alloc(1);
@@ -378,6 +378,19 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
             
         }
     }
+    else{
+        ci[0] = NULL;
+        ci[1] = cross_index_alloc(1);
+//        printf("on first one\n");
+        for (size_t jj = 0; jj < sizes[0]; jj++){
+            cross_index_add_index(ci[1],1,&(vals[0][jj]));
+        }
+//        printf("hello\n");
+        for (size_t ii = 2; ii < dim; ii++){
+            ci[ii] = cross_index_create_nested(newfirst,0,sizes[ii],sizes[ii],vals[ii],ci[ii-1]);
+        }
+    }
+    
 }
 
 

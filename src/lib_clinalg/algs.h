@@ -106,6 +106,9 @@ struct FtCrossArgs
 };
 struct FtCrossArgs * ft_cross_args_alloc(size_t, size_t);
 void ft_cross_args_set_round_tol(struct FtCrossArgs *, double);
+void ft_cross_args_set_kickrank(struct FtCrossArgs *, size_t);
+void ft_cross_args_set_maxiter(struct FtCrossArgs *, size_t);
+void ft_cross_args_set_maxiteradapt(struct FtCrossArgs *, size_t);
 void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
 void ft_cross_args_set_optargs(struct FtCrossArgs *, void*);

@@ -44,9 +44,36 @@ enum C3ATYPE { CROSS, REGRESS };
 struct C3Approx;
 struct C3Approx * c3approx_create(enum C3ATYPE,size_t,double*,double *);
 void c3approx_destroy(struct C3Approx *);
+
+// Polynomial approximation settings
 void c3approx_init_poly(struct C3Approx *, enum poly_type);
+void c3approx_set_poly_adapt_nstart(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_nmax(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_ncheck(struct C3Approx *,size_t);
+void c3approx_set_poly_adapt_tol(struct C3Approx *,double);
+
+// Linear Element settings
 void c3approx_init_lin_elem(struct C3Approx *);
+void c3approx_set_lin_elem_fixed(struct C3Approx *,size_t *,double **);
+void c3approx_set_lin_elem_hmin(struct C3Approx *, double);
+void c3approx_set_lin_elem_delta(struct C3Approx *, double);
+
+//setting cross approximation arguments
 void c3approx_init_cross(struct C3Approx *, size_t, int);
+void c3approx_set_round_tol(struct C3Approx *, double);
+void c3approx_set_cross_tol(struct C3Approx *, double);
+void c3approx_set_verbose(struct C3Approx *, int);
+void c3approx_set_adapt_kickrank(struct C3Approx *, size_t);
+void c3approx_set_adapt_maxiter(struct C3Approx *, size_t);
+void c3approx_set_cross_maxiter(struct C3Approx *, size_t);
+void c3approx_set_fiber_opt_brute_force(struct C3Approx *,size_t *,double **);
+
+// starting nodes
+void c3approx_set_start(struct C3Approx *, size_t*, double **);
+
+// perform cross approximation
+struct FunctionTrain *
+c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);
 
 //getting
 struct FtApproxArgs * c3approx_get_approx_args(struct C3Approx *);
@@ -54,22 +81,4 @@ enum poly_type c3approx_get_ptype(const struct C3Approx *);
 size_t c3approx_get_dim(const struct C3Approx *);
 struct BoundingBox * c3approx_get_bds(const struct C3Approx *);
 
-//setting cross approximation arguments
-void c3approx_set_round_tol(struct C3Approx *, double);
-void c3approx_set_cross_tol(struct C3Approx *, double);
-void c3approx_set_verbose(struct C3Approx *, int);
-
-// setting fiber approximation arguments
-void c3approx_set_poly_adapt_nstart(struct C3Approx *,size_t);
-void c3approx_set_poly_adapt_nmax(struct C3Approx *,size_t);
-void c3approx_set_poly_adapt_ncheck(struct C3Approx *,size_t);
-void c3approx_set_poly_adapt_tol(struct C3Approx *,double);
-
-// linear element settings
-void c3approx_set_lin_elem_hmin(struct C3Approx *, double);
-void c3approx_set_lin_elem_delta(struct C3Approx *, double);
-
-
-struct FunctionTrain *
-c3approx_do_cross(struct C3Approx *, double (*)(double*,void*),void*);
 #endif

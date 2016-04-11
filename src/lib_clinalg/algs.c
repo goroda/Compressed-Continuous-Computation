@@ -2740,9 +2740,11 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
             }
         }
         else{
+            //printf("here~\n");
             Q = qmarray_orth1d_rows(LINELM, 
                                     &ptype, A->nrows, ncols,
-                                    lb, ub); 
+                                    lb, ub);
+            //printf("there!\n");
             out = qmarray_lq(A,&Q,&R);
             assert(out == 0);
         }
@@ -3102,12 +3104,13 @@ double function_train_eval(struct FunctionTrain * ft, double * x)
 /********************************************************//**
     Right orthogonalize the cores (except the first one) of the function train
 
-    \param a [inout] - FT (overwritten)
+    \param[in,out] a - FT (overwritten)
     
     \return ftrl - new ft with orthogonalized cores
 ***********************************************************/
 struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 {
+    //printf("orthor\n");
     //right left sweep
     struct FunctionTrain * ftrl = function_train_alloc(a->dim);
     double * L = NULL; 
@@ -3119,6 +3122,7 @@ struct FunctionTrain * function_train_orthor(struct FunctionTrain * a)
 
 
     // update last core
+//    printf("dim = %zu\n",a->dim);
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L);
     for (ii = 2; ii < a->dim; ii++){
         core = a->dim-ii;
@@ -3155,9 +3159,10 @@ function_train_round(struct FunctionTrain * ain, double epsilon)
     double delta = function_train_norm2(a);
     delta = delta * epsilon / sqrt(a->dim-1);
     //double delta = epsilon;
-   
-    struct FunctionTrain * ftrl = function_train_orthor(a);
 
+//    printf("begin orho\n");
+    struct FunctionTrain * ftrl = function_train_orthor(a);
+//    printf("ortho gonalized\n");
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);
     double * vt = NULL;
@@ -3642,10 +3647,13 @@ ft1d_array_sum_prod(size_t N, double * coeff,
     struct FunctionTrain * ft2 = NULL;
     struct FunctionTrain * out = NULL;
     struct FunctionTrain * temp = NULL;
-    
+
+//    printf("compute product\n");
     temp = function_train_product(f->ft[0],g->ft[0]);
     function_train_scale(temp,coeff[0]);
-    out = function_train_round(temp,epsilon); 
+//    printf("scale N = %zu\n",N);
+    out = function_train_round(temp,epsilon);
+//    printf("rounded\n");
     function_train_free(temp); temp = NULL;
     size_t ii;
     for (ii = 1; ii < N; ii++){
@@ -3685,7 +3693,6 @@ prepCore(size_t ii, size_t nrows,
     size_t ncols, ncuts;
     size_t dim = bd->dim;
     
-
     fc = ft_approx_args_getfc(fta,ii);
     sub_type = ft_approx_args_getst(fta,ii);
     approx_args = ft_approx_args_getaopts(fta, ii);
@@ -4120,6 +4127,29 @@ void ft_cross_args_set_round_tol(struct FtCrossArgs * fca, double epsround)
 {
     fca->epsround = epsround;
 }
+/***********************************************************//**
+    Set the kickrank
+***************************************************************/
+void ft_cross_args_set_kickrank(struct FtCrossArgs * fca, size_t kickrank)
+{
+    fca->kickrank = kickrank;
+}
+
+/***********************************************************//**
+    Set the maxiter
+***************************************************************/
+void ft_cross_args_set_maxiter(struct FtCrossArgs * fca, size_t maxiter)
+{
+    fca->maxiter = maxiter;
+}
+
+/***********************************************************//**
+    Set maxiteradapt
+***************************************************************/
+void ft_cross_args_set_maxiteradapt(struct FtCrossArgs * fca, size_t maxiteradapt)
+{
+    fca->maxiteradapt = maxiteradapt;
+}
 
 /***********************************************************//**
     Set the cross approximation tolerance
@@ -4267,10 +4297,27 @@ function_train_cross(double (*f)(double *, void *), void * args,
     struct CrossIndex * isr[1000];
     cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
-
-    struct FunctionTrain * ftref = 
-        function_train_constant_d(fapp,1.0, bds);
-
+    struct FunctionTrain * ftref = function_train_constant_d(fapp,1.0,bds);
+    
+//    cross_index_array_initialize(dim,isl,0,0,fcause->ranks,init_x);    
+    /* struct FunctionTrain * ftref = function_train_alloc(dim); */
+/*     for (ii = 0; ii < dim; ii++){ */
+/*         size_t nrows = fcause->ranks[ii]; */
+/*         size_t ncols = fcause->ranks[ii+1]; */
+/*         /\* printf("ii = %zu\n",ii); *\/ */
+/*         /\* printf( "left index set = \n"); *\/ */
+/*         /\* print_cross_index(isl[ii]); *\/ */
+/*         /\* printf( "right index set = \n"); *\/ */
+/*         /\* print_cross_index(isr[ii]); *\/ */
+/*         ftref->cores[ii] = prepCore(ii,nrows,f,args,bds,isl,isr,fcause,fapp,0); */
+/*         ftref->ranks[ii] = nrows; */
+/*         ftref->ranks[ii+1] = ncols; */
+/* //        printf("ok ok\n"); */
+/*         nrows = fcause->ranks[ii+1]; */
+/* //        printf("here!\n"); */
+/*     } */
+/*     /\* iprint_sz(dim+1,ftref->ranks); *\/ */
+    /* exit(1); */
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
                                   isr,fcause,fapp);
@@ -4453,14 +4500,14 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     
     struct FunctionTrain * ftc = function_train_copy(ft);
     struct FunctionTrain * ftr = function_train_round(ft, eps);
-    //printf("rounded ranks = "); iprint_sz()
+    /* printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks); */
     //struct FunctionTrain * ftr = function_train_copy(ft);
     //return ftr; 
     //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
     int adapt = 0;
     size_t ii;
     for (ii = 1; ii < dim; ii++){
-        //printf("%zu == %zu\n",ranks_found[ii],ftr->ranks[ii]);
+        /* printf("%zu == %zu\n",ranks_found[ii],ftr->ranks[ii]); */
         if (ranks_found[ii] == ftr->ranks[ii]){
             adapt = 1;
             fca->ranks[ii] = ranks_found[ii] + kickrank;

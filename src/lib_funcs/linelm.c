@@ -1360,7 +1360,7 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f)
 {
     double norm, proj;
     for (size_t ii = 0; ii < n; ii++){
-        assert (f[ii]->num_nodes == n);
+        assert (f[ii]->num_nodes >= n);
         f[ii]->coeff[ii] = 1.0;        
     }
     for (size_t ii = 0; ii < n; ii++){

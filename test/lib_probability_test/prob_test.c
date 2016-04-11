@@ -279,7 +279,7 @@ double * gradProb(double x[2], void * args){
     //dprint(2,x);
     out[0] = (prec[0] * x[0] + prec[2] * x[1]);
     //printf("here out[0] = %G\n",out[0]);
-    out[1] = (prec[1] * x[0] + prec[3] * x[1]);
+    out[1] = (prec[1] * x[0] + prec[3] * x[1]); 
     return out;
 }
 
@@ -398,6 +398,23 @@ void Test_log_hessian_eval(CuTest * tc)
     free(xtest); xtest = NULL;
 }
 
+double c3opt_lap_test(size_t dx, double * x, double * grad, void * args)
+{
+    (void)(dx);
+    double * prec = args;
+    double t1 = -(prec[0] * x[0] + prec[2] * x[1]);
+    double t2 = -(prec[1] * x[0] + prec[3] * x[1]); 
+    if (grad != NULL){
+        grad[0] = t1;
+        grad[1] = t2;
+    }
+    /* double inexp = exp(0.5 * (x[0]*t1 + x[1]*t2)); */
+    /* double det = sqrt(prec[0]*prec[3] - prec[1]*prec[2]); */
+    /* return -det*inexp; */
+    double out = -0.5 * (x[0]*t1 + x[1]*t2);
+    return out;
+}
+
 
 void Test_laplace(CuTest * tc)
 {
@@ -413,14 +430,15 @@ void Test_laplace(CuTest * tc)
     pinv(dim,dim,dim,c,prec,0.0);
 
     struct ProbabilityDensity * pdf = 
-        probability_density_laplace(gradProb,hessProb,prec,dim,start);
+//        probability_density_laplace(gradProb,hessProb,prec,dim,start);
+        probability_density_laplace(c3opt_lap_test,hessProb,prec,dim,start);
 
     double * mean = probability_density_mean(pdf);
     double * cov = probability_density_cov(pdf);
     double * var = probability_density_var(pdf);
     size_t ii,jj; 
     for (ii = 0; ii < dim; ii++){
-        CuAssertDblEquals(tc,m[ii],mean[ii],1e-8);
+        CuAssertDblEquals(tc,m[ii],mean[ii],1e-4);
         CuAssertDblEquals(tc,c2[ii*dim+ii],cov[ii*dim+ii],1e-4);
         CuAssertDblEquals(tc,1.0,var[ii],1e-4);
         for (jj = 0; jj < dim; jj++){
@@ -429,43 +447,11 @@ void Test_laplace(CuTest * tc)
             }
         }
     }
-
     
     probability_density_free(pdf); pdf = NULL;
     free(mean); mean = NULL;
     free(cov); cov = NULL;
     free(var); var = NULL;
-}
-
-double poisson_should_be10d(double * x){
-    size_t ii; 
-    double out = 1.0;
-    for (ii = 0; ii < 10; ii++){
-        out *= exp(1.0*x[ii] - 1.0/10.0*exp(x[ii]));
-    }
-    return out;
-}
-
-void Test_poisson_like(CuTest * tc)
-{
-    printf("Testing Function: poisson_like \n");
-    size_t dim = 10;
-    double likeparam[1] = {1.0 / (double) 10.0};
-    double * count = darray_val(dim,1.0);
-    struct Likelihood * like = 
-    likelihood_alloc(dim,count,1,likeparam,dim,-10.0,10.0,
-                    POISSON_LIKE);
-        
-    //size_t N = 20;
-    double * xtest = darray_val(dim, 0.5);
-    double val = function_train_eval(like->like,xtest);
-    double shouldbe = poisson_should_be10d(xtest);
-    CuAssertDblEquals(tc,shouldbe,val,1e-11);
-
-    free(xtest); xtest = NULL;
-    free(count); count = NULL;
-    likelihood_free(like); like = NULL;
-
 }
 
 double evalLike(size_t N, double * coeff, double * points, double * data, 
@@ -487,9 +473,38 @@ double evalLike(size_t N, double * coeff, double * points, double * data,
     return out;
 }
 
+void Test_likelihood_linear_regression(CuTest * tc)
+{
+    printf("Testing Function: likelihood_linear_regression \n");
+    //true: y = 2x + 4
+    size_t dim = 1;
+    size_t N = 5;
+    double covariates[5] = {-2.0, -0.3, 0.0, 1.0, 2.6};
+    //double data[5] = {0.0, 2.0, 4.0, 6.0, 8.0};
+    double data[5] = {0.01, 2.2, 3.7, 6.8, 7.0};
+    double noise = 1e-1;
+    struct BoundingBox * bds = bounding_box_init(dim+1,-10.0,10.0);
+
+    struct Likelihood * like = NULL;
+    like = likelihood_linear_regression(dim, N, data,
+                                        covariates, noise, bds);
+
+//    printf("done with construction\n");
+    double ms[2] = {4.0, 2.0};
+    double likeeval = function_train_eval(like->like,ms) + like->logextra;
+    double likeshould = log(evalLike(N,ms,covariates,data,noise));
+
+    double diff = fabs(likeshould-likeeval)/fabs(likeshould);
+    CuAssertDblEquals(tc,0,diff,1e-3);
+    
+    likelihood_free(like);
+    bounding_box_free(bds);
+}
+
+
 void Test_linear_regression(CuTest * tc)
 {
-    printf("Testing Function: likelihood_linear_regression (1)\n");
+    printf("Testing Function: linear_regression (1)\n");
     //true: y = 2x + 4
     size_t dim = 1;
     size_t N = 5;
@@ -558,12 +573,14 @@ void Test_linear_regression(CuTest * tc)
     double likeeval = function_train_eval(br.like->like,ms) + br.like->logextra;
     double likeshould =  log(evalLike(N,ms,covariates,data,noise));
 
-    CuAssertDblEquals(tc,likeshould,likeeval,1e-10);
+    double diff = fabs(likeshould-likeeval)/fabs(likeshould);
+    CuAssertDblEquals(tc,0.0,diff,1e-3);
                 
     //printf("prior eval at mean = %G\n",probability_density_eval(br.prior,ms));
 
    
     //struct ProbabilityDensity * post2 = NULL;
+    printf("bayes_rule_laplace\n");
     struct ProbabilityDensity * post = bayes_rule_laplace(&br);
 
     double * mean = probability_density_mean(post);
@@ -777,13 +794,43 @@ CuSuite * ProbGetSuite(){
     /* SUITE_ADD_TEST(suite, Test_log_gradient_eval); */
     /* SUITE_ADD_TEST(suite, Test_log_hessian_eval); */
     /* SUITE_ADD_TEST(suite, Test_laplace); */
-    /* SUITE_ADD_TEST(suite, Test_linear_regression); */
-    SUITE_ADD_TEST(suite, Test_linear_regression2);
+    SUITE_ADD_TEST(suite, Test_likelihood_linear_regression);
+    SUITE_ADD_TEST(suite, Test_linear_regression);
+    /* SUITE_ADD_TEST(suite, Test_linear_regression2); */
     /* SUITE_ADD_TEST(suite, Test_cdf_normal); */
     /* SUITE_ADD_TEST(suite, Test_icdf_normal); */
-
-
     /* /\* SUITE_ADD_TEST(suite, Test_poisson_like); *\/ */
 
     return suite;
+}
+
+double poisson_should_be10d(double * x){
+    size_t ii; 
+    double out = 1.0;
+    for (ii = 0; ii < 10; ii++){
+        out *= exp(1.0*x[ii] - 1.0/10.0*exp(x[ii]));
+    }
+    return out;
+}
+
+void Test_poisson_like(CuTest * tc)
+{
+    printf("Testing Function: poisson_like \n");
+    size_t dim = 10;
+    double likeparam[1] = {1.0 / (double) 10.0};
+    double * count = darray_val(dim,1.0);
+    struct Likelihood * like = 
+    likelihood_alloc(dim,count,1,likeparam,dim,-10.0,10.0,
+                    POISSON_LIKE);
+        
+    //size_t N = 20;
+    double * xtest = darray_val(dim, 0.5);
+    double val = function_train_eval(like->like,xtest);
+    double shouldbe = poisson_should_be10d(xtest);
+    CuAssertDblEquals(tc,shouldbe,val,1e-11);
+
+    free(xtest); xtest = NULL;
+    free(count); count = NULL;
+    likelihood_free(like); like = NULL;
+
 }

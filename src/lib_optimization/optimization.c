@@ -596,8 +596,14 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         }
         double diff = fabs(*fval - fvaltemp);
         if (fabs(fvaltemp) > 1e-10){
-            diff /= fvaltemp;
+            diff /= fabs(fvaltemp);
         }
+
+        double xdiff = 0.0;
+        for (size_t ii = 0; ii < d; ii++){
+            xdiff += pow(x[ii]-workspace[ii],2);
+        }
+        xdiff = sqrt(xdiff);
         if (onbound == 1){
             //printf("grad = ");
             //dprint(2,grad);
@@ -607,11 +613,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                 converged = 1;
             }
             else{
-                eta = 0.0;
-                for (size_t ii = 0; ii < d; ii++){
-                    eta += pow(x[ii]-workspace[ii],2);
-                }
-                if (eta < absxtol){
+                if (xdiff < absxtol){
                     ret = C3OPT_XTOL_REACHED;
                     //printf("converged xclose\n");
                     converged = 1;
@@ -628,12 +630,18 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                 ret = C3OPT_FTOL_REACHED;
                 converged = 1;
             }
+            else if (xdiff < absxtol){
+                ret = C3OPT_XTOL_REACHED;
+                converged = 1;
+            }
+                
         }
         
         if (verbose > 0){
             printf("Iteration:%zu/%zu\n",iter,maxiter);
             printf("\t f(x)          = %3.5G\n",*fval);
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
+            printf("\t |x - x_p|     = %3.5G\n",xdiff);
             printf("\t eta =         = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
             if (verbose > 1){

@@ -85,9 +85,12 @@ probability_density_mvn(size_t, double *, double *);
 double * probability_density_sample(struct ProbabilityDensity *);
 
 struct ProbabilityDensity * 
-probability_density_laplace(double *(*)(double *, void *), 
+/* probability_density_laplace(double *(*)(double *, void *),  */
+/*                             double *(*)(double *, void *), */
+/*                             void *, size_t, double *); */
+probability_density_laplace(double (*)(size_t,double *,double*,void *),
                             double *(*)(double *, void *),
-                            void *, size_t, double *);
+                            void *,size_t, double *);
 
 struct Likelihood{
 

@@ -592,8 +592,6 @@ double * probability_density_sample(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Construct a laplace approximation
     
-    \param[in] gradLogPost - function computes gradient of negative log posterior
-    \param[in] hessLogPost - function computes hessian of negative log posterior
     \param[in] args        - arguments to grad and hess functions
     \param[in] dim         - number of dimensions
     \param[in] start       - start of optimization
@@ -601,24 +599,35 @@ double * probability_density_sample(struct ProbabilityDensity * pdf)
     \return gaussian pdf 
 ***************************************************************/
 struct ProbabilityDensity * 
-probability_density_laplace(double *(*gradLogPost)(double * x, void * args), 
+/* probability_density_laplace(double *(*gradLogPost)(double * x, void * args),  */
+
+/*                             void * args, size_t dim, double * start) */
+probability_density_laplace(double (*f)(size_t,double *,double*,void *),
                             double *(*hessLogPost)(double * x, void * args),
                             void * args, size_t dim, double * start)
 {
-    double tol = 1e-4;
+    //double tol = 1e-4;
     double * mean = calloc_double(dim);
     memmove(mean,start,dim*sizeof(double));
 
-    /* struct c3Opt * opt = c3opt_alloc(BFGS,dim); */
-    /* c3opt_add_lb(opt,lb); */
-    /* c3opt_add_ub(opt,ub); */
-    /* c3opt_add_objective(opt,c3opt_f,NULL); */
-    /* c3opt_set_verbose(opt,0); */
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    double * lb = calloc_double(dim);
+    double * ub = calloc_double(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        lb[ii] = -DBL_MAX;
+        ub[ii] = DBL_MAX;
+    }
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,f,args);
+    c3opt_set_verbose(opt,0);
+    double val;
+    int res = c3opt_minimize(opt,mean,&val);
+    /* printf("res = %d\n",res); */
+    assert (res >- 1);
 
-    /* res = c3opt_minimize(opt,start,&val); */
-
-    printf("do newtons method\n");
-    newton(&mean, dim, 1.0, tol, gradLogPost,hessLogPost,args);
+    /* printf("do newtons method\n"); */
+    /* newton(&mean, dim, 1.0, tol, gradLogPost,hessLogPost,args); */
     double * hess = hessLogPost(mean,args);
     double * cov = calloc_double(dim*dim);
     pinv(dim,dim,dim,hess,cov,0.0);
@@ -1278,18 +1287,20 @@ struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
             moff->ft[ii] = function_train_afpb(1.0,-data[jj*datadim+ii],
                             meanfunc->ft[jj*datadim+ii],1e-12);
         }
-//        printf("got moff\n");
+//        printf("got moff noise_type = %d\n",noise_type);
 
         if (noise_type == 0){
             assert (paramdim == 1);
             double * coeff = darray_val(datadim,-0.5/pow(param[0],2));
+//            printf("datadim = %zu\n",datadim);
             temp = ft1d_array_sum_prod(datadim,coeff,moff,moff,1e-10);
+//            printf("got sum\n");
             free(coeff); coeff = NULL;
             //printf("here! %G \n", log(pow(pow(pow(param[0],2),datadim),-0.5)));
             like->logextra += log(pow(2.0*M_PI,- ((double) datadim) /2.0) *
                                   pow(pow(param[0] * param[0],datadim),-0.5));
-            //printf("datadim = %zu\n",datadim);
-            //printf("log extra is now = %G\n", like->logextra);
+
+//            printf("log extra is now = %G\n", like->logextra);
         }
         else if (noise_type == 1){
             assert (paramdim == datadim);
@@ -1355,6 +1366,7 @@ struct Likelihood * likelihood_linear_regression(size_t dim, size_t N,
     double * pt = calloc_double(dim+1);
     pt[0] = 1.0;
     for (ii = 0; ii < N; ii++){
+        //printf("ii = %zu\n",ii);
         memmove(pt+1,covariates + ii*dim,dim*sizeof(double));    
 //        meanfunc->ft[ii] = function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL);
         meanfunc->ft[ii] = function_train_linear(LINELM,NULL,dim+1,bds,pt,NULL);
@@ -1526,9 +1538,7 @@ double * bayes_rule_log_gradient(double * x, void * args){
     struct BayesRule * br = args;
     size_t dim = br->like->inputdim;
 
-
     double * gradp = probability_density_log_gradient_eval(br->prior,x);
-    
 
     struct FT1DArray * gradl = function_train_gradient(br->like->like);
     double * gradl_eval = ft1d_array_eval(gradl,x);
@@ -1547,7 +1557,6 @@ double * bayes_rule_log_gradient(double * x, void * args){
             out[ii] = gradl_eval[ii] + gradp[ii];
         }
     }
-
 
     ft1d_array_free(gradl); gradl = NULL;
     free(gradl_eval); gradl_eval = NULL;
@@ -1666,11 +1675,12 @@ double * bayes_rule_log_hessian_negative(double * x, void * args){
 struct ProbabilityDensity * bayes_rule_laplace(struct BayesRule * br)
 {
     double * start = probability_density_mean(br->prior);
-    size_t dim = br->like->inputdim;
-    struct ProbabilityDensity * pdf = 
-        probability_density_laplace(bayes_rule_log_gradient_negative,
-                                    bayes_rule_log_hessian_negative,
-                                    br, dim, start);
+//    size_t dim = br->like->inputdim;
+    struct ProbabilityDensity * pdf = NULL;
+    /* struct ProbabilityDensity * pdf =  */
+    /*     probability_density_laplace(bayes_rule_log_gradient_negative, */
+    /*                                 bayes_rule_log_hessian_negative, */
+    /*                                 br, dim, start); */
     
     free(start); start = NULL;
     return pdf;

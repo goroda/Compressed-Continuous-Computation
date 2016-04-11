@@ -2479,7 +2479,6 @@ fiber_opt_args_bf(size_t dim, struct c3Vector ** nodes)
     return fopt;
 }
 
-
 /***********************************************************//**
     Free memory allocate to fiber optimization arguments
 
