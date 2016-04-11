@@ -483,10 +483,10 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
                                         f->coeff, g->coeff);
     }
     else{
-        assert ( (f->num_nodes + g->num_nodes) < 100000);
-        double xnew[100000];
-        double fnew[100000];
-        double gnew[100000];
+        assert ( (f->num_nodes + g->num_nodes) < 10000);
+        double xnew[10000];
+        double fnew[10000];
+        double gnew[10000];
 //        printf("here\n");
 
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
