@@ -133,19 +133,21 @@ struct c3Opt
     
     double * lb;
     double * ub;
-    
     int grad;
     struct c3LS * ls;
 
-
-    int verbose;
+    // for gradient based methods
     size_t maxiter;
     double relxtol;
     double absxtol;
     double relftol;
     double gtol;
 
+    // for brute force
+    size_t nlocs;
+
     double * workspace;
+    int verbose;
 };
 
 /***********************************************************//**
@@ -337,11 +339,29 @@ double c3opt_ls_get_beta(struct c3Opt * opt)
     return c3ls_get_beta(opt->ls);
 }
 
-
 size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
 {
     assert (opt != NULL);
     return c3ls_get_maxiter(opt->ls);
+}
+
+/***********************************************************//**
+    Add brute-force optimization locations
+    
+    \param[in,out] opt   - optimization structure
+    \param[in]     nvals - number of locations to test
+    \param[in]     loc   - (d*nvals,) flattened array (d first) of options
+***************************************************************/
+void c3opt_set_brute_force_vals(struct c3Opt * opt, size_t nvals, double * loc)
+{
+    assert (opt != NULL);
+    if (opt->alg != BRUTEFORCE){
+        fprintf(stderr,"Must set optimization type to BRUTEFORCE\n");
+        fprintf(stderr,"in order to add brute force values\n");
+    }
+    opt->nlocs = nvals;
+    opt->workspace = calloc_double(nvals * opt->d);
+    memmove(opt->workspace,loc,opt->d*nvals*sizeof(double));
 }
 
 /***********************************************************//**
@@ -655,6 +675,8 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     return ret;
 }
 
+
+
 int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
 {
     int res = 0;
@@ -668,6 +690,21 @@ int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
         res = c3_opt_damp_bfgs(opt,start,minf,grad,invhess);
         free(grad); grad = NULL;
         free(invhess); invhess = NULL;
+    }
+    else if (opt->alg == BRUTEFORCE){
+        size_t minind = 0;
+        *minf = c3opt_eval(opt, opt->workspace,NULL);
+        double val;
+        for (size_t ii = 1; ii < opt->nlocs; ii++){
+            val = c3opt_eval(opt, opt->workspace + ii*opt->d,NULL);
+            if (val < *minf){
+                *minf = val;
+                minind = ii;
+            }
+        }
+        for (size_t ii = 0; ii < opt->d; ii++){
+            start[ii] = opt->workspace[minind*opt->d+ii];
+        }
     }
     else{
         fprintf(stderr,"Unknown optimization argument %d\n",opt->alg);

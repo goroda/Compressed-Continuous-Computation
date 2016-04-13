@@ -36,7 +36,7 @@
 #define OPTIMIZATION_H
 
 
-enum c3opt_alg {NEWTON, BFGS};
+enum c3opt_alg {NEWTON, BFGS, BRUTEFORCE};
 enum c3opt_return {
     C3OPT_LS_PARAM_INVALID=-4,
     C3OPT_LS_MAXITER_REACHED=-3,
@@ -65,6 +65,10 @@ void c3opt_ls_set_alpha(struct c3Opt *,double);
 double c3opt_ls_get_alpha(struct c3Opt *);
 void c3opt_ls_set_beta(struct c3Opt *,double);
 double c3opt_ls_get_beta(struct c3Opt *);
+size_t c3opt_ls_get_maxiter(struct c3Opt *);
+
+void c3opt_set_brute_force_vals(struct c3Opt *, size_t, double *);
+
 int c3opt_minimize(struct c3Opt *, double *, double *);
 
 double * c3opt_get_lb(struct c3Opt *);
