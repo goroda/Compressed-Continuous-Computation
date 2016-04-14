@@ -131,18 +131,15 @@ int main(int argc, char * argv[])
     struct FtApproxArgs * fapp = ft_approx_args_create_le2(dim,aopts);
 
 
-    size_t init_ranks[3] = {1,3,1};
-    struct FtCrossArgs fca;
-    ft_cross_args_init(&fca);
-    fca.dim = dim;
-    fca.ranks = init_ranks;
-    fca.epsilon = 1e-7;
-    fca.maxiter = 10;
-    fca.epsround = 1e-10;
-    fca.kickrank = 2;
-    fca.maxiteradapt = 5;
-    fca.verbose = verbose;
-    fca.optargs = fopt;
+    size_t init_ranks = 3;
+    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
+    ft_cross_args_set_verbose(fca,verbose);
+    ft_cross_args_set_kickrank(fca,2);
+    ft_cross_args_set_maxiter(fca,10);
+    ft_cross_args_set_cross_tol(fca,1e-7);
+    ft_cross_args_set_round_tol(fca,1e-10);
+    ft_cross_args_set_maxrank_all(fca,init_ranks+5*2); 
+    ft_cross_args_set_optargs(fca,fopt);
    
     struct FunctionMonitor * fm = NULL;
     double (*ff)(double *, void *);
@@ -177,7 +174,7 @@ int main(int argc, char * argv[])
     start[1] = starty;
     struct FunctionTrain * ft = NULL;
     ft = function_train_cross(function_monitor_eval,fm,
-                              bds,start,&fca,fapp);
+                              bds,start,fca,fapp);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     size_t ntot = n*n;
@@ -242,6 +239,7 @@ int main(int argc, char * argv[])
     lin_elem_exp_aopts_free(aoptsy);
     free(aopts); aopts = NULL;
     free(c3v); c3v = NULL;
+    ft_cross_args_free(fca);
     function_train_free(ft);
     function_monitor_free(fm);
     ft_approx_args_free(fapp);

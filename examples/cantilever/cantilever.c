@@ -56,23 +56,19 @@ int main()
     size_t dim = 2;
     struct BoundingBox * bds = bounding_box_init(dim,0.01,.99);
 
-    size_t init_ranks[3] = {1,5,1};
-    struct FtCrossArgs fca;
-    ft_cross_args_init(&fca);
-    fca.dim = dim;
-    fca.ranks = init_ranks;
-    fca.ranks[dim] = 1;
-    fca.epsilon = 1e-10;
-    fca.maxiter = 10;
-    fca.epsround = 1e-10;
-    fca.kickrank = 5;
-    fca.maxiteradapt = 10;
-    fca.verbose = 0;
+    size_t init_ranks = 5;
+    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
+    ft_cross_args_set_verbose(fca,0);
+    ft_cross_args_set_kickrank(fca,5);
+    ft_cross_args_set_maxiter(fca,10);
+    ft_cross_args_set_cross_tol(fca,1e-10);
+    ft_cross_args_set_round_tol(fca,1e-10);
+    ft_cross_args_set_maxrank_all(fca,init_ranks+10*5); 
 
     struct FunctionTrain * d = NULL; // displacement
     struct FunctionTrain * s = NULL; // stress
 
-    d = function_train_cross(displacement,NULL,bds,NULL,&fca,NULL);
+    d = function_train_cross(displacement,NULL,bds,NULL,fca,NULL);
     printf("Displacement rank is %zu.\n",d->ranks[1]);
 
     s = function_train_cross(stress,NULL,bds,NULL,NULL,NULL);
@@ -104,6 +100,7 @@ int main()
     printf("L2 error for displacement is %G\n",derr/dden);
     printf("L2 error for stress is %G\n",serr/sden);
 
+    ft_cross_args_free(fca);
     function_train_free(d);
     function_train_free(s);
     bounding_box_free(bds);

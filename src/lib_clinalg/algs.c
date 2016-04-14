@@ -4100,10 +4100,16 @@ struct FtCrossArgs * ft_cross_args_alloc(size_t dim, size_t start_rank)
     ftc->ranks[dim] = 1;
     ftc->epsilon = 1e-10;
     ftc->maxiter = 5;
-    
+
+    ftc->adapt = 1;    
     ftc->epsround = 1e-10;
     ftc->kickrank = 5;
-    ftc->maxiteradapt = 5;
+//    ftc->maxiteradapt = 5;
+    ftc->maxranks = calloc_size_t(dim-1);
+    for (size_t ii = 0; ii < dim-1;ii++){
+        // 4 adaptation steps
+        ftc->maxranks[ii] = ftc->ranks[ii+1] + ftc->kickrank*4; 
+    }
 
     ftc->verbose = 0;
 
@@ -4144,11 +4150,41 @@ void ft_cross_args_set_maxiter(struct FtCrossArgs * fca, size_t maxiter)
 }
 
 /***********************************************************//**
-    Set maxiteradapt
+    Turn off adaptation
 ***************************************************************/
-void ft_cross_args_set_maxiteradapt(struct FtCrossArgs * fca, size_t maxiteradapt)
+void ft_cross_args_set_no_adaptation(struct FtCrossArgs * fca)
 {
-    fca->maxiteradapt = maxiteradapt;
+    fca->adapt = 0;
+}
+
+/***********************************************************//**
+    Turn onn adaptation
+***************************************************************/
+void ft_cross_args_set_adaptation(struct FtCrossArgs * fca)
+{
+    fca->adapt = 1;
+}
+
+/***********************************************************//**
+    Set maximum ranks for adaptation
+***************************************************************/
+void ft_cross_args_set_maxrank_all(struct FtCrossArgs * fca, size_t maxrank)
+{
+//    fca->maxiteradapt = maxiteradapt;
+    for (size_t ii = 0; ii < fca->dim-1; ii++){
+        fca->maxranks[ii] = maxrank;
+    }
+}
+
+/***********************************************************//**
+    Set maximum ranks for adaptation per dimension
+***************************************************************/
+void 
+ft_cross_args_set_maxrank_ind(struct FtCrossArgs * fca, size_t maxrank, size_t ind)
+{
+//    fca->maxiteradapt = maxiteradapt;
+    assert (ind < (fca->dim-1));
+    fca->maxranks[ind] = maxrank;
 }
 
 /***********************************************************//**
@@ -4194,9 +4230,11 @@ struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs * fca)
         memmove(f2->ranks,fca->ranks,(fca->dim+1) * sizeof(size_t));
         f2->epsilon = fca->epsilon;
         f2->maxiter = fca->maxiter;
+        f2->adapt = fca->adapt;
         f2->epsround = fca->epsround;
         f2->kickrank = fca->kickrank;
-        f2->maxiteradapt=fca->maxiteradapt;
+        f2->maxranks = calloc_size_t(fca->dim-1);
+        memmove(f2->maxranks,fca->maxranks, (fca->dim-1)*sizeof(size_t));
         f2->verbose = fca->verbose;
 
         f2->optargs = fca->optargs;
@@ -4211,6 +4249,7 @@ void ft_cross_args_free(struct FtCrossArgs * fca)
 {
     if (fca != NULL){
         free(fca->ranks); fca->ranks = NULL;
+        free(fca->maxranks); fca->maxranks = NULL;
         free(fca); fca = NULL;
     }
 }
@@ -4301,14 +4340,16 @@ function_train_cross(double (*f)(double *, void *), void * args,
     
 //    cross_index_array_initialize(dim,isl,0,0,fcause->ranks,init_x);    
     /* struct FunctionTrain * ftref = function_train_alloc(dim); */
-/*     for (ii = 0; ii < dim; ii++){ */
-/*         size_t nrows = fcause->ranks[ii]; */
-/*         size_t ncols = fcause->ranks[ii+1]; */
-/*         /\* printf("ii = %zu\n",ii); *\/ */
-/*         /\* printf( "left index set = \n"); *\/ */
-/*         /\* print_cross_index(isl[ii]); *\/ */
-/*         /\* printf( "right index set = \n"); *\/ */
-/*         /\* print_cross_index(isr[ii]); *\/ */
+//    printf("here!!!\n");
+    /* for (ii = 0; ii < dim; ii++){ */
+    /*     size_t nrows = fcause->ranks[ii]; */
+    /*     size_t ncols = fcause->ranks[ii+1]; */
+    /*     printf("ii = %zu\n",ii); */
+    /*     printf( "left index set = \n"); */
+    /*     print_cross_index(isl[ii]); */
+    /*     printf( "right index set = \n"); */
+    /*     print_cross_index(isr[ii]); */
+    /* } */
 /*         ftref->cores[ii] = prepCore(ii,nrows,f,args,bds,isl,isr,fcause,fapp,0); */
 /*         ftref->ranks[ii] = nrows; */
 /*         ftref->ranks[ii+1] = ncols; */
@@ -4375,6 +4416,15 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
     struct OpeAdaptOpts * aopts = NULL;
     double ** startnodes = NULL;;
     struct c3Vector * optnodes = NULL;
+
+    if (fcain != NULL){
+        fca = ft_cross_args_copy(fcain);
+    }
+    else{
+        size_t init_rank = 5;
+        fca = ft_cross_args_alloc(dim,init_rank);
+    }
+
     if (foptin != NULL){
         fopt = foptin;
     }
@@ -4385,7 +4435,9 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         optnodes = c3vector_alloc(N,x);
         fopt = fiber_opt_args_bf_same(dim,optnodes);
         free(x); x = NULL;
+        ft_cross_args_set_maxrank_all(fca,N);
     }
+    ft_cross_args_set_optargs(fca,fopt);
 
     if (apargsin != NULL){
         aparg =apargsin;
@@ -4399,16 +4451,6 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
         aparg = ft_approx_args_createpoly(dim,&ptype,aopts);
         
     }
-
-    if (fcain != NULL){
-        fca = ft_cross_args_copy(fcain);
-    }
-    else{
-        size_t init_rank = 5;
-        fca = ft_cross_args_alloc(dim,init_rank);
-    }
-    ft_cross_args_set_optargs(fca,fopt);
-
 
     if (xstart != NULL){
         startnodes = xstart;
@@ -4482,14 +4524,13 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     struct FunctionTrain * ft = NULL;
 
     ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
-    if (fca->maxiteradapt == 0){
+    if (fca->adapt == 0){
         return ft;
     }
     // printf("found left index\n");
     // print_cross_index(isl[1]);
     // printf("found right index\n");
     //print_cross_index(isr[0]);
-    
     
     //return ft;
     if (fca->verbose > 0){
@@ -4509,16 +4550,25 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
     for (ii = 1; ii < dim; ii++){
         /* printf("%zu == %zu\n",ranks_found[ii],ftr->ranks[ii]); */
         if (ranks_found[ii] == ftr->ranks[ii]){
-            adapt = 1;
-            fca->ranks[ii] = ranks_found[ii] + kickrank;
+            if (fca->ranks[ii] < fca->maxranks[ii-1]){
+                adapt = 1;
+                size_t kicksize; 
+                if ( (ranks_found[ii]+kickrank) <= fca->maxranks[ii-1]){
+                    kicksize = kickrank;
+                }
+                else{
+                    kicksize = fca->maxranks[ii-1] -ranks_found[ii];
+                }
+                fca->ranks[ii] = ranks_found[ii] + kicksize;
+                
+                // simply repeat the last nodes
+                // this is not efficient but I don't have a better
+                // idea. Could do it using random locations but
+                // I don't want to.
+                cross_index_copylast(isr[ii-1],kicksize);
             
-            // simply repeat the last nodes
-            // this is not efficient but I don't have a better
-            // idea. Could do it using random locations but
-            // I don't want to.
-            cross_index_copylast(isr[ii-1],kickrank);
-            
-            ranks_found[ii] = fca->ranks[ii];
+                ranks_found[ii] = fca->ranks[ii];
+            }
         }
     }
 
@@ -4526,7 +4576,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 
     size_t iter = 0;
 //    double * xhelp = NULL;
-    while ( (adapt == 1) && (fca->maxiteradapt>0))
+    while ( (adapt == 1) )
     {
         adapt = 0;
         if (fca->verbose > 0){
@@ -4551,19 +4601,33 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
         //printf("done rounding\n");
         for (ii = 1; ii < dim; ii++){
             if (ranks_found[ii] == ftr->ranks[ii]){
-                adapt = 1;
-                fca->ranks[ii] = ranks_found[ii] + kickrank;
-
-                // add indices again
-                cross_index_copylast(isr[ii-1],kickrank);
-                ranks_found[ii] = fca->ranks[ii];
+                if (fca->ranks[ii] < fca->maxranks[ii-1]){
+                    adapt = 1;
+                    size_t kicksize; 
+                    if ( (ranks_found[ii]+kickrank) <= fca->maxranks[ii-1]){
+                        kicksize = kickrank;
+                    }
+                    else{
+                        kicksize = fca->maxranks[ii-1] -ranks_found[ii];
+                    }
+                    fca->ranks[ii] = ranks_found[ii] + kicksize;
+                
+            
+                    // simply repeat the last nodes
+                    // this is not efficient but I don't have a better
+                    // idea. Could do it using random locations but
+                    // I don't want to.
+                    cross_index_copylast(isr[ii-1],kicksize);
+            
+                    ranks_found[ii] = fca->ranks[ii];
+                }
             }
         }
 
         iter++;
-        if (iter == fca->maxiteradapt) {
-            adapt = 0;
-        }
+        /* if (iter == fca->maxiteradapt) { */
+        /*     adapt = 0; */
+        /* } */
         //adapt = 0;
 
     }

@@ -82,8 +82,8 @@ struct Cross2dargs
  *  rounding tolerance for adaptive rank cross approximation
  *  \var FtCrossArgs::kickrank
  *  size of rank increase for adaptation
- *  \var FtCrossArgs::maxiteradapt
- *  maximum number of rank adaptation iterations
+ *  \var FtCrossArgs::maxranks
+ *  maximum rank to go to during adaptation (dim-1,1)
  *  \var FtCrossArgs::verbose
  *  verbosity level (0,1,2)
  *  \var FtCrossArgs::optargs
@@ -96,9 +96,10 @@ struct FtCrossArgs
     double epsilon;
     size_t maxiter;
     
+    int adapt;
     double epsround;
     size_t kickrank;
-    size_t maxiteradapt;
+    size_t * maxranks; //maxiteradapt;
 
     int verbose;
 
@@ -108,7 +109,10 @@ struct FtCrossArgs * ft_cross_args_alloc(size_t, size_t);
 void ft_cross_args_set_round_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_kickrank(struct FtCrossArgs *, size_t);
 void ft_cross_args_set_maxiter(struct FtCrossArgs *, size_t);
-void ft_cross_args_set_maxiteradapt(struct FtCrossArgs *, size_t);
+void ft_cross_args_set_no_adaptation(struct FtCrossArgs *);
+void ft_cross_args_set_adaptation(struct FtCrossArgs *);
+void ft_cross_args_set_maxrank_all(struct FtCrossArgs *, size_t);
+void ft_cross_args_set_maxrank_ind(struct FtCrossArgs *, size_t, size_t);
 void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
 void ft_cross_args_set_optargs(struct FtCrossArgs *, void*);

@@ -76,6 +76,19 @@ struct c3LS * c3ls_alloc()
 }
 
 /***********************************************************//**
+    Copy ls
+***************************************************************/
+struct c3LS * c3ls_copy(struct c3LS * old)
+{
+    struct c3LS * new = c3ls_alloc();
+    new->alpha   = old->alpha;
+    new->beta    = old->beta;
+    new->maxiter = old->maxiter;
+
+    return new;
+}
+
+/***********************************************************//**
     Free line search parameters
 ***************************************************************/
 void c3ls_free(struct c3LS * ls)
@@ -191,6 +204,36 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
         opt->grad = 0;
         opt->ls = NULL;
         opt->workspace = NULL;        
+    }
+    
+    return opt;
+}
+
+/***********************************************************//**
+    Copy optimization struct
+***************************************************************/
+struct c3Opt * c3opt_copy(struct c3Opt * old)
+{
+    if (old == NULL){
+        return NULL;
+    }
+    struct c3Opt * opt = c3opt_alloc(old->alg,old->d);
+    opt->f = old->f;
+    opt->farg = old->farg;
+    memmove(opt->lb,old->lb,opt->d*sizeof(double));
+    memmove(opt->ub,old->ub,opt->d*sizeof(double));
+    opt->verbose = old->verbose;
+    opt->maxiter = old->maxiter;
+    opt->relxtol = old->relxtol;
+    opt->absxtol = old->absxtol;
+    opt->relftol = old->relftol;
+    opt->gtol    = old->gtol;
+
+    if (opt->alg == BFGS){
+        opt->grad = 1;
+        memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
+        c3ls_free(opt->ls); opt->ls = NULL;
+        opt->ls = c3ls_copy(old->ls);
     }
     
     return opt;
@@ -674,8 +717,6 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
 
     return ret;
 }
-
-
 
 int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
 {

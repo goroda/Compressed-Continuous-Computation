@@ -64,7 +64,8 @@ void c3approx_set_round_tol(struct C3Approx *, double);
 void c3approx_set_cross_tol(struct C3Approx *, double);
 void c3approx_set_verbose(struct C3Approx *, int);
 void c3approx_set_adapt_kickrank(struct C3Approx *, size_t);
-void c3approx_set_adapt_maxiter(struct C3Approx *, size_t);
+void c3approx_set_adapt_maxrank_all(struct C3Approx *, size_t);
+//void c3approx_set_adapt_maxiter(struct C3Approx *, size_t);
 void c3approx_set_cross_maxiter(struct C3Approx *, size_t);
 void c3approx_set_fiber_opt_brute_force(struct C3Approx *,size_t *,double **);
 

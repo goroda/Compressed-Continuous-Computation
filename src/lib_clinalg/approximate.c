@@ -394,16 +394,16 @@ void c3approx_set_cross_maxiter(struct C3Approx * c3a, size_t maxiter)
 }
 
 /***********************************************************//**
-    Set maximum number of adaptation steps
+    Set maximum rank
 ***************************************************************/
-void c3approx_set_adapt_maxiter(struct C3Approx * c3a, size_t maxiteradapt)
+void c3approx_set_adapt_maxrank_all(struct C3Approx * c3a, size_t maxrank)
 {
     assert (c3a != NULL);
     if (c3a->fca == NULL){
         fprintf(stderr,"Must call c3approx_init_cross before setting adapt_maxiter");
         exit(1);
     }
-    ft_cross_args_set_maxiteradapt(c3a->fca,maxiteradapt);
+    ft_cross_args_set_maxrank_all(c3a->fca,maxrank);
 }
 
 /***********************************************************//**

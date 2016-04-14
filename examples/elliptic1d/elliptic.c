@@ -394,24 +394,16 @@ int main(int argc, char *argv[])
             struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,ope);
 
             size_t init_ranks = 5;
-            struct FtCrossArgs fca;
-            ft_cross_args_init(&fca);
-            fca.dim = dim;
-            fca.ranks = calloc_size_t(dim+1);
-            size_t ii;
-            fca.ranks[0] = 1;
-            for (ii=1;ii<dim;ii++){ fca.ranks[ii] = init_ranks; }
-            fca.ranks[dim] = 1;
-            fca.epsilon = roundtol[iii];
-            fca.maxiter = 3;
-            fca.epsround = roundtol[iii];
-            fca.kickrank = 5;
-            fca.maxiteradapt = 3;
-            fca.verbose = 2;
+            struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
+            ft_cross_args_set_verbose(fca,2);
+            ft_cross_args_set_kickrank(fca,5);
+            ft_cross_args_set_maxiter(fca,3);
+            ft_cross_args_set_cross_tol(fca,roundtol[iii]);
+            ft_cross_args_set_round_tol(fca,roundtol[iii]);
+            ft_cross_args_set_maxrank_all(fca,init_ranks+3*5); // three times
 
             struct BoundingBox * bds = bounding_box_init(rargs.dim,0.05,0.95);
             
-
             struct FunctionMonitor * fm = NULL;
             fm = function_monitor_initnd(solveBlackBoxUni,&rargs,dim,1000*dim);
 
@@ -419,7 +411,7 @@ int main(int argc, char *argv[])
             struct FunctionTrain * ft = NULL;
 
             //ft = function_train_cross(solveBlackBoxUni, &rargs,bds,NULL,&fca,app);
-            ft = function_train_cross(function_monitor_eval, fm,bds,NULL,&fca,app);
+            ft = function_train_cross(function_monitor_eval, fm,bds,NULL,fca,app);
             int success = function_train_save(ft,ftsave);
             assert (success == 1);
 
@@ -489,6 +481,7 @@ int main(int argc, char *argv[])
             function_monitor_free(fm); fm = NULL;
             ft_approx_args_free(app); app = NULL;
             function_train_free(ft); ft = NULL;
+            ft_cross_args_free(fca); fca = NULL;
             bounding_box_free(bds); bds = NULL;
         }
     }
