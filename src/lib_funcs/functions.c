@@ -535,8 +535,6 @@ generic_function_1darray_eval2(size_t n,
             out[ii] = generic_function_1d_eval(f[ii],x);
         }
     }
-  
-
 }
 
 /********************************************************//**
@@ -842,6 +840,33 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      }
      return out;
  }
+
+ /********************************************************//**
+ *   Create a nodal basis at particular points
+ *
+ *   \param[in] f   - function to interpolate
+ *   \param[in] N   - number of nodes
+ *   \param[in] x   - locations of nodes
+ *
+ *   \return nodal basis (LINELM) function
+ ************************************************************/
+struct GenericFunction *
+generic_function_create_nodal(struct GenericFunction * f,size_t N, double * x)
+{
+    struct GenericFunction * out = NULL;
+    out = generic_function_alloc(f->dim,LINELM,0);
+    out->fargs = NULL;
+    double * fvals = calloc_double(N);
+    for (size_t ii = 0; ii < N; ii++){
+        fvals[ii] = generic_function_1d_eval(f,x[ii]);
+    }
+    out->f = lin_elem_exp_init(N,x,fvals);
+    free(fvals); fvals = NULL;
+
+    return out;
+}
+
+
 
  /********************************************************//**
  *   Compute the sum of the product between the functions of two function arrays

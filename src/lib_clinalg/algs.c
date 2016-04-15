@@ -3016,6 +3016,24 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
     }
 }
 
+/***********************************************************//**
+    Interpolate a qmarray using a nodal basis at particular values
+
+    \param[in] qma - quasimatrix array
+    \param[in] N   - number of nodes to form nodal basis
+    \param[in] x   - locations of nodal basis
+
+    \return Qmarray with interpolated functions at a nodal basis
+***************************************************************/
+struct Qmarray * qmarray_create_nodal(struct Qmarray * qma, size_t N, double * x)
+{
+    struct Qmarray * qmaout = qmarray_alloc(qma->nrows,qma->ncols);
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        qmaout->funcs[ii] = generic_function_create_nodal(qma->funcs[ii],N,x);
+    }
+    return qmaout;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // function_train
 
@@ -3621,6 +3639,27 @@ void ft1d_array_eval2(struct FT1DArray * fta, double * x, double * out)
     for (ii = 0; ii < fta->size; ii++){
         out[ii] = function_train_eval(fta->ft[ii], x);
     }
+}
+
+/********************************************************//**
+    Interpolate a function-train onto a particular grid forming 
+    another function_train with a nodela basis
+
+    \param[in] fta - Function train array to evaluate
+    \param[in] N   - number of nodes in each dimension
+    \param[in] x   - nodes in each dimension
+
+    \return new function train
+***********************************************************/
+struct FunctionTrain *
+function_train_create_nodal(struct FunctionTrain * fta, size_t * N, double ** x)
+{
+    struct FunctionTrain * newft = function_train_alloc(fta->dim);
+    memmove(newft->ranks,fta->ranks, (fta->dim+1)*sizeof(size_t));
+    for (size_t ii = 0; ii < newft->dim; ii ++){
+        newft->cores[ii] = qmarray_create_nodal(fta->cores[ii],N[ii],x[ii]);
+    }
+    return newft;
 }
 
 /********************************************************//**
@@ -4576,7 +4615,7 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 
     size_t iter = 0;
 //    double * xhelp = NULL;
-    while ( (adapt == 1) )
+    while ( adapt == 1 )
     {
         adapt = 0;
         if (fca->verbose > 0){

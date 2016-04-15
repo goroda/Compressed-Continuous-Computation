@@ -158,7 +158,8 @@ generic_function_onezero(enum function_class, double, size_t,
 double generic_function_integral(struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
-
+struct GenericFunction *
+generic_function_create_nodal(struct GenericFunction *,size_t, double *);
 struct GenericFunction *
 generic_function_sum_prod(size_t, size_t,  struct GenericFunction **, 
                 size_t, struct GenericFunction **);
