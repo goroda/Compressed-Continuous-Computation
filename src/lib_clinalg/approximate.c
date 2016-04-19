@@ -320,7 +320,8 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose)
             c3a->start = malloc_dd(c3a->dim);
             double lbs = -2.0;
             double ubs = 2.0;
-            c3a->start[0] = calloc_double(init_rank); 
+//            c3a->start[0] = calloc_double(init_rank); 
+            c3a->start[0] = linspace(lbs,ubs,init_rank);
             for (size_t ii = 0; ii < c3a->dim-1; ii++){
                 c3a->start[ii+1] = linspace(lbs,ubs,init_rank);
             }

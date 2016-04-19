@@ -323,6 +323,19 @@ double **
 cross_index_merge(struct CrossIndex * left, struct CrossIndex * right)
 {
     double ** vals = NULL;
+    /* if (right == NULL){ */
+    /*     vals = malloc(left->n * sizeof(double *)); */
+    /*     if (vals == NULL){ */
+    /*         fprintf(stderr, "Cannot allocate values for merging CrossIndex\n"); */
+    /*         exit(1); */
+    /*     }    */
+    /*     size_t dl = left->d; */
+    /*     size_t d = dl + 1;  */
+    /*     for (size_t ii = 0; ii < left->n; ii++){ */
+    /*         vals[ii] */
+    /*     } */
+    /* } */
+
     assert (left != NULL);
     assert (right != NULL);
     assert (left->n == right->n);
@@ -387,7 +400,7 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
         }
 //        printf("hello\n");
         for (size_t ii = 2; ii < dim; ii++){
-            ci[ii] = cross_index_create_nested(newfirst,0,sizes[ii],sizes[ii],vals[ii],ci[ii-1]);
+            ci[ii] = cross_index_create_nested(newfirst,0,sizes[ii-1],sizes[ii-1],vals[ii],ci[ii-1]);
         }
     }
     

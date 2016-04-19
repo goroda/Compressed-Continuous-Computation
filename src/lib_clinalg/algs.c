@@ -3740,13 +3740,19 @@ prepCore(size_t ii, size_t nrows,
     if (t == 1){
         ncuts = nrows;
         ncols = 1;
-        vals = cross_index_merge(left_ind[ii],right_ind[ii-1]);
+        /* printf("left index of merge = \n"); */
+        /* print_cross_index(left_ind[ii]); */
+        /* printf("right index of merge = \n"); */
+        /* print_cross_index(right_ind[ii]); */
+//        vals = cross_index_merge(left_ind[ii],right_ind[ii-1]);
+        vals = cross_index_merge_wspace(left_ind[ii],NULL);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else if (t == -1){
         ncuts = cargs->ranks[ii+1];
         ncols = ncuts;
-        vals = cross_index_merge(left_ind[ii+1],right_ind[ii]);
+//        vals = cross_index_merge(left_ind[ii+1],right_ind[ii]);
+        vals = cross_index_merge_wspace(NULL,right_ind[ii]);
         fcut = fiber_cut_ndarray(f,args, dim, ii, ncuts, vals);
     }
     else{
@@ -3764,7 +3770,10 @@ prepCore(size_t ii, size_t nrows,
         ncols = ncuts / nrows;
     }
     if (VPREPCORE){
-        printf("compute from fibercuts\n");
+        printf("compute from fibercuts t = %d\n",t);
+        for (size_t ii = 0; ii < nrows*ncols; ii++){
+            dprint(dim,vals[ii]);
+        }
     }
     temp = qmarray_from_fiber_cuts(nrows, ncols,
                     fiber_cut_eval, fcut, fc, sub_type,
@@ -3934,6 +3943,7 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
         ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd,
                                  left_ind,right_ind,cargs,apargs,1);
+
         if (VFTCROSS == 2){
             printf ("got it \n");
             //print_qmarray(ft->cores[ii],0,NULL);
@@ -3944,7 +3954,18 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             print_qmarray(tprod->cores[0],0,NULL);
             //print_qmarray(tprod->cores[1],0,NULL);
             function_train_free(tprod);
+        }
 
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Left-Right cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
         }
         
         //printf("compute difference \n");
@@ -3969,8 +3990,8 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             break;
         }
         
-        //function_train_free(fti); fti=NULL;
-        //fti = function_train_copy(ft);
+        /* function_train_free(fti); fti=NULL; */
+        /* fti = function_train_copy(ft); */
         
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
@@ -4072,7 +4093,21 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
         ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,cargs,apargs,-1);
         if (cargs->verbose > 1)
             printf(" ............. done with right left sweep\n");
-    
+ 
+
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Right-left cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
+        }
+
+   
 
         diff = function_train_relnorm2diff(ft,fti);
         if (fti2 != NULL){
@@ -4339,13 +4374,11 @@ function_train_cross(double (*f)(double *, void *), void * args,
     if ( xstart == NULL) {
         init_x = malloc_dd(dim);
         // not used in cross because left->right first
-        init_x[0] = calloc_double(fcause->ranks[1]); 
+        //init_x[0] = calloc_double(fcause->ranks[1]); 
         
+        init_x[0] = linspace(bds->lb[0],bds->ub[0],
+                                fcause->ranks[1]);
         for (ii = 0; ii < dim-1; ii++){
-            /* assert(isnan(bds->lb[ii+1]) == 0); */
-            /* assert(isinf(bds->lb[ii+1]) == 0); */
-            /* assert(isnan(bds->ub[ii+1]) == 0); */
-            /* assert(isinf(bds->ub[ii+1]) == 0); */
             init_x[ii+1] = linspace(bds->lb[ii+1],bds->ub[ii+1],
                                     fcause->ranks[ii+1]);
 //            dprint(fcause->ranks[ii+1],init_x[ii+1]);
@@ -4373,31 +4406,32 @@ function_train_cross(double (*f)(double *, void *), void * args,
     assert (dim <= 1000);
     struct CrossIndex * isl[1000];
     struct CrossIndex * isr[1000];
-    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    /* cross_index_array_initialize(dim,isl,1,0,NULL,NULL); */
+    /* cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x); */
+    /* struct FunctionTrain * ftref = function_train_constant_d(fapp,1.0,bds); */
+
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
-    struct FunctionTrain * ftref = function_train_constant_d(fapp,1.0,bds);
-    
-//    cross_index_array_initialize(dim,isl,0,0,fcause->ranks,init_x);    
-    /* struct FunctionTrain * ftref = function_train_alloc(dim); */
-//    printf("here!!!\n");
-    /* for (ii = 0; ii < dim; ii++){ */
-    /*     size_t nrows = fcause->ranks[ii]; */
-    /*     size_t ncols = fcause->ranks[ii+1]; */
-    /*     printf("ii = %zu\n",ii); */
-    /*     printf( "left index set = \n"); */
-    /*     print_cross_index(isl[ii]); */
-    /*     printf( "right index set = \n"); */
-    /*     print_cross_index(isr[ii]); */
-    /* } */
-/*         ftref->cores[ii] = prepCore(ii,nrows,f,args,bds,isl,isr,fcause,fapp,0); */
-/*         ftref->ranks[ii] = nrows; */
-/*         ftref->ranks[ii+1] = ncols; */
-/* //        printf("ok ok\n"); */
-/*         nrows = fcause->ranks[ii+1]; */
-/* //        printf("here!\n"); */
-/*     } */
-/*     /\* iprint_sz(dim+1,ftref->ranks); *\/ */
-    /* exit(1); */
+    cross_index_array_initialize(dim,isl,0,0,fcause->ranks+1,init_x);    
+    struct FunctionTrain * ftref = function_train_alloc(dim);
+/*     printf("ranks are !!!\n"); */
+/*     iprint_sz(dim+1,fcause->ranks); */
+    for (ii = 0; ii < dim; ii++){
+        size_t nrows = fcause->ranks[ii];
+        size_t ncols = fcause->ranks[ii+1];
+        ftref->cores[ii] = prepCore(ii,nrows,f,args,bds,isl,isr,fcause,fapp,0);
+        ftref->ranks[ii] = nrows;
+        ftref->ranks[ii+1] = ncols;
+/*         printf("-------------------------\n"); */
+/*         printf("ii = %zu\n",ii); */
+/*         printf( "left index set = \n"); */
+/*         print_cross_index(isl[ii]); */
+/*         printf( "right index set = \n"); */
+/*         print_cross_index(isr[ii]); */
+/*         printf("-------------------------------\n"); */
+     
+    }
+
+//    exit(1);
     struct FunctionTrain * ft  = NULL;
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
                                   isr,fcause,fapp);

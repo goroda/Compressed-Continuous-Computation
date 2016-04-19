@@ -2783,7 +2783,7 @@ void Test_ftapprox_cross3(CuTest * tc)
 //    struct IndexSet ** isl = index_set_array_lnested(dim, ranks, yr);
 
     struct FtCrossArgs fca;
-    fca.epsilon = 1e-4;
+    fca.epsilon = 1e-6;
     fca.maxiter = 5;
     fca.verbose = 0;
     fca.dim = dim;
@@ -2794,7 +2794,7 @@ void Test_ftapprox_cross3(CuTest * tc)
     aopts.ptype = LEGENDRE;
     aopts.maxorder = 7;
     aopts.coeff_check = 2;
-    aopts.epsilon = 1e-5;
+    aopts.epsilon = 1e-6;
     aopts.minsize = 1e-8;
     aopts.nregions = 5;
     aopts.pts = NULL;

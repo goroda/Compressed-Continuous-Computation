@@ -14,7 +14,7 @@ if (APPLE)
     set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn")
     set(CMAKE_C_COMPILER "clang")
 else ()
-    set(compiler_flags "-g -Wall -Wextra -O3 -std=c99")
+    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99")
     set(CMAKE_C_COMPILER "gcc")
 
     find_package(BLAS REQUIRED)
