@@ -201,6 +201,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
         opt->ls = c3ls_alloc();
     }
     else{
+        opt->nlocs = 0;
         opt->grad = 0;
         opt->ls = NULL;
         opt->workspace = NULL;        
@@ -228,12 +229,17 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->absxtol = old->absxtol;
     opt->relftol = old->relftol;
     opt->gtol    = old->gtol;
-
+    opt->nlocs = old->nlocs;
     if (opt->alg == BFGS){
         opt->grad = 1;
         memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
         c3ls_free(opt->ls); opt->ls = NULL;
         opt->ls = c3ls_copy(old->ls);
+    }
+    else if (opt->alg == BRUTEFORCE)
+    {
+        opt->workspace = calloc_double(opt->nlocs * opt->d);
+        memmove(opt->workspace,old->workspace,opt->nlocs*opt->d*sizeof(double));
     }
     
     return opt;

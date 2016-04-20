@@ -74,7 +74,7 @@ function_monitor_initnd( double (*f)(double *, void *), void * args, size_t dim,
 /***********************************************************//**
     Free memory allocated to function monitor
 
-    \param fm [inout] - function monitor
+    \param[in,out] fm - function monitor
 ***************************************************************/
 void function_monitor_free( struct FunctionMonitor * fm){
     
@@ -86,10 +86,10 @@ void function_monitor_free( struct FunctionMonitor * fm){
 /***********************************************************//**
     Evaluate a function using the function monitor to recall/store evaluations
 
-    \param x [in] - location at which to evaluate
-    \param args [in] - void pointer to function monitor
+    \param[in] x    - location at which to evaluate
+    \param[in] args - void pointer to function monitor
 
-    \return val - evaluation of a function
+    \return evaluation of a function
 ***************************************************************/
 double function_monitor_eval(double * x, void * args)
 {
@@ -375,7 +375,7 @@ size_t pair_list_index(struct PairList * head, struct Cpair * pair)
 /***********************************************************//**
     Allocate memory for a new hashtable of cpairs
 
-    \param size [in] - size table
+    \param[in] size - size table
     
     \return new_table 
 ***************************************************************/
@@ -407,8 +407,8 @@ create_hashtable_cp(size_t size)
 /***********************************************************//**
     Lookup a key in the hashtable
 
-    \param ht [in] - hashtable
-    \param key [in] - key to lookup
+    \param[in] ht  - hashtable
+    \param[in] key - key to lookup
     
     \return out - either NULL or the second element in the pair stored under the key 
 ***************************************************************/
