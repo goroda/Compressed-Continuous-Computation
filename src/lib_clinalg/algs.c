@@ -3771,8 +3771,8 @@ prepCore(size_t ii, size_t nrows,
     }
     if (VPREPCORE){
         printf("compute from fibercuts t = %d\n",t);
-        for (size_t ii = 0; ii < nrows*ncols; ii++){
-            dprint(dim,vals[ii]);
+        for (size_t kk = 0; kk < nrows*ncols; kk++){
+            dprint(dim,vals[kk]);
         }
     }
     temp = qmarray_from_fiber_cuts(nrows, ncols,
