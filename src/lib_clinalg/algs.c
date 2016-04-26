@@ -4411,28 +4411,32 @@ function_train_cross(double (*f)(double *, void *), void * args,
     /* struct FunctionTrain * ftref = function_train_constant_d(fapp,1.0,bds); */
 
     cross_index_array_initialize(dim,isr,0,1,fcause->ranks,init_x);
-    cross_index_array_initialize(dim,isl,0,0,fcause->ranks+1,init_x);    
+    cross_index_array_initialize(dim,isl,0,0,fcause->ranks+1,init_x);
+    /* exit(1); */
     struct FunctionTrain * ftref = function_train_alloc(dim);
 /*     printf("ranks are !!!\n"); */
 /*     iprint_sz(dim+1,fcause->ranks); */
+    /* printf("create ftref!\n"); */
     for (ii = 0; ii < dim; ii++){
+
+        /* printf("-------------------------\n"); */
+        /* printf("ii = %zu\n",ii); */
+        /* printf( "left index set = \n"); */
+        /* print_cross_index(isl[ii]); */
+        /* printf( "right index set = \n"); */
+        /* print_cross_index(isr[ii]); */
+        /* printf("-------------------------------\n"); */
         size_t nrows = fcause->ranks[ii];
         size_t ncols = fcause->ranks[ii+1];
         ftref->cores[ii] = prepCore(ii,nrows,f,args,bds,isl,isr,fcause,fapp,0);
         ftref->ranks[ii] = nrows;
         ftref->ranks[ii+1] = ncols;
-/*         printf("-------------------------\n"); */
-/*         printf("ii = %zu\n",ii); */
-/*         printf( "left index set = \n"); */
-/*         print_cross_index(isl[ii]); */
-/*         printf( "right index set = \n"); */
-/*         print_cross_index(isr[ii]); */
-/*         printf("-------------------------------\n"); */
      
     }
 
-//    exit(1);
+    /* exit(1); */
     struct FunctionTrain * ft  = NULL;
+    /* printf("start cross!\n"); */
     ft = ftapprox_cross_rankadapt(f,args,bds,ftref,isl,
                                   isr,fcause,fapp);
     

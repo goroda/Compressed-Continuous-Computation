@@ -66,6 +66,7 @@ void c3opt_ls_set_alpha(struct c3Opt *,double);
 double c3opt_ls_get_alpha(struct c3Opt *);
 void c3opt_ls_set_beta(struct c3Opt *,double);
 double c3opt_ls_get_beta(struct c3Opt *);
+void c3opt_ls_set_maxiter(struct c3Opt *,size_t);
 size_t c3opt_ls_get_maxiter(struct c3Opt *);
 
 void c3opt_set_brute_force_vals(struct c3Opt *, size_t, double *);

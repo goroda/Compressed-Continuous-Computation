@@ -392,6 +392,7 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
         }
     }
     else{
+//        newfirst = 1;
         ci[0] = NULL;
         ci[1] = cross_index_alloc(1);
 //        printf("on first one\n");
@@ -399,8 +400,14 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
             cross_index_add_index(ci[1],1,&(vals[0][jj]));
         }
 //        printf("hello\n");
+        /* printf("index set[1] = \n"); */
+        /* print_cross_index(ci[1]); */
         for (size_t ii = 2; ii < dim; ii++){
-            ci[ii] = cross_index_create_nested(newfirst,0,sizes[ii-1],sizes[ii-1],vals[ii],ci[ii-1]);
+            /* printf("ii=%zu x options are\n",ii); */
+            /* dprint(sizes[ii-1],vals[ii]); */
+            ci[ii] = cross_index_create_nested(newfirst,0,sizes[ii-1],sizes[ii-1],vals[ii-1],ci[ii-1]);
+            /* printf("resulting cross index is\n"); */
+            /* print_cross_index(ci[ii]); */
         }
     }
     

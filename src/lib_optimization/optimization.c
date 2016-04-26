@@ -229,7 +229,7 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->absxtol = old->absxtol;
     opt->relftol = old->relftol;
     opt->gtol    = old->gtol;
-    opt->nlocs = old->nlocs;
+    opt->nlocs   = old->nlocs;
     if (opt->alg == BFGS){
         opt->grad = 1;
         memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
@@ -386,6 +386,12 @@ double c3opt_ls_get_beta(struct c3Opt * opt)
 {
     assert (opt != NULL);
     return c3ls_get_beta(opt->ls);
+}
+
+void c3opt_ls_set_maxiter(struct c3Opt * opt,size_t maxiter)
+{
+    assert (opt != NULL);
+    c3ls_set_maxiter(opt->ls,maxiter);
 }
 
 size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
