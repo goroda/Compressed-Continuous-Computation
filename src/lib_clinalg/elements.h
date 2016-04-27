@@ -238,6 +238,11 @@ struct FunctionTrain {
     double * evalspace1;
     double * evalspace2;
     double * evalspace3;
+
+    double ** evaldd1;
+    double ** evaldd2;
+    double ** evaldd3;
+    double ** evaldd4;
    
 };
 

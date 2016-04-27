@@ -1205,7 +1205,7 @@ void Test_lin_elem_exp_approx(CuTest * tc){
     }
     err = sqrt(err) / errNorm;
 //    printf("err = %G\n",err);
-    CuAssertDblEquals(tc, 0.0, err, 1e-2);
+    CuAssertDblEquals(tc, 0.0, err, 1e-3);
 
     free(x);
     lin_elem_exp_free(fa);

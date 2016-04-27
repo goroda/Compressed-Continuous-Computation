@@ -203,9 +203,10 @@ double lin_elem_exp_eval(struct LinElemExp * f, double x)
     size_t indmin = 0;
     size_t indmax = f->num_nodes-1;
     size_t indmid = indmin + (indmax - indmin)/2;
-    // printf("x=%G\n",x);
+    
     while (indmid != indmin){
         if (fabs(x - f->nodes[indmid]) <= 1e-15){
+            /* printf("eventually here!\n"); */
             return f->coeff[indmid];
         }
         else if (x < f->nodes[indmid]){
@@ -217,7 +218,20 @@ double lin_elem_exp_eval(struct LinElemExp * f, double x)
         indmid = indmin + (indmax-indmin)/2;
         //  printf("indmid = %zu, indmin=%zu,indmax=%zu\n",indmid,indmin,indmax);
     }
-
+    if (fabs(x - f->nodes[indmid]) <= 1e-15){
+        /* printf("eventually here!\n"); */
+        return f->coeff[indmid];
+    }
+    
+    /* printf("\n\n\nx=%3.15G\n",x); */
+    /* dprint(f->num_nodes,f->nodes); */
+    /* for (size_t ii = 0; ii < f->num_nodes; ii++){ */
+    /*     double diff = fabs(x-f->nodes[ii]); */
+    /*     fprintf(stdout,"diff[%zu] = %3.15G, diff<=1e-15=%d\n",ii,diff,diff<1e-15); */
+    /* } */
+    /* printf("indmid = %zu\n",indmid); */
+    /* printf("should not be here!\n"); */
+    /* exit(1); */
 //    printf("indmin = %zu,x=%G\n",indmin,x);
    
     double den = f->nodes[indmin+1]-f->nodes[indmin];

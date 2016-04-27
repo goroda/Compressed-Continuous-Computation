@@ -65,7 +65,7 @@
 #endif
 
 #ifndef VQMAHOUSEHOLDER
-    #define VQMAHOUSEHOLDER 0
+    #define VQMAHOUSEHOLDER 1
 #endif
 
 #ifndef VPREPCORE
@@ -2660,7 +2660,6 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
    
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
-
         int out = 0;
         int fastqr = 1;
         int polyorth = 1;
@@ -2693,15 +2692,21 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
             }
         }
         else{
+            /* printf("should be in linelm!\n"); */
+            /* print_qmarray(A,0,NULL); */
             Q = qmarray_orth1d_columns(LINELM, 
                                        &ptype, A->nrows, ncols,
-                                       lb, ub); 
+                                       lb, ub);
+            /* printf("got orthonormal columns\n"); */
+            /* print_qmarray(Q,0,NULL); */
             out = qmarray_qr(A,&Q,&R);
+            /* printf("performed qmarray_qr\n"); */
             //printf("R = \n");
             //dprint2d_col(ncols,ncols,R);
 
             assert(out == 0);
         }
+        printf("done with QR\n");
     }
     else if (strcmp(dir, "LQ") == 0){
       
@@ -3149,17 +3154,40 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft, const double * 
     if (ft->evalspace3 == NULL){
         ft->evalspace3 = calloc_double(maxrank*maxrank);
     }
-
+    if (ft->evaldd1 == NULL){
+        ft->evaldd1 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd1[ii] = calloc_double(maxrank * maxrank);
+        }
+    }
+    if (ft->evaldd3 == NULL){
+        ft->evaldd3 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd3[ii] = calloc_double(maxrank);
+        }
+    }
+    if (ft->evaldd4 == NULL){
+        ft->evaldd4 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd4[ii] = calloc_double(maxrank);
+        }
+    }
+    
     // center cores
-    double ** cores_center = malloc_dd(dim);
-    double ** cores_neigh = malloc_dd(2*dim); // cores for neighbors
-    double ** bprod = malloc_dd(dim);
-    double ** fprod = malloc_dd(dim);
+//    double ** cores_center = malloc_dd(dim);
 
+    /* double ** cores_neigh = malloc_dd(2*dim); // cores for neighbors */
+    /* double ** bprod = malloc_dd(dim); */
+    /* double ** fprod = malloc_dd(dim); */
+
+    double ** cores_center = ft->evaldd1;
+    double ** bprod = ft->evaldd3;
+    double ** fprod = ft->evaldd4;
+    
     // evaluate the cores for the center
     for (size_t ii = 0; ii < dim; ii++){
-        fprod[ii] = calloc_double(ft->ranks[ii+1]);
-        cores_center[ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]);
+        /* fprod[ii] = calloc_double(ft->ranks[ii+1]); */
+        /* cores_center[ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
         if (ii == 0){
             generic_function_1darray_eval2(
                 ft->cores[ii]->nrows * ft->cores[ii]->ncols, 
@@ -3176,19 +3204,19 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft, const double * 
                         fprod[ii-1], 1, 0.0, fprod[ii], 1);
         }
 
-        cores_neigh[2*ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]);
-        cores_neigh[2*ii+1] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]);
+        /* cores_neigh[2*ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
+        /* cores_neigh[2*ii+1] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
 
-        generic_function_1darray_eval2(
-            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii], cores_neigh[2*ii]);
-        generic_function_1darray_eval2(
-            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii+1], cores_neigh[2*ii+1]);
+        /* generic_function_1darray_eval2( */
+        /*     ft->cores[ii]->nrows * ft->cores[ii]->ncols, */
+        /*     ft->cores[ii]->funcs, pert[2*ii], cores_neigh[2*ii]); */
+        /* generic_function_1darray_eval2( */
+        /*     ft->cores[ii]->nrows * ft->cores[ii]->ncols, */
+        /*     ft->cores[ii]->funcs, pert[2*ii+1], cores_neigh[2*ii+1]); */
     }
 
     for (int ii = dim-1; ii >= 0; ii--){
-        bprod[ii] = calloc_double(ft->ranks[ii]);
+        /* bprod[ii] = calloc_double(ft->ranks[ii]); */
         if (ii == (int)dim-1){
             generic_function_1darray_eval2(
                 ft->cores[ii]->nrows * ft->cores[ii]->ncols, 
@@ -3203,33 +3231,40 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft, const double * 
     }
 
     for (size_t ii = 0; ii < dim; ii++){
+
+        generic_function_1darray_eval2(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, pert[2*ii], ft->evalspace1);
+        generic_function_1darray_eval2(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, pert[2*ii+1], ft->evalspace2);
         if (ii == 0){
-            vals[ii] = cblas_ddot(ft->ranks[1],cores_neigh[ii],1,bprod[1],1);
-            vals[ii+1] = cblas_ddot(ft->ranks[1],cores_neigh[ii+1],1,bprod[1],1);
+            vals[ii] = cblas_ddot(ft->ranks[1],ft->evalspace1,1,bprod[1],1);
+            vals[ii+1] = cblas_ddot(ft->ranks[1],ft->evalspace2,1,bprod[1],1);
         }
         else if (ii == dim-1){
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],cores_neigh[2*ii],1,
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace1,1,
                                     fprod[dim-2],1);
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],cores_neigh[2*ii+1],
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace2,
                                       1,fprod[dim-2],1);
         }
         else{
-            double * temp = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]);
+            /* double * temp = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0, 
-                        cores_neigh[2*ii], ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, temp, 1);
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],temp,1,
+                        ft->evalspace1, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
                                     fprod[ii-1],1);
 
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0, 
-                        cores_neigh[2*ii+1], ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, temp, 1);
+                        ft->evalspace2, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
 
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],temp,1,
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
                                     fprod[ii-1],1);
-            free(temp); temp = NULL;
+            /* free(temp); temp = NULL; */
         }
 
     }
@@ -3237,10 +3272,10 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft, const double * 
     double out = fprod[dim-1][0];
     /* printf("out = %G\n",out); */
     /* printf("should equal = %G\n",bprod[0][0]); */
-    free_dd(dim,cores_center);
-    free_dd(2*dim,cores_neigh);
-    free_dd(dim,bprod); bprod = NULL;
-    free_dd(dim,fprod); fprod = NULL;
+    /* free_dd(dim,cores_center); */
+    /* free_dd(2*dim,cores_neigh); */
+    /* free_dd(dim,bprod); bprod = NULL; */
+    /* free_dd(dim,fprod); fprod = NULL; */
 
     return out;
 }
@@ -3936,10 +3971,12 @@ prepCore(size_t ii, size_t nrows,
 ***************************************************************/
 struct FunctionTrain *
 ftapprox_cross(double (*f)(double *, void *), void * args, 
-               struct BoundingBox * bd, struct FunctionTrain * ftref, 
+               struct BoundingBox * bd,
+               struct FunctionTrain * ftref, 
                struct CrossIndex ** left_ind, 
                struct CrossIndex ** right_ind, 
-               struct FtCrossArgs * cargs, struct FtApproxArgs * apargs)
+               struct FtCrossArgs * cargs,
+               struct FtApproxArgs * apargs)
 {
     size_t dim = bd->dim;
     int info;
@@ -3954,12 +3991,13 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     
     struct FunctionTrain * ft = function_train_alloc(dim);
     memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t));
-    
+
     struct FunctionTrain * fti = function_train_copy(ftref);
     struct FunctionTrain * fti2 = NULL;
 
     int done = 0;
     size_t iter = 0;
+
 
     while (done == 0){
         if (cargs->verbose > 0)
@@ -4012,13 +4050,14 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
             }
 
             if (cargs->optargs != NULL){
-                //printf("before\n");
-                //struct c3Vector * vec = cargs->optargs->opts[ii];
-                //printf("n = %zu",vec->size);
+                printf("before\n");
+                struct c3Vector * vec = cargs->optargs->opts[ii];
+                printf("n = %zu",vec->size);
                 info = qmarray_maxvol1d(Q,R,pivind,pivx,cargs->optargs->opts[ii]);
                 //printf("after\n");
             }
             else{
+                printf("SHOULD ABSOLUTELY NOT BE HERE!\n");
                 info = qmarray_maxvol1d(Q,R,pivind,pivx,NULL);
             }
 
@@ -4027,7 +4066,6 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
                 printf("indices and pivots\n");
                 iprint_sz(ft->ranks[ii+1],pivind);
                 dprint(ft->ranks[ii+1],pivx);
-
             }
 
             if (info < 0){
@@ -4726,7 +4764,9 @@ ftapprox_cross_rankadapt( double (*f)(double *, void *),
 
     struct FunctionTrain * ft = NULL;
 
+
     ft = ftapprox_cross(f,args,bds,ftref,isl,isr,fca,apargs);
+
     if (fca->adapt == 0){
         return ft;
     }

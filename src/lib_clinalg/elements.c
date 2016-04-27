@@ -1211,6 +1211,10 @@ struct FunctionTrain * function_train_alloc(size_t dim)
     ft->evalspace1 = NULL;
     ft->evalspace2 = NULL;
     ft->evalspace3 = NULL;
+    ft->evaldd1 = NULL;
+    ft->evaldd2 = NULL;
+    ft->evaldd3 = NULL;
+    ft->evaldd4 = NULL;
     return ft;
 }
 
@@ -1255,6 +1259,10 @@ void function_train_free(struct FunctionTrain * ft)
         free(ft->evalspace1); ft->evalspace1 = NULL;
         free(ft->evalspace2); ft->evalspace2 = NULL;
         free(ft->evalspace3); ft->evalspace3 = NULL;
+        free_dd(ft->dim,ft->evaldd1); ft->evaldd1 = NULL;
+        /* free_dd(2*ft->dim,ft->evaldd2);   ft->evaldd2 = NULL; */
+        free_dd(ft->dim,ft->evaldd3);     ft->evaldd3 = NULL;
+        free_dd(ft->dim,ft->evaldd4);     ft->evaldd4 = NULL;
         free(ft); ft = NULL;
     }
 }
