@@ -440,6 +440,73 @@ double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
     return out;
 }
 
+double c3opt_ls_box2(struct c3Opt * opt, const double * x, double fx,
+                     const double * grad, const double * dir,
+                     double * newx, double * newf, int *info)
+{
+    double alpha = c3opt_ls_get_alpha(opt);
+    double beta = c3opt_ls_get_beta(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t d = c3opt_get_d(opt);
+    size_t maxiter = c3opt_ls_get_maxiter(opt);
+    /* double absxtol = c3opt_get_absxtol(opt); */
+    int verbose = c3opt_get_verbose(opt);
+
+    *info = 0;
+    if ((alpha <= 0.0) || (alpha >= 0.5)){
+        printf("line search alpha (%G) is not (0,0.5)\n",alpha);
+        *info = -1;
+        return 0.0;
+    }
+    if ((beta <= 0.0) && (beta >= 1.0)) {
+        printf("line search beta (%G) is not (0,1)\n",beta);
+        *info = -2;
+        return 0.0;
+    }
+
+    double gamma = 1.0;
+    for (size_t ii = 0; ii < d; ii++){
+        newx[ii] = x[ii] - gamma * beta * dir[ii];
+        if (newx[ii] < lb[ii]){
+            newx[ii] = lb[ii];
+        }
+        else if (newx[ii] > ub[ii]){
+            newx[ii] = ub[ii];
+        }
+    }
+    *newf = c3opt_eval(opt,newx,NULL);
+    double dg = cblas_ddot(d,grad,1,dir,1);
+    double check = alpha * gamma * beta * dg;
+    size_t iter = 1;
+    *info = 0;
+    while ((fx - *newf) >= check){
+        iter++;
+        gamma = gamma * beta;
+        for (size_t ii = 0; ii < d; ii++){
+            newx[ii] = x[ii] - gamma * beta * dir[ii];
+            // projection step
+            if (newx[ii] < lb[ii]){
+                newx[ii] = lb[ii];
+            }
+            else if (newx[ii] > ub[ii]){
+                newx[ii] = ub[ii];
+            }
+        }
+        *newf = c3opt_eval(opt,newx,NULL);
+        check = alpha * gamma * beta;
+        if (iter > maxiter){
+            *info = 1;
+            if (verbose > 1){
+                printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
+                printf("gamma = %G\n",gamma);
+            }
+            break;
+        }
+    }
+    return gamma;
+}
+
 /***********************************************************//**
     Backtracking Line search with projection onto box constraints
 
@@ -536,6 +603,100 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
 
     return t*alpha;
 }
+
+/***********************************************************//**
+    Projected Gradient damped BFGS with active sets
+
+    \param[in]     opt        - optimization
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+    \param[in,out] grad       - gradient at final point
+    \param[in,out] invhess    - approx hessian at start and end
+                                only upper triangular part used
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+
+    \note  Domgmin Kim 2010 (with suvrit sra)
+***************************************************************/
+/* int c3_opt_pqn_bfgs(struct c3Opt * opt, */
+/*                      double * x, double * fval, double * grad, */
+/*                      double * invhess) */
+/* { */
+
+    /* size_t d = c3opt_get_d(opt); */
+    /* double * workspace = c3opt_get_workspace(opt); */
+    /* int verbose = c3opt_get_verbose(opt); */
+    /* double * lb = c3opt_get_lb(opt); */
+    /* double * ub = c3opt_get_ub(opt); */
+    /* size_t maxiter = c3opt_get_maxiter(opt); */
+    /* double gtol = c3opt_get_gtol(opt); */
+    /* double relftol = c3opt_get_relftol(opt); */
+    /* double absxtol = c3opt_get_absxtol(opt); */
+    
+    /* int * free_vars = calloc_int(d); */
+    /* // first index set */
+    /* for (size_t ii = 0; ii < d; ii++){ */
+    /*     free_vars[ii] = 1; */
+    /*     if (x[ii] > lb[ii]){ */
+    /*         if (x[ii] < ub[ii]){ */
+    /*             free_vars[ii] = 1; */
+    /*         } */
+    /*         else if (grad[ii] < 0){ */
+    /*             free_vars[ii] = 1; */
+    /*         } */
+    /*         else{ */
+    /*             free_vars[ii] = 0; // on boundary and gradient points out; */
+    /*         } */
+    /*     } */
+    /*     else if (grad[ii] > 0){ */
+    /*         free_vars[ii] = 1; // on boundary and gradient points in */
+    /*     } */
+    /*     else{ */
+    /*         free_vars[ii] = 0; */
+    /*     } */
+    /* } */
+    
+    /* double * sbar = calloc_double(d*d); */
+    /* for (size_t ii = 0; ii < d; ii++){ */
+    /*     for (size_t jj = 0; jj < d; jj++){ */
+    /*         if ( (free_vars[ii] == 1) && (free_vars[jj] == 1)){ */
+    /*             sbar[ii*d + jj ] = invhess[ii*d+jj]; */
+    /*         } */
+    /*     } */
+    /* } */
+
+    /* double * dir1 = calloc_double(d); */
+    /* cblas_dsymv(CblasColMajor,CblasUpper, */
+    /*             d,-1.0,sbar,d,grad,1,0.0,dir1,1); */
+
+    /* // second index set */
+    /* for (size_t ii = 0; ii < d; ii++ ){ */
+    /*     if (free_vars[ii] == 1){ */
+    /*         if (x[ii] > lb[ii]){ */
+    /*             if (x[ii] >= ub[ii]){ */
+    /*                 if (dir1[ii] > 0){ */
+    /*                     free_vars[ii] = 0; */
+    /*                 } */
+    /*             } */
+    /*         } */
+    /*         else if (dir1[ii] < 0.0){ */
+    /*             free_vars[ii] = 0; */
+    /*         } */
+    /*     } */
+    /* } */
+    /* double * shat = calloc_double(d*d); */
+    /* for (size_t ii = 0; ii < d; ii++){ */
+    /*     for (size_t jj = 0; jj < d; jj++){ */
+    /*         if ( (free_vars[ii] == 1) && (free_vars[jj] == 1)){ */
+    /*             shat[ii*d + jj ] = invhess[ii*d+jj]; */
+    /*         } */
+    /*     } */
+    /* } */
+/* } */
 
 
 /***********************************************************//**

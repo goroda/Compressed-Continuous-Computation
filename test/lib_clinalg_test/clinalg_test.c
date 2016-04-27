@@ -2688,6 +2688,7 @@ void Test_ftapprox_cross(CuTest * tc)
     free(xtest);
 }
 
+
 void Test_ftapprox_cross2(CuTest * tc)
 {
     printf("Testing Function: ftapprox_cross  (2/4)\n");
@@ -2732,6 +2733,8 @@ void Test_ftapprox_cross2(CuTest * tc)
     function_train_free(ft);
     free(xtest);
 }
+
+
 
 double disc2d(double * xy, void * args)
 {
@@ -2920,6 +2923,48 @@ void Test_ftapprox_cross4(CuTest * tc)
     bounding_box_free(bds);
     function_train_free(ft);
     free(xtest);
+}
+
+void Test_function_train_eval_co_peruturb(CuTest * tc)
+{
+    printf("Testing Function: function_train_eval_co_perturb \n");
+    
+    size_t dim = 4;
+    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+
+    struct FunctionMonitor * fm = function_monitor_initnd(funcnd2,NULL,dim,1000);
+
+    struct FunctionTrain * ft = 
+        function_train_cross(function_monitor_eval,fm,bds,NULL,NULL,NULL);
+    function_monitor_free(fm);
+
+    double pt[4] = {0.5, 0.2 ,0.3, 0.8};
+    double pert[8] = { 0.3, 0.6, 0.1, 0.9, 0.4, 0.6, -0.2, -0.4};
+    double evals[8];
+    double val = function_train_eval_co_perturb(ft,pt,pert,evals);
+
+    double valshould = funcnd2(pt,NULL);
+    CuAssertDblEquals(tc,valshould,val,1e-13);
+    
+    double evals_should[8];
+    double pt2[4] = {pt[0],pt[1],pt[2],pt[3]};
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        pt2[ii] = pert[2*ii];
+        evals_should[2*ii] = funcnd2(pt2,NULL);
+        CuAssertDblEquals(tc,evals_should[2*ii],evals[2*ii],1e-13);
+        
+        pt2[ii] = pert[2*ii+1];
+        evals_should[2*ii+1] = funcnd2(pt2,NULL);;
+        CuAssertDblEquals(tc,evals_should[2*ii+1],evals[2*ii+1],1e-13);
+
+        pt2[ii] = pt[ii];
+    }
+
+    bounding_box_free(bds);
+    function_train_free(ft);
+
 }
 
 double funch1(double * x, void * arg)
@@ -3494,6 +3539,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);

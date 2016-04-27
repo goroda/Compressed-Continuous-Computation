@@ -76,11 +76,13 @@ function_monitor_initnd( double (*f)(double *, void *), void * args, size_t dim,
 
     \param[in,out] fm - function monitor
 ***************************************************************/
-void function_monitor_free( struct FunctionMonitor * fm){
-    
-    free_hashtable_cp(fm->evals); 
-    fm->evals = NULL;
-    free(fm); fm = NULL;
+void function_monitor_free( struct FunctionMonitor * fm)
+{
+    if (fm != NULL){
+        free_hashtable_cp(fm->evals); 
+        fm->evals = NULL;
+        free(fm); fm = NULL;
+    }
 }
 
 /***********************************************************//**

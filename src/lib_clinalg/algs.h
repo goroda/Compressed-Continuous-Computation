@@ -214,6 +214,7 @@ struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 // function_train
 
 double function_train_eval(struct FunctionTrain *, double *);
+double function_train_eval_co_perturb(struct FunctionTrain *, const double *, const double *, double *);
 struct FunctionTrain * function_train_sum(struct FunctionTrain *, struct FunctionTrain *);
 struct FunctionTrain * function_train_afpb(double, double, struct FunctionTrain *, double);
 struct FunctionTrain * function_train_orthor(struct FunctionTrain *);
