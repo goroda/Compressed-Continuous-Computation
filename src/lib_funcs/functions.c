@@ -2245,6 +2245,59 @@ generic_function_array_orth1d_columns(struct GenericFunction ** f,
 
 }
 
+/***********************************************************//**
+    Generate a set of orthonormal arrays of functions for helping
+    generate an orthonormal qmarray of nodal basis functions
+    on a grid
+
+    \param[in] fc    - function class
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] grid  - nodes
+
+
+    \note
+    - Not super efficient because of copies
+***************************************************************/
+void
+generic_function_array_orth1d_linelm_columns(struct GenericFunction ** f,
+                                              size_t nrows,size_t ncols,
+                                              struct c3Vector * grid)
+{
+/*     assert (1 == 0); */
+    /* struct LinElemExp ** le = malloc(grid->size * sizeof(struct LinElemExp *)); */
+    /* assert (f != NULL); */
+    /* double * zero = calloc_double(grid->size); */
+    /* for (size_t ii = 0; ii < grid->size; ii++){ */
+    /*     le[ii] = lin_elem_exp_init(grid->size,grid->elem,zero); */
+    /* } */
+    /* lin_elem_exp_orth_basis(grid->size,le); */
+    
+    /* size_t onnon = 0; */
+    /* size_t onorder = 0; */
+    /* for (jj = 0; jj < ncols; jj++){ */
+    /*     f[jj*nrows+onnon] = generic_function_copy(funcs[onorder]); */
+    /*     for (kk = 0; kk < onnon; kk++){ */
+    /*         f[jj*nrows+kk] = generic_function_copy(zero); */
+    /*     } */
+    /*     for (kk = onnon+1; kk < nrows; kk++){ */
+    /*         f[jj*nrows+kk] = generic_function_copy(zero); */
+    /*     } */
+    /*     onnon = onnon+1; */
+    /*     if (onnon == nrows){ */
+    /*         onorder = onorder+1; */
+    /*         onnon = 0; */
+    /*     } */
+    /* } */
+
+    /* free(zero); zero = NULL; */
+    /* for (size_t ii = 0; ii < grid->size; ii++){ */
+    /*     lin_elem_exp_free(le[ii]); le[ii] = NULL; */
+    /* } */
+    /* le[ii] = NULL; */
+
+}
+
 /*******************************************************//**
     Fill a generic_function array with orthonormal functions 
     of a particular class and sub_type

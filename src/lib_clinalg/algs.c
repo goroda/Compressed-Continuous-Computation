@@ -2762,6 +2762,47 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
 }
 
 /***********************************************************//**
+    Compute the householder triangularization of a 
+    qmarray. for nodal basis (grid) functions of a fixed
+    grid
+
+    \param[in]     dir - type either "QR" or "LQ"
+    \param[in,out] A   - qmarray to triangularize (destroyed in call)
+    \param[in,out] R   - allocated space upper triangular factor
+    \param[in]     grid - grid of locations at which to
+
+    \return Q 
+***************************************************************/
+struct Qmarray *
+qmarray_householder_simple_grid(char * dir, struct Qmarray * A, double * R,
+                                struct c3Vector * grid)
+{
+    
+    for (size_t ii = 0; ii < A->nrows * A->ncols; ii++){
+        assert(A->funcs[ii]->fc == LINELM);
+    }
+
+    struct Qmarray * Q = NULL;
+    if (strcmp(dir,"QR") == 0){
+        Q = qmarray_orth1d_linelm_grid(A->nrows, A->ncols, grid);
+        int out = qmarray_qr(A,&Q,&R);
+        assert (out == 0);
+    }
+    else if (strcmp(dir, "LQ") == 0){
+        struct Qmarray * temp = qmarray_orth1d_linelm_grid(A->nrows,A->ncols,grid);
+        struct Qmarray * Q = qmarray_transpose(temp);
+        int out = qmarray_lq(A,&Q,&R);
+        assert(out == 0);
+        qmarray_free(temp); temp = NULL;
+    }
+    else{
+        fprintf(stderr, "No clear QR/LQ decomposition for type=%s\n",dir);
+        exit(1);
+    }
+    return Q;
+}
+
+/***********************************************************//**
     Compute the svd of a quasimatrix array Udiag(lam)vt = A
 
     \param[in,out] A   - qmarray to get SVD (destroyed)
@@ -4335,334 +4376,333 @@ ftapprox_cross(double (*f)(double *, void *), void * args,
     \note
     both left and right indices are nested
 ***************************************************************/
-/* struct FunctionTrain * */
-/* ftapprox_cross_grid(double (*f)(double *, void *), void * args,  */
-/*                     struct BoundingBox * bd, */
-/*                     struct FunctionTrain * ftref,  */
-/*                     struct CrossIndex ** left_ind,  */
-/*                     struct CrossIndex ** right_ind,  */
-/*                     struct FtCrossArgs * cargs, */
-/*                     struct FtApproxArgs * apargs, */
-/*                     struct c3Vector ** grid */
-/*                      ) */
-/* { */
-/*     size_t dim = bd->dim; */
-/*     int info; */
-/*     size_t nrows, ii, oncore; */
-/*     struct Qmarray * temp = NULL; */
-/*     struct Qmarray * Q = NULL; */
-/*     struct Qmarray * Qt = NULL; */
-/*     double * R = NULL; */
-/*     size_t * pivind = NULL; */
-/*     double * pivx = NULL; */
-/*     double diff, diff2, den; */
+struct FunctionTrain *
+ftapprox_cross_grid(double (*f)(double *, void *), void * args,
+                    struct BoundingBox * bd,
+                    struct FunctionTrain * ftref,
+                    struct CrossIndex ** left_ind,
+                    struct CrossIndex ** right_ind,
+                    struct FtCrossArgs * cargs,
+                    struct FtApproxArgs * apargs,
+                    struct c3Vector ** grid
+    )
+{
+    size_t dim = bd->dim;
+    int info;
+    size_t nrows, ii, oncore;
+    struct Qmarray * temp = NULL;
+    struct Qmarray * Q = NULL;
+    struct Qmarray * Qt = NULL;
+    double * R = NULL;
+    size_t * pivind = NULL;
+    double * pivx = NULL;
+    double diff, diff2, den;
     
-/*     struct FunctionTrain * ft = function_train_alloc(dim); */
-/*     memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t)); */
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t));
 
-/*     struct FunctionTrain * fti = function_train_copy(ftref); */
-/*     struct FunctionTrain * fti2 = NULL; */
+    struct FunctionTrain * fti = function_train_copy(ftref);
+    struct FunctionTrain * fti2 = NULL;
 
-/*     int done = 0; */
-/*     size_t iter = 0; */
+    int done = 0;
+    size_t iter = 0;
 
-
-/*     while (done == 0){ */
-/*         if (cargs->verbose > 0) */
-/*             printf("cross iter=%zu \n",iter); */
+    while (done == 0){
+        if (cargs->verbose > 0)
+            printf("cross iter=%zu \n",iter);
       
-/*         // left right sweep; */
-/*         nrows = 1;  */
-/*         for (ii = 0; ii < dim-1; ii++){ */
-/*             if (cargs->verbose > 1){ */
-/*                 printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1); */
-/*             } */
-/*             //printf("ii=%zu\n",ii); */
-/*             pivind = calloc_size_t(ft->ranks[ii+1]); */
-/*             pivx = calloc_double(ft->ranks[ii+1]); */
+        // left right sweep;
+        nrows = 1;
+        for (ii = 0; ii < dim-1; ii++){
+            if (cargs->verbose > 1){
+                printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
+            }
+            //printf("ii=%zu\n",ii);
+            pivind = calloc_size_t(ft->ranks[ii+1]);
+            pivx = calloc_double(ft->ranks[ii+1]);
             
-/*             if (VFTCROSS){ */
-/*                 printf( "prepCore \n"); */
-/*                 printf( "left index set = \n"); */
-/*                 print_cross_index(left_ind[ii]); */
-/*                 printf( "right index set = \n"); */
-/*                 print_cross_index(right_ind[ii]); */
-/*             } */
-/*             temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind, */
-/*                             cargs,apargs,0); */
+            if (VFTCROSS){
+                printf( "prepCore \n");
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,
+                            cargs,apargs,0);
 
-/*             if (VFTCROSS == 2){ */
-/*                 printf ("got it \n"); */
-/*                 //print_qmarray(temp,0,NULL); */
-/*                 struct Qmarray * tempp = qmarray_copy(temp); */
-/*                 printf("core is \n"); */
-/*                 //print_qmarray(tempp,0,NULL); */
-/*                 R = calloc_double(temp->ncols * temp->ncols); */
-/*                 Q = qmarray_householder_simple("QR", temp,R); */
-/*                 printf("R=\n"); */
-/*                 dprint2d_col(temp->ncols, temp->ncols, R); */
-/* //                print_qmarray(Q,0,NULL); */
+            if (VFTCROSS == 2){
+                printf ("got it \n");
+                //print_qmarray(temp,0,NULL);
+                struct Qmarray * tempp = qmarray_copy(temp);
+                printf("core is \n");
+                //print_qmarray(tempp,0,NULL);
+                R = calloc_double(temp->ncols * temp->ncols);
+                Q = qmarray_householder_simple("QR", temp,R);
+                printf("R=\n");
+                dprint2d_col(temp->ncols, temp->ncols, R);
+//                print_qmarray(Q,0,NULL);
 
-/*                 struct Qmarray * mult = qmam(Q,R,temp->ncols); */
-/*                 //print_qmarray(Q,3,NULL); */
-/*                 double difftemp = qmarray_norm2diff(mult,tempp); */
-/*                 printf("difftemp = %3.15G\n",difftemp); */
-/*                 qmarray_free(tempp); */
-/*                 qmarray_free(mult); */
-/*             } */
-/*             else{ */
-/*                 R = calloc_double(temp->ncols * temp->ncols); */
-/*                 /\* Q = qmarray_householder_simple("QR", temp,R); *\/ */
-/*                 Q = qmarray_householder_simple_grid("QR",temp,R,grid[ii]); */
-/*             } */
+                struct Qmarray * mult = qmam(Q,R,temp->ncols);
+                //print_qmarray(Q,3,NULL);
+                double difftemp = qmarray_norm2diff(mult,tempp);
+                printf("difftemp = %3.15G\n",difftemp);
+                qmarray_free(tempp);
+                qmarray_free(mult);
+            }
+            else{
+                R = calloc_double(temp->ncols * temp->ncols);
+                /* Q = qmarray_householder_simple("QR", temp,R); */
+                Q = qmarray_householder_simple_grid("QR",temp,R,grid[ii]);
+            }
 
-/*             info = qmarray_maxvol1d(Q,R,pivind,pivx,grid[ii]); */
+            info = qmarray_maxvol1d(Q,R,pivind,pivx,grid[ii]);
 
-/*             if (VFTCROSS){ */
-/*                 printf( " got info=%d\n",info); */
-/*                 printf("indices and pivots\n"); */
-/*                 iprint_sz(ft->ranks[ii+1],pivind); */
-/*                 dprint(ft->ranks[ii+1],pivx); */
-/*             } */
+            if (VFTCROSS){
+                printf( " got info=%d\n",info);
+                printf("indices and pivots\n");
+                iprint_sz(ft->ranks[ii+1],pivind);
+                dprint(ft->ranks[ii+1],pivx);
+            }
 
-/*             if (info < 0){ */
-/*                 fprintf(stderr, "no invertible submatrix in maxvol in cross\n"); */
-/*             } */
-/*             if (info > 0){ */
-/*                 fprintf(stderr, " error in qmarray_maxvol1d \n"); */
-/*                 exit(1); */
-/*             } */
+            if (info < 0){
+                fprintf(stderr, "no invertible submatrix in maxvol in cross\n");
+            }
+            if (info > 0){
+                fprintf(stderr, " error in qmarray_maxvol1d \n");
+                exit(1);
+            }
 
-/*             cross_index_free(left_ind[ii+1]); */
-/*             if (ii > 0){ */
-/*                 left_ind[ii+1] = */
-/*                     cross_index_create_nested_ind(0,ft->ranks[ii+1],pivind, */
-/*                                                   pivx,left_ind[ii]); */
-/*             } */
-/*             else{ */
-/*                 left_ind[ii+1] = cross_index_alloc(1); */
-/*                 for (size_t zz = 0; zz < ft->ranks[1]; zz++){ */
-/*                     cross_index_add_index(left_ind[1],1,&(pivx[zz])); */
-/*                 } */
-/*             } */
+            cross_index_free(left_ind[ii+1]);
+            if (ii > 0){
+                left_ind[ii+1] =
+                    cross_index_create_nested_ind(0,ft->ranks[ii+1],pivind,
+                                                  pivx,left_ind[ii]);
+            }
+            else{
+                left_ind[ii+1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[1]; zz++){
+                    cross_index_add_index(left_ind[1],1,&(pivx[zz]));
+                }
+            }
             
-/*             qmarray_free(ft->cores[ii]); ft->cores[ii]=NULL; */
-/*             ft->cores[ii] = qmam(Q,R, temp->ncols); */
-/*             nrows = left_ind[ii+1]->n; */
+            qmarray_free(ft->cores[ii]); ft->cores[ii]=NULL;
+            ft->cores[ii] = qmam(Q,R, temp->ncols);
+            nrows = left_ind[ii+1]->n;
 
-/*             qmarray_free(temp); temp = NULL; */
-/*             qmarray_free(Q); Q = NULL; */
-/*             free(pivind); pivind =NULL; */
-/*             free(pivx); pivx = NULL; */
-/*             free(R); R=NULL; */
+            qmarray_free(temp); temp = NULL;
+            qmarray_free(Q); Q = NULL;
+            free(pivind); pivind =NULL;
+            free(pivx); pivx = NULL;
+            free(R); R=NULL;
 
-/*         } */
-/*         ii = dim-1; */
-/*         if (cargs->verbose > 1){ */
-/*             printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1); */
-/*         } */
-/*         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL; */
-/*         ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd, */
-/*                                  left_ind,right_ind,cargs,apargs,1); */
+        }
+        ii = dim-1;
+        if (cargs->verbose > 1){
+            printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
+        }
+        qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
+        ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd,
+                                 left_ind,right_ind,cargs,apargs,1);
 
-/*         if (VFTCROSS == 2){ */
-/*             printf ("got it \n"); */
-/*             //print_qmarray(ft->cores[ii],0,NULL); */
-/*             printf("integral = %G\n",function_train_integrate(ft)); */
-/*             struct FunctionTrain * tprod = function_train_product(ft,ft); */
-/*             printf("prod integral = %G\n",function_train_integrate(tprod)); */
-/*             printf("norm2 = %G\n",function_train_norm2(ft)); */
-/*             print_qmarray(tprod->cores[0],0,NULL); */
-/*             //print_qmarray(tprod->cores[1],0,NULL); */
-/*             function_train_free(tprod); */
-/*         } */
+        if (VFTCROSS == 2){
+            printf ("got it \n");
+            //print_qmarray(ft->cores[ii],0,NULL);
+            printf("integral = %G\n",function_train_integrate(ft));
+            struct FunctionTrain * tprod = function_train_product(ft,ft);
+            printf("prod integral = %G\n",function_train_integrate(tprod));
+            printf("norm2 = %G\n",function_train_norm2(ft));
+            print_qmarray(tprod->cores[0],0,NULL);
+            //print_qmarray(tprod->cores[1],0,NULL);
+            function_train_free(tprod);
+        }
 
-/*         if (VFTCROSS){ */
-/*             printf("\n\n\n Index sets after Left-Right cross\n"); */
-/*             for (ii = 0; ii < dim; ii++){ */
-/*                 printf("ii = %zu\n",ii); */
-/*                 printf( "left index set = \n"); */
-/*                 print_cross_index(left_ind[ii]); */
-/*                 printf( "right index set = \n"); */
-/*                 print_cross_index(right_ind[ii]); */
-/*             } */
-/*             printf("\n\n\n"); */
-/*         } */
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Left-Right cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
+        }
         
-/*         //printf("compute difference \n"); */
-/*         //printf("norm fti = %G\n",function_train_norm2(fti)); */
-/*         //printf("norm ft = %G\n",function_train_norm2(ft)); */
-/*         diff = function_train_relnorm2diff(ft,fti); */
-/*         //printf("diff = %G\n",diff); */
-/*         //den = function_train_norm2(ft); */
-/*         //diff = function_train_norm2diff(ft,fti); */
-/*         //if (den > ZEROTHRESH){ */
-/*         //    diff /= den; */
-/*        // } */
+        //printf("compute difference \n");
+        //printf("norm fti = %G\n",function_train_norm2(fti));
+        //printf("norm ft = %G\n",function_train_norm2(ft));
+        diff = function_train_relnorm2diff(ft,fti);
+        //printf("diff = %G\n",diff);
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
-/*         if (cargs->verbose > 0){ */
-/*             den = function_train_norm2(ft); */
-/*             printf("...... New FT norm L/R Sweep = %E\n",den); */
-/*             printf("...... Error L/R Sweep = %E\n",diff); */
-/*         } */
+        if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
+            printf("...... New FT norm L/R Sweep = %E\n",den);
+            printf("...... Error L/R Sweep = %E\n",diff);
+        }
         
-/*         if (diff < cargs->epsilon){ */
-/*             done = 1; */
-/*             break; */
-/*         } */
+        if (diff < cargs->epsilon){
+            done = 1;
+            break;
+        }
         
-/*         /\* function_train_free(fti); fti=NULL; *\/ */
-/*         /\* fti = function_train_copy(ft); *\/ */
+        /* function_train_free(fti); fti=NULL; */
+        /* fti = function_train_copy(ft); */
         
-/*         //printf("copied \n"); */
-/*         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti)); */
+        //printf("copied \n");
+        //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
 
-/*         /////////////////////////////////////////////////////// */
-/*         // right-left sweep */
-/*         for (oncore = 1; oncore < dim; oncore++){ */
+        ///////////////////////////////////////////////////////
+        // right-left sweep
+        for (oncore = 1; oncore < dim; oncore++){
             
-/*             ii = dim-oncore; */
+            ii = dim-oncore;
 
-/*             if (cargs->verbose > 1){ */
-/*                 printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1); */
-/*             } */
+            if (cargs->verbose > 1){
+                printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1);
+            }
 
-/*             nrows = ft->ranks[ii];  */
+            nrows = ft->ranks[ii];
 
-/*             if (VFTCROSS){ */
-/*                 printf("do prep\n"); */
-/*                 printf( "left index set = \n"); */
-/*                 print_cross_index(left_ind[ii]); */
-/*                 printf( "right index set = \n"); */
-/*                 print_cross_index(right_ind[ii]); */
-/*             } */
-/*             //printf("prep core\n"); */
-/*             temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0); */
-/*             //printf("prepped core\n"); */
+            if (VFTCROSS){
+                printf("do prep\n");
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            //printf("prep core\n");
+            temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0);
+            //printf("prepped core\n");
 
-/*             R = calloc_double(temp->nrows * temp->nrows); */
-/*             Q = qmarray_householder_simple_grid("LQ", temp,R,grid[ii]); */
-/*             Qt = qmarray_transpose(Q); */
-/*             pivind = calloc_size_t(ft->ranks[ii]); */
-/*             pivx = calloc_double(ft->ranks[ii]); */
+            R = calloc_double(temp->nrows * temp->nrows);
+            Q = qmarray_householder_simple_grid("LQ", temp,R,grid[ii]);
+            Qt = qmarray_transpose(Q);
+            pivind = calloc_size_t(ft->ranks[ii]);
+            pivx = calloc_double(ft->ranks[ii]);
 
-/*             info = qmarray_maxvol1d(Qt,R,pivind,pivx,grad[ii]); */
+            info = qmarray_maxvol1d(Qt,R,pivind,pivx,grid[ii]);
             
-/*             if (VFTCROSS){ */
-/*                 printf("got info=%d\n",info); */
-/*                 printf("indices and pivots\n"); */
-/*                 iprint_sz(ft->ranks[ii],pivind); */
-/*                 dprint(ft->ranks[ii],pivx); */
-/*             } */
+            if (VFTCROSS){
+                printf("got info=%d\n",info);
+                printf("indices and pivots\n");
+                iprint_sz(ft->ranks[ii],pivind);
+                dprint(ft->ranks[ii],pivx);
+            }
 
-/*             //printf("got maxvol\n"); */
-/*             if (info < 0){ */
-/*                 fprintf(stderr, "noinvertible submatrix in maxvol in rl cross\n"); */
-/*             } */
+            //printf("got maxvol\n");
+            if (info < 0){
+                fprintf(stderr, "noinvertible submatrix in maxvol in rl cross\n");
+            }
 
-/*             if (info > 0){ */
-/*                 fprintf(stderr, " error in qmarray_maxvol1d \n"); */
-/*                 exit(1); */
-/*             } */
-/*             qmarray_free(Q); Q = NULL; */
+            if (info > 0){
+                fprintf(stderr, " error in qmarray_maxvol1d \n");
+                exit(1);
+            }
+            qmarray_free(Q); Q = NULL;
 
-/*             //printf("pivx \n"); */
-/*             //dprint(ft->ranks[ii], pivx); */
+            //printf("pivx \n");
+            //dprint(ft->ranks[ii], pivx);
 
-/*             Q = qmam(Qt,R, temp->nrows); */
+            Q = qmam(Qt,R, temp->nrows);
 
-/*             qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL; */
-/*             ft->cores[ii] = qmarray_transpose(Q); */
+            qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
+            ft->cores[ii] = qmarray_transpose(Q);
 
-/*             cross_index_free(right_ind[ii-1]); */
-/*             if (ii < dim-1){ */
-/*                 //printf("are we really here? oncore=%zu,ii=%zu\n",oncore,ii); */
-/*                 right_ind[ii-1] = */
-/*                     cross_index_create_nested_ind(1,ft->ranks[ii],pivind, */
-/*                                                   pivx,right_ind[ii]); */
-/*             } */
-/*             else{ */
-/*                 //printf("lets update the cross index ii=%zu\n",ii); */
-/*                 right_ind[ii-1] = cross_index_alloc(1); */
-/*                 for (size_t zz = 0; zz < ft->ranks[ii]; zz++){ */
-/*                     cross_index_add_index(right_ind[ii-1],1,&(pivx[zz])); */
-/*                 } */
-/*                 //printf("updated\n"); */
-/*             } */
+            cross_index_free(right_ind[ii-1]);
+            if (ii < dim-1){
+                //printf("are we really here? oncore=%zu,ii=%zu\n",oncore,ii);
+                right_ind[ii-1] =
+                    cross_index_create_nested_ind(1,ft->ranks[ii],pivind,
+                                                  pivx,right_ind[ii]);
+            }
+            else{
+                //printf("lets update the cross index ii=%zu\n",ii);
+                right_ind[ii-1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[ii]; zz++){
+                    cross_index_add_index(right_ind[ii-1],1,&(pivx[zz]));
+                }
+                //printf("updated\n");
+            }
 
-/*             qmarray_free(temp); temp = NULL; */
-/*             qmarray_free(Q); Q = NULL; */
-/*             qmarray_free(Qt); Qt = NULL; */
-/*             free(pivind); */
-/*             free(pivx); */
-/*             free(R); R=NULL; */
+            qmarray_free(temp); temp = NULL;
+            qmarray_free(Q); Q = NULL;
+            qmarray_free(Qt); Qt = NULL;
+            free(pivind);
+            free(pivx);
+            free(R); R=NULL;
 
-/*         } */
+        }
 
-/*         ii = 0; */
-/*         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL; */
+        ii = 0;
+        qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
 
-/*         if (cargs->verbose > 1) */
-/*             printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1); */
-/*         ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind, */
-/*                                  cargs,apargs,-1); */
-/*         if (cargs->verbose > 1) */
-/*             printf(" ............. done with right left sweep\n"); */
+        if (cargs->verbose > 1)
+            printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1);
+        ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,
+                                 cargs,apargs,-1);
+        if (cargs->verbose > 1)
+            printf(" ............. done with right left sweep\n");
  
 
-/*         if (VFTCROSS){ */
-/*             printf("\n\n\n Index sets after Right-left cross\n"); */
-/*             for (ii = 0; ii < dim; ii++){ */
-/*                 printf("ii = %zu\n",ii); */
-/*                 printf( "left index set = \n"); */
-/*                 print_cross_index(left_ind[ii]); */
-/*                 printf( "right index set = \n"); */
-/*                 print_cross_index(right_ind[ii]); */
-/*             } */
-/*             printf("\n\n\n"); */
-/*         } */
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Right-left cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
+        }
 
-/*         diff = function_train_relnorm2diff(ft,fti); */
-/*         if (fti2 != NULL){ */
-/*             diff2 = function_train_relnorm2diff(ft,fti2); */
-/*         } */
-/*         else{ */
-/*             diff2 = diff; */
-/*         } */
+        diff = function_train_relnorm2diff(ft,fti);
+        if (fti2 != NULL){
+            diff2 = function_train_relnorm2diff(ft,fti2);
+        }
+        else{
+            diff2 = diff;
+        }
 
-/*         //den = function_train_norm2(ft); */
-/*         //diff = function_train_norm2diff(ft,fti); */
-/*         //if (den > ZEROTHRESH){ */
-/*         //    diff /= den; */
-/*        // } */
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
 
-/*         if (cargs->verbose > 0){ */
-/*             den = function_train_norm2(ft); */
-/*             printf("...... New FT norm R/L Sweep = %3.9E\n",den); */
-/*             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2); */
-/*         } */
+        if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
+            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
+        }
 
-/*         if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){ */
-/*             done = 1; */
-/*             break; */
-/*         } */
+        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+            done = 1;
+            break;
+        }
 
-/*         function_train_free(fti2); fti2 = NULL; */
-/*         fti2 = function_train_copy(fti); */
-/*         function_train_free(fti); fti=NULL; */
-/*         fti = function_train_copy(ft); */
+        function_train_free(fti2); fti2 = NULL;
+        fti2 = function_train_copy(fti);
+        function_train_free(fti); fti=NULL;
+        fti = function_train_copy(ft);
 
-/*         iter++; */
-/*         if (iter  == cargs->maxiter){ */
-/*             done = 1; */
-/*             break; */
-/*         } */
-/*     } */
+        iter++;
+        if (iter  == cargs->maxiter){
+            done = 1;
+            break;
+        }
+    }
 
-/*     function_train_free(fti); fti=NULL; */
-/*     function_train_free(fti2); fti2=NULL; */
-/*     return ft; */
-/* } */
+    function_train_free(fti); fti=NULL;
+    function_train_free(fti2); fti2=NULL;
+    return ft;
+}
 
 /***********************************************************//**
    Allocate space for cross approximation arguments

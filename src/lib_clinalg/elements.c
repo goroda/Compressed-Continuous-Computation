@@ -833,6 +833,27 @@ qmarray_orth1d_columns(enum function_class fc, void * st, size_t nrows,
 }
 
 /***********************************************************//**
+    Generate a qmarray with orthonormal columns consisting of
+    one dimensional functions of linear elements on a certain grid
+
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] grid  - grid size
+
+    \return qmarray with orthonormal columns
+
+    \note
+        - Not super efficient because of copies
+***************************************************************/
+struct Qmarray *
+qmarray_orth1d_linelm_grid(size_t nrows,size_t ncols, struct c3Vector * grid)
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    generic_function_array_orth1d_linelm_columns(qm->funcs,nrows,ncols,grid);
+    return qm;
+}
+
+/***********************************************************//**
     Generate a qmarray with orthonormal rows
 
     \param[in] fc    - function class

@@ -242,6 +242,10 @@ void generic_function_array_orth1d_columns(
     double);
 void generic_function_array_orth(size_t, enum function_class, void *,
                             struct GenericFunction **, void *);
+void 
+generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
+                                              size_t,size_t,
+                                             struct c3Vector *);
 
 ////////////////////////////////////////////////////////////////////
 // High dimensional helper functions

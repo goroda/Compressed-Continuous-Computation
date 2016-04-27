@@ -158,7 +158,8 @@ qmarray_orth1d_columns(enum function_class,
 struct Qmarray *
 qmarray_orth1d_rows(enum function_class, void *, size_t,
                             size_t, double, double);
-
+struct Qmarray *
+qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
 
 
 struct Quasimatrix * qmarray_extract_column(struct Qmarray *, size_t);
