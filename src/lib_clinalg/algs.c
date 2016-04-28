@@ -34,8 +34,8 @@
 //Code
 
 /** \file algs.c
- * Provides routines for performing continuous linear algebra and working with function
- * trains
+ * Provides routines for performing continuous linear algebra and 
+ * working with function trains
  */
 
 #include <stdio.h>
@@ -76,793 +76,14 @@
     #define VFTCROSS 0
 #endif
 
-/***********************************************************//**
-    Quasimatrix - vector multiplication
-
-    \param[in] Q - quasimatrix
-    \param[in] v - array
-
-    \return f -  generic function
-***************************************************************/
-struct GenericFunction *
-qmv(struct Quasimatrix * Q, double * v)
-{
-    struct GenericFunction * f = generic_function_lin_comb(Q->n, Q->funcs,v);
-    return f;
-}
-
-/***********************************************************//**
-    Quasimatrix - matrix multiplication
-
-    \param Q [in] - quasimatrix
-    \param R [in] - matrix  (fortran order)
-    \param b [in] - number of columns of R
-
-    \return B - quasimatrix
-***************************************************************/
-struct Quasimatrix *
-qmm(struct Quasimatrix * Q, double * R, size_t b)
-{
-    struct Quasimatrix * B = quasimatrix_alloc(b);
-    size_t ii;
-    for (ii = 0; ii < b; ii++){
-        B->funcs[ii] = generic_function_lin_comb(Q->n, Q->funcs, R + ii*Q->n);
-    }
-    return B;
-}
-
-/***********************************************************//**
-    Quasimatrix - transpose matrix multiplication
-
-    \param Q [in] - quasimatrix
-    \param R [in] - matrix  (fortran order)
-    \param b [in] - number of rows of R
-
-    \return B - quasimatrix
-***************************************************************/
-struct Quasimatrix *
-qmmt(struct Quasimatrix * Q, double * R, size_t b)
-{
-    double * Rt = calloc_double(Q->n * b);
-    size_t ii, jj;
-    for (ii = 0; ii < b; ii++){
-        for (jj = 0; jj < Q->n; jj++){
-            Rt[ii * Q->n + jj] = R[jj * b + ii];
-        }
-    }
-    struct Quasimatrix * B = qmm(Q,Rt, b);
-    free(Rt);
-    return B;
-}
-
-/***********************************************************//**
-    Compute ax + by where x, y are quasimatrices and a,b are scalars
-
-    \param a [in] - scale for x
-    \param x [in] - quasimatrix
-    \param b [in] - scale for y
-    \param y [in] - quasimatrix
-
-    \return qm - quasimatrix result
-***************************************************************/
-struct Quasimatrix * quasimatrix_daxpby(double a, struct Quasimatrix * x,
-                                         double b, struct Quasimatrix * y)
-{
-    struct Quasimatrix * qm = NULL;
-    if ((x == NULL) && (y == NULL)){
-        return qm;
-    }
-    else if ((x == NULL) && (y != NULL)){
-        //printf("here y not null \n");
-        qm = quasimatrix_alloc(y->n);
-        free(qm->funcs); qm->funcs = NULL;
-        qm->funcs = generic_function_array_daxpby(y->n, b, 1, y->funcs, 0.0,1,NULL);
-    }
-    else if ((x != NULL) && (y == NULL)){
-        //printf("here x not null \n");
-        qm = quasimatrix_alloc(x->n);
-        free(qm->funcs); qm->funcs = NULL;
-        qm->funcs = generic_function_array_daxpby(x->n, a, 1, x->funcs, 0.0,1,NULL);
-        //printf("out of x not null \n");
-    }
-    else{
-        //printf("here in qm daxpby\n");
-        qm = quasimatrix_alloc(x->n);
-        free(qm->funcs); qm->funcs = NULL;
-        qm->funcs = generic_function_array_daxpby(x->n,a,1,x->funcs,b,1,y->funcs);
-    }
-
-    return qm;
-}
-
-// local function
-void quasimatrix_flip_sign(struct Quasimatrix * x)
-{
-    size_t ii;
-    for (ii = 0; ii < x->n ;ii++){
-        generic_function_flip_sign(x->funcs[ii]);
-    }
-}
-
-/***********************************************************//**
-    Compute the householder triangularization of a 
-    quasimatrix. (Trefethan 2010) whose columns consist of
-    one dimensional functions
-
-    \param A [inout] - quasimatrix to triangularize
-    \param R [inout] - upper triangluar matrix
-
-    \return E - quasimatrix denoting the Q term
-    
-    \note
-        For now I have only implemented this for polynomial 
-        function class and legendre subtype
-***************************************************************/
-struct Quasimatrix *
-quasimatrix_householder_simple(struct Quasimatrix * A, double * R)
-{
-    
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
-
-    size_t ncols = A->n;
-    enum poly_type ptype = LEGENDRE;
-    // generate two quasimatrices needed for householder
-    struct Quasimatrix * Q = quasimatrix_orth1d(POLYNOMIAL, 
-                    (void *) (&ptype), ncols, lb, ub); 
-    struct Quasimatrix * V = quasimatrix_alloc(ncols);
-
-    int out = 0;
-    out = quasimatrix_householder(A,Q,V,R);
-
-    /*
-    printf("Vqm[0] = \n");
-    print_generic_function(V->funcs[0],0,NULL);
-    printf("Vqm[1] = \n");
-    print_generic_function(V->funcs[1],0,NULL);
-    if (V->n > 2){
-        printf("Vqm[2] = \n");
-        print_generic_function(V->funcs[2],0,NULL);
-    }
-    */
-
-    assert(out == 0);
-    out = quasimatrix_qhouse(Q,V);
-    assert(out == 0);
-
-    quasimatrix_free(V);
-    return  Q;
-}
-
-/***********************************************************//**
-    Compute the householder triangularization of a quasimatrix. (Trefethan 2010)
-
-    \param A [inout] - quasimatrix to triangularize (destroyed 
-    \param E [inout] - quasimatrix with orthonormal columns
-    \param V [inout] - allocated space for a quasimatrix, stores reflectors in the end
-    \param R [inout] - allocated space upper triangular factor
-
-    \return info (if != 0 then something is wrong)
-***************************************************************/
-int 
-quasimatrix_householder(struct Quasimatrix * A, struct Quasimatrix * E, 
-        struct Quasimatrix * V, double * R)
-{
-    size_t ii, jj;
-    struct GenericFunction * e;
-    struct GenericFunction * x;
-    struct GenericFunction * v;
-    struct GenericFunction * v2;
-    struct GenericFunction * atemp;
-    double rho, sigma, alpha;
-    double temp1;
-    for (ii = 0; ii < A->n; ii++){
-       // printf(" On iter (%zu / %zu) \n", ii,A->n);
-        e = E->funcs[ii];    
-        x = A->funcs[ii];
-        rho = generic_function_norm(x);
-       // printf(" \t ... rho = %3.15G\n",rho);
-
-        /*
-        printf("X+==================================\n");
-        print_generic_function(x,3,NULL);
-        printf("E+==================================\n");
-        print_generic_function(e,3,NULL);
-        printf("K+==================================\n");
-        */
-        //printf(" \t .... norm of e = %3.5f\n", generic_function_norm(e));
-        R[ii * A->n + ii] = rho;
-        //printf("pre alpha------------------------------------\n");
-        alpha = generic_function_inner(e,x);
-        //printf(" \t ... alpha = %3.15G\n",alpha);
-        if (alpha >= ZEROTHRESH){
-            //printf("flip sign\n");
-            generic_function_flip_sign(e);
-        }
-
-        //printf("epostalpha = \n");
-        //print_generic_function(e,3,NULL);
-
-        //printf("apostalpha = \n");
-        //print_generic_function(x,3,NULL);
-        v = generic_function_daxpby(rho,e,-1.0,x);
-    
-        // skip step improve orthogonality
-        // improve orthogonality
-
-        //print_generic_function(v,3,NULL);
-        sigma = generic_function_norm(v);
-        //printf(" \t ... sigma = %3.15G\n",sigma);
-
-        //printf("v2pre = \n");
-        //print_generic_function(v,3,NULL);
-        if (fabs(sigma) <= ZEROTHRESH){
-            V->funcs[ii] = generic_function_copy(e); 
-            generic_function_free(v);
-        }
-        else {
-            V->funcs[ii] = generic_function_daxpby(1.0/sigma, v, 0.0, NULL);
-            generic_function_free(v);
-        }
-        v2 = V->funcs[ii];
-        
-        //printf("v2 = \n");
-        //print_generic_function(v2,3,NULL);
-
-        for (jj = ii+1; jj < A->n; jj++){
-         //   printf("\t On sub-iter %zu\n", jj);
-            //printf("Aqm = \n");
-            //print_generic_function(A->funcs[jj],3,NULL);
-            temp1 = generic_function_inner(v2,A->funcs[jj]);
-            //printf("\t\t temp1 pre = %3.15G DBL_EPS=%G\n", temp1,DBL_EPSILON);
-            if (fabs(temp1) < ZEROTHRESH){
-                temp1 = 0.0;
-            }
-          //  printf("\t\t temp1= %3.15G\n", temp1);
-
-            atemp = generic_function_daxpby(1.0, A->funcs[jj], -2.0 * temp1, v2);
-            R[jj * A->n + ii] = generic_function_inner(e, atemp);
-          //  printf("\t\t e^T atemp= %3.15G\n", R[jj*A->n+ii]);
-            generic_function_free(A->funcs[jj]);
-
-            A->funcs[jj] = generic_function_daxpby(1.0, atemp, -R[jj * A->n + ii], e);
-            generic_function_free(atemp);
-        }
-        
-    }
-    //printf("R = \n");
-    //dprint2d_col(A->n,A->n,R);
-    return 0;
-}
-
-/***********************************************************//**
-    Compute the Q matrix from householder reflectors (Trefethan 2010)
-
-    \param Q [inout] - quasimatrix E obtained afterm househodler_qm (destroyed 
-    \param V [inout] - Householder functions, obtained from quasimatrix_householder
-
-    \return info (if != 0 then something is wrong)
-***************************************************************/
-int quasimatrix_qhouse(struct Quasimatrix * Q, struct Quasimatrix * V)
-{
-    
-    int info = 0;
-    size_t ii, jj;
-
-    struct GenericFunction * v;
-    struct GenericFunction * q;
-    double temp1;
-    size_t counter = 0;
-    ii = Q->n-1;
-    while (counter < Q->n){
-        v = V->funcs[ii];
-        for (jj = ii; jj < Q->n; jj++){
-            temp1 = generic_function_inner(v,Q->funcs[jj]);
-            q = generic_function_daxpby(1.0, Q->funcs[jj], -2.0 * temp1, v);
-
-            generic_function_free(Q->funcs[jj]);
-            Q->funcs[jj] = generic_function_copy(q);
-            generic_function_free(q);
-        }
-        ii = ii - 1;
-        counter = counter + 1;
-    }
-
-    return info;
-}
-
-/***********************************************************//**
-    Compute the LU decomposition of a quasimatrix of one dimensional functions (Townsend 2015)
-
-    \param[in]     A       - quasimatrix to decompose
-    \param[in,out] L       - quasimatrix representing L factor
-    \param[in,out] u       - allocated space for U factor
-    \param[in,out] p       - pivots 
-    \param[in]     optargs - optimization arguments
-
-    \return inno
-
-    \note
-        info = 
-            - 0 converges
-            - <0 low rank ( rank = A->n + info )
-***************************************************************/
-int quasimatrix_lu1d(struct Quasimatrix * A, struct Quasimatrix * L, double * u,
-                     double * p, void * optargs)
-{
-    int info = 0;
-    
-    size_t ii,kk;
-    double val, amloc;
-    struct GenericFunction * temp;
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
-    for (kk = 0; kk < A->n; kk++){
-        //printf("kk=%zu\n",kk);
-        //printf("getting max of function:\n");
-        //print_generic_function(A->funcs[kk],0,NULL);
-        generic_function_absmax(A->funcs[kk], &amloc,optargs);
-        p[kk] = amloc;
-        //printf("location of max =%3.5f\n",amloc);
-
-        val = generic_function_1d_eval(A->funcs[kk], amloc);
-        
-        if (fabs(val) < 2.0 * ZEROTHRESH){
-            enum poly_type ptype = LEGENDRE;
-            L->funcs[kk] = 
-                generic_function_constant(1.0,POLYNOMIAL,&ptype,lb,ub,NULL);
-        }
-        else{
-            L->funcs[kk] =
-                generic_function_daxpby(1.0/val, A->funcs[kk], 0.0, NULL);
-        }
-        for (ii = 0; ii < A->n; ii++){
-            //printf("evaluation = %3.2f \n", 
-            //        generic_function_1d_eval(A->funcs[ii], amloc));
-            u[ii*A->n+kk] = generic_function_1d_eval(A->funcs[ii], amloc);
-            temp = generic_function_daxpby(1.0, A->funcs[ii], 
-                                            -u[ii*A->n+kk], L->funcs[kk]);
-            generic_function_free(A->funcs[ii]);
-            A->funcs[ii] = generic_function_daxpby(1.0, temp, 0.0, NULL);
-            generic_function_free(temp);
-        }
-    }
-    
-    // check if matrix is full rank
-    for (kk = 0; kk < A->n; kk++){
-        if (fabs(u[kk*A->n + kk]) < ZEROTHRESH){
-            info --;
-        }
-    }
-    
-    return info;
-}
-
-/***********************************************************//**
-    Perform a greedy maximum volume procedure to find the maximum volume submatrix of quasimatrix 
-
-    \param A [in] - quasimatrix 
-    \param Asinv [inout] - submatrix inv
-    \param p [inout] - pivots 
-
-    \return info 
-    
-    \note
-        info =
-          -  0 converges
-          -  < 0 no invertible submatrix
-          -  >0 rank may be too high
-        naive implementation without rank 1 updates
-***************************************************************/
-int quasimatrix_maxvol1d(struct Quasimatrix * A, double * Asinv, double * p)
-{
-    int info = 0;
-    double delta = 0.01;
-    size_t r = A->n;
-
-    struct Quasimatrix * L = quasimatrix_alloc(r);
-    double * U = calloc_double(r * r);
-    
-    double *eye = calloc_double(r * r);
-    size_t ii;
-    for (ii = 0; ii < r; ii++){
-        eye[ii*r + ii] = 1.0;
-    }
-    struct Quasimatrix * Acopy = qmm(A,eye,r);
-
-    info =  quasimatrix_lu1d(Acopy,L,U,p,NULL);
-    //printf("pivot immediate \n");
-    //dprint(A->n, p);
-
-    if (info != 0){
-        printf("Couldn't find an invertible submatrix for maxvol %d\n",info);
-        //printf("Couldn't Error from quasimatrix_lu1d \n");
-        quasimatrix_free(L);
-        quasimatrix_free(Acopy);
-        free(U);
-        free(eye);
-        return info;
-    }
-    
-    size_t jj;
-    for (ii = 0; ii < r; ii++){
-        for (jj = 0; jj < r; jj++){
-            Asinv[jj * r + ii] = 
-                    generic_function_1d_eval(A->funcs[jj],p[ii]);
-        }
-    }
-
-    int * ipiv2 = calloc(r, sizeof(int));
-    size_t lwork = r*r;
-    double * work = calloc(lwork, sizeof(double));
-    int info2;
-    
-    dgetrf_(&r,&r, Asinv, &r, ipiv2, &info2); 
-    dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
-        
-    struct Quasimatrix * B = qmm(A,Asinv,r);
-    size_t maxcol;
-    double maxloc, maxval;
-    maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
-
-    while (maxval > (1.0 + delta)){
-        //printf("maxval = %3.4f\n", maxval);
-        p[maxcol] = maxloc;
-        for (ii = 0; ii < r; ii++){
-            for (jj = 0; jj < r; jj++){
-                Asinv[jj * r + ii] = 
-                    generic_function_1d_eval(A->funcs[jj],p[ii]);
-            }
-        }
-
-        dgetrf_(&r,&r, Asinv, &r, ipiv2, &info2); 
-        dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
-        quasimatrix_free(B);
-        B = qmm(A,Asinv,r);
-        maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);
-    }
-    //printf("maxval = %3.4f\n", maxval);
-
-    free(work);
-    free(ipiv2);
-    quasimatrix_free(B);
-    quasimatrix_free(L);
-    quasimatrix_free(Acopy);
-    free(U);
-    free(eye);
-    return info;
-}
-
-/***********************************************************//**
-    Check the convergence of cross2d
-
-    \param s1 [in] - skeleton decomp 1
-    \param s2 [in] - skeleton decomp 2
-
-    \return dist - relative distance between the two approximations
-                \f$ ||1 - 2||^2/ ||1||^2 \f$
-***************************************************************/
-double check_cross_2d_convergence(struct SkeletonDecomp * s1,
-                                  struct SkeletonDecomp * s2)
-{
-    double * eye1 = calloc_double(s1->r * s1->r);
-    double * eye2 = calloc_double(s2->r * s2->r);
-    
-    size_t ii;
-    for (ii = 0; ii < s1->r; ii++){
-        eye1[ii * s1->r + ii] = 1.0;
-    }
-    for (ii = 0; ii < s2->r; ii++){
-        eye2[ii * s2->r + ii] = 1.0;
-    }
-
-    struct Quasimatrix * t1 = qmm(s1->xqm,eye1,s1->r);
-    struct Quasimatrix * t2 = qmm(s2->xqm,eye2,s2->r);
-
-    double den = skeleton_decomp_inner_help(t1,s1->yqm,t1,s1->yqm);
-    //printf("den = %3.5f\n",den);
-    double num = skeleton_decomp_inner_help(t2,s2->yqm,t2,s2->yqm) + den - 
-                    2.0 * skeleton_decomp_inner_help(t1,s1->yqm,t2,s2->yqm);
-    
-    double dist = num/den;
-
-    free(eye1);
-    free(eye2);
-    quasimatrix_free(t1);
-    quasimatrix_free(t2);
-    //double dist = den;
-    return dist;
-}
-
-/***********************************************************//**
-    Cross approximation of a two dimensional function f(x,y)
-
-    \param f [in] - function
-    \param args [in] - function arguments
-    \param bounds (IN): bounds on input space
-    \param skd_init [inout] - initial skeleton decomposition, changed in func
-    \param pivx [inout] - x values for skeleton
-    \param pivy [inout] - y values for skeleton
-    \param cargs [in] - algorithm parameters
-
-    \return skd - skeleton decomposition
-***************************************************************/
-struct SkeletonDecomp *
-cross_approx_2d(double (*f)(double, double, void *), void * args, 
-                struct BoundingBox * bounds, struct SkeletonDecomp ** skd_init,
-                double * pivx, double * pivy, struct Cross2dargs * cargs)
-{
-    int info;
-    struct SkeletonDecomp * skd = skeleton_decomp_alloc(cargs->r);
-    
-    size_t r = cargs->r;
-    double * T = calloc_double(r * r);
-    double * eye = calloc_double(r * r);
-    struct Quasimatrix * Q;
-    struct Quasimatrix * tempqm;
-    struct FiberCut ** fx;  
-    struct FiberCut ** fy;
-
-    size_t ii;
-    for (ii = 0; ii < r; ii++){
-        eye[ii*r+ii] = 1.0;
-        skd->skeleton[ii*r+ii] = 1.0;
-    }
-
-    int done = 0;
-    size_t iter = 0;
-    double reldist;
-    while (done == 0){
-        if (cargs->verbose > 0)
-            printf("cross iter=%zu \n",iter);
-
-        // functions of y
-        quasimatrix_free(skd->yqm);
-        fy = fiber_cut_2darray(f,args,1, r, pivx);
-        tempqm = quasimatrix_approx_from_fiber_cuts(
-                r, fiber_cut_eval2d, fy, cargs->fclass[1], cargs->sub_type[1],
-                bounds->lb[1],bounds->ub[1], cargs->approx_args[1]);
-        fiber_cut_array_free(r, fy);
-
-        Q = quasimatrix_householder_simple(tempqm,T);
-        //print_quasimatrix(Q,1,NULL);
-
-        info = quasimatrix_maxvol1d(Q,T,pivy);
-        //printf("New y pivot = ");
-        //dprint(r,pivy);
-
-        skd->yqm = qmm(Q,T,r); 
-        quasimatrix_free(tempqm);
-        quasimatrix_free(Q);
-
-        // functions of x
-        quasimatrix_free(skd->xqm);
-        fx = fiber_cut_2darray(f,args,0, r, pivy);
-        skd->xqm = quasimatrix_approx_from_fiber_cuts(
-                r, fiber_cut_eval2d, fx, cargs->fclass[0], cargs->sub_type[0],
-                bounds->lb[0],bounds->ub[0], cargs->approx_args[0]);
-        fiber_cut_array_free(r, fx);
-        
-        // check convergence here
-        reldist = check_cross_2d_convergence(skd,*skd_init);
-
-        if (cargs->verbose > 0)
-            printf("reldist = %3.5f\n",reldist);
-        if (reldist < cargs->delta) {
-        //if (iter == 2) {
-            done = 1;
-        }
-        else{     
-            skeleton_decomp_free(*skd_init);
-            *skd_init = skeleton_decomp_copy(skd);
-                
-            Q = quasimatrix_householder_simple(skd->xqm,T);
-            quasimatrix_free(skd->xqm);
-            skd->xqm = qmm(Q,eye,skd->r);
-            //print_quasimatrix(skd->xqm,0,NULL);
-            info = quasimatrix_maxvol1d(Q,T,pivx);
-
-            //printf("New x pivot = ");
-            //dprint(r,pivx);
-            if ( info < 0){
-                printf("Warning: rank may be too high");
-                //fprintf(stderr, "maxvol failed in cross approximation.\n");
-                //exit(1);
-            }
-            quasimatrix_free(Q);
-            
-        }
-        /*
-        printf("pivot (x;y) out = \n");                                             
-        dprint(2,pivx);                                                             
-        dprint(2,pivy);                                                             
-        printf("i am out!\n");   
-        */
-
-        iter++;
-    }
-    
-    free(T);
-    free(eye);
-    return skd;
-}
-
-////////////////////////////////////////////////////////////////////////////.
-
-/***********************************************************//**
-    Compute rank of a quasimatrix
-
-    \param A [in] - quasimatrix 
-
-    \return rank - rank of the quasimatrix
-***************************************************************/
-size_t quasimatrix_rank(struct Quasimatrix * A){
-    size_t rank = A->n;
-
-    size_t ncols = A->n;
-    enum poly_type ptype = LEGENDRE;
-    // generate two quasimatrices needed for householder
-    //
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
-    
-    struct Quasimatrix * Q = quasimatrix_orth1d(POLYNOMIAL, 
-                    (void *) (&ptype), ncols, lb, ub); 
-    struct Quasimatrix * V = quasimatrix_alloc(ncols);
-    double * R = calloc_double(rank * rank);
-
-    double * eye = calloc_double(rank * rank);
-    size_t ii;
-    for (ii = 0; ii < rank; ii++){
-        eye[ii * rank + ii] = 1.0;
-    }
-    struct Quasimatrix * qm = quasimatrix_copy(A);
-    int out = 0;
-    out = quasimatrix_householder(qm,Q,V,R);
-
-    assert(out == 0);
-    
-    //printf("R=\n");
-    //dprint2d_col(Q->n,Q->n,R);
-    for (ii = 0; ii < qm->n; ii++){
-        //printf("R[ii*Qm->n+ii]=%G for ii=%zu\n",R[ii*qm->n+ii],ii);
-        if (fabs(R[ii * qm->n + ii]) < 10.0*ZEROTHRESH){
-            rank = rank - 1;
-        }
-    }
-    
-    quasimatrix_free(Q);
-    quasimatrix_free(V);
-    quasimatrix_free(qm);
-    free(eye);
-    free(R);
-    return rank;
-}
-
-/***********************************************************//**
-    Inner product between two functions represented in skeleton format by their quasimatrices
-
-    \param A1 [in] - x quasimatrix  of function 1
-    \param B1 [in] - y quasimatrix  of function 1
-    \param A2 [in] - x quasimatrix  of function 2
-    \param B2 [in] - y quasimatrix  of function 2
-
-    \return mag : \f$ int (A1B1^T)(A2B2^T) dx dy \f$
-***************************************************************/
-double skeleton_decomp_inner_help(struct Quasimatrix * A1, struct Quasimatrix * B1,
-            struct Quasimatrix * A2, struct Quasimatrix * B2)
-{
-    size_t ii, jj;
-    double int1, int2;
-    double mag = 0.0;
-    //printf("here! %zu,%zu\n",A1->n,A2->n);
-    for (ii = 0; ii < A1->n; ii++){
-        for (jj = 0; jj < A2->n; jj++){
-            int1 = generic_function_inner(A1->funcs[ii],A2->funcs[jj]);
-            //printf("int1=%3.2f\n",int1);
-            int2 = generic_function_inner(B1->funcs[ii],B2->funcs[jj]);
-            //printf("int2=%3.2f\n",int2);
-            mag += int1 * int2;
-            //printf("(int1,int2) = (%3.5f,%3.5f)\n",int1,int2);
-        }
-    }
-    //printf("mag = %3.2f \n", mag);
-    
-    return mag;
-}
-
-
-/***********************************************************//**
-    Inner product of integral of quasimatrices
-    returns sum_i=1^n int A->funcs[ii], B->funcs[ii] dx
-
-    \param A [in] - quasimatrix
-    \param B [in] - quasimatrix
-
-    \return mag : inner product
-***************************************************************/
-double quasimatrix_inner(struct Quasimatrix * A, struct Quasimatrix * B)
-{
-    assert(A->n == B->n);
-
-    size_t ii;
-    double int1;
-    double mag = 0.0;
-    //printf("here! %zu,%zu\n",A1->n,A2->n);
-    for (ii = 0; ii < A->n; ii++){
-        int1 = generic_function_inner(A->funcs[ii],B->funcs[ii]);
-        mag += int1;
-    }
-    //printf("mag = %3.2f \n", mag);
-    
-    return mag;
-}
-
-/***********************************************************//**
-    Compute norm of a quasimatrix
-
-    \param A [in] - quasimatrix
-
-    \return mag - norm of the quasimatrix
-***************************************************************/
-double quasimatrix_norm(struct Quasimatrix * A)
-{
-    double mag = sqrt(quasimatrix_inner(A,A));
-    return mag;
-}
-
-
 //////////////////////////////////////////////////////////////////
-
-struct GenericFunction **
-qmav_base(struct Qmarray * Q, double *v)
-{
-    struct GenericFunction ** fout = NULL;
-    if ( NULL == 
-        (fout = malloc(Q->nrows*sizeof(struct GenericFunction *)))){
-        fprintf(stderr, "failed to allocate memory in qmav.\n");
-        exit(1);
-    }
-
-    struct GenericFunction ** f = NULL;
-    if ( NULL == (f = malloc(Q->ncols*sizeof(struct GenericFunction *)))){
-        fprintf(stderr, "failed to allocate memory in qmav.\n");
-        exit(1);
-    }
-    size_t ii, jj;
-    for (ii = 0; ii < Q->nrows; ii++){
-        for (jj = 0; jj < Q->ncols; jj++){
-            f[jj] = Q->funcs[jj*Q->nrows+ii];
-        }
-        fout[ii] =  generic_function_lin_comb(Q->ncols,f,v);
-    }
-
-    return fout;
-}
-
-/***********************************************************//**
-    Quasimatrix array - vector multiplication
-
-    \param Q [in] - qmarray
-    \param v [in] - array
-
-    \return q - quasimatrix
-***************************************************************/
-struct Quasimatrix *
-qmav(struct Qmarray * Q, double * v)
-{
-    struct Quasimatrix * q = quasimatrix_alloc(Q->nrows);
-    free(q->funcs);
-    q->funcs = qmav_base(Q,v);
-    return q;
-}
 
 /***********************************************************//**
     Quasimatrix array - matrix multiplication
 
-    \param Q [in] - quasimatrix array
-    \param R [in] - matrix  (fortran order)
-    \param b [in] - number of columns of R
+    \param[in] Q - quasimatrix array
+    \param[in] R - matrix  (fortran order)
+    \param[in] b - number of columns of R
 
     \return B - qmarray
 ***************************************************************/
@@ -884,9 +105,9 @@ struct Qmarray * qmam(struct Qmarray * Q, double * R, size_t b)
 /***********************************************************//**
     Transpose Quasimatrix array - matrix multiplication
 
-    \param Q [in] - quasimatrix array
-    \param R [in] - matrix  (fortran order)
-    \param b [in] - number of columns of R
+    \param[in] Q - quasimatrix array
+    \param[in] R - matrix  (fortran order)
+    \param[in] b - number of columns of R
 
     \return B - qmarray
 ***************************************************************/
@@ -2216,6 +1437,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
     //printf("ORTHONORMAL QMARRAY IS \n");
     //print_qmarray(E,0,NULL);
     //printf("qm array\n");
+    struct GenericFunction ** vfuncs = NULL;
     for (ii = 0; ii < A->ncols; ii++){
         if (VQMAHOUSEHOLDER){
             printf(" On iter (%zu / %zu) \n", ii, A->ncols);
@@ -2252,15 +1474,21 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             generic_function_array_flip_sign(E->nrows,1,E->funcs+ii*E->nrows);
         }
         v = quasimatrix_alloc(A->nrows);
-        free(v->funcs);v->funcs=NULL;
+        quasimatrix_free_funcs(v);
+        
+        /* free(v->funcs);v->funcs=NULL; */
         //printf("array daxpby nrows = %zu\n",A->nrows);
         //printf("epostalpha_qma = \n");
         //print_generic_function(E->funcs[ii*E->nrows],3,NULL);
         //printf("Apostalpha_qma = \n");
         //print_generic_function(A->funcs[ii*A->nrows],3,NULL);
-        v->funcs = generic_function_array_daxpby(A->nrows,rho,1,
-                        E->funcs+ii*E->nrows,-1.0, 1, A->funcs+ii*A->nrows);
 
+        vfuncs = generic_function_array_daxpby(A->nrows,rho,1,
+                                              E->funcs+ii*E->nrows,-1.0,
+                                              1, A->funcs+ii*A->nrows);
+        quasimatrix_set_funcs(v,vfuncs);
+        
+        /* printf("sup!\n"); */
         //printf("v update = \n");
         //print_generic_function(v->funcs[0],3,NULL);
 
@@ -2273,23 +1501,32 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             for (jj = 0; jj < ii-1; jj++){
                 //printf("jj=%zu (max is %zu) \n",jj, ii-1);
                 tempv = quasimatrix_copy(v);
+                struct GenericFunction ** tvfuncs = NULL;
+                tvfuncs = quasimatrix_get_funcs(tempv);
                 //printf("compute temp\n");
                 //print_quasimatrix(tempv, 0, NULL);
-                temp1 =  generic_function_inner_sum(A->nrows,1,tempv->funcs,1,
-                                                E->funcs + jj*E->nrows);
+                temp1 =  generic_function_inner_sum(A->nrows,1,tvfuncs,1,
+                                                    E->funcs + jj*E->nrows);
+                /* quasimatrix_set_funcs(tempv,tvfuncs); */
+                
                 //printf("temp1= %G\n",temp1);
-                generic_function_array_free(v->funcs,A->nrows);
-                v->funcs = generic_function_array_daxpby(A->nrows,1.0,1,tempv->funcs,
-                                                -temp1, 1, E->funcs+jj*E->nrows);
+                /* generic_function_array_free(vfuncs,A->nrows); */
+                quasimatrix_free_funcs(v);
+                /* vfuncs = quasimatrix_get_funcs(v); */
+                vfuncs = generic_function_array_daxpby(A->nrows,1.0,1,tvfuncs,
+                                                       -temp1,1,E->funcs+jj*E->nrows);
+                quasimatrix_set_funcs(v,vfuncs);
                 //printf("k ok= %G\n",temp1);
                 quasimatrix_free(tempv);
             }
         }
         //*/
 
-        //printf("compute sigma\n");
+        /* printf("compute sigma\n"); */
         //print_generic_function(v->funcs[0],3,NULL);
-        sigma = generic_function_array_norm(v->n, 1, v->funcs);
+        /* sigma = generic_function_array_norm(A->nrows, 1, vfuncs); */
+        sigma = quasimatrix_norm(v);
+        /* printf("get it!\n"); */
         if (sigma < ZEROTHRESH){
             sigma = 0.0;
         }
@@ -2304,17 +1541,22 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
         //printf("v2preqma = \n");
         //print_generic_function(v->funcs[0],3,NULL);
         double ttol = ZEROTHRESH;
+        struct GenericFunction ** v2fs;
         if (fabs(sigma) <= ttol){
             //printf("here sigma too small!\n");
             v2 = quasimatrix_alloc(A->nrows);
-            free(v2->funcs);v2->funcs=NULL;
-            v2->funcs = generic_function_array_daxpby(A->nrows,1.0, 1, 
-                            E->funcs+ii*E->nrows, 0.0, 1, NULL); //just a copy
+            quasimatrix_free_funcs(v2);
+            /* free(v2->funcs);v2->funcs=NULL; */
+            //just a copy
+            v2fs = generic_function_array_daxpby(A->nrows,1.0, 1, 
+                                                 E->funcs+ii*E->nrows, 0.0, 1, NULL);
+            quasimatrix_set_funcs(v2,v2fs);
         }
         else {
             //printf("quasi daxpby\n");
             //printf("sigma = %G\n",sigma);
             v2 = quasimatrix_daxpby(1.0/sigma, v, 0.0, NULL);
+            v2fs = quasimatrix_get_funcs(v2);
             //printf("quasi got it daxpby\n");
         }
         quasimatrix_free(v);
@@ -2326,12 +1568,12 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
         for (jj = ii+1; jj < A->ncols; jj++){
 
             if (VQMAHOUSEHOLDER){
-                //printf("\t On sub-iter %zu\n", jj);
+                printf("\t On sub-iter %zu\n", jj);
             }
             //printf("Aqma = \n");
             //print_generic_function(A->funcs[jj*A->nrows],3,NULL);
-            temp1 = generic_function_inner_sum(A->nrows,1,v2->funcs,1,
-                                        A->funcs+jj*A->nrows);
+            temp1 = generic_function_inner_sum(A->nrows,1,v2fs,1,
+                                               A->funcs+jj*A->nrows);
 
             //printf("\t\t temp1 pre = %3.15G DBL_EPS=%G\n", temp1,DBL_EPSILON);
             if (fabs(temp1) < ZEROTHRESH){
@@ -2339,15 +1581,18 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             }
 
             atemp = quasimatrix_alloc(A->nrows);
-            free(atemp->funcs);
-            atemp->funcs = generic_function_array_daxpby(A->nrows, 1.0, 1, 
-                                A->funcs+jj*A->nrows, -2.0 * temp1, 1, 
-                                v2->funcs);
+            quasimatrix_free_funcs(atemp);
+            struct GenericFunction ** afuncs = quasimatrix_get_funcs(atemp);
+            afuncs = generic_function_array_daxpby(A->nrows, 1.0, 1, 
+                                                  A->funcs+jj*A->nrows,
+                                                  -2.0 * temp1, 1, 
+                                                  v2fs);
+            quasimatrix_set_funcs(atemp,afuncs);
             
             //printf("atemp = \n");
             //print_generic_function(atemp->funcs[0], 0, NULL);
             R[jj * A->ncols + ii] = generic_function_inner_sum(E->nrows, 1,
-                        E->funcs + ii*E->nrows, 1, atemp->funcs);
+                        E->funcs + ii*E->nrows, 1, afuncs);
 
 
             //double aftemp = 
@@ -2362,11 +1607,13 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
             }
 
             v = quasimatrix_alloc(A->nrows);
-            free(v->funcs);v->funcs=NULL;
-            v->funcs = generic_function_array_daxpby(A->nrows, 1.0, 1, 
-                atemp->funcs, -R[jj * A->ncols + ii], 1,
-                E->funcs + ii*E->nrows);
-            
+            quasimatrix_free_funcs(v);
+            /* free(v->funcs);v->funcs=NULL; */
+            vfuncs = generic_function_array_daxpby(A->nrows, 1.0, 1, 
+                                                   afuncs,
+                                                   -R[jj * A->ncols + ii], 1,
+                                                   E->funcs + ii*E->nrows);
+            quasimatrix_set_funcs(v,vfuncs);
 
 
             if (VQMAHOUSEHOLDER){
@@ -2389,7 +1636,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
 
     //printf("qmarray E after = \n");
     //print_qmarray(E,0,NULL);
-    //printf("\n\n\n\n\n\n\n\n\n Ending QMARRAY_HOUSEHOLDER\n");
+    /* printf("\n\n\n\n\n\n\n\n\n Ending QMARRAY_HOUSEHOLDER\n"); */
     return 0;
 }
 
@@ -2397,9 +1644,9 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
     Compute the Q for the QR factor from householder reflectors
     for a Quasimatrix Array
 
-    \param Q [inout] - qmarray E obtained afterm qmarray_householder
+    \param[in,out] Q - qmarray E obtained afterm qmarray_householder
                        becomes overwritten
-    \param V [inout] - Householder functions, obtained from qmarray_householder
+    \param[in,out] V - Householder functions, obtained from qmarray_householder
 
     \return info - if != 0 then something is wrong)
 ***************************************************************/
@@ -2429,11 +1676,12 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
                                         1, Q->funcs + jj*Q->nrows);
             //printf("temp1=%G\n",temp1);    
             q2 = quasimatrix_alloc(Q->nrows);
-            free(q2->funcs); q2->funcs = NULL;
-            q2->funcs = generic_function_array_daxpby(Q->nrows, 1.0, 1, 
+            quasimatrix_free_funcs(q2);
+            struct GenericFunction ** q2funcs = quasimatrix_get_funcs(q2);
+            q2funcs = generic_function_array_daxpby(Q->nrows, 1.0, 1, 
                         Q->funcs + jj * Q->nrows, -2.0 * temp1, 1, 
                         V->funcs + ii * V->nrows);
-
+            quasimatrix_set_funcs(q2,q2funcs);
             qmarray_set_column(Q,jj, q2);
             //printf("Q new = \n");
             //print_generic_function(Q->funcs[jj],1,NULL);
@@ -2458,10 +1706,10 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
     quasimatrix array. (LQ= A), Q orthonormal, 
     L lower triangular
 
-    \param A [inout] - qmarray to triangularize (destroyed 
-    \param E [inout] - qmarray with orthonormal rows
-    \param V [inout] - allocated space for a qmarray (will store reflectors)
-    \param L [inout] - allocated space lower triangular factor
+    \param[in,out] A - qmarray to triangularize (destroyed 
+    \param[in,out] E - qmarray with orthonormal rows
+    \param[in,out] V - allocated space for a qmarray (will store reflectors)
+    \param[in,out] L - allocated space lower triangular factor
 
     \return info (if != 0 then something is wrong)
 ***************************************************************/
@@ -2478,8 +1726,7 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
     double rho, sigma, alpha;
     double temp1;
 
-
-
+    struct GenericFunction ** vfuncs = NULL;
     for (ii = 0; ii < A->nrows; ii++){
         if (VQMAHOUSEHOLDER)
             printf(" On iter %zu\n", ii);
@@ -2510,44 +1757,53 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
         }
 
         v = quasimatrix_alloc(A->ncols);
-        free(v->funcs);v->funcs=NULL;
-
-        v->funcs = generic_function_array_daxpby(A->ncols, rho, E->nrows, 
+        quasimatrix_free_funcs(v);
+        
+        vfuncs = generic_function_array_daxpby(A->ncols, rho, E->nrows, 
                     E->funcs+ii, -1.0, A->nrows, A->funcs+ii);
-    
+        quasimatrix_set_funcs(v,vfuncs);
+        
         // improve orthogonality
         //*
         if (ii > 1){
             struct Quasimatrix * tempv = NULL;
             for (jj = 0; jj < ii-1; jj++){
                 tempv = quasimatrix_copy(v);
-                temp1 =  generic_function_inner_sum(A->ncols,1,tempv->funcs,E->nrows,
-                                                E->funcs + jj);
-                generic_function_array_free(v->funcs,A->ncols);
-                v->funcs = generic_function_array_daxpby(A->ncols,1.0,1,tempv->funcs,
-                                        -temp1, E->nrows, E->funcs+jj);
+                struct GenericFunction ** tvfuncs = quasimatrix_get_funcs(tempv);
+                temp1 =  generic_function_inner_sum(A->ncols,1,tvfuncs,E->nrows,
+                                                    E->funcs + jj);
+                quasimatrix_free_funcs(v);
+                vfuncs = generic_function_array_daxpby(A->ncols,1.0,1,tvfuncs,
+                                                       -temp1,E->nrows,E->funcs+jj);
+                quasimatrix_set_funcs(v,vfuncs);
                 quasimatrix_free(tempv);
             }
         }
         //*/
-        sigma = generic_function_array_norm(v->n, 1, v->funcs);
+        sigma = quasimatrix_norm(v);//generic_function_array_norm(v->n, 1, v->funcs);
         if (sigma < ZEROTHRESH){
             sigma = 0.0;
         }
         //
         double ttol = ZEROTHRESH;
 
-        if (VQMAHOUSEHOLDER)
+        if (VQMAHOUSEHOLDER){
             printf(" \t ... sigma = %G ttol=%G \n",sigma,ttol);
+        }
+        struct GenericFunction ** v2funcs;
+        
         if (fabs(sigma) <= ttol){
             //printf("HERE SIGMA TOO SMALL\n");
             v2 = quasimatrix_alloc(A->ncols);
-            free(v2->funcs);v2->funcs=NULL;
-            v2->funcs = generic_function_array_daxpby(E->ncols,1.0, E->nrows, 
-                            E->funcs+ii, 0.0, 1, NULL); //just a copy
+            quasimatrix_free_funcs(v2);
+             //just a copy
+            v2funcs = generic_function_array_daxpby(E->ncols,1.0, E->nrows, 
+                                                    E->funcs+ii, 0.0, 1, NULL);
+            quasimatrix_set_funcs(v2,v2funcs);
         }
         else {
             v2 = quasimatrix_daxpby(1.0/sigma, v, 0.0, NULL);
+            v2funcs = quasimatrix_get_funcs(v2);
         }
         quasimatrix_free(v);
         qmarray_set_row(V,ii,v2);
@@ -2556,10 +1812,10 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
 
             if (VQMAHOUSEHOLDER){
                 //printf("\t On sub-iter %zu\n", jj);
-		}
+            }
 
-            temp1 = generic_function_inner_sum(A->ncols,1,v2->funcs,
-                                            A->nrows, A->funcs+jj);
+            temp1 = generic_function_inner_sum(A->ncols,1,v2funcs,
+                                               A->nrows, A->funcs+jj);
 
             if (fabs(temp1) < ZEROTHRESH){
                 temp1 = 0.0;
@@ -2568,21 +1824,31 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
             //    printf("\t\t temp1= %3.15G\n", temp1);
 
             atemp = quasimatrix_alloc(A->ncols);
-            free(atemp->funcs);
-            atemp->funcs = generic_function_array_daxpby(A->ncols, 1.0, 
-                                A->nrows, A->funcs+jj, -2.0 * temp1, 1, 
-                                v2->funcs);
+            quasimatrix_free_funcs(atemp);
+            struct GenericFunction ** afuncs = NULL;
+            /* free(atemp->funcs); */
+            afuncs = generic_function_array_daxpby(A->ncols, 1.0, 
+                                                   A->nrows, A->funcs+jj,
+                                                   -2.0 * temp1, 1, 
+                                                   v2funcs);
+            quasimatrix_set_funcs(atemp,afuncs);
 
             L[ii * A->nrows + jj] = generic_function_inner_sum(E->ncols, 
-                        E->nrows, E->funcs + ii, 1, atemp->funcs);
+                                                               E->nrows,
+                                                               E->funcs + ii, 1,
+                                                               afuncs);
 
             //if (VQMAHOUSEHOLDER)
             //    printf("\t\t e^T atemp= %3.15G\n", L[ii*A->nrows+jj]);
 
             v = quasimatrix_alloc(A->ncols);
-            free(v->funcs);v->funcs=NULL;
-            v->funcs = generic_function_array_daxpby(A->ncols, 1.0, 1,
-                atemp->funcs, -L[ii * A->nrows + jj], E->nrows, E->funcs + ii);
+            quasimatrix_free_funcs(v);
+            /* free(v->funcs);v->funcs=NULL; */
+            /* vfuncs = quasimatrix_get_funcs(v); */
+            vfuncs = generic_function_array_daxpby(A->ncols, 1.0, 1,
+                                                   afuncs, -L[ii * A->nrows + jj],
+                                                   E->nrows, E->funcs + ii);
+            quasimatrix_set_funcs(v,vfuncs);
             
             qmarray_set_row(A,jj,v);  // overwrites column jj
 
@@ -2600,8 +1866,8 @@ qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E,
 /***********************************************************//**
     Compute the Q matrix from householder reflector for LQ decomposition
 
-    \param Q [inout] - qmarray E obtained afterm qmarray_householder_rows (overwritten)
-    \param V [inout] - Householder functions, obtained from qmarray_householder
+    \param[in,out] Q - qmarray E obtained afterm qmarray_householder_rows (overwrite)
+    \param[in,out] V - Householder functions, obtained from qmarray_householder
 
     \return info - (if != 0 then something is wrong)
 ***************************************************************/
@@ -2620,11 +1886,13 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
                                         Q->nrows, Q->funcs + jj);
         
             q2 = quasimatrix_alloc(Q->ncols);
-            free(q2->funcs); q2->funcs = NULL;
-            q2->funcs = generic_function_array_daxpby(Q->ncols, 1.0, Q->nrows, 
+            quasimatrix_free_funcs(q2);
+            struct GenericFunction ** q2funcs = quasimatrix_get_funcs(q2);
+            q2funcs = generic_function_array_daxpby(Q->ncols, 1.0, Q->nrows, 
                         Q->funcs + jj, -2.0 * temp1, V->nrows, 
                         V->funcs + ii);
-
+            quasimatrix_set_funcs(q2,q2funcs);
+            
             qmarray_set_row(Q,jj, q2);
             quasimatrix_free(q2); q2 = NULL;
         }
@@ -2790,7 +2058,7 @@ qmarray_householder_simple_grid(char * dir, struct Qmarray * A, double * R,
     }
     else if (strcmp(dir, "LQ") == 0){
         struct Qmarray * temp = qmarray_orth1d_linelm_grid(A->nrows,A->ncols,grid);
-        struct Qmarray * Q = qmarray_transpose(temp);
+        Q = qmarray_transpose(temp);
         int out = qmarray_lq(A,&Q,&R);
         assert(out == 0);
         qmarray_free(temp); temp = NULL;

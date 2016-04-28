@@ -33,24 +33,44 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
+/** \file cross2d.h
+ * Provides header files for cross2d.c
  */
 
+#ifndef CROSS2D_H
+#define CROSS2D_H
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
+struct SkeletonDecomp;
+struct Cross2dargs;
+struct Cross2dargs * cross2d_args_create(size_t,double,enum function_class,
+                                         void *, int);
+void cross2d_args_destroy(struct Cross2dargs *);
+void cross2d_args_set_approx_args(struct Cross2dargs *, void *);
+size_t cross2d_args_get_rank(const struct Cross2dargs *);
 
-#include "quasimatrix.h"
-#include "cross2d.h"
+struct SkeletonDecomp * skeleton_decomp_alloc(size_t);
+struct SkeletonDecomp *
+skeleton_decomp_copy(const struct SkeletonDecomp *);
+void skeleton_decomp_free(struct SkeletonDecomp *);
+double * skeleton_get_skeleton(const struct SkeletonDecomp *);
 
-#include "elements.h"
-#include "indmanage.h"
-#include "algs.h"
-#include "dmrg.h"
-#include "dmrgprod.h"
-#include "qmarray_qr.h"
-#include "diffusion.h"
-#include "approximate.h"
+struct SkeletonDecomp * 
+skeleton_decomp_init2d_from_pivots(
+    double (*)(double,double,void *),
+    void *, const struct BoundingBox *,
+    const struct Cross2dargs *,
+    const double *, const double *);
+    
+
+
+double skeleton_decomp_eval(const struct SkeletonDecomp *,
+                            double, double);
+
+
+struct SkeletonDecomp *
+cross_approx_2d(double (*)(double, double, void *), 
+                void *, struct BoundingBox *,
+                struct SkeletonDecomp **,double *,
+                double *, struct Cross2dargs *);
 
 #endif

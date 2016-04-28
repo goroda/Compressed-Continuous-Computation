@@ -40,6 +40,7 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include "array.h"
 #include "lib_funcs.h"
 
 /** \enum function_class
@@ -116,7 +117,7 @@ struct GenericFunction * generic_function_alloc(size_t, enum function_class, con
 void generic_function_roundt(struct GenericFunction **, double);
 
 struct GenericFunction * generic_function_deriv(struct GenericFunction *);
-struct GenericFunction * generic_function_copy(struct GenericFunction *);
+
 
 struct GenericFunction * generic_function_approximate1d( 
                 double (*f)(double,void *), void *, enum function_class, 
@@ -124,7 +125,7 @@ struct GenericFunction * generic_function_approximate1d(
 struct GenericFunction * 
 generic_function_poly_randu(enum poly_type,size_t, double, double);
 
-struct GenericFunction * generic_function_copy(struct GenericFunction *);
+struct GenericFunction * generic_function_copy(const struct GenericFunction *);
 void generic_function_copy_pa(struct GenericFunction *, struct GenericFunction *);
 
 void generic_function_free(struct GenericFunction *);
@@ -200,8 +201,9 @@ generic_function_array_daxpby2(size_t, double, size_t,
         struct GenericFunction **, double, size_t, 
         struct GenericFunction **, size_t, struct GenericFunction **);
 
-struct GenericFunction * generic_function_lin_comb(size_t,
-                            struct GenericFunction **, double *);
+struct GenericFunction *
+generic_function_lin_comb(size_t,
+                          struct GenericFunction **, const double *);
 struct GenericFunction * generic_function_lin_comb2(size_t, size_t, 
                 struct GenericFunction **, size_t, double *);
 
@@ -244,7 +246,7 @@ void generic_function_array_orth(size_t, enum function_class, void *,
                             struct GenericFunction **, void *);
 void 
 generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
-                                              size_t,size_t,
+                                             size_t,size_t,
                                              struct c3Vector *);
 
 ////////////////////////////////////////////////////////////////////
@@ -284,7 +286,7 @@ fiber_cut_init2d( double (*f)(double, double, void *), void *, size_t, double);
 
 struct FiberCut **
 fiber_cut_2darray(double (*f)(double, double, void *), void *, 
-                            size_t, size_t, double *);
+                            size_t, size_t, const double *);
 
 struct FiberCut **
 fiber_cut_ndarray( double (*)(double *, void *), void *, 

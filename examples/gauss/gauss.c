@@ -56,7 +56,6 @@ int main( int argc, char *argv[])
     if (argc == 7){
         rank = (size_t)atol(argv[6]);
     }
-    size_t dim = 2;
 
     struct gauss_opts gopts;
     gopts.m1 = atof(argv[1]);
@@ -90,28 +89,20 @@ int main( int argc, char *argv[])
     ope_adapt_opts_set_coeffs_check(aopts,4);
     ope_adapt_opts_set_tol(aopts,1e-8);
 
-    enum function_class fc = POLYNOMIAL;
     enum poly_type p = LEGENDRE;
-    struct Cross2dargs cargs;
-    cargs.r = rank;
-    cargs.delta = 5e-3;
-    size_t kk;
+    int verbose = 2;
+    struct Cross2dargs * cargs=cross2d_args_create(rank,5e-3,POLYNOMIAL,&p,verbose);
+    cross2d_args_set_approx_args(cargs,aopts);
 
-    for (kk = 0; kk < dim; kk++){
-        cargs.fclass[kk] = fc;
-        cargs.sub_type[kk] = &p;
-        cargs.approx_args[kk] = aopts;
-    }
-    cargs.verbose = 2;
     
     printf("xpivots = ");
-    dprint(cargs.r,pivx);
+    dprint(rank,pivx);
     printf("pivots = ");
-    dprint(cargs.r,pivy);
+    dprint(rank,pivy);
 
     struct SkeletonDecomp * skd = skeleton_decomp_init2d_from_pivots(
-                    gauss, &gopts, bounds, cargs.fclass, cargs.sub_type,
-                    cargs.r, pivx, pivy, cargs.approx_args);
+        gauss, &gopts, bounds, cargs,pivx,pivy);
+
     
     /*
     printf("skeleton = \n");
@@ -122,7 +113,7 @@ int main( int argc, char *argv[])
     struct SkeletonDecomp * skd_init = skeleton_decomp_copy(skd);
 
     struct SkeletonDecomp * final = cross_approx_2d(gauss,&gopts,bounds,
-                        &skd,pivx,pivy,&cargs);
+                                                    &skd,pivx,pivy,cargs);
 
     //printf("Params=%s\n",params);
 
@@ -193,6 +184,7 @@ int main( int argc, char *argv[])
     free(pivx);
     free(pivy);
     bounding_box_free(bounds);
+    cross2d_args_destroy(cargs);
     skeleton_decomp_free(final);
     skeleton_decomp_free(skd);
     skeleton_decomp_free(skd_init);
