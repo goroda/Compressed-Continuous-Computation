@@ -163,6 +163,8 @@ double * bounding_box_get_ub(struct BoundingBox * b)
     return b->ub;
 }
 
+
+
 /********************************************************//**
     Allocate memory for a generic function without specifying class or sub_type
 
