@@ -43,30 +43,7 @@
 
 #include "elements.h"
 #include "indmanage.h"
-
-/** \struct Cross2dargs
- *  \brief Contains arguments for cross approximation
- *  \var Cross2dargs::r 
- *  rank of approximation
- *  \var Cross2dargs::delta
- *  convergence criteria
- *  \var Cross2dargs::fclass
- *  approximation classes for each dimension
- *  \var Cross2dargs::sub_type
- *  approximation sub types for each dimension
- *  \var Cross2dargs::verbose
- *  verbosity level (0,1,2)
- * */
-struct Cross2dargs
-{
-    size_t r;
-    double delta;
-
-    enum function_class fclass[2];
-    void * sub_type[2];
-    void * approx_args [2];
-    int verbose;
-};
+#include "quasimatrix.h"
 
 /** \struct FtCrossArgs
  *  \brief Arguments for function-train cross approximation
@@ -120,40 +97,11 @@ struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs *);
 void ft_cross_args_free(struct FtCrossArgs *);
 void ft_cross_args_init(struct FtCrossArgs *);
 
-// (quasimatrix - vector multiplication
-struct GenericFunction * qmv(struct Quasimatrix *, double *);
-struct Quasimatrix * qmm(struct Quasimatrix *, double *, size_t);
-struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
-struct Quasimatrix * quasimatrix_daxpby(double, struct Quasimatrix *,
-                                         double, struct Quasimatrix *);
 
-// decompositions
-struct Quasimatrix * quasimatrix_householder_simple(struct Quasimatrix *, double *); 
-int quasimatrix_householder(struct Quasimatrix *, struct Quasimatrix *, 
-        struct Quasimatrix *, double *);
-int quasimatrix_qhouse(struct Quasimatrix *, struct Quasimatrix *);
-
-int quasimatrix_lu1d(struct Quasimatrix *, struct Quasimatrix *, double *, double *, void *);
-
-int quasimatrix_maxvol1d(struct Quasimatrix *, double *, double *);
-
-struct SkeletonDecomp * cross_approx_2d(double (*)(double, double, void *), 
-        void *, struct BoundingBox *, struct SkeletonDecomp **,  double *,
-        double *, struct Cross2dargs *);
-
-// Misc
-size_t quasimatrix_rank(struct Quasimatrix *);
-double skeleton_decomp_inner_help(struct Quasimatrix *, struct Quasimatrix *,
-            struct Quasimatrix *, struct Quasimatrix *);
-
-double quasimatrix_inner(struct Quasimatrix *, struct Quasimatrix *);
-double quasimatrix_norm(struct Quasimatrix *);
-
-////////////////////////////////////////////////////////////////////////////
 // qmarrays
 
 // (qmarray - vector multiplication
-struct Quasimatrix * qmav(struct Qmarray *, double *);
+/* struct Quasimatrix * qmav(struct Qmarray *, double *); */
 struct Qmarray * qmam(struct Qmarray *, double *, size_t);
 struct Qmarray * qmatm(struct Qmarray *, double *, size_t);
 struct Qmarray * mqma(double *, struct Qmarray *, size_t);

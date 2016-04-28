@@ -138,13 +138,20 @@ void Test_quasimatrix_rank2(CuTest * tc){
     printf("POLYNOMIAL %d \n",Atemp->funcs[0]->fc);
     print_generic_function(Atemp->funcs[0],2,NULL);
     */
-    double diff = generic_function_norm2diff(A->funcs[0],Atemp->funcs[0]);
+    struct GenericFunction *f1,*f2;
+    f1 = quasimatrix_get_func(A,0);
+    f2 = quasimatrix_get_func(Atemp,0);
+    double diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-13);
 
-    diff = generic_function_norm2diff(A->funcs[1],Atemp->funcs[1]);
+    f1 = quasimatrix_get_func(A,1);
+    f2 = quasimatrix_get_func(Atemp,1);
+    diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-13);
 
-    diff = generic_function_norm2diff(A->funcs[2],Atemp->funcs[2]);
+    f1 = quasimatrix_get_func(A,2);
+    f2 = quasimatrix_get_func(Atemp,2);
+    diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-11);
 
     //print_quasimatrix(A,0,NULL);
@@ -159,14 +166,20 @@ void Test_quasimatrix_rank2(CuTest * tc){
 
     struct Quasimatrix * Btemp = quasimatrix_approx1d(
                         3, funcs2, args, POLYNOMIAL, &p, -1.0, 1.0, NULL);
-    
-    diff = generic_function_norm2diff(B->funcs[0],Btemp->funcs[0]);
+
+    f1 = quasimatrix_get_func(B,0);
+    f2 = quasimatrix_get_func(Btemp,0);
+    diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-13);
 
-    diff = generic_function_norm2diff(B->funcs[1],Btemp->funcs[1]);
+    f1 = quasimatrix_get_func(B,1);
+    f2 = quasimatrix_get_func(Btemp,1);
+    diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-13);
 
-    diff = generic_function_norm2diff(B->funcs[2],Btemp->funcs[2]);
+    f1 = quasimatrix_get_func(B,2);
+    f2 = quasimatrix_get_func(Btemp,2);
+    diff = generic_function_norm2diff(f1,f2);
     CuAssertDblEquals(tc,0.0,diff,1e-13);
 
     struct Quasimatrix * Bdiff = quasimatrix_daxpby(1.0,B,-1.0,Btemp);
@@ -205,17 +218,24 @@ void Test_quasimatrix_householder(CuTest * tc){
     struct GenericFunction * temp;
     double diff;
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[0],-1.0,Anew->funcs[0]);
+    struct GenericFunction *f1,*f2;
+    f1 = quasimatrix_get_func(Acopy,0);
+    f2 = quasimatrix_get_func(Anew,0);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
     generic_function_free(temp);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[1],-1.0,Anew->funcs[1]);
+    f1 = quasimatrix_get_func(Acopy,1);
+    f2 = quasimatrix_get_func(Anew,1);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     generic_function_free(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[2],-1.0,Anew->funcs[2]);
+    f1 = quasimatrix_get_func(Acopy,2);
+    f2 = quasimatrix_get_func(Anew,2);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
     generic_function_free(temp);
@@ -253,17 +273,24 @@ void Test_quasimatrix_householder_weird_domain(CuTest * tc){
     struct GenericFunction * temp;
     double diff;
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[0],-1.0,Anew->funcs[0]);
+    struct GenericFunction *f1,*f2;
+    f1 = quasimatrix_get_func(Acopy,0);
+    f2 = quasimatrix_get_func(Anew,0);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
     generic_function_free(temp);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[1],-1.0,Anew->funcs[1]);
+    f1 = quasimatrix_get_func(Acopy,1);
+    f2 = quasimatrix_get_func(Anew,1);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     generic_function_free(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-12);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[2],-1.0,Anew->funcs[2]);
+    f1 = quasimatrix_get_func(Acopy,2);
+    f2 = quasimatrix_get_func(Anew,2);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-11);
     generic_function_free(temp);
@@ -301,11 +328,15 @@ void Test_quasimatrix_lu1d(CuTest * tc){
     quasimatrix_lu1d(A,L,U,piv,NULL);
      
     double eval;
-    eval = generic_function_1d_eval(L->funcs[1], piv[0]);
+    struct GenericFunction * lf;
+    lf = quasimatrix_get_func(L,1);
+    eval = generic_function_1d_eval(lf, piv[0]);
     CuAssertDblEquals(tc, 0.0, eval, 1e-13);
-    eval = generic_function_1d_eval(L->funcs[2], piv[0]);
+    lf = quasimatrix_get_func(L,2);
+    eval = generic_function_1d_eval(lf, piv[0]);
     CuAssertDblEquals(tc, 0.0, eval, 1e-13);
-    eval = generic_function_1d_eval(L->funcs[2], piv[1]);
+    lf = quasimatrix_get_func(L,2);
+    eval = generic_function_1d_eval(lf, piv[1]);
     CuAssertDblEquals(tc, 0.0, eval, 1e-13);
 
     //printf("pivots at = \n");
@@ -315,20 +346,28 @@ void Test_quasimatrix_lu1d(CuTest * tc){
     struct GenericFunction * temp;
     double diff;
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[0],-1.0,Anew->funcs[0]);
+    struct GenericFunction *f1,*f2;
+    f1 = quasimatrix_get_func(Acopy,0);
+    f2 = quasimatrix_get_func(Anew,0);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
-    CuAssertDblEquals(tc, 0.0, diff, 1e-15);
+    CuAssertDblEquals(tc, 0.0, diff, 1e-13);
     generic_function_free(temp);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[1],-1.0,Anew->funcs[1]);
+    f1 = quasimatrix_get_func(Acopy,1);
+    f2 = quasimatrix_get_func(Anew,1);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     generic_function_free(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
 
-    temp = generic_function_daxpby(1.0, Acopy->funcs[2],-1.0,Anew->funcs[2]);
+    f1 = quasimatrix_get_func(Acopy,2);
+    f2 = quasimatrix_get_func(Anew,2);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-15);
     generic_function_free(temp);
+    
 
     quasimatrix_free(A);
     quasimatrix_free(L);
@@ -388,22 +427,12 @@ void Test_cross_approx_2d(CuTest * tc){
     struct BoundingBox * bounds = bounding_box_init_std(2); 
     double pivy[2] = {-0.25, 0.3};
     double pivx[2] = {-0.45, 0.4};
-    
-    struct Cross2dargs cargs;
+
     enum poly_type p = LEGENDRE;
-    cargs.r = 2;
-    cargs.delta = 1e-4;
-    cargs.fclass[0] = POLYNOMIAL;
-    cargs.fclass[1] = POLYNOMIAL;
-    cargs.sub_type[0] = &p;
-    cargs.sub_type[1] = &p;
-    cargs.approx_args[0] = NULL;
-    cargs.approx_args[1] = NULL;
-    cargs.verbose = 0;
+    struct Cross2dargs * cargs = cross2d_args_create(2,1e-4,POLYNOMIAL,&p,0);
     
     struct SkeletonDecomp * skd = skeleton_decomp_init2d_from_pivots(
-                    func2d, NULL, bounds, cargs.fclass, cargs.sub_type,
-                    cargs.r, pivx, pivy, cargs.approx_args);
+        func2d,NULL,bounds,cargs,pivx, pivy);
     
     size_t ii, jj;
     double det_before = 0.0;
@@ -411,7 +440,7 @@ void Test_cross_approx_2d(CuTest * tc){
     det_before -= (func2d(pivx[1],pivy[0],NULL) * func2d(pivx[0],pivy[1],NULL)) ;
 
     struct SkeletonDecomp * final = cross_approx_2d(func2d,NULL,bounds,
-                        &skd,pivx,pivy,&cargs);
+                        &skd,pivx,pivy,cargs);
     
     double det_after = 0.0;
     det_after += (func2d(pivx[0],pivy[0],NULL) * func2d(pivx[1],pivy[1],NULL));
@@ -451,6 +480,7 @@ void Test_cross_approx_2d(CuTest * tc){
     skeleton_decomp_free(skd);
     skeleton_decomp_free(final);
     bounding_box_free(bounds);
+    cross2d_args_destroy(cargs);
 }
 
 
@@ -478,22 +508,30 @@ void Test_quasimatrix_serialize(CuTest * tc){
     struct Quasimatrix * B = NULL;
     quasimatrix_deserialize(text, &B);
 
-    CuAssertIntEquals(tc,3,B->n);
+    size_t bsize = quasimatrix_get_size(B);
+    CuAssertIntEquals(tc,3,bsize);
 
     struct GenericFunction * temp;
     double diff;
 
-    temp = generic_function_daxpby(1.0, A->funcs[0],-1.0,B->funcs[0]);
+    struct GenericFunction *f1,*f2;
+    f1 = quasimatrix_get_func(A,0);
+    f2 = quasimatrix_get_func(B,0);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-15);
     generic_function_free(temp);
 
-    temp = generic_function_daxpby(1.0, A->funcs[1],-1.0,B->funcs[1]);
+    f1 = quasimatrix_get_func(A,1);
+    f2 = quasimatrix_get_func(B,1);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     generic_function_free(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
 
-    temp = generic_function_daxpby(1.0, A->funcs[2],-1.0,B->funcs[2]);
+    f1 = quasimatrix_get_func(A,2);
+    f2 = quasimatrix_get_func(B,2);
+    temp = generic_function_daxpby(1.0,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff, 1e-13);
     generic_function_free(temp);
@@ -589,6 +627,7 @@ void Test_qmarray_householder(CuTest * tc){
     double * R = calloc_double(2*2);
 
     struct Qmarray * Q = qmarray_householder_simple("QR", A,R);
+    /* printf("got QR\n"); */
 
     CuAssertIntEquals(tc,2,Q->nrows);
     CuAssertIntEquals(tc,2,Q->ncols);
@@ -677,24 +716,34 @@ void Test_qmarray_householder2(CuTest * tc){
 
     struct GenericFunction * temp = NULL;
     double diff;
-
-    temp = generic_function_daxpby(1,Q->funcs[0],-1.0,Q2->funcs[0]);
-    diff = generic_function_norm(temp);
-    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
-    generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[1],-1.0,Q2->funcs[1]);
-    diff = generic_function_norm(temp);
-    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
-    generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[2],-1.0,Q2->funcs[2]);
-    diff = generic_function_norm(temp);
-    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
-    generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[3],-1.0,Q2->funcs[3]);
+    struct GenericFunction *f1,*f2;
+    f1 = qmarray_get_func(Q,0,0);
+    f2 = quasimatrix_get_func(Q2,0);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-14);
     generic_function_free(temp);
 
+    f1 = qmarray_get_func(Q,0,1);
+    f2 = quasimatrix_get_func(Q2,1);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+    
+    f1 = qmarray_get_func(Q,0,2);
+    f2 = quasimatrix_get_func(Q2,2);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+
+    f1 = qmarray_get_func(Q,0,3);
+    f2 = quasimatrix_get_func(Q2,3);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
 
     qmarray_free(A);
     qmarray_free(Q);
@@ -742,7 +791,8 @@ void Test_qmarray_householder3(CuTest * tc){
         err = 0.0;
         for (jj = 0; jj < N; jj++){
             temp1 = funcs[ii](xtest[jj],&c);
-            temp2 = generic_function_1d_eval(A2->funcs[ii],xtest[jj]);
+            struct GenericFunction * gf = quasimatrix_get_func(A2,ii);
+            temp2 = generic_function_1d_eval(gf,xtest[jj]);
             err += fabs(temp1-temp2);
         }
         //printf("err= %3.15G\n",err);
@@ -753,54 +803,65 @@ void Test_qmarray_householder3(CuTest * tc){
     double * R2 = calloc_double(4*4);
     struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2);
 
+    struct GenericFunction *f1,*f2,*f3,*f4;
+    f1 = qmarray_get_func(Q,0,0);
+    f2 = qmarray_get_func(Q,0,1);
+    f3 = qmarray_get_func(Q,0,2);
+    f4 = qmarray_get_func(Q,0,3);
 
     double inner;
-    inner = generic_function_inner(Q->funcs[0],Q->funcs[0]);
+    inner = generic_function_inner(f1,f1);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[0],Q->funcs[1]);
+    inner = generic_function_inner(f1,f2);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[0],Q->funcs[2]);
+    inner = generic_function_inner(f1,f3);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[0],Q->funcs[3]);
+    inner = generic_function_inner(f1,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-12);
 
-    inner = generic_function_inner(Q->funcs[1],Q->funcs[1]);
+    inner = generic_function_inner(f2,f2);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[1],Q->funcs[2]);
+    inner = generic_function_inner(f2,f3);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[1],Q->funcs[3]);
+    inner = generic_function_inner(f2,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
 
-    inner = generic_function_inner(Q->funcs[2],Q->funcs[2]);
+    inner = generic_function_inner(f3,f3);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q->funcs[2],Q->funcs[3]);
+    inner = generic_function_inner(f3,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
 
-    inner = generic_function_inner(Q->funcs[3],Q->funcs[3]);
+    inner = generic_function_inner(f4,f4);
     CuAssertDblEquals(tc,1.0,inner,1e-11);
 
-    inner = generic_function_inner(Q2->funcs[0],Q2->funcs[0]);
+    f1 = quasimatrix_get_func(Q2,0);
+    f2 = quasimatrix_get_func(Q2,1);
+    f3 = quasimatrix_get_func(Q2,2);
+    f4 = quasimatrix_get_func(Q2,3);
+
+    
+    inner = generic_function_inner(f1,f1);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[0],Q2->funcs[1]);
+    inner = generic_function_inner(f1,f2);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[0],Q2->funcs[2]);
+    inner = generic_function_inner(f1,f3);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[0],Q2->funcs[3]);
+    inner = generic_function_inner(f1,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-12);
 
-    inner = generic_function_inner(Q2->funcs[1],Q2->funcs[1]);
+    inner = generic_function_inner(f2,f2);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[1],Q2->funcs[2]);
+    inner = generic_function_inner(f2,f3);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[1],Q2->funcs[3]);
+    inner = generic_function_inner(f2,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
 
-    inner = generic_function_inner(Q2->funcs[2],Q2->funcs[2]);
+    inner = generic_function_inner(f3,f3);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
-    inner = generic_function_inner(Q2->funcs[2],Q2->funcs[3]);
+    inner = generic_function_inner(f3,f4);
     CuAssertDblEquals(tc,0.0,inner,1e-13);
 
-    inner = generic_function_inner(Q2->funcs[3],Q2->funcs[3]);
+    inner = generic_function_inner(f4,f4);
     CuAssertDblEquals(tc,1.0,inner,1e-13);
 
     /*
@@ -817,15 +878,23 @@ void Test_qmarray_householder3(CuTest * tc){
     struct GenericFunction * temp = NULL;
     double diff;
 
-    temp = generic_function_daxpby(1,Q->funcs[0],-1.0,Q2->funcs[0]);
+    f1 = qmarray_get_func(Q,0,0);
+    f2 = quasimatrix_get_func(Q2,0);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-13);
     generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[1],-1.0,Q2->funcs[1]);
+
+    f1 = qmarray_get_func(Q,0,1);
+    f2 = quasimatrix_get_func(Q2,1);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-13);
     generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[2],-1.0,Q2->funcs[2]);
+
+    f1 = qmarray_get_func(Q,0,2);
+    f2 = quasimatrix_get_func(Q2,2);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-13);
     generic_function_free(temp);
@@ -882,22 +951,34 @@ void Test_qmarray_householder4(CuTest * tc){
 
     struct GenericFunction * temp = NULL;
     double diff;
+    struct GenericFunction *f1,*f2;
 
-    temp = generic_function_daxpby(1,Q->funcs[0],-1.0,Q2->funcs[0]);
+    f1 = qmarray_get_func(Q,0,0);
+    f2 = quasimatrix_get_func(Q2,0);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-14);
     generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[1],-1.0,Q2->funcs[1]);
+
+    f1 = qmarray_get_func(Q,0,1);
+    f2 = quasimatrix_get_func(Q2,1);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-14);
     generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[2],-1.0,Q2->funcs[2]);
+
+    f1 = qmarray_get_func(Q,0,2);
+    f2 = quasimatrix_get_func(Q2,2);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     //print_generic_function(Q->funcs[2],0,NULL);
     //print_generic_function(Q2->funcs[2],0,NULL);
     CuAssertDblEquals(tc, 0.0, diff ,1e-14);
     generic_function_free(temp);
-    temp = generic_function_daxpby(1,Q->funcs[3],-1.0,Q2->funcs[3]);
+
+    f1 = qmarray_get_func(Q,0,3);
+    f2 = quasimatrix_get_func(Q2,3);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
     diff = generic_function_norm(temp);
     CuAssertDblEquals(tc, 0.0, diff ,1e-14);
     generic_function_free(temp);
@@ -966,11 +1047,19 @@ void Test_qmarray_householder_linelm(CuTest * tc){
 //    printf("R is \n");
 //    dprint2d_col(nc,nc,R);
 
-    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
-    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
-    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
-    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
-
+    struct GenericFunction *f1,*f2;
+    f1 = qmarray_get_func(A,0,0);
+    f2 = qmarray_get_func(Anew,0,0);
+    double diff1=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,0,1);
+    f2 = qmarray_get_func(Anew,0,1);
+    double diff2=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,1,0);
+    f2 = qmarray_get_func(Anew,1,0);
+    double diff3=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,1,1);
+    f2 = qmarray_get_func(Anew,1,1);
+    double diff4=generic_function_norm2diff(f1,f2);
 
     //printf("diffs = %3.15G,%3.15G,%3.15G,%3.15G\n",diff1,diff2,diff3,diff4);
 
@@ -1035,11 +1124,20 @@ void Test_qmarray_householder_hermite1(CuTest * tc){
     struct Qmarray * Anew = qmam(Q,R,nc);
 
     double * qmat = qmatqma_integrate(Q,Q);
-    
-    double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]);
-    double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]);
-    double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]);
-    double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]);
+
+    struct GenericFunction *f1,*f2;
+    f1 = qmarray_get_func(A,0,0);
+    f2 = qmarray_get_func(Anew,0,0);
+    double diff1=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,0,1);
+    f2 = qmarray_get_func(Anew,0,1);
+    double diff2=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,1,0);
+    f2 = qmarray_get_func(Anew,1,0);
+    double diff3=generic_function_norm2diff(f1,f2);
+    f1 = qmarray_get_func(A,1,1);
+    f2 = qmarray_get_func(Anew,1,1);
+    double diff4=generic_function_norm2diff(f1,f2);
 
     CuAssertDblEquals(tc,1.0,qmat[0],1e-14);
     CuAssertDblEquals(tc,0.0,qmat[1],1e-14);

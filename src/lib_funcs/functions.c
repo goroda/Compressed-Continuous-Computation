@@ -391,7 +391,7 @@ generic_function_deriv(struct GenericFunction * gf)
     \return generic function
 ************************************************************/
 struct GenericFunction * 
-generic_function_copy(struct GenericFunction * gf)
+generic_function_copy(const struct GenericFunction * gf)
 {
     struct GenericFunction * out = NULL; 
 
@@ -1727,15 +1727,15 @@ generic_function_array_daxpby2(size_t n, double a, size_t ldx,
 /********************************************************//**
 *   Compute a linear combination of generic functions
 *
-*   \param[in] n [in]  - number of functions
+*   \param[in] n       - number of functions
 *   \param[in] gfarray - array of functions
 *   \param[in] coeffs  - scaling coefficients
 *
 *   \return out  = sum_i=1^n coeff[i] * gfarray[i]
 ************************************************************/
 struct GenericFunction *
-generic_function_lin_comb(size_t n, struct GenericFunction ** gfarray, 
-                            double * coeffs)
+generic_function_lin_comb(size_t n,struct GenericFunction ** gfarray, 
+                          const double * coeffs)
 {
     // this function is not optimal
     struct GenericFunction * out = NULL;
@@ -2250,7 +2250,7 @@ generic_function_array_orth1d_columns(struct GenericFunction ** f,
     generate an orthonormal qmarray of nodal basis functions
     on a grid
 
-    \param[in] fc    - function class
+    \param[in] f     - array of functions
     \param[in] nrows - number of rows
     \param[in] ncols - number of columns
     \param[in] grid  - nodes
@@ -2448,17 +2448,17 @@ fiber_cut_init2d( double (*f)(double, double, void *), void * args,
 /********************************************************//**
     Generate an array fibercuts of a two dimensional function
 
-    \param f [in] -  function to cut
-    \param args [in] - function arguments
-    \param dim [in] - dimension along which we obtain the cut
-    \param n [in] - number of fibercuts
-    \param val [in] - values of the input for each fibercut 
+    \param[in] f    -  function to cut
+    \param[in] args - function arguments
+    \param[in] dim  - dimension along which we obtain the cut
+    \param[in] n    - number of fibercuts
+    \param[in] val  - values of the input for each fibercut 
 
     \return fcut - array of struct necessary for computing values in the cut
 ***************************************************************/
 struct FiberCut **
 fiber_cut_2darray( double (*f)(double, double, void *), void * args, 
-                            size_t dim, size_t n, double * val)
+                            size_t dim, size_t n, const double * val)
 {   
     struct FiberCut ** fcut;
     if (NULL == ( fcut = malloc(n *sizeof(struct FiberCut *)))){

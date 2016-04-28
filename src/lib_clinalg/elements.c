@@ -62,239 +62,100 @@ double eval_spec_func(double x, void * args)
     return spf->f(x,spf->which,spf->args);
 }
 
-
-/***********************************************************//**
-    Allocate space for a quasimatrix
-
-    \param n [in] - number of columns of quasimatrix
-
-    \return qm -  quasimatrix
-***************************************************************/
-struct Quasimatrix * 
-quasimatrix_alloc(size_t n){
-    
-    struct Quasimatrix * qm;
-    if ( NULL == (qm = malloc(sizeof(struct Quasimatrix)))){
-        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
-        exit(1);
-    }
-    qm->n = n;
-    if ( NULL == (qm->funcs = malloc(n * sizeof(struct GenericFunction *)))){
-        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
-        exit(1);
-    }
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] = NULL;
-    }
-    return qm;
-}
-
-/***********************************************************//**
-    Create a quasimatrix by approximating 1d functions
-
-    \param n [in] - number of columns of quasimatrix
-    \param funcs [in] - functions
-    \param args [in] - extra arguments to each function
-    \param fc [in] - function class of each column
-    \param st [in] - sub_type of each column
-    \param lb [in] - lower bound of inputs to functions
-    \param ub [in] - upper bound of inputs to functions
-    \param aopts [in] - approximation options
-
-    \return qm - quasimatrix
-***************************************************************/
-struct Quasimatrix * 
-quasimatrix_approx1d(size_t n, double (**funcs)(double, void *),
-                    void ** args, enum function_class fc, void * st, double lb,
-                    double ub, void * aopts)
-{
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] = generic_function_approximate1d(funcs[ii], args[ii], 
-                                    fc, st, lb, ub, aopts);
-    }
-    return qm;
-}
-
-/***********************************************************//**
-    Create a quasimatrix from a fiber_cuts array
-
-    \param n [in] - number of columns of quasimatrix
-    \param f [in] - function
-    \param fcut [in] - array of fiber cuts
-    \param fc [in] - function class of each column
-    \param sub_type [in] - sub_type of each column
-    \param lb [in] - lower bound of inputs to functions
-    \param ub [in] - upper bound of inputs to functions
-    \param aopts [in] - approximation options
-
-    \return qm - quasimatrix
-***************************************************************/
-struct Quasimatrix * 
-quasimatrix_approx_from_fiber_cuts(size_t n, 
-                    double (*f)(double, void *), struct FiberCut ** fcut, 
-                    enum function_class fc, void * sub_type, double lb,
-                    double ub, void * aopts)
-{
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] = generic_function_approximate1d(f, fcut[ii], 
-                                    fc, sub_type, lb, ub, aopts);
-    }
-    return qm;
-}
-
-/***********************************************************//**
-    Allocate space for and initialize a quasimatrix
-
-    \param fdim [in] - dimension of each function in the quasimatrix
-    \param n [in] - number of columns of quasimatrix
-    \param fc [in] - function class of each column
-    \param sub_type [in] - sub_type of each column
-    \param f [in] - functions which make up each column
-    \param fargs [in] - function arguments
-
-    \return qm - quasimatrix
-***************************************************************/
-struct Quasimatrix * 
-quasimatrix_init(size_t fdim, size_t n, enum function_class * fc,
-            void ** sub_type, void ** f, void ** fargs)
-{
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] = generic_function_alloc(fdim, fc[ii],sub_type[ii]);
-        qm->funcs[ii]->f = f[ii];
-        if (fargs == NULL){
-            qm->funcs[ii]->fargs = NULL;
-        }
-        else{
-            qm->funcs[ii]->fargs = fargs[ii];
-        }
-    }
-
-    return qm;
-}
-
-/***********************************************************//**
-    Free memory allocated to quasimatrix
-
-    \param qm [in] - quasimatrix
-***************************************************************/
-void quasimatrix_free(struct Quasimatrix * qm){
-    
-    if (qm != NULL){
-        size_t ii = 0;
-        for (ii = 0; ii < qm->n; ii++){
-            if (qm->funcs[ii] != NULL)
-                generic_function_free(qm->funcs[ii]);
-        }
-        free(qm->funcs);
-        free(qm);qm=NULL;
-    }
-}
-
-/***********************************************************//**
-    copy a quasimatrix
-
-    \param qm [in] - quasimatrix to copy
-
-    \return qmo  - copied quasimatrix
-***************************************************************/
-struct Quasimatrix * quasimatrix_copy(struct Quasimatrix * qm)
-{
-    struct Quasimatrix * qmo = quasimatrix_alloc(qm->n);
-    size_t ii;
-    for (ii = 0; ii < qm->n; ii++){
-        qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
-    }
-
-    return qmo;
-}
-
-
-/***********************************************************//**
+/*********************************************************//**
     Extract a copy of a quasimatrix from a column of a qmarray
 
-    \param qma [in] - qmarray
-    \param col [in] - column to copy
+    \param[in] qma - qmarray
+    \param[in] col - column to copy
 
-    \return qm [out] - quasimatrix
-***************************************************************/
+    \return quasimatrix
+*************************************************************/
 struct Quasimatrix *
-qmarray_extract_column(struct Qmarray * qma, size_t col)
+qmarray_extract_column(const struct Qmarray * qma, size_t col)
 {
 
     struct Quasimatrix * qm = quasimatrix_alloc(qma->nrows);
     size_t ii;
     for (ii = 0; ii < qma->nrows; ii++){
-        qm->funcs[ii] = generic_function_copy(qma->funcs[col*qma->nrows+ii]);
+        quasimatrix_set_func(qm,qma->funcs[col*qma->nrows+ii],ii);
+        /* qm->funcs[ii] = generic_function_copy(qma->funcs[col*qma->nrows+ii]); */
     }
     return qm;
 }
 
-/***********************************************************//**
-    Extract a copy of the first nkeep columns of a qmarray
-
-    \param a [in] - qmarray from which to extract columns
-    \param nkeep [in] : number of columns to extract
-
-    \return qm - qmarray
-***************************************************************/
-struct Qmarray * qmarray_extract_ncols(struct Qmarray * a, size_t nkeep)
+/**********************************************************//**
+    Return a function                                                           
+**************************************************************/
+struct GenericFunction *
+qmarray_get_func(const struct Qmarray * qma, size_t row, size_t col)
 {
-    
-    struct Qmarray * qm = qmarray_alloc(a->nrows,nkeep);
-    size_t ii,jj;
-    for (ii = 0; ii < nkeep; ii++){
-        for (jj = 0; jj < a->nrows; jj++){
-            qm->funcs[ii*a->nrows+jj] = generic_function_copy(a->funcs[ii*a->nrows+jj]);
-        }
-    }
-    return qm;
+    assert (qma != NULL);
+    assert (row < qma->nrows);
+    assert (col < qma->ncols);
+
+    return qma->funcs[col*qma->nrows+row];
 }
 
+/* /\**********************************************************\//\** */
+/*     Extract a copy of the first nkeep columns of a qmarray */
 
-/***********************************************************//**
+/*     \param a [in] - qmarray from which to extract columns */
+/*     \param nkeep [in] : number of columns to extract */
+
+/*     \return qm - qmarray */
+/* **************************************************************\/ */
+/* struct Qmarray * qmarray_extract_ncols(struct Qmarray * a, size_t nkeep) */
+/* { */
+    
+/*     struct Qmarray * qm = qmarray_alloc(a->nrows,nkeep); */
+/*     size_t ii,jj; */
+/*     for (ii = 0; ii < nkeep; ii++){ */
+/*         for (jj = 0; jj < a->nrows; jj++){ */
+/*             qm->funcs[ii*a->nrows+jj] = generic_function_copy(a->funcs[ii*a->nrows+jj]); */
+/*         } */
+/*     } */
+/*     return qm; */
+/* } */
+
+
+/**********************************************************//**
     Extract a copy of a quasimatrix from a row of a qmarray
 
-    \param qma [in] - qmarray
-    \param row [in] - row to copy
+    \param[in] qma - qmarray
+    \param[in] row - row to copy
 
     \return qm - quasimatrix
-***************************************************************/
+**************************************************************/
 struct Quasimatrix *
-qmarray_extract_row(struct Qmarray * qma, size_t row)
+qmarray_extract_row(const struct Qmarray * qma, size_t row)
 {
 
     struct Quasimatrix * qm = quasimatrix_alloc(qma->ncols);
     size_t ii;
     for (ii = 0; ii < qma->ncols; ii++){
-        qm->funcs[ii] = generic_function_copy(qma->funcs[ii*qma->nrows+row]);
+        quasimatrix_set_func(qm,qma->funcs[ii*qma->nrows+row],ii);
+        /* qm->funcs[ii] = generic_function_copy(qma->funcs[ii*qma->nrows+row]); */
     }
     return qm;
 }
 
 
-/***********************************************************//**
+/**********************************************************//**
     Set the column of a quasimatrix array to a given quasimatrix by copying
 
-    \param qma (IN/OUT) : qmarray
-    \param col [in] - column to set
-    \param qm (IN)  : quasimatrix to copy
-***************************************************************/
+    \param[in,out] qma - qmarray to modify
+    \param[in]     col - column to set
+    \param[in]     qm  - quasimatrix to copy
+**************************************************************/
 void
 qmarray_set_column(struct Qmarray * qma, size_t col, 
-                        struct Quasimatrix * qm)
+                   const struct Quasimatrix * qm)
 {
     size_t ii;
     for (ii = 0; ii < qma->nrows; ii++){
         generic_function_free(qma->funcs[col*qma->nrows+ii]);
-        qma->funcs[col*qma->nrows+ii] = 
-            generic_function_copy(qm->funcs[ii]);
+        struct GenericFunction * f = quasimatrix_get_func(qm,ii);
+        qma->funcs[col*qma->nrows+ii] = generic_function_copy(f);
     }
 }
 
@@ -321,300 +182,22 @@ qmarray_set_column_gf(struct Qmarray * qma, size_t col,
 }
 
 
-/***********************************************************//**
+/**********************************************************//**
     Set the row of a quasimatrix array to a given quasimatrix by copying
 
-    \param qma [inout] - qmarray
-    \param row [in] - row to set
-    \param qm [in] - quasimatrix to copy
-***************************************************************/
+    \param[in,out] qma - qmarray
+    \param[in]     row - row to set
+    \param[in]     qm  - quasimatrix to copy
+**************************************************************/
 void
-qmarray_set_row(struct Qmarray * qma, size_t row, struct Quasimatrix * qm)
+qmarray_set_row(struct Qmarray * qma, size_t row, const struct Quasimatrix * qm)
 {
     size_t ii;
     for (ii = 0; ii < qma->ncols; ii++){
         generic_function_free(qma->funcs[ii*qma->nrows+row]);
-        qma->funcs[ii*qma->nrows+row] = generic_function_copy(qm->funcs[ii]);
+        struct GenericFunction * f = quasimatrix_get_func(qm,ii);
+        qma->funcs[ii*qma->nrows+row] = generic_function_copy(f);
     }
-}
-
-
-/***********************************************************//**
-    Serialize a quasimatrix
-
-    \param ser [inout] - stream to serialize to
-    \param qm [in] - quasimatrix
-    \param totSizeIn [inout] if NULL then serialize, if not NULL then return size;
-
-    \return ptr - ser shifted by number of bytes
-***************************************************************/
-unsigned char * 
-quasimatrix_serialize(unsigned char * ser, struct Quasimatrix * qm, 
-                    size_t *totSizeIn)
-{
-
-    // n -> func -> func-> ... -> func
-    size_t ii;
-    size_t totSize = sizeof(size_t);
-    size_t size_temp;
-    for (ii = 0; ii < qm->n; ii++){
-        serialize_generic_function(NULL,qm->funcs[ii],&size_temp);
-        totSize += size_temp;
-    }
-    if (totSizeIn != NULL){
-        *totSizeIn = totSize;
-        return ser;
-    }
-    
-    unsigned char * ptr = ser;
-    ptr = serialize_size_t(ptr, qm->n);
-    for (ii = 0; ii < qm->n; ii++){
-        ptr = serialize_generic_function(ptr, qm->funcs[ii],NULL);
-    }
-    return ptr;
-}
-
-/***********************************************************//**
-    Deserialize a quasimatrix
-
-    \param ser [in] - serialized quasimatrix
-    \param qm [inout] - quasimatrix
-
-    \return ptr - shifted ser after deserialization
-***************************************************************/
-unsigned char *
-quasimatrix_deserialize(unsigned char * ser, struct Quasimatrix ** qm)
-{
-    unsigned char * ptr = ser;
-
-    size_t n;
-    ptr = deserialize_size_t(ptr, &n);
-    *qm = quasimatrix_alloc(n);
-
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        ptr = deserialize_generic_function(ptr, &((*qm)->funcs[ii]));
-    }
-    
-    return ptr;
-}
-
-
-/***********************************************************//**
-    Generate a quasimatrix with orthonormal columns
-
-    \param fc [in] - function class
-    \param st [in] - function class sub_type
-    \param n [in] -  number of columns
-    \param lb [in] - lower bound on functions
-    \param ub [in] - upper bound on functions
-
-    \return qm - quasimatrix with orthonormal columns
-***************************************************************/
-struct Quasimatrix *
-quasimatrix_orth1d(enum function_class fc, void * st, size_t n, 
-                            double lb, double ub)
-{
-    struct Interval ob;
-    ob.lb = lb;
-    ob.ub = ub;
-
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    generic_function_array_orth(n, fc, st, qm->funcs, (void *)(&ob));
-    return qm;
-}
-
-/***********************************************************//**
-    Find the absolute maximum element of a quasimatrix of 1d functions
-
-    \param[in]     qm      - quasimatrix
-    \param[in,out] absloc  - location (row) of maximum
-    \param[in,out] absval  - value of maximum
-    \param[in]     optargs - optimization arguments
-
-    \return col - column of maximum element
-***************************************************************/
-size_t 
-quasimatrix_absmax(struct Quasimatrix * qm, 
-                   double * absloc, double * absval,
-                   void * optargs)
-{   
-    size_t col = 0;
-    size_t ii;
-    double temp_loc;
-    double temp_max;
-    *absval = generic_function_absmax(qm->funcs[0], absloc,optargs) ;
-    for (ii = 1; ii < qm->n; ii++){
-        temp_max = generic_function_absmax(qm->funcs[ii], &temp_loc,optargs);
-        if (temp_max > *absval){
-            col = ii;
-            *absval = temp_max;
-            *absloc = temp_loc;
-        }
-    }
-    return col;
-}
-
-/***********************************************************//**
-    Allocate memory for a skeleton decomposition
-
-    \param[in] r - rank
-
-    \return skd - skeleton decomposition
-***************************************************************/
-struct SkeletonDecomp * skeleton_decomp_alloc(size_t r)
-{
-
-    struct SkeletonDecomp * skd;
-    if ( NULL == (skd = malloc(sizeof(struct SkeletonDecomp)))){
-        fprintf(stderr, 
-                "failed to allocate memory for skeleton decomposition.\n");
-        exit(1);
-    }
-    skd->r = r;
-    skd->xqm = quasimatrix_alloc(r);
-    skd->yqm = quasimatrix_alloc(r);
-    skd->skeleton = calloc_double(r*r);
-    return skd;
-}
-
-/***********************************************************//**
-    Copy a skeleton decomposition
-
-    \param[in] skd - skeleton decomposition
-    \return snew  - copied skeleton decomposition
-***************************************************************/
-struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp * skd)
-{
-    struct SkeletonDecomp * snew;
-    if ( NULL == (snew = malloc(sizeof(struct SkeletonDecomp)))){
-        fprintf(stderr, 
-                "failed to allocate memory for skeleton decomposition.\n");
-        exit(1);
-    }
-    double * eye = calloc_double(skd->r * skd->r);
-    size_t ii;
-    for (ii = 0; ii < skd->r; ii++) eye[ii*skd->r +ii] = 1.0;
-    snew->r = skd->r;
-    snew->xqm = qmm(skd->xqm,eye, skd->r);
-    snew->yqm = qmm(skd->yqm,eye, skd->r);
-    snew->skeleton = calloc_double(skd->r * skd->r);
-
-    /*
-    printf("skeleton = \n");
-    dprint2d_col(skd->r,skd->r, skd->skeleton);
-    */
-    memmove(snew->skeleton,skd->skeleton,skd->r *skd->r* sizeof(double));
-    
-    free(eye);eye=NULL;
-    return snew;
-}
-
-/***********************************************************//**
-    Free memory allocated to skeleton decomposition
-
-    \param[in,out] skd - skeleton decomposition
-***************************************************************/
-void skeleton_decomp_free(struct SkeletonDecomp * skd)
-{
-    if (skd != NULL){
-        quasimatrix_free(skd->xqm);
-        quasimatrix_free(skd->yqm);
-        free(skd->skeleton);
-        free(skd);skd=NULL;
-    }
-}
-
-/***********************************************************//**
-    Allocate and initialize skeleton decomposition 
-    with a set of pivots and a given approximation
-
-    \param[in] f           - function to approximate
-    \param[in] args        - function arguments
-    \param[in] bounds      - bounds on function
-    \param[in] fc          - function classes of approximation (2)
-    \param[in] sub_type    - sub_type of approximation (2)
-    \param[in] r           - rank
-    \param[in] pivx        - x pivots
-    \param[in] pivy        - y pivots
-    \param[in] approx_args - approximation arguments (2);
-
-    \return skeleton decomposition
-***************************************************************/
-struct SkeletonDecomp * 
-skeleton_decomp_init2d_from_pivots(double (*f)(double,double,void *),
-                void * args, struct BoundingBox * bounds,
-                enum function_class * fc, void ** sub_type,
-                size_t r, double * pivx, double * pivy, void ** approx_args)
-{
-    
-    struct SkeletonDecomp * skd = skeleton_decomp_alloc(r);
-
-    struct FiberCut ** fx;  
-    struct FiberCut ** fy;
-
-    fx = fiber_cut_2darray(f,args,0, r, pivy);
-    quasimatrix_free(skd->xqm);
-    skd->xqm = quasimatrix_approx_from_fiber_cuts(
-            r, fiber_cut_eval2d, fx, fc[0], sub_type[0],
-            bounds->lb[0],bounds->ub[0], approx_args[0]);
-    fiber_cut_array_free(r, fx);
-
-    fy = fiber_cut_2darray(f,args,1, r, pivx);
-    quasimatrix_free(skd->yqm);
-    skd->yqm = quasimatrix_approx_from_fiber_cuts(
-            r, fiber_cut_eval2d, fy, fc[1], sub_type[1],
-            bounds->lb[1],bounds->ub[1], approx_args[1]);
-    fiber_cut_array_free(r, fy);
-
-    
-    size_t ii,jj;
-    double * cmat = calloc_double(r*r);
-    for (ii = 0; ii < r; ii++){
-        for (jj = 0; jj < r; jj++){
-            cmat[ii * r + jj] = f(pivx[jj],pivy[ii], args);
-        }
-    }
-
-    /*
-    printf("cmat = ");
-    dprint2d_col(r,r,cmat);
-    */
-    pinv(r,r,r,cmat,skd->skeleton,1e-15);
-
-    free(cmat);cmat=NULL;
-    return skd;
-}
-
-/***********************************************************//**
-    Evaluate a skeleton decomposition
-
-    \param skd [in] - skeleton decomposition
-    \param x [in] - x-location to evaluate
-    \param y [in] - y-location to evaluate
-
-    \return out - evaluation
-***************************************************************/
-double skeleton_decomp_eval(struct SkeletonDecomp * skd, double x, double y)
-{
-    double out = 0.0;
-    struct Quasimatrix * t1 = qmm(skd->xqm, skd->skeleton, skd->r);
-    
-    /*
-    printf("T11111111111111\n");
-    printf("skeleton = \n");
-    dprint2d_col(skd->r,skd->r, skd->skeleton);
-    print_quasimatrix(t1,0,NULL);
-    print_quasimatrix(skd->xqm,0,NULL);
-    printf("COOOOL\n");
-    */
-    size_t ii;
-    for (ii = 0; ii < t1->n; ii++){
-        out += generic_function_1d_eval(t1->funcs[ii],x) * 
-                generic_function_1d_eval(skd->yqm->funcs[ii],y);
-    }
-    quasimatrix_free(t1);
-    return out;
 }
 
 
@@ -2525,17 +2108,7 @@ void fiber_opt_args_free(struct FiberOptArgs * fopt)
 /////////////////////////////////////////////////////////
 // Utilities
 //
-void print_quasimatrix(struct Quasimatrix * qm, size_t prec, void * args)
-{
 
-    printf("Quasimatrix consists of %zu columns\n",qm->n);
-    printf("=========================================\n");
-    size_t ii;
-    for (ii = 0; ii < qm->n; ii++){
-        print_generic_function(qm->funcs[ii],prec,args);
-        printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-    }
-}
 
 void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
 {

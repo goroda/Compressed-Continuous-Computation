@@ -61,7 +61,6 @@ int main( int argc, char *argv[])
     if (argc == 2){
         rank = (size_t)atol(argv[1]);
     }
-    size_t dim = 2;
 
     struct sinrank2_opts gopts;
 
@@ -84,43 +83,34 @@ int main( int argc, char *argv[])
     ope_adapt_opts_set_coeffs_check(opts,4);
     ope_adapt_opts_set_tol(opts,1e-4);
 
-    enum function_class fc = POLYNOMIAL;
     enum poly_type p = LEGENDRE;
-    struct Cross2dargs cargs;
-    cargs.r = rank;
-    cargs.delta = 1e-4;
-    size_t kk;
+    int verbose = 2;
+    struct Cross2dargs * cargs=cross2d_args_create(rank,1e-4,POLYNOMIAL,&p,verbose);
+    cross2d_args_set_approx_args(cargs,opts);
 
-    for (kk = 0; kk < dim; kk++){
-        cargs.fclass[kk] = fc;
-        cargs.sub_type[kk] = &p;
-        cargs.approx_args[kk] = opts;
-    }
-    cargs.verbose = 2;
-    
     printf("xpivots = ");
-    dprint(cargs.r,pivx);
+    dprint(rank,pivx);
     printf("pivots = ");
-    dprint(cargs.r,pivy);
+    dprint(rank,pivy);
 
     struct SkeletonDecomp * skd = skeleton_decomp_init2d_from_pivots(
-                    sinrank2, &gopts, bounds, cargs.fclass, cargs.sub_type,
-                    cargs.r, pivx, pivy, cargs.approx_args);
+        sinrank2,&gopts,bounds,cargs,pivx,pivy);
+
     
     printf("skeleton = \n");
-    dprint2d_col(skd->r,skd->r, skd->skeleton);
+    dprint2d_col(rank,rank,skeleton_get_skeleton(skd));
     //return(0);
 
     struct SkeletonDecomp * skd_init = skeleton_decomp_copy(skd);
 
     struct SkeletonDecomp * final = cross_approx_2d(sinrank2,&gopts,bounds,
-                        &skd,pivx,pivy,&cargs);
+                        &skd,pivx,pivy,cargs);
 
     //printf("Params=%s\n",params);
     printf("xpivots = ");
-    dprint(cargs.r,pivx);
+    dprint(rank,pivx);
     printf("pivots = ");
-    dprint(cargs.r,pivy);
+    dprint(rank,pivy);
 
     char final_errs[256];
     sprintf(final_errs,"%s-final.dat",params);
@@ -192,6 +182,7 @@ int main( int argc, char *argv[])
     skeleton_decomp_free(final);
     skeleton_decomp_free(skd);
     skeleton_decomp_free(skd_init);
+    cross2d_args_destroy(cargs);
     free(xtest);
     free(ytest);
     return 0;

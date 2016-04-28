@@ -43,76 +43,7 @@
 #include <stdlib.h>
 #include "../lib_array/array.h"
 #include "../lib_funcs/lib_funcs.h"
-
-//////////////////////////////////////////////////////////////
-// Quasimatrices
-
-/** \struct Quasimatrix
- *  \brief Defines a vector-valued function
- *  \var Quasimatrix::n
- *  number of functions
- *  \var Quasimatrix::funcs
- *  array of functions
- */
-struct Quasimatrix {
-    size_t n;
-    struct GenericFunction ** funcs;
-};
-
-struct Quasimatrix * quasimatrix_alloc(size_t n);
-struct Quasimatrix * quasimatrix_init(size_t, size_t, 
-                enum function_class *, void **, void **, void **);    
-
-struct Quasimatrix * 
-quasimatrix_approx1d(size_t, double (**)(double, void *),
-                    void **, enum function_class, void *, double,
-                    double, void *);
-
-struct Quasimatrix * 
-quasimatrix_approx_from_fiber_cuts(size_t, double (*)(double, void *),
-                    struct FiberCut **, enum function_class, void *, double,
-                    double, void *);
-
-void quasimatrix_free(struct Quasimatrix *);
-struct Quasimatrix * quasimatrix_copy(struct Quasimatrix *);
-
-unsigned char * 
-quasimatrix_serialize(unsigned char *, struct Quasimatrix *, size_t *);
-unsigned char * 
-quasimatrix_deserialize(unsigned char *, struct Quasimatrix ** );
-
-struct Quasimatrix * quasimatrix_orth1d(enum function_class fc, 
-                        void * st, size_t n, double lb, double ub);
-
-size_t quasimatrix_absmax(struct Quasimatrix *, double *, double *,void*);
-
-/** \struct SkeletonDecomp
- *  \brief Defines a skeleton decomposition of a two-dimensional function \f$ f(x,y) \f$
- *  \var SkeletonDecomp::r
- *  rank of the function
- *  \var SkeletonDecomp::xqm
- *  quasimatrix representing functions of *x*
- *  \var SkeletonDecomp::yqm
- *  quasimatrix representing functions of *y*
- *  \var SkeletonDecomp::skeleton
- *  skeleton matrix
- */
-struct SkeletonDecomp
-{
-    size_t r;
-    struct Quasimatrix * xqm;
-    struct Quasimatrix * yqm;
-    double * skeleton; // rows are x, cols are y
-};
-struct SkeletonDecomp * skeleton_decomp_alloc(size_t);
-struct SkeletonDecomp * skeleton_decomp_copy(struct SkeletonDecomp *);
-void skeleton_decomp_free(struct SkeletonDecomp *);
-
-struct SkeletonDecomp * 
-skeleton_decomp_init2d_from_pivots(double (*)(double,double,void *),void *, 
-                        struct BoundingBox *, enum function_class *, void **,
-                        size_t, double *,double *, void **);
-double skeleton_decomp_eval(struct SkeletonDecomp *, double, double);
+#include "quasimatrix.h"
 
 
 ////////////////////////////////////////////////////////////////////
@@ -161,15 +92,17 @@ qmarray_orth1d_rows(enum function_class, void *, size_t,
 struct Qmarray *
 qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
 
+struct Quasimatrix * qmarray_extract_column(const struct Qmarray *, size_t);
+struct GenericFunction *
+qmarray_get_func(const struct Qmarray *, size_t, size_t);
+struct Quasimatrix * qmarray_extract_row(const struct Qmarray *, size_t);
+/* struct Qmarray * qmarray_extract_ncols(struct Qmarray *, size_t); */
 
-struct Quasimatrix * qmarray_extract_column(struct Qmarray *, size_t);
-struct Qmarray * qmarray_extract_ncols(struct Qmarray *, size_t);
-struct Quasimatrix * qmarray_extract_row(struct Qmarray *, size_t);
 
-void qmarray_set_column(struct Qmarray *, size_t, struct Quasimatrix *);
+void qmarray_set_column(struct Qmarray *, size_t, const struct Quasimatrix *);
 void qmarray_set_column_gf(struct Qmarray *, size_t, 
-                                                struct GenericFunction **);
-void qmarray_set_row(struct Qmarray *, size_t, struct Quasimatrix *);
+                           struct GenericFunction **);
+void qmarray_set_row(struct Qmarray *, size_t, const struct Quasimatrix *);
 
 unsigned char * 
 qmarray_serialize(unsigned char *, struct Qmarray *, size_t *);
