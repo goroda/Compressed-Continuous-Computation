@@ -2266,7 +2266,11 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction ** f,
                                               size_t nrows,size_t ncols,
                                               struct c3Vector * grid)
 {
-/*     assert (1 == 0); */
+    (void)(f);
+    (void)(nrows);
+    (void)(ncols);
+    (void)(grid);
+    assert (1 == 0);
     /* struct LinElemExp ** le = malloc(grid->size * sizeof(struct LinElemExp *)); */
     /* assert (f != NULL); */
     /* double * zero = calloc_double(grid->size); */

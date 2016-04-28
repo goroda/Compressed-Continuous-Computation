@@ -49,22 +49,6 @@
 ////////////////////////////////////////////////////////////////////
 // qm_array (quasimatrix arrays)
 
-/** \struct Qmarray
- * \brief Defines a matrix-valued function (a Quasimatrix array)
- * \var Qmarray::nrows
- * number of rows
- * \var Qmarray::ncols
- * number of columns
- * \var Qmarray::funcs
- * functions in column-major order 
- */
-
-struct Qmarray {
-
-    size_t nrows;
-    size_t ncols;
-    struct GenericFunction ** funcs; // fortran order
-};
 
 struct Qmarray * qmarray_alloc(size_t, size_t); 
 struct Qmarray * qmarray_zeros(enum poly_type,size_t, size_t,double,double);
@@ -92,17 +76,6 @@ qmarray_orth1d_rows(enum function_class, void *, size_t,
 struct Qmarray *
 qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
 
-struct Quasimatrix * qmarray_extract_column(const struct Qmarray *, size_t);
-struct GenericFunction *
-qmarray_get_func(const struct Qmarray *, size_t, size_t);
-struct Quasimatrix * qmarray_extract_row(const struct Qmarray *, size_t);
-/* struct Qmarray * qmarray_extract_ncols(struct Qmarray *, size_t); */
-
-
-void qmarray_set_column(struct Qmarray *, size_t, const struct Quasimatrix *);
-void qmarray_set_column_gf(struct Qmarray *, size_t, 
-                           struct GenericFunction **);
-void qmarray_set_row(struct Qmarray *, size_t, const struct Quasimatrix *);
 
 unsigned char * 
 qmarray_serialize(unsigned char *, struct Qmarray *, size_t *);
