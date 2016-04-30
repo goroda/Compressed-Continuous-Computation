@@ -1714,7 +1714,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     }
 
     double fvals[200];
-    double pt_un[200]; // nodes appropriate for bounds of A
+    double pt_un[200];
     double qpt[200];
     double wt[200];
     
@@ -1723,7 +1723,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
 
     int return_val = 0;
     switch (poly->p->ptype) { 
-    case CHEBYSHEV: return_val = cheb_gauss(poly->num_poly,qpt,wt);                                     break;
+    case CHEBYSHEV: return_val = cheb_gauss(nquad,qpt,wt);                                     break;
     case LEGENDRE:  return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);                                  break; 
     case HERMITE:   return_val = gauss_hermite(nquad,qpt,wt);                                           break;
     case STANDARD:  fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for STANDARD type\n");  return 1;
@@ -1757,7 +1757,6 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     }
     
     orth_poly_expansion_construct(poly,nquad,fvals,quadpt);
-
     return return_val;
 }
 

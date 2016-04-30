@@ -90,7 +90,7 @@ int Sin3xTx2(size_t N, const double * x, double * out, void * args)
 {
     (void)(args);
     for (size_t ii = 0; ii < N; ii++ ){
-        out[ii] = sin(3.0 * x[ii]) + pow(x[ii],2);
+        out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]);
     }
     return 0;
 }
@@ -131,7 +131,7 @@ void Test_cheb_approx(CuTest * tc){
     // approximation
     size_t N = 50;
     double lb=-1.0,ub=1.0;
-    opoly_t cpoly = orth_poly_expansion_init(CHEBYSHEV,N,-1.0,1.0);
+    opoly_t cpoly = orth_poly_expansion_init(CHEBYSHEV,N,lb,ub);
     int res = orth_poly_expansion_approx_vec(cpoly,fw);
     CuAssertIntEquals(tc,0,res);
 
@@ -322,12 +322,12 @@ CuSuite * ChebGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_cheb_approx);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird);
-    SUITE_ADD_TEST(suite, Test_cheb_integrate);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal); 
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt); 
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird); 
+    SUITE_ADD_TEST(suite, Test_cheb_integrate); 
     SUITE_ADD_TEST(suite, Test_cheb_inner);
-    SUITE_ADD_TEST(suite, Test_cheb_norm);
+    SUITE_ADD_TEST(suite, Test_cheb_norm); 
 
     return suite;
 }
@@ -697,6 +697,8 @@ void Test_legendre_axpy(CuTest * tc){
     POLY_FREE(cpoly);
     POLY_FREE(cpoly2);
     ope_opts_free(opts);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
 }
 
 CuSuite * LegGetSuite(){

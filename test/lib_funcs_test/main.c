@@ -62,8 +62,8 @@ void RunAllTests(void) {
     /* CuSuite * pap = PolyApproxSuite(); */
 	
     CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg);
-    CuSuiteAddSuite(suite, herm);
+    CuSuiteAddSuite(suite, leg); 
+    CuSuiteAddSuite(suite, herm); 
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
