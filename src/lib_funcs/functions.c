@@ -2011,7 +2011,7 @@ generic_function_approximate1d(enum function_class fc, struct Fwrap * f,
     switch (fc){
     case ZERO:                                                           break;
     case CONSTANT:                                                       break;
-    case PIECEWISE:  assert(1 == 0); break;//gf->f = piecewise_poly_approx1_adapt(aopts,f);      break;
+    case PIECEWISE:  gf->f = piecewise_poly_approx1_adapt(aopts,f);      break;
     case POLYNOMIAL: gf->f = orth_poly_expansion_approx_adapt(aopts,f);  break;
     case LINELM:     gf->f = lin_elem_exp_approx(aopts,f);               break;
     case RATIONAL:                                                       break;

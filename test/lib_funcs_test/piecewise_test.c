@@ -898,8 +898,10 @@ CuSuite * PiecewisePolyGetSuite(){
     SUITE_ADD_TEST(suite, Test_pw_real_roots);
     SUITE_ADD_TEST(suite, Test_maxmin_pw);
     SUITE_ADD_TEST(suite, Test_pw_serialize);
-    //SUITE_ADD_TEST(suite, Test_poly_match);
 
+
+    // these below don't work yet
+    //SUITE_ADD_TEST(suite, Test_poly_match);
     //SUITE_ADD_TEST(suite, Test_minmod_disc_exists);
     //SUITE_ADD_TEST(suite, Test_locate_jumps);
     //SUITE_ADD_TEST(suite, Test_locate_jumps2);

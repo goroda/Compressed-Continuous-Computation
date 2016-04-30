@@ -48,7 +48,6 @@
 
 #include "lib_funcs.h"
 
-
 typedef struct LinElemExp* le_t;
 #define LINELEM_EVAL lin_elem_exp_eval
 #define LINELEM_FREE lin_elem_exp_free
