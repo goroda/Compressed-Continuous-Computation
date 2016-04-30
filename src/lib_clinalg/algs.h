@@ -43,7 +43,7 @@
 
 #include "elements.h"
 #include "indmanage.h"
-#include "quasimatrix.h"
+//#include "quasimatrix.h"
 
 /** \struct FtCrossArgs
  *  \brief Arguments for function-train cross approximation
