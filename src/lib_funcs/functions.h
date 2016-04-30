@@ -41,13 +41,15 @@
 #define FUNCTIONS_H
 
 #include "array.h"
+
 #include "lib_funcs.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
  * only POLYNOMIAL is implemented!!!
  */
-enum function_class {PIECEWISE, POLYNOMIAL, LINELM, RATIONAL, KERNEL};
+enum function_class {ZERO,CONSTANT,PIECEWISE, POLYNOMIAL,
+                     LINELM, RATIONAL, KERNEL};
 
 /** \struct Interval
  * \brief A pair of lower and upper bounds
@@ -62,83 +64,67 @@ struct Interval
     double ub;
 };
 
-/** \struct BoundingBox
- * \brief An array of pairs of lower and upper bounds
- * \var BoundingBox::dim
- * dimension of box
- * \var BoundingBox::lb
- * lower bounds
- * \var BoundingBox::ub
- * upper bounds
- */
-struct BoundingBox
-{
-    size_t dim;
-    double * lb;
-    double * ub;
-};
 
-struct BoundingBox * bounding_box_init_std(size_t);
-struct BoundingBox * bounding_box_init(size_t,double, double);
-struct BoundingBox * bounding_box_vec(size_t, double *, double *);
-void bounding_box_free(struct BoundingBox *);
-double * bounding_box_get_lb(struct BoundingBox *);
-double * bounding_box_get_ub(struct BoundingBox *);
-
-/** \struct GenericFunction
- * \brief Interface between the world and specific functions such as polynomials, radial
- * basis functions (future), etc (future)
- * \var GenericFunction::dim
- * dimension of the function
- * \var GenericFunction::fc
- * type of function
- * \var GenericFunction::sub_type
- * sub type of function
- * \var GenericFunction::f
- * function
- * \var GenericFunction::fargs
- * function arguments
- */
-struct GenericFunction {
-    
-    size_t dim;
-    enum function_class fc;
-    union
-    {
-        enum poly_type ptype;
-    } sub_type;
-    void * f;
-    void * fargs;
-};
-
+struct GenericFunction;
 struct GenericFunction * generic_function_alloc_base(size_t);
 struct GenericFunction ** generic_function_array_alloc(size_t);
-struct GenericFunction * generic_function_alloc(size_t, enum function_class, const void *);
-void generic_function_roundt(struct GenericFunction **, double);
-
-struct GenericFunction * generic_function_deriv(struct GenericFunction *);
-
-
-struct GenericFunction * generic_function_approximate1d( 
-                double (*f)(double,void *), void *, enum function_class, 
-                void *, double lb, double ub, void *);
-struct GenericFunction * 
-generic_function_poly_randu(enum poly_type,size_t, double, double);
-
-struct GenericFunction * generic_function_copy(const struct GenericFunction *);
-void generic_function_copy_pa(struct GenericFunction *, struct GenericFunction *);
+struct GenericFunction *
+generic_function_alloc(size_t, enum function_class);
+struct GenericFunction *
+generic_function_copy(const struct GenericFunction *);
+void generic_function_copy_pa(const struct GenericFunction *,
+                              struct GenericFunction *);
 
 void generic_function_free(struct GenericFunction *);
-void generic_function_array_free(struct GenericFunction **, size_t);
-unsigned char * serialize_generic_function(unsigned char *, 
-                    struct GenericFunction *, size_t *);
+void generic_function_array_free(struct GenericFunction **,size_t);
+unsigned char *
+serialize_generic_function(unsigned char *, 
+                           const struct GenericFunction *,
+                           size_t *);
 unsigned char *
 deserialize_generic_function(unsigned char *, struct GenericFunction ** );
 
-// extraction functions
-double generic_function_get_lower_bound(struct GenericFunction * f);
-double generic_function_get_upper_bound(struct GenericFunction * f);
-double generic_function_1d_eval(struct GenericFunction *, double);
+
+// special initializers
+struct GenericFunction * 
+generic_function_constant(double, enum function_class,void *);
+struct GenericFunction * 
+generic_function_linear(double, double,enum function_class, void *);
+struct GenericFunction * 
+generic_function_quadratic(double,double,enum function_class,void *);
+
+struct GenericFunction * 
+generic_function_poly_randu(enum poly_type,size_t, double, double);
+struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
+
+
+// generic operations
+struct GenericFunction *
+generic_function_daxpby(double, const struct GenericFunction *,
+                        double, const struct GenericFunction *);
+
+double generic_function_inner(const struct GenericFunction *,
+                              const struct GenericFunction *);
+double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
+                         size_t, struct GenericFunction **);
+double generic_function_norm(const struct GenericFunction *); 
+double generic_function_norm2diff(const struct GenericFunction *, 
+                                  const struct GenericFunction *);
+double generic_function_array_norm2diff(
+                size_t, struct GenericFunction **, size_t,
+                struct GenericFunction **, size_t);
+
+double generic_function_integral(const struct GenericFunction *);
+double * 
+generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
+
+
+void generic_function_roundt(struct GenericFunction **, double);
+
+
+
+
+double generic_function_1d_eval(const struct GenericFunction *, double);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
                                        double);
@@ -146,19 +132,11 @@ void generic_function_1darray_eval2(size_t,
                                     struct GenericFunction **, 
                                     double,double *);
 
-// generic operations
-double generic_function_norm(struct GenericFunction *);
-double generic_function_norm2diff(struct GenericFunction *, 
-                                  struct GenericFunction *);
-double generic_function_array_norm2diff(
-                size_t, struct GenericFunction **, size_t,
-                struct GenericFunction **, size_t);
+
 struct GenericFunction *
 generic_function_onezero(enum function_class, double, size_t,
                          double *, double, double);
-double generic_function_integral(struct GenericFunction *);
-double * 
-generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
+
 struct GenericFunction *
 generic_function_create_nodal(struct GenericFunction *,size_t, double *);
 struct GenericFunction *
@@ -168,26 +146,31 @@ double generic_function_sum_prod_integrate(size_t, size_t,
                 struct GenericFunction **, size_t, struct GenericFunction **);
 struct GenericFunction *
 generic_function_prod(struct GenericFunction *, struct GenericFunction *);
-double generic_function_inner(struct GenericFunction *, struct GenericFunction *);
-double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
-                         size_t, struct GenericFunction **);
+
 double generic_function_array_norm(size_t, size_t, struct GenericFunction **);
 
 void generic_function_flip_sign(struct GenericFunction *);
 void generic_function_array_flip_sign(size_t, size_t, struct GenericFunction **);
 
-struct GenericFunction * generic_function_daxpby(double, struct GenericFunction * m,
-            double, struct GenericFunction *);
+
 
 void generic_function_weighted_sum_pa(double, struct GenericFunction *, 
             double, struct GenericFunction *, struct GenericFunction **);
 
+
+struct GenericFunction *
+generic_function_approximate1d(enum function_class, struct Fwrap *, void*);
+
+// extraction functions
+double generic_function_get_lower_bound(const struct GenericFunction * f);
+double generic_function_get_upper_bound(const struct GenericFunction * f);
 void
 generic_function_sum3_up(double, struct GenericFunction *,
                          double, struct GenericFunction *,
                          double, struct GenericFunction *);
 
-int generic_function_axpy(double, struct GenericFunction *, struct GenericFunction *);
+int generic_function_axpy(double, const struct GenericFunction *,
+                          struct GenericFunction *);
 int generic_function_array_axpy(size_t, double, struct GenericFunction **, 
             struct GenericFunction **);
 
@@ -207,7 +190,7 @@ generic_function_lin_comb(size_t,
 struct GenericFunction * generic_function_lin_comb2(size_t, size_t, 
                 struct GenericFunction **, size_t, double *);
 
-double generic_function_absmax(struct GenericFunction *, double *,void *);
+double generic_function_absmax(const struct GenericFunction *, double *,void *);
 double generic_function_array_absmax(size_t, size_t, 
                                      struct GenericFunction **, 
                                      size_t *, double *, void *);
@@ -223,17 +206,6 @@ void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
         struct GenericFunction **);
 
 // more complicated operations
-struct GenericFunction * 
-generic_function_constant(double, enum function_class, const void *,
-            double, double, const void *);
-struct GenericFunction * 
-generic_function_linear(double, double,
-            enum function_class, const void *,
-            double, double, const void *);
-struct GenericFunction * 
-generic_function_quadratic(double, double,
-            enum function_class,const void *,
-            double, double, const void *);
 
 void generic_function_array_orth1d_columns(
     struct GenericFunction **,
@@ -242,7 +214,7 @@ void generic_function_array_orth1d_columns(
     void *, size_t,
     size_t, double,
     double);
-void generic_function_array_orth(size_t, enum function_class, void *,
+void generic_function_array_orth(size_t, enum function_class,
                             struct GenericFunction **, void *);
 void 
 generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
@@ -301,5 +273,5 @@ double fiber_cut_eval(double, void *);
 /////////////////////////////////////////////////////////
 // Utilities
 
-void print_generic_function(struct GenericFunction *, size_t,void *);
+void print_generic_function(const struct GenericFunction *, size_t,void *);
 #endif

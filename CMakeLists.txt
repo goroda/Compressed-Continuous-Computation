@@ -52,7 +52,7 @@ include_directories(src/lib_funcs)
 # include_directories(include)
 
 add_subdirectory(src)
-# add_subdirectory(test)
+add_subdirectory(test)
 # add_subdirectory(examples)
 # add_subdirectory(benchmarks)
 

@@ -33,29 +33,28 @@
 
 //Code
 
+/** \file space.h
+ * Provides header files and structure definitions for functions in space.c 
+ */
 
-
-
-#ifndef QUADRATURE_H
-#define QUADRATURE_H
+#ifndef SPACE_H
+#define SPACE_H
 
 #include <stdlib.h>
 
+struct BoundingBox;
+struct BoundingBox * bounding_box_init_std(size_t);
+struct BoundingBox * bounding_box_init(size_t,double, double);
+struct BoundingBox *
+bounding_box_vec(size_t, const double *, const double *);
 
-#ifndef M_PI
-#define M_PI 3.1415926535897932384626433
-#endif
-double * trap_w(size_t, double);
-double * simpson_w(size_t, double);
+void bounding_box_free(struct BoundingBox *);
+double * bounding_box_get_lb(struct BoundingBox *);
+double * bounding_box_get_ub(struct BoundingBox *);
+double bounding_box_get_ub_dim(const struct BoundingBox *, size_t);
+void bounding_box_set_ub_dim(struct BoundingBox *, size_t, double);
+double bounding_box_get_lb_dim(const struct BoundingBox *, size_t);
+void bounding_box_set_lb_dim(struct BoundingBox *,size_t,double);
 
-
-void clenshaw_curtis(size_t, double *, double *);
-void rescale_cc(size_t, double *, double *, double, double);
-
-void fejer2(size_t, double *, double *);
-
-int cheb_gauss(size_t, double *, double *);
-int gauss_hermite(size_t, double *, double *);
-void gauss_legendre(size_t, double *, double *);
 
 #endif

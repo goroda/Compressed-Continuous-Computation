@@ -185,6 +185,118 @@ double eval_quad_func(double x, void * args)
     return m*(x-b)*(x-b);
 }
 
+struct OpeOpts{
+    enum poly_type ptype;
+    
+    size_t start_num;
+    size_t max_num;
+    size_t coeffs_check;
+    double tol;
+    
+    double lb;
+    double ub;
+};
+
+struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
+{
+    struct OpeOpts * ao;
+    if ( NULL == (ao = malloc(sizeof(struct OpeOpts)))){
+        fprintf(stderr, "failed to allocate memory for poly exp.\n");
+        exit(1);
+    }
+
+    ao->ptype = ptype;
+    if (ptype == HERMITE){
+        ao->lb = -DBL_MAX;
+        ao->ub = DBL_MAX;
+    }
+    else{
+        ao->lb = -1.0;
+        ao->ub = 1.0;
+    }
+    
+    ao->start_num = 5;
+    ao->coeffs_check = 2;
+    ao->tol = 1e-10;
+    ao->max_num = 100;
+    
+
+    return ao;
+}
+
+void ope_opts_free(struct OpeOpts * ope)
+{
+    if (ope != NULL){
+        free(ope); ope = NULL;
+    }
+}
+
+void ope_opts_set_start(struct OpeOpts * ope, size_t start)
+{
+    assert (ope != NULL);
+    ope->start_num = start;
+}
+void ope_opts_set_maxnum(struct OpeOpts * ope, size_t maxnum)
+{
+    assert (ope != NULL);
+    ope->max_num = maxnum;
+}
+
+size_t ope_opts_get_maxnum(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    assert (ope->max_num < 1000); // really a check if it exists
+    
+    return ope->max_num;
+}
+
+void ope_opts_set_coeffs_check(struct OpeOpts * ope, size_t num)
+{
+    assert (ope != NULL);
+    ope->coeffs_check = num;
+}
+
+void ope_opts_set_tol(struct OpeOpts * ope, double tol)
+{
+    assert (ope != NULL);
+    ope->tol = tol;
+}
+
+void ope_opts_set_lb(struct OpeOpts * ope, double lb)
+{
+    assert (ope != NULL);
+    ope->lb = lb;
+}
+
+double ope_opts_get_lb(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->lb;
+}
+
+void ope_opts_set_ub(struct OpeOpts * ope, double ub)
+{
+    assert (ope != NULL);
+    ope->ub = ub;
+}
+
+double ope_opts_get_ub(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->ub;
+}
+
+void ope_opts_set_ptype(struct OpeOpts * ope, enum poly_type ptype)
+{
+    assert (ope != NULL);
+    ope->ptype = ptype;
+}
+
+enum poly_type ope_opts_get_ptype(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->ptype;
+}
 
 /********************************************************//**
 *   Initialize a standard basis polynomial
@@ -736,20 +848,19 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
 /********************************************************//**
 *   Generate a constant orthonormal polynomial expansion
 *
-*   \param[in] a     - value of the function
-*   \param[in] ptype - type of polynomial
-*   \param[in] lb    - lower bound
-*   \param[in] ub     - upper bound
+*   \param[in] a    - value of the function
+*   \param[in] opts - opts
 *
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_constant(double a, enum poly_type ptype, double lb, 
-                             double ub)
+orth_poly_expansion_constant(double a, struct OpeOpts * opts)
 {
 
-    struct OrthPolyExpansion * p = orth_poly_expansion_init(ptype,1,lb,ub);
-    p->coeff[0] = a/ p->p->const_term;
+    assert (opts != NULL);
+    struct OrthPolyExpansion * p = NULL;
+    p = orth_poly_expansion_init(opts->ptype,1,opts->lb,opts->ub);
+    p->coeff[0] = a / p->p->const_term;
 
     return p;
 }
@@ -759,19 +870,16 @@ orth_poly_expansion_constant(double a, enum poly_type ptype, double lb,
 *
 *   \param[in] a      - value of the slope function
 *   \param[in] offset - offset
-*   \param[in] ptype  - type of polynomial
-*   \param[in] lb     - lower bound
-*   \param[in] ub     - upper bound
+*   \param[in] opts   - upper bound
 *
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_linear(double a, double offset, enum poly_type ptype, 
-                           double lb, double ub)
+orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 {
     struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(ptype, 2, lb, ub);
-    if (ptype == LEGENDRE){
+            orth_poly_expansion_init(opts->ptype, 2, opts->lb, opts->ub);
+    if (opts->ptype == LEGENDRE){
         double m = (p->p->upper - p->p->lower) / 
                     (p->upper_bound - p->lower_bound);
         double off = p->p->upper - m * p->upper_bound;
@@ -781,7 +889,7 @@ orth_poly_expansion_linear(double a, double offset, enum poly_type ptype,
         p->coeff[1] = a/m;
         p->coeff[0] = offset-off*p->coeff[1];
     }
-    else if (ptype == HERMITE){
+    else if (opts->ptype == HERMITE){
         p->coeff[0] = offset;
         p->coeff[1] = a;
     }
@@ -803,20 +911,17 @@ orth_poly_expansion_linear(double a, double offset, enum poly_type ptype,
 *
 *   \param[in] a      - value of the slope function
 *   \param[in] offset - offset
-*   \param[in] ptype  - type of polynomial
-*   \param[in] lb     - lower bound
-*   \param[in] ub     - upper bound
+*   \param[in] opts   - options
 *
 *   \return quadratic polynomial
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype, 
-                              double lb, double ub)
+orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 {
     struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(ptype, 3, lb, ub);
+            orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
 
-    if (ptype == LEGENDRE){
+    if (opts->ptype == LEGENDRE){
         double m = (p->p->upper - p->p->lower) / 
                     (p->upper_bound - p->lower_bound);
         double off = p->p->upper - m * p->upper_bound;
@@ -824,7 +929,7 @@ orth_poly_expansion_quadratic(double a, double offset, enum poly_type ptype,
         p->coeff[1] = (-2.0 * a * offset - (3.0 *m * off * p->coeff[2]))/m;
         p->coeff[0] = (a*offset*offset - p->coeff[2]/2.0*(3*off*off-1.0) - p->coeff[1] * off);
     }
-    else if(ptype == HERMITE){
+    else if(opts->ptype == HERMITE){
         p->coeff[0]= a*offset*offset+a;
         p->coeff[1] = -2.0*a*offset;
         p->coeff[2] = a;
@@ -937,14 +1042,15 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
         return out;
     }
     if  (p->num_poly == 1){
-        out = orth_poly_expansion_constant(0.0, p->p->ptype,
-                                p->lower_bound, p->upper_bound);
+        out = orth_poly_expansion_init(p->p->ptype,1, 
+                                       p->lower_bound, p->upper_bound);
+        out->coeff[0] = 0.0;
     }
     else{
         switch (p->p->ptype) {
             case LEGENDRE:
                 out = orth_poly_expansion_init(p->p->ptype,p->num_poly-1, 
-                                           p->lower_bound, p->upper_bound);
+                                               p->lower_bound, p->upper_bound);
                 size_t ii,jj;
                 double m = (p->p->upper-p->p->lower) / 
                             (p->upper_bound - p->lower_bound);
@@ -1581,60 +1687,71 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
 *  Approximating a function that can take a vector of points as
 *  input
 *  
-*  \param[in]     A - function to approximate (can take multiple inputs)
-*  \param[in]     args - arguments to function
 *  \param[in,out] poly - orthogonal polynomial expansion
+*  \param[in]     f    - wrapped function
 *
 *  \return 0 - no problems, > 0 problem
 *
 *  \note  Maximum quadrature limited to 200 nodes
 *************************************************************/
 int
-orth_poly_expansion_approx_vec(
-    int (*A)(size_t, double *,double *,void *), void *args,
-    struct OrthPolyExpansion * poly)
-
+orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
+                               struct Fwrap * f)
 {
+    assert (poly != NULL);
+    assert (f != NULL);
+    
     size_t nquad = poly->num_poly+1;
     if (nquad < 1 || nquad > 200){
         return 1;
     }
 
-    double m = (poly->upper_bound - poly->lower_bound) / (poly->p->upper - poly->p->lower);
-    double off = poly->upper_bound - m * poly->p->upper;
+    double m = 1.0;
+    double off = 0.0;
+    if (poly->p->ptype != HERMITE){
+        m = (poly->upper_bound - poly->lower_bound) / (poly->p->upper - poly->p->lower);
+        off = poly->upper_bound - m * poly->p->upper;
+    }
 
     double fvals[200];
     double pt_un[200]; // nodes appropriate for bounds of A
+    double qpt[200];
+    double wt[200];
     
     double * quadpt = NULL;
     double * quadwt = NULL;
+
     int return_val = 0;
     switch (poly->p->ptype) { 
-        case CHEBYSHEV: 
-            fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for CHEBYSHEV type\n");
-            return 1;
-        case LEGENDRE: 
-            return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
-            if (return_val != 0){
-                return return_val;
-            }
-            break; 
-        case HERMITE:
-            assert(1 == 0);
-        case STANDARD: 
-            fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for STANDARD type\n");
-            return 1;
-    } 
-    for (size_t ii = 0; ii < nquad; ii++){ 
-        pt_un[ii] =  m * quadpt[ii] + off; 
-//        fvals[ii] = A(pt_un[ii],args)  * wt[ii]; 
+    case CHEBYSHEV: return_val = cheb_gauss(poly->num_poly,qpt,wt);                                     break;
+    case LEGENDRE:  return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);                                  break; 
+    case HERMITE:   return_val = gauss_hermite(nquad,qpt,wt);                                           break;
+    case STANDARD:  fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for STANDARD type\n");  return 1;
     }
-    
-    // Evaluate functions
-    return_val = A(nquad,pt_un,fvals,args);
+
     if (return_val != 0){
         return return_val;
     }
+
+    // something other than legendre
+    if (quadpt == NULL){ 
+        quadpt = qpt;
+        quadwt = wt;
+    }
+    
+    for (size_t ii = 0; ii < nquad; ii++){ 
+        pt_un[ii] =  m * quadpt[ii] + off; 
+    }
+
+
+    // Evaluate functions
+    return_val = fwrap_eval(nquad,pt_un,fvals,f);
+    if (return_val != 0){
+        return return_val;
+    }
+    /* printf("points and values"); */
+    /* dprint(nquad,pt_un); */
+    /* dprint(nquad,fvals); */
     for (size_t ii = 0; ii < nquad; ii++){
         fvals[ii] *= quadwt[ii];
     }
@@ -1644,70 +1761,11 @@ orth_poly_expansion_approx_vec(
     return return_val;
 }
 
-struct OpeAdaptOpts * ope_adapt_opts_alloc()
-{
-    struct OpeAdaptOpts * ao;
-    if ( NULL == (ao = malloc(sizeof(struct OpeAdaptOpts)))){
-        fprintf(stderr, "failed to allocate memory for poly exp.\n");
-        exit(1);
-    }
-
-    ao->start_num = 5;
-    ao->coeffs_check = 2;
-    ao->tol = 1e-10;
-    ao->max_num = 40;
-    return ao;
-}
-
-void ope_adapt_opts_free(struct OpeAdaptOpts * ope)
-{
-    if (ope != NULL){
-        free(ope); ope = NULL;
-    }
-}
-
-void ope_adapt_opts_set_start(struct OpeAdaptOpts * ope, size_t start)
-{
-    assert (ope != NULL);
-    ope->start_num = start;
-}
-void ope_adapt_opts_set_maxnum(struct OpeAdaptOpts * ope, size_t maxnum)
-{
-    assert (ope != NULL);
-    ope->max_num = maxnum;
-}
-
-size_t ope_adapt_opts_get_maxnum(struct OpeAdaptOpts * ope)
-{
-    assert (ope != NULL);
-    assert (ope->max_num < 1000); // really a check if it exists
-    
-    return ope->max_num;
-}
-
-void ope_adapt_opts_set_coeffs_check(struct OpeAdaptOpts * ope, size_t num)
-{
-    assert (ope != NULL);
-    ope->coeffs_check = num;
-}
-
-void ope_adapt_opts_set_tol(struct OpeAdaptOpts * ope, double tol)
-{
-    assert (ope != NULL);
-    ope->tol = tol;
-}
-
-
-
 /********************************************************//**
 *   Create an approximation adaptively
 *
-*   \param[in] A       - function to project
-*   \param[in] args    - arguments to function
-*   \param[in] ptype   - polynomial type
-*   \param[in] lower   - lower bound of input
-*   \param[in] upper   - upper bound of input
-*   \param[in] aoptsin - approximation options
+*   \param[in] aopts - approximation options
+*   \param[in] fw    - wrapped function
 *   
 *   \return poly
 *
@@ -1716,43 +1774,17 @@ void ope_adapt_opts_set_tol(struct OpeAdaptOpts * ope, double tol)
 *       Chebfun in his book Approximation Theory and practice
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args, 
-                        enum poly_type ptype, double lower, double upper,
-                        struct OpeAdaptOpts * aoptsin)
+orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts, struct Fwrap * fw)
 {
-    int default_opts = 0;
-    struct OpeAdaptOpts * aopts;
-    if (aoptsin == NULL){
-        aopts = ope_adapt_opts_alloc();
-        ope_adapt_opts_set_start(aopts,8);
-        ope_adapt_opts_set_maxnum(aopts,40);
-        ope_adapt_opts_set_coeffs_check(aopts,2);
-        ope_adapt_opts_set_tol(aopts,1e-10);
+    assert (aopts != NULL);
+    assert (fw != NULL);
 
-        //aopts->tol = 1e-1;  
-        default_opts = 1;
-    }
-    else{
-        aopts = aoptsin;
-    }
     size_t ii;
     size_t N = aopts->start_num;
-//    printf("Nstart = %zu\n",N);
-//    printf("N coeff check = %zu\n",aopts->coeffs_check);
-    //printf("pre ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
-    if ((int)ptype > 10){
-        printf("Warning: for some reason ptype is\n");
-        printf("specified to be %d, reverting to 0\n",ptype);
-        exit(1);
-//        ptype = 0;
-    }
-    struct OrthPolyExpansion * poly = orth_poly_expansion_init(ptype,
-                                        N, lower, upper);
-    
-    //printf("start ptype=%d, N=%zu, lower=%G, upper=%G \n",ptype,N,lower,upper);
-    orth_poly_expansion_approx(A,args, poly);
-    //printf("got first one\n");
-    
+    struct OrthPolyExpansion * poly = NULL;
+    poly = orth_poly_expansion_init(aopts->ptype, N, aopts->lb,aopts->ub);
+    orth_poly_expansion_approx_vec(poly,fw);
+
     size_t coeffs_too_big = 0;
     for (ii = 0; ii < aopts->coeffs_check; ii++){
         if (fabs(poly->coeff[N-1-ii]) > aopts->tol){
@@ -1760,9 +1792,11 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
             break;
         }
     }
-    //printf("TOL SPECIFIED IS %G\n",aopts->tol);
-    size_t maxnum = ope_adapt_opts_get_maxnum(aopts);
+    /* printf("TOL SPECIFIED IS %G\n",aopts->tol); */
+    /* printf("Ncoeffs check=%zu \n",aopts->coeffs_check); */
+    size_t maxnum = ope_opts_get_maxnum(aopts);
     while ((coeffs_too_big == 1) && (N < maxnum)){
+        /* printf("N = %zu\n",N); */
         coeffs_too_big = 0;
 	
         free(poly->coeff); poly->coeff = NULL;
@@ -1771,10 +1805,9 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         N = N + 5;
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
-        //      printf("N = %zu\n",N);
         poly->coeff = calloc_double(poly->nalloc);
 //        printf("Number of coefficients to check = %zu\n",aopts->coeffs_check);
-        orth_poly_expansion_approx(A, args, poly);
+        orth_poly_expansion_approx_vec(poly,fw);
 	    double sum_coeff_squared = 0.0;
         for (ii = 0; ii < N; ii++){ 
             sum_coeff_squared += pow(poly->coeff[ii],2); 
@@ -1782,9 +1815,9 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
         sum_coeff_squared = fmax(sum_coeff_squared,ZEROTHRESH);
         //sum_coeff_squared = 1.0;
         for (ii = 0; ii < aopts->coeffs_check; ii++){
-            //printf("aopts->tol=%3.15G last coefficients %3.15G\n",
-            //        aopts->tol * sum_coeff_squared,
-           	//	  poly->coeff[N-1-ii]);
+            /* printf("aopts->tol=%3.15G last coefficients %3.15G\n", */
+            /*        aopts->tol * sum_coeff_squared, */
+           	/* 	  poly->coeff[N-1-ii]); */
             if (fabs(poly->coeff[N-1-ii]) > (aopts->tol * sum_coeff_squared) ){
                 coeffs_too_big = 1;
                 break;
@@ -1835,9 +1868,9 @@ orth_poly_expansion_approx_adapt(double (*A)(double,void *), void * args,
     /*     //exit(1); */
     /* } */
 
-    if (default_opts == 1){
-        ope_adapt_opts_free(aopts);
-    }
+    /* if (default_opts == 1){ */
+    /*     ope_opts_free(aopts); */
+    /* } */
     return poly;
 }
 
@@ -1978,7 +2011,9 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         
         if ( (norma < ZEROTHRESH) || (normb < ZEROTHRESH) ){
             //printf("in here \n");
-            c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+//            c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
+            c = orth_poly_expansion_init(p,1, lb, ub);
+            c->coeff[0] = 0.0;
         }
         else{
             //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
@@ -1990,7 +2025,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     
     //*
     //printf("compute product\n");
-    //struct OpeAdaptOpts ao;
+    //struct OpeOpts ao;
     //ao.start_num = 3;
     //ao.coeffs_check = 2;
     //ao.tol = 1e-13;
@@ -2166,21 +2201,10 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
 {
     double out = 0.0;
     switch (poly->p->ptype){
-        case LEGENDRE:
-            out = legendre_integrate(poly);
-            break;
-        case HERMITE:
-            out = hermite_integrate(poly);
-            break;
-        case CHEBYSHEV:
-            out = cheb_integrate2(poly);
-            break;
-        case STANDARD:
-            fprintf(stderr, "Cannot integrate STANDARD type\n");
-            break;
-        //default: 
-        //    fprintf(stderr, "Polynomial type does not exist: %d\n ", 
-        //            poly->p->ptype);
+    case LEGENDRE:  out = legendre_integrate(poly); break;
+    case HERMITE:   out = hermite_integrate(poly);  break;
+    case CHEBYSHEV: out = cheb_integrate2(poly);    break;
+    case STANDARD:  fprintf(stderr, "Cannot integrate STANDARD type\n"); break;
     }
     return out;
 }
@@ -2251,7 +2275,7 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
     int c2 = 0;
     if (a->p->ptype == CHEBYSHEV){
         t1 = orth_poly_expansion_init(LEGENDRE, a->num_poly,
-                    a->lower_bound, a->upper_bound);
+                                      a->lower_bound, a->upper_bound);
         orth_poly_expansion_approx(&orth_poly_expansion_eval2, a, t1);
         orth_poly_expansion_round(&t1);
         c1 = 1;

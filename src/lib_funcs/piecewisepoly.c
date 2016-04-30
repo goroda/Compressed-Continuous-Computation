@@ -274,64 +274,55 @@ void piecewise_poly_array_free(struct PiecewisePoly ** poly, size_t n)
 /********************************************************//**
 *   Construct a piecewise constant function
 *
-*   \param value [in] - value of the function
-*   \param ptype [in] - type of polynomial
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] value - value of the function
+*   \param[in] opts  - options
 *
 *   \return p - piecewise polynomial of one interval
 *************************************************************/
 struct PiecewisePoly *
-piecewise_poly_constant(double value, enum poly_type ptype, double lb, double ub)
+piecewise_poly_constant(double value, struct PwPolyAdaptOpts * opts)
 {
-    
     struct PiecewisePoly * p = piecewise_poly_alloc();
-    p->ope = orth_poly_expansion_constant(value, ptype, lb, ub);
+    p->ope = orth_poly_expansion_constant(value,opts->opeopts);
     return p;
 }
 
 /********************************************************//**
 *   Construct a piecewise linear function
 *
-*   \param slope [in] - value of the slope function
-*   \param offset [in] - offset
-*   \param ptype [in] - type of polynomial
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] slope  - value of the slope function
+*   \param[in] offset - offset
+*   \param[in] opts   - upper bound
 *
 *   \return p - piecewise polynomial of one interval
 *************************************************************/
 struct PiecewisePoly *
-piecewise_poly_linear(double slope, double offset, enum poly_type ptype, double lb,  double ub)
+piecewise_poly_linear(double slope, double offset, struct PwPolyAdaptOpts * opts)
 {
-    
     struct PiecewisePoly * p = piecewise_poly_alloc();
-    p->ope = orth_poly_expansion_linear(slope, offset, ptype, lb, ub);
+    p->ope = orth_poly_expansion_linear(slope, offset,opts->opeopts);
     return p;
 }
 
 /********************************************************//**
 *   Construct a piecewise quadratic function \f$ ax^2 + bx + c \f$
 *
-*   \param a [in] - coefficient of squared term
-*   \param b [in] - coefficient of linear term
-*   \param c [in] - constant term
-*   \param ptype [in] - type of polynomial
-*   \param lb [in] - lower bound
-*   \param ub [in] - upper bound
+*   \param[in] a    - coefficient of squared term
+*   \param[in] b    - coefficient of linear term
+*   \param[in] c    - constant term
+*   \param[in] opts - opts
 *
 *   \return p - piecewise polynomial of one interval
 *************************************************************/
 struct PiecewisePoly *
-piecewise_poly_quadratic(double a, double b, double c, enum poly_type ptype,
-        double lb, double ub)
+piecewise_poly_quadratic(double a, double b, double c, struct PwPolyAdaptOpts * opts)
 {
     
     struct PiecewisePoly * p = piecewise_poly_alloc();
     double coeff[3];
     coeff[0] = a; coeff[1] = b; coeff[2] = c;
 
-    p->ope = orth_poly_expansion_init(ptype, 3, lb, ub);
+    p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
     orth_poly_expansion_approx(&pw_eval_quad_func, coeff, p->ope);
     orth_poly_expansion_round(&(p->ope));
     return p;
@@ -978,9 +969,9 @@ void piecewise_poly_flatten(struct PiecewisePoly * p)
 /********************************************************//**
 *   Reapproximate a piecewise poly on a finer grid.
 *
-*   \param a [in] - pw polynomial to reapproximate
-*   \param N [in] - number of nodes (including lb,ub)
-*   \param nodes [in] - nodes defining boundaries of each region
+*   \param[in] a     - pw polynomial to reapproximate
+*   \param[in] N     - number of nodes (including lb,ub)
+*   \param[in] nodes - nodes defining boundaries of each region
 *
 *   \note
 *       Each of the new pieces must be fully encompassed by an old piece
@@ -989,29 +980,31 @@ void piecewise_poly_flatten(struct PiecewisePoly * p)
 struct PiecewisePoly *
 piecewise_poly_finer_grid(struct PiecewisePoly * a, size_t N, double * nodes)
 {
-    
+    assert (1 == 0);
     struct PiecewisePoly * p = NULL;
     if (N == 2){
         assert( a->leaf == 1);
         p = piecewise_poly_copy(a);
     }
     else{
-        struct OpeAdaptOpts aopts;
-        aopts.start_num = 8;
-        aopts.coeffs_check = 2;
-        aopts.tol = 1e-14;
-
+        struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
+        ope_opts_set_start(aopts,8);
+        ope_opts_set_coeffs_check(aopts,2);
+        ope_opts_set_tol(aopts,1e-14);
+        
         p->leaf = 0;
         p->nbranches = N-1;
         p->branches = piecewise_poly_array_alloc(N-1);
         size_t ii;
         for (ii = 0; ii < N-1; ii++){
+            ope_opts_set_lb(aopts,nodes[ii]);
+            ope_opts_set_ub(aopts,nodes[ii+1]);
             p->branches[ii] = piecewise_poly_alloc();
             p->branches[ii]->leaf = 1;
-            p->branches[ii]->ope = 
-                orth_poly_expansion_approx_adapt(pw_eval,&a,
-                        LEGENDRE, nodes[ii],nodes[ii+1], &aopts);
+            /* p->branches[ii]->ope = orth_poly_expansion_approx_adapt(pw_eval,&a,aopts); */
+            /* LEGENDRE, nodes[ii],nodes[ii+1], aopts); */
         }
+        ope_opts_free(aopts); aopts = NULL;
     }
     return p;
 }
@@ -1020,8 +1013,8 @@ piecewise_poly_finer_grid(struct PiecewisePoly * a, size_t N, double * nodes)
 /********************************************************//**
 *   Compute the product of two piecewise polynomials
 *
-*   \param a [in] - first pw polynomial
-*   \param b [in] - second pw polynomial
+*   \param[in] a  - first pw polynomial
+*   \param[in] b  - second pw polynomial
 *
 *   \return c - pw polynomial
 *
@@ -1032,7 +1025,10 @@ struct PiecewisePoly *
 piecewise_poly_prod(struct PiecewisePoly * a,
                     struct PiecewisePoly * b)
 {
+    assert (1 == 0);
     struct PwPolyAdaptOpts aopts;
+
+    
     aopts.ptype = LEGENDRE;
     aopts.maxorder = 7;
     aopts.coeff_check = 2;
@@ -1040,16 +1036,17 @@ piecewise_poly_prod(struct PiecewisePoly * a,
     aopts.minsize = 1e-3;
     aopts.nregions = 5;
     aopts.pts = NULL;
+    aopts.lb = piecewise_poly_lb(a);
+    aopts.ub = piecewise_poly_ub(a);
 
-    double lb = piecewise_poly_lb(a);
-    double ub = piecewise_poly_ub(a);
+
     struct PwCouple pwc;
     pwc.a = a;
     pwc.b = b;
     
     //printf("in prod \n");
     struct PiecewisePoly *c = 
-            piecewise_poly_approx1_adapt(pw_eval_prod, &pwc, lb, ub, &aopts);
+        piecewise_poly_approx1_adapt(pw_eval_prod, &pwc, &aopts);//lb, ub, &aopts);
     //printf("out of prod \n");
     return c;
 }
@@ -1058,8 +1055,8 @@ piecewise_poly_prod(struct PiecewisePoly * a,
 /********************************************************//**
 *   Inner product between two pw polynomials 
 *
-*   \param a [in] - first pw polynomial
-*   \param b [in] - second pw polynomai
+*   \param[in] a - first pw polynomial
+*   \param[in] b - second pw polynomai
 *
 *   \return out - inner product
 *
@@ -1132,6 +1129,7 @@ struct PiecewisePoly *
 piecewise_poly_daxpby(double a, struct PiecewisePoly * x,
                        double b, struct PiecewisePoly * y)
 {
+    assert (1 == 0);
     struct PwPolyAdaptOpts aopts;
     aopts.ptype = LEGENDRE;
     aopts.maxorder = 7;
@@ -1140,9 +1138,9 @@ piecewise_poly_daxpby(double a, struct PiecewisePoly * x,
     aopts.minsize = 1e-3;
     aopts.nregions = 5;
     aopts.pts = NULL;
-
-    double lb = piecewise_poly_lb(x);
-    double ub = piecewise_poly_ub(x);
+    aopts.lb = piecewise_poly_lb(x);
+    aopts.ub = piecewise_poly_ub(x);
+    
     struct PwCouple pwc;
     pwc.a = x;
     pwc.b = y;
@@ -1150,7 +1148,7 @@ piecewise_poly_daxpby(double a, struct PiecewisePoly * x,
     pwc.coeff[1] = b;
 
     struct PiecewisePoly *c = 
-            piecewise_poly_approx1_adapt(pw_eval_sum, &pwc, lb, ub, &aopts);
+            piecewise_poly_approx1_adapt(pw_eval_sum, &pwc, &aopts);
     return c;
 }
 
@@ -1900,44 +1898,49 @@ piecewise_poly_approx2(double (*f)(double, void *), void * args, double lb,
 /********************************************************//**
 *   Create Approximation by hierarchical splitting
 *   
-*   \param f [in] - function to approximate
-*   \param args [in] - function arguments
-*   \param lb [in] - lower bound of input space
-*   \param ub [in] - upper bound of input space
-*   \param aoptsin [in] - approximation options
+*   \param[in] f       - function to approximate
+*   \param[in] args    - function arguments
+*   \param[in] aoptsin - approximation options
 *
-*   \return p - polynomial
+*   \return piecewise - polynomial
 *************************************************************/
 struct PiecewisePoly *
-piecewise_poly_approx1(double (*f)(double, void *), void * args, double lb,
-                        double ub, struct PwPolyAdaptOpts * aoptsin)
+piecewise_poly_approx1(double (*f)(double, void *), void * args,
+                       /* double lb, double ub, */
+                       struct PwPolyAdaptOpts * aoptsin)
 {
+    assert (1 == 0);
     //printf("start approx\n");
+    assert (aoptsin != NULL);
     struct PwPolyAdaptOpts * aopts = NULL;
-    if (aoptsin != NULL){
-        aopts = aoptsin;
-    }
-    else{
-        aopts = malloc(sizeof(struct PwPolyAdaptOpts));
-        if (aopts == NULL){
-            fprintf(stderr, "cannot allocate space for pw adapt opts");
-            exit(1);
-        }
-        aopts->ptype = LEGENDRE;
-        aopts->maxorder = 7;
-        //aopts->minsize = 1e5 * ZEROTHRESH;
-        //aopts->coeff_check = 2;
-        //aopts->epsilon = 1e-12;
-        aopts->nregions = 5;
-        aopts->pts = NULL;
-        aopts->other = NULL;
-    }
+    double lb = 0;
+    double ub = 0;
+    aopts = aoptsin;
+    /* if (aoptsin != NULL){ */
+    /*     aopts = aoptsin; */
+    /* } */
+    /* else{ */
+    /*     aopts = malloc(sizeof(struct PwPolyAdaptOpts)); */
+    /*     if (aopts == NULL){ */
+    /*         fprintf(stderr, "cannot allocate space for pw adapt opts"); */
+    /*         exit(1); */
+    /*     } */
+    /*     aopts->ptype = LEGENDRE; */
+    /*     aopts->maxorder = 7; */
+    /*     //aopts->minsize = 1e5 * ZEROTHRESH; */
+    /*     //aopts->coeff_check = 2; */
+    /*     //aopts->epsilon = 1e-12; */
+    /*     aopts->nregions = 5; */
+    /*     aopts->pts = NULL; */
+    /*     aopts->other = NULL; */
+    /* } */
+
 
     size_t N = aopts->maxorder+1;
     struct PiecewisePoly * poly = piecewise_poly_alloc();
     if (aopts->nregions == 1){
         poly->leaf = 1;
-        poly->ope = orth_poly_expansion_init(aopts->ptype, N, lb, ub);
+        poly->ope = orth_poly_expansion_init(aopts->ptype, N, aopts->lb, aopts->ub);
         orth_poly_expansion_approx(f,args,poly->ope);
         orth_poly_expansion_round(&(poly->ope));
     }
@@ -1974,10 +1977,10 @@ piecewise_poly_approx1(double (*f)(double, void *), void * args, double lb,
         free(pts); pts = NULL;
     }
 
-    if (aoptsin == NULL){
-        free(aopts);
-        aopts = NULL;
-    }
+    /* if (aoptsin == NULL){ */
+    /*     free(aopts); */
+    /*     aopts = NULL; */
+    /* } */
 
     //printf("end approx\n");
     return poly;
@@ -1986,40 +1989,42 @@ piecewise_poly_approx1(double (*f)(double, void *), void * args, double lb,
 /********************************************************//**
 *   Create Approximation by hierarchical splitting (adaptively)
 *   
-*   \param f [in] - function to approximate
-*   \param args [in] - function arguments
-*   \param lb [in] - lower bound of input space
-*   \param ub [in] - upper bound of input space
-*   \param aoptsin [in] - approximation options
+*   \param[in] f       - function to approximate
+*   \param[in] args    - function arguments
+*   \param[in] aoptsin - approximation options
 *
-*   \return p - polynomial
+*   \return piecewise - polynomial
 *************************************************************/
 struct PiecewisePoly *
 piecewise_poly_approx1_adapt(
-                double (*f)(double, void *), void * args, double lb,
-                double ub, struct PwPolyAdaptOpts * aoptsin)
+                double (*f)(double, void *), void * args,
+                /* double lb, double ub, */
+                struct PwPolyAdaptOpts * aoptsin)
 {
+    assert (aoptsin != NULL);
+   
     struct PwPolyAdaptOpts * aopts = NULL;
-    if (aoptsin != NULL){
-        aopts = aoptsin;
-    }
-    else{
-        aopts = malloc(sizeof(struct PwPolyAdaptOpts));
-        if (aopts == NULL){
-            fprintf(stderr, "cannot allocate space for pw adapt opts");
-            exit(1);
-        }
-        aopts->ptype = LEGENDRE;
-        aopts->maxorder = 7;
-        aopts->minsize = 1e-5;
-        aopts->coeff_check = 2;
-        aopts->epsilon = 1e-8;
-        aopts->nregions = 5;
-        aopts->pts = NULL;
-        aopts->other = NULL;
-    }
+    aopts = aoptsin;
+    /* if (aoptsin != NULL){ */
+    /*     aopts = aoptsin; */
+    /* } */
+    /* else{ */
+    /*     aopts = malloc(sizeof(struct PwPolyAdaptOpts)); */
+    /*     if (aopts == NULL){ */
+    /*         fprintf(stderr, "cannot allocate space for pw adapt opts"); */
+    /*         exit(1); */
+    /*     } */
+    /*     aopts->ptype = LEGENDRE; */
+    /*     aopts->maxorder = 7; */
+    /*     aopts->minsize = 1e-5; */
+    /*     aopts->coeff_check = 2; */
+    /*     aopts->epsilon = 1e-8; */
+    /*     aopts->nregions = 5; */
+    /*     aopts->pts = NULL; */
+    /*     aopts->other = NULL; */
+    /* } */
     
-    struct PiecewisePoly * poly = piecewise_poly_approx1(f,args,lb,ub,aopts);
+    struct PiecewisePoly * poly = piecewise_poly_approx1(f,args,aopts);//lb,ub,aopts);
     size_t ii,jj;
     //printf("nbranches = %zu\n",poly->nbranches);
     for (ii = 0; ii < poly->nbranches; ii++){
@@ -2059,17 +2064,17 @@ piecewise_poly_approx1_adapt(
             poly->branches[ii] = NULL;
             assert(aopts->pts == NULL);
             poly->branches[ii] = 
-                piecewise_poly_approx1_adapt(f,args,lbs,ubs,aopts);//aopts);
+                piecewise_poly_approx1_adapt(f,args,aopts);//lbs,ubs,aopts);//aopts);
                 //piecewise_poly_approx1(f,args,lbs,ubs,aopts);
 
         }
         //*/
     }
 
-    if (aoptsin == NULL){
-        free(aopts);
-        aopts = NULL;
-    }
+    /* if (aoptsin == NULL){ */
+    /*     free(aopts); */
+    /*     aopts = NULL; */
+    /* } */
 
     return poly;
 }

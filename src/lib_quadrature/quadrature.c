@@ -104,14 +104,17 @@ double * simpson_w(size_t N, double h)
 *       \param[in]     N       - number of elements
 *       \param[in,out] pts     - quadrature nodes (space already alloc)
 *       \param[in,out] weights - weights (space alread alloc)
+*
+*       \return 0 if successfull
 *************************************************************/
-void cheb_gauss(size_t N, double * pts, double * weights){
+int cheb_gauss(size_t N, double * pts, double * weights){
     size_t ii;
     for (ii = 0; ii < N; ii++){
         weights[ii] = M_PI / (double) N;
         pts[ii] = cos( (2.0 * (double) (ii+1) - 1.0) * M_PI / 
                     2.0 / (double) N);
     }
+    return 0;
 }
 
 /***********************************************************//**
@@ -210,10 +213,12 @@ void fejer2(size_t N, double * pts, double * weights){
 *     \param[in,out] pts     - quadrature nodes (space already alloc)
 *     \param[in,out] weights - weights (space alread alloc)
 *
+*     \return 0 if successful
+
 *     \note
 *     weight function is \f$ w(x) = \frac{1}{\sqrt{2\pi}}e^{-x^2/2}\f$
 *************************************************************/
-void gauss_hermite(size_t N, double * pts, double * weights){
+int gauss_hermite(size_t N, double * pts, double * weights){
     
     size_t ii;
     double * offdiag = calloc_double(N);
@@ -243,6 +248,8 @@ void gauss_hermite(size_t N, double * pts, double * weights){
     free(offdiag); offdiag = NULL;
     free(evec); evec = NULL;
     free(work); work = NULL;
+    
+    return info;
 }
 
 /***********************************************************//**
