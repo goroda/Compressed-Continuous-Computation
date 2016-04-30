@@ -33,29 +33,67 @@
 
 //Code
 
-
-
-
-#ifndef QUADRATURE_H
-#define QUADRATURE_H
-
 #include <stdlib.h>
+#include <stdio.h>
+
+#include "CuTest.h"
+#include "functest.h"
 
 
-#ifndef M_PI
-#define M_PI 3.1415926535897932384626433
-#endif
-double * trap_w(size_t, double);
-double * simpson_w(size_t, double);
 
+void RunAllTests(void) {
+    
+    printf("Running Test Suite: lib_funcs\n");
 
-void clenshaw_curtis(size_t, double *, double *);
-void rescale_cc(size_t, double *, double *, double, double);
+    CuString * output = CuStringNew();
+    CuSuite * suite = CuSuiteNew();
+    
+    CuSuite * cheb = ChebGetSuite();
+    CuSuite * leg = LegGetSuite();
+    CuSuite * herm = HermGetSuite();
+    CuSuite * sp = StandardPolyGetSuite();
+    CuSuite * alg = PolyAlgorithmsGetSuite();
+    CuSuite * ser = PolySerializationGetSuite();
+    
+    /* CuSuite * lelm = LelmGetSuite(); */
 
-void fejer2(size_t, double *, double *);
+    /* CuSuite * ll = LinkedListGetSuite(); */
+    /* CuSuite * pp = PiecewisePolyGetSuite(); */
+    /* CuSuite * pap = PolyApproxSuite(); */
+	
+    CuSuiteAddSuite(suite, cheb);
+    CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, herm);
+    CuSuiteAddSuite(suite, sp);
+    CuSuiteAddSuite(suite, alg);
+    CuSuiteAddSuite(suite, ser);
+    
+    /* CuSuiteAddSuite(suite, lelm); */
 
-int cheb_gauss(size_t, double *, double *);
-int gauss_hermite(size_t, double *, double *);
-void gauss_legendre(size_t, double *, double *);
+    /* CuSuiteAddSuite(suite, ll); */
+    /* CuSuiteAddSuite(suite, pp); */
+    /* CuSuiteAddSuite(suite, pap); */
 
-#endif
+    CuSuiteRun(suite);
+    CuSuiteSummary(suite, output);
+    CuSuiteDetails(suite, output);
+    printf("%s \n", output->buffer);
+    
+    CuSuiteDelete(cheb);
+    CuSuiteDelete(leg);
+    CuSuiteDelete(herm);
+    CuSuiteDelete(sp);
+    CuSuiteDelete(alg);
+    CuSuiteDelete(ser);
+    
+    /* CuSuiteDelete(lelm); */
+    /* CuSuiteDelete(ll); */
+    /* CuSuiteDelete(pp); */
+    /* CuSuiteDelete(pap); */
+    CuStringDelete(output);
+    free(suite);
+}
+
+int main(void) {
+    RunAllTests();
+}

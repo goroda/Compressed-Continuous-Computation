@@ -46,10 +46,28 @@
 
 #include <stdlib.h>
 
+#include "fwrap.h"
+
 /** \enum poly_type
  * contains LEGENDRE, CHEBYSHEV, STANDARD, HERMITE
  */
 enum poly_type {LEGENDRE, CHEBYSHEV, HERMITE, STANDARD};
+
+struct OpeOpts;
+struct OpeOpts * ope_opts_alloc(enum poly_type);
+void ope_opts_free(struct OpeOpts *);
+void ope_opts_set_start(struct OpeOpts *, size_t);
+void ope_opts_set_maxnum(struct OpeOpts *, size_t);
+size_t ope_opts_get_maxnum(const struct OpeOpts *);
+void ope_opts_set_coeffs_check(struct OpeOpts *, size_t);
+void ope_opts_set_tol(struct OpeOpts *, double);
+
+void ope_opts_set_lb(struct OpeOpts *, double);
+double ope_opts_get_lb(const struct OpeOpts *);
+void ope_opts_set_ub(struct OpeOpts *, double);
+double ope_opts_get_ub(const struct OpeOpts *);
+void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
+enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis
@@ -173,13 +191,13 @@ struct OrthPolyExpansion *
 orth_poly_expansion_copy(struct OrthPolyExpansion *);
 
 struct OrthPolyExpansion * 
-orth_poly_expansion_constant(double, enum poly_type, double, double);
+orth_poly_expansion_constant(double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
-orth_poly_expansion_linear(double, double, enum poly_type, double, double);
+orth_poly_expansion_linear(double, double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
-orth_poly_expansion_quadratic(double, double, enum poly_type, double, double);
+orth_poly_expansion_quadratic(double, double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_genorder(enum poly_type, size_t, double, double);
@@ -213,37 +231,21 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);
 void orth_poly_expansion_approx (double (*)(double,void *), void *, 
                        struct OrthPolyExpansion *);
 int
-orth_poly_expansion_approx_vec(
-    int (*A)(size_t, double *,double *,void *), void *,
-    struct OrthPolyExpansion *);
+orth_poly_expansion_approx_vec(struct OrthPolyExpansion *,
+                               struct Fwrap *);
+                               
+    /* int (*A)(size_t, double *,double *,void *), void *, */
+    /* struct OrthPolyExpansion *); */
 
-struct OpeAdaptOpts{
-    
-    size_t start_num;
-    size_t max_num;
-    size_t coeffs_check;
-    double tol;
-};
-struct OpeAdaptOpts * ope_adapt_opts_alloc();
-void ope_adapt_opts_free(struct OpeAdaptOpts *);
-void ope_adapt_opts_set_start(struct OpeAdaptOpts *, size_t);
-void ope_adapt_opts_set_maxnum(struct OpeAdaptOpts *, size_t);
-size_t ope_adapt_opts_get_maxnum(struct OpeAdaptOpts *);
-void ope_adapt_opts_set_coeffs_check(struct OpeAdaptOpts *, size_t);
-void ope_adapt_opts_set_tol(struct OpeAdaptOpts *, double);
 
 struct OrthPolyExpansion * 
-orth_poly_expansion_approx_adapt(double (*A)(double,void *), 
-                                 void *, enum poly_type, double, 
-                                 double, struct OpeAdaptOpts *);
+orth_poly_expansion_approx_adapt(const struct OpeOpts *,struct Fwrap *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_randu(enum poly_type, size_t, double, double);
 
-
 double cheb_integrate2(struct OrthPolyExpansion *);
 double legendre_integrate(struct OrthPolyExpansion *);
-
 
 struct OrthPolyExpansion *
 orth_poly_expansion_prod(struct OrthPolyExpansion *,

@@ -6,7 +6,8 @@ file(GLOB SRC_FILES
     hpoly.c
     linelm.c
     functions.c
-    monitoring.c)
+    monitoring.c
+    fwrap.c)
 
 if ( ${static_libs} )
     add_library(funcs ${SRC_FILES})

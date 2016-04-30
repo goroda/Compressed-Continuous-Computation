@@ -71,6 +71,9 @@ struct PwPolyAdaptOpts
     size_t nregions;
     double * pts; // could be null then evenly spaced out, (nregions+1,)
 
+    double lb;
+    double ub;
+    struct OpeOpts * opeopts;
     void * other;
 };
 
@@ -82,11 +85,11 @@ void piecewise_poly_free(struct PiecewisePoly *);
 void piecewise_poly_array_free(struct PiecewisePoly **, size_t);
 
 struct PiecewisePoly * 
-piecewise_poly_constant(double, enum poly_type, double, double) ;
+piecewise_poly_constant(double, struct PwPolyAdaptOpts *);
 struct PiecewisePoly * 
-piecewise_poly_linear(double, double, enum poly_type, double,  double);
+piecewise_poly_linear(double, double, struct PwPolyAdaptOpts *);
 struct PiecewisePoly * 
-piecewise_poly_quadratic(double,double,double, enum poly_type, double, double);
+piecewise_poly_quadratic(double,double,double, struct PwPolyAdaptOpts *);
 void piecewise_poly_split(struct PiecewisePoly *, double);
 void piecewise_poly_splitn(struct PiecewisePoly *, size_t, double *);
 
@@ -136,12 +139,14 @@ piecewise_poly_matched_prod(struct PiecewisePoly *,struct PiecewisePoly *);
 
 // Approximation
 struct PiecewisePoly *
-piecewise_poly_approx1(double (*)(double, void *), void *, double,
-                        double, struct PwPolyAdaptOpts *);
+piecewise_poly_approx1(double (*)(double, void *), void *,
+                       /* double, double, */
+                       struct PwPolyAdaptOpts *);
 struct PiecewisePoly *
 piecewise_poly_approx1_adapt(
-                double (*f)(double, void *), void *, double,
-                double, struct PwPolyAdaptOpts *);
+                double (*f)(double, void *), void *,
+                /* double, double, */
+                struct PwPolyAdaptOpts *);
 
 
 ///////////////////////////////////////////////

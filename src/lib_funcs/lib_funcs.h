@@ -46,6 +46,7 @@
 #include "piecewisepoly.h"
 #include "linelm.h"
 #include "functions.h"
+#include "fwrap.h"
 #include "monitoring.h"
 
 #endif

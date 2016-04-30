@@ -47,6 +47,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "fwrap.h"
+
 /** \struct LinElemExp
  * \brief structure to represent an expansion of linear elements
  * \var LinElemExp::num_nodes
@@ -105,6 +107,8 @@ struct LinElemExpAopts
     double * nodes;
     int adapt;
 
+    double lb;
+    double ub;
     double delta;
     double hmin;
 };
@@ -120,7 +124,7 @@ void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
 void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
 
 struct LinElemXY;
-void lin_elem_adapt(double (*)(double,void*), void *,
+void lin_elem_adapt(struct Fwrap *,
                     double, double,double, double,
                     double, double,struct LinElemXY ** x);
 double lin_elem_xy_get_x(struct LinElemXY *);
@@ -129,17 +133,16 @@ struct LinElemXY * lin_elem_xy_next(struct LinElemXY *);
 void lin_elem_xy_free(struct LinElemXY *);
 
 struct LinElemExp *
-lin_elem_exp_approx(double (*)(double,void*), void*,
-                    double, double,
-                    struct LinElemExpAopts *);
+lin_elem_exp_approx(struct LinElemExpAopts *, struct Fwrap *);
+
 void lin_elem_exp_scale(double, struct LinElemExp *);
 void lin_elem_exp_flip_sign(struct LinElemExp *);
 void lin_elem_exp_orth_basis(size_t, struct LinElemExp **);
 struct LinElemExp *
-lin_elem_exp_constant(double, double, double,
+lin_elem_exp_constant(double,
                       const struct LinElemExpAopts *);
 struct LinElemExp * 
-lin_elem_exp_linear(double, double, double, double,
+lin_elem_exp_linear(double, double,
                     const struct LinElemExpAopts *);
 double lin_elem_exp_lb(struct LinElemExp *);
 double lin_elem_exp_ub(struct LinElemExp *);

@@ -70,9 +70,9 @@ struct Fwrap
     Ftype ftype;
 };
 
-/***********************************************************//**
+/**********************************************************//**
     Create an fwrapper
-***************************************************************/
+**************************************************************/
 struct Fwrap * fwrap_create(size_t dim, const char * type)
 {
     struct Fwrap * fw = malloc(sizeof(struct Fwrap));
@@ -113,7 +113,8 @@ void fwrap_set_f(struct Fwrap * fwrap, double(*f)(const double*,void*),void*arg)
     Set the vectorizedfunction
 ***************************************************************/
 void fwrap_set_fvec(struct Fwrap * fwrap, 
-                    int (*f)(size_t, const double*,double*,void*),void*arg)
+                    int (*f)(size_t,const double*,double*,void*),
+                    void* arg)
 {
     assert (fwrap != NULL);
     if (fwrap->ftype != VEC){
@@ -156,6 +157,7 @@ int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
         return fw->fvec(nevals,x,out,fw->fargs);
     }
     else{
+        fprintf(stderr,"Cannot evaluate function wrapper of type %d\n",fw->ftype);
         return 1;
     }
 }
