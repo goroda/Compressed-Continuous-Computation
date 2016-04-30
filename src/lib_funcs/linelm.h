@@ -49,6 +49,21 @@
 
 #include "fwrap.h"
 
+
+
+struct LinElemExpAopts;
+struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
+struct LinElemExpAopts *
+lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
+void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
+void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
+                                  size_t, double *);
+void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
+void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
+void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
+
+/////////////////////////////////////////////////////////////////////
+
 /** \struct LinElemExp
  * \brief structure to represent an expansion of linear elements
  * \var LinElemExp::num_nodes
@@ -77,51 +92,20 @@ unsigned char *
 serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
 unsigned char * deserialize_lin_elem_exp(unsigned char *, 
                                          struct LinElemExp **);
-double lin_elem_exp_eval(struct LinElemExp *, double);
-struct LinElemExp * lin_elem_exp_deriv(struct LinElemExp *);
-double lin_elem_exp_integrate(struct LinElemExp *);
-double lin_elem_exp_inner(struct LinElemExp *,struct LinElemExp *);
-int lin_elem_exp_axpy(double, struct LinElemExp *,struct LinElemExp *);
+double lin_elem_exp_eval(const struct LinElemExp *, double);
+struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
+double lin_elem_exp_integrate(const struct LinElemExp *);
+double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
+int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);
 struct LinElemExp *
-lin_elem_exp_prod(struct LinElemExp *,struct LinElemExp *,void *);
-double lin_elem_exp_norm(struct LinElemExp *);
-double lin_elem_exp_max(struct LinElemExp *, double *);
-double lin_elem_exp_min(struct LinElemExp *, double *);
-double lin_elem_exp_absmax(struct LinElemExp *, double *,void *);
+lin_elem_exp_prod(const struct LinElemExp *,const struct LinElemExp *,void *);
+double lin_elem_exp_norm(const struct LinElemExp *);
+double lin_elem_exp_max(const struct LinElemExp *, double *);
+double lin_elem_exp_min(const struct LinElemExp *, double *);
+double lin_elem_exp_absmax(const struct LinElemExp *, double *,void *);
 
 double lin_elem_exp_err_est(struct LinElemExp *, double *, short,short);
 
-/////////////////////////////////////////////////////////////////////
-/** \struct LinElemExpAopts
- * \brief Approximation options of LinElemExp
- * \var LinElemExp::num_nodes
- * number of basis functions or nodes
- * \var LinElemExp::nodes
- * nodes
- * \var LinElemExp::adapt
- * whether or not to adapt (0 or 1)
- */
-struct LinElemExpAopts
-{
-    size_t num_nodes;
-    double * nodes;
-    int adapt;
-
-    double lb;
-    double ub;
-    double delta;
-    double hmin;
-};
-
-struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
-struct LinElemExpAopts *
-lin_elem_exp_aopts_alloc_adapt(size_t,double *,double, double);
-void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
-void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
-                                  size_t, double *);
-void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
-void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
-void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
 
 struct LinElemXY;
 void lin_elem_adapt(struct Fwrap *,

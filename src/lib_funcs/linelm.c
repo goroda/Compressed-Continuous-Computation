@@ -48,6 +48,199 @@
 #include "linalg.h"
 #include "linelm.h"
 
+/** \struct LinElemExpAopts
+ * \brief Approximation options of LinElemExp
+ * \var LinElemExp::num_nodes
+ * number of basis functions or nodes
+ * \var LinElemExp::node_alloc
+ * indicator whether nodes were self allocated
+ * \var LinElemExp::nodes
+ * nodes
+ * \var LinElemExp::adapt
+ * whether or not to adapt (0 or 1)
+ * \var LinElemExp::lb
+ * lower bound
+ * \var LinElemExp::ub
+ * upper bound
+ * \var LinElemExp::delta
+ * adaptation function value tolerance
+ * \var LinElemExp::hmin
+ * adaptation node spacing tolerance
+ */
+struct LinElemExpAopts
+{
+
+    size_t num_nodes;
+    int node_alloc;
+    double * nodes;
+    int adapt;
+
+    double lb;
+    double ub;
+    double delta;
+    double hmin;
+};
+
+/********************************************************//**
+    Allocate approximation arguments (by reference)
+
+    \param[in] N - number of nodes
+    \param[in] x - nodes
+
+    \return approximation arguments
+*************************************************************/
+struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
+{
+    assert (x != NULL);
+    struct LinElemExpAopts * aopts = NULL;
+    aopts = malloc(sizeof(struct LinElemExpAopts));
+    if (aopts == NULL){
+        fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
+        exit(1);
+    }
+    aopts->num_nodes= N;
+    aopts->node_alloc = 0;
+    aopts->nodes = x;
+    aopts->lb = x[0];
+    aopts->lb = x[N-1];
+        
+    aopts->adapt = 0;
+    aopts->delta = DBL_MAX;
+    aopts->hmin = DBL_MAX;
+    return aopts;
+}
+
+/********************************************************//**
+    Allocate approximation arguments for adaptation
+
+    \param[in] N     - number of nodes
+    \param[in] x     - starting nodes reference
+    \param[in] lb    - lower bound lb==x[0] if x! NULL
+    \param[in] ub    - upper bound ub==x[0] if x! NULL
+    \param[in] delta - size of deviation from linear
+    \param[in] hmin  - minimum spacing
+
+    \return approximation arguments
+*************************************************************/
+struct LinElemExpAopts *
+lin_elem_exp_aopts_alloc_adapt(size_t N, double * x,
+                               double lb, double ub,
+                               double delta, double hmin)
+{
+    struct LinElemExpAopts * aopts = NULL;
+    aopts = malloc(sizeof(struct LinElemExpAopts));
+    if (aopts == NULL){
+        fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
+        exit(1);
+    }
+    aopts->num_nodes= N;
+    aopts->node_alloc = 0;
+    aopts->lb = lb;
+    aopts->ub = ub;
+    if (N > 0){
+        aopts->nodes = x;
+    }
+    else{
+        aopts->nodes = NULL;
+    }
+    aopts->adapt = 1;
+    aopts->delta = delta;
+    aopts->hmin = hmin;
+    return aopts;
+}
+
+/********************************************************//**
+    Free memory allocated to approximation arguments
+
+    \param[in,out] aopts - approximation arguments
+*************************************************************/
+void lin_elem_exp_aopts_free(struct LinElemExpAopts * aopts)
+{
+    if (aopts != NULL){
+        if (aopts->node_alloc == 1){
+            free(aopts->nodes); aopts->nodes = NULL;
+        }
+        free(aopts); aopts = NULL;
+    }
+}
+
+/********************************************************//**
+    Sets new nodes (by reference) for approximation options.
+    frees old ones if
+    previously allocated
+
+    \param[in,out] aopts - approximation arguments
+    \param[in]     N     - number of nodes
+    \param[in]     nodes - nodes
+*************************************************************/
+void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts * aopts,
+                                  size_t N, double * nodes)
+{
+
+    if (aopts == NULL){
+        fprintf(stderr,"Must allocate LinElemExpAopts before setting nodes\n");
+        exit(1);
+    }
+    if (aopts->node_alloc == 1){
+        free(aopts->nodes); aopts->nodes = NULL;
+    }
+    aopts->num_nodes= N;
+    aopts->node_alloc = 0;
+    if (N > 0){
+        aopts->nodes = nodes;
+    }
+}
+
+/********************************************************//**
+    Set adaptation
+
+    \param[in,out] aopts - approximation arguments
+    \param[in]     delta - maximum deviation from linear
+    \param[in]     hmin  - minimum distance between nodes
+*************************************************************/
+void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts * aopts,
+                                  double delta, double hmin)
+{
+    if (aopts == NULL){
+        fprintf(stderr,"Must allocate LinElemExpAopts before turning on adapting\n");
+        exit(1);
+    }
+    aopts->adapt = 1;
+    aopts->delta = delta;
+    aopts->hmin = hmin;
+}
+/********************************************************//**
+    Setting delta for adaptation
+
+    \param[in,out] aopts - approximation arguments
+    \param[in]     delta - maximum deviation from linear
+*************************************************************/
+void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts * aopts, double delta)
+{
+    if (aopts == NULL){
+        fprintf(stderr,"Must allocate LinElemExpAopts before setting delta\n");
+        exit(1);
+    }
+    aopts->delta = delta;
+}
+
+/********************************************************//**
+    Setting hmin for adaptation
+
+    \param[in,out] aopts - approximation arguments
+    \param[in]     hmin  - minimum distance between nodes
+*************************************************************/
+void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts * aopts, double hmin)
+{
+    if (aopts == NULL){
+        fprintf(stderr,"Must allocate LinElemExpAopts before setting hmin\n");
+        exit(1);
+    }
+    aopts->hmin = hmin;
+}
+
+///////////////////////////////////////////////
+
 /********************************************************//**
 *   Allocate a Linear Element Expansion
 *
@@ -106,7 +299,6 @@ void lin_elem_exp_free(struct LinElemExp * exp)
         free(exp->coeff); exp->coeff = NULL;
         free(exp); exp = NULL;
     }
-
 }
 
 /********************************************************//**
@@ -146,7 +338,8 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
 *   \return pointer to the end of the serialization
 *************************************************************/
 unsigned char *
-serialize_lin_elem_exp(unsigned char * ser, struct LinElemExp * f,size_t * totSizeIn)
+serialize_lin_elem_exp(unsigned char * ser, struct LinElemExp * f,
+                       size_t * totSizeIn)
 {
 
     // 3 * sizeof(size_t)-- 1 for num_nodes, 2 for sizes of nodes and coeffs
@@ -195,7 +388,7 @@ unsigned char * deserialize_lin_elem_exp(unsigned char * ser,
 *
 *   \return value
 *************************************************************/
-double lin_elem_exp_eval(struct LinElemExp * f, double x)
+double lin_elem_exp_eval(const struct LinElemExp * f, double x)
 {
     if ((x < f->nodes[0]) || (x > f->nodes[f->num_nodes-1])){
         return 0.0;
@@ -248,7 +441,7 @@ double lin_elem_exp_eval(struct LinElemExp * f, double x)
 *
 *   \return integral
 *************************************************************/
-struct LinElemExp * lin_elem_exp_deriv(struct LinElemExp * f)
+struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 {
     struct LinElemExp * le = lin_elem_exp_init(f->num_nodes,
                                                f->nodes,f->coeff);
@@ -315,7 +508,7 @@ struct LinElemExp * lin_elem_exp_deriv(struct LinElemExp * f)
 *
 *   \return integral
 *************************************************************/
-double lin_elem_exp_integrate(struct LinElemExp * f)
+double lin_elem_exp_integrate(const struct LinElemExp * f)
 {
 
     assert (f->num_nodes>1 );
@@ -339,7 +532,8 @@ double lin_elem_exp_integrate(struct LinElemExp * f)
 *   \return 1 - yes
 *           0 - no
 *************************************************************/
-static int lin_elem_sdiscp(struct LinElemExp * f, struct LinElemExp * g)
+static int lin_elem_sdiscp(const struct LinElemExp * f,
+                           const struct LinElemExp * g)
 {
     if (f->num_nodes != g->num_nodes){
         return 0;
@@ -401,7 +595,7 @@ static void lin_elem_exp_inner_element(
     conservative allocation
 *************************************************************/
 static size_t lin_elem_exp_inner_same_grid(
-    struct LinElemExp * f, struct LinElemExp * g, double * x,
+    const struct LinElemExp * f, const struct LinElemExp * g, double * x,
     double * fvals, double * gvals)
 {
     size_t nnodes = 0;
@@ -486,7 +680,8 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
 *
 *   \return inner product
 *************************************************************/
-double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
+double lin_elem_exp_inner(const struct LinElemExp * f,
+                          const struct LinElemExp * g)
 {
 
     double value = 0.0;
@@ -535,7 +730,7 @@ double lin_elem_exp_inner(struct LinElemExp * f,struct LinElemExp * g)
    \note 
    Could be sped up by keeping track of evaluations
 *************************************************************/
-static int lin_elem_exp_axpy_same(double a, struct LinElemExp * f,
+static int lin_elem_exp_axpy_same(double a, const struct LinElemExp * f,
                                   struct LinElemExp * g)
 {
 
@@ -561,7 +756,8 @@ static int lin_elem_exp_axpy_same(double a, struct LinElemExp * f,
     conservative allocation
 *************************************************************/
 static size_t lin_elem_exp_interp_same_grid(
-    struct LinElemExp * f, struct LinElemExp * g, double * x)
+    const struct LinElemExp * f,
+    const struct LinElemExp * g, double * x)
 {
     size_t nnodes = 0;
     size_t inodef = 0;
@@ -614,7 +810,7 @@ static size_t lin_elem_exp_interp_same_grid(
    Could be sped up by keeping track of evaluations
 *************************************************************/
 int lin_elem_exp_axpy(double a, 
-                      struct LinElemExp * f,
+                      const struct LinElemExp * f,
                       struct LinElemExp * g)
 {
     
@@ -644,18 +840,18 @@ int lin_elem_exp_axpy(double a,
 
 struct lefg
 {
-    struct LinElemExp * f;
-    struct LinElemExp * g;
+    const struct LinElemExp * f;
+    const struct LinElemExp * g;
 };
 
-double leprod(double x, void * arg)
+static int leprod(size_t N, const double * x,double * out, void * arg)
 {
-    /* printf("eval at %G\n ",x); */
     struct lefg * fg = arg;
-    double val = lin_elem_exp_eval(fg->f,x);
-    val *= lin_elem_exp_eval(fg->g,x);
-    /* printf("val = %G\n ",val); */
-    return val;
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = lin_elem_exp_eval(fg->f,x[ii]);
+        out[ii] *= lin_elem_exp_eval(fg->g,x[ii]);        
+    }
+    return 0;
 }
 
 /********************************************************//**
@@ -669,14 +865,14 @@ double leprod(double x, void * arg)
             
    \note 
 *************************************************************/
-struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
-                                      struct LinElemExp * g,
+struct LinElemExp * lin_elem_exp_prod(const struct LinElemExp * f,
+                                      const struct LinElemExp * g,
                                       void * arg)
 {
-    assert(1 == 0); //lb, ub not specified in approximation arguments
+
     (void)(arg);
-    /* double lb = f->nodes[0] < g->nodes[0] ? g->nodes[0] : f->nodes[0]; */
-    /* double ub = f->nodes[f->num_nodes-1] > g->nodes[g->num_nodes-1] ? g->nodes[g->num_nodes-1] : f->nodes[f->num_nodes-1]; */
+    double lb = f->nodes[0] < g->nodes[0] ? g->nodes[0] : f->nodes[0];
+    double ub = f->nodes[f->num_nodes-1] > g->nodes[g->num_nodes-1] ? g->nodes[g->num_nodes-1] : f->nodes[f->num_nodes-1];
 
     struct lefg fg;
     fg.f = f;
@@ -684,16 +880,15 @@ struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
     struct LinElemExpAopts * opts = NULL;
     double hmin = 1e-3;
     double delta = 1e-4;
-//    printf("f->num_nodes = %zu\n",f->num_nodes);
-    //  printf("f->nodes = "); dprint(f->num_nodes,f->nodes);
-    //opts = lin_elem_exp_aopts_alloc_adapt(f->num_nodes,f->nodes,delta,hmin);
-    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,delta,hmin);
-//    printf("allocated! lb=%G, ub=%G\n",lb,ub);
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,lb,ub,delta,hmin);
 
-    struct LinElemExp * prod = NULL;
-    /* struct Fwrap * fw = fwrap_create() */
-    /* struct LinElemExp * prod = lin_elem_exp_approx(leprod,&fg,opts); */
-
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,leprod,&fg);
+    
+    struct LinElemExp * prod = NULL;    
+    prod = lin_elem_exp_approx(opts,fw);
+    fwrap_destroy(fw);
+    
     lin_elem_exp_aopts_free(opts);
     return prod;
 }
@@ -705,7 +900,7 @@ struct LinElemExp * lin_elem_exp_prod(struct LinElemExp * f,
     
     \return norm
 *************************************************************/
-double lin_elem_exp_norm(struct LinElemExp * f)
+double lin_elem_exp_norm(const struct LinElemExp * f)
 {
     double norm = lin_elem_exp_inner(f,f);
     return sqrt(norm);
@@ -719,7 +914,7 @@ double lin_elem_exp_norm(struct LinElemExp * f)
     
     \return value of maximum
 *************************************************************/
-double lin_elem_exp_max(struct LinElemExp * f, double * x)
+double lin_elem_exp_max(const struct LinElemExp * f, double * x)
 {
     double mval = f->coeff[0];
     *x = f->nodes[0];
@@ -740,7 +935,7 @@ double lin_elem_exp_max(struct LinElemExp * f, double * x)
     
     \return value of minimum
 *************************************************************/
-double lin_elem_exp_min(struct LinElemExp * f, double * x)
+double lin_elem_exp_min(const struct LinElemExp * f, double * x)
 {
     double mval = f->coeff[0];
     *x = f->nodes[0];
@@ -762,7 +957,7 @@ double lin_elem_exp_min(struct LinElemExp * f, double * x)
     
     \return value
 *************************************************************/
-double lin_elem_exp_absmax(struct LinElemExp * f, double * x,
+double lin_elem_exp_absmax(const struct LinElemExp * f, double * x,
                            void * optargs)
 {
     if (optargs == NULL){
@@ -871,149 +1066,6 @@ double lin_elem_exp_err_est(struct LinElemExp * f, double * errs, short dir, sho
     }
 
     return value;
-}
-
-/********************************************************//**
-    Allocate approximation arguments
-
-    \param[in] N - number of nodes
-    \param[in] x - nodes
-
-    \return approximation arguments
-*************************************************************/
-struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
-{
-    struct LinElemExpAopts * aopts = NULL;
-    aopts = malloc(sizeof(struct LinElemExpAopts));
-    if (aopts == NULL){
-        fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
-        exit(1);
-    }
-    aopts->num_nodes= N;
-    aopts->nodes = calloc_double(N);
-    memmove(aopts->nodes,x,N*sizeof(double));
-    aopts->adapt = 0;
-    aopts->delta = DBL_MAX;
-    aopts->hmin = DBL_MAX;
-    return aopts;
-}
-
-/********************************************************//**
-    Allocate approximation arguments for adaptation
-
-    \param[in] N     - number of nodes
-    \param[in] x     - nodes
-    \param[in] delta - size of deviation from linear
-    \param[in] hmin  - minimum spacing
-
-    \return approximation arguments
-*************************************************************/
-struct LinElemExpAopts *
-lin_elem_exp_aopts_alloc_adapt(size_t N, double * x,
-                               double delta, double hmin)
-{
-    struct LinElemExpAopts * aopts = NULL;
-    aopts = malloc(sizeof(struct LinElemExpAopts));
-    if (aopts == NULL){
-        fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
-        exit(1);
-    }
-    aopts->num_nodes= N;
-    if (N > 0){
-        aopts->nodes = calloc_double(N);
-        memmove(aopts->nodes,x,N*sizeof(double));
-    }
-    else{
-        aopts->nodes = NULL;
-    }
-    aopts->adapt = 1;
-    aopts->delta = delta;
-    aopts->hmin = hmin;
-    return aopts;
-}
-
-/********************************************************//**
-    Free memory allocated to approximation arguments
-
-    \param[in,out] aopts - approximation arguments
-*************************************************************/
-void lin_elem_exp_aopts_free(struct LinElemExpAopts * aopts)
-{
-    if (aopts != NULL){
-        free(aopts->nodes); aopts->nodes = NULL;
-        free(aopts); aopts = NULL;
-    }
-}
-
-/********************************************************//**
-    Sets new nodes for approximation options. frees old ones if
-    previously allocated
-
-    \param[in,out] aopts - approximation arguments
-    \param[in]     N     - number of nodes
-    \param[in]     nodes - nodes
-*************************************************************/
-void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts * aopts,
-                                  size_t N, double * nodes)
-{
-
-    if (aopts == NULL){
-        fprintf(stderr,"Must allocate LinElemExpAopts before setting nodes\n");
-        exit(1);
-    }
-    free(aopts->nodes); aopts->nodes = NULL;
-    aopts->num_nodes= N;
-    if (N > 0){
-        aopts->nodes = calloc_double(N);
-        memmove(aopts->nodes,nodes,N*sizeof(double));
-    }
-}
-
-/********************************************************//**
-    Set adaptation
-
-    \param[in,out] aopts - approximation arguments
-    \param[in]     delta - maximum deviation from linear
-    \param[in]     hmin  - minimum distance between nodes
-*************************************************************/
-void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts * aopts,double delta, double hmin)
-{
-    if (aopts == NULL){
-        fprintf(stderr,"Must allocate LinElemExpAopts before turning on adapting\n");
-        exit(1);
-    }
-    aopts->adapt = 1;
-    aopts->delta = delta;
-    aopts->hmin = hmin;
-}
-/********************************************************//**
-    Setting delta for adaptation
-
-    \param[in,out] aopts - approximation arguments
-    \param[in]     delta - maximum deviation from linear
-*************************************************************/
-void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts * aopts, double delta)
-{
-    if (aopts == NULL){
-        fprintf(stderr,"Must allocate LinElemExpAopts before setting delta\n");
-        exit(1);
-    }
-    aopts->delta = delta;
-}
-
-/********************************************************//**
-    Setting hmin for adaptation
-
-    \param[in,out] aopts - approximation arguments
-    \param[in]     hmin  - minimum distance between nodes
-*************************************************************/
-void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts * aopts, double hmin)
-{
-    if (aopts == NULL){
-        fprintf(stderr,"Must allocate LinElemExpAopts before setting hmin\n");
-        exit(1);
-    }
-    aopts->hmin = hmin;
 }
 
 struct LinElemXY

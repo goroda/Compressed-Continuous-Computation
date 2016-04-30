@@ -33,68 +33,14 @@
 
 //Code
 
+#ifndef TESTF_H
+#define TESTF_H
+
 #include <stdlib.h>
-#include <stdio.h>
 
-#include "CuTest.h"
-#include "functest.h"
+int Sin3xTx2(size_t, const double *, double *, void *);
+double funcderiv(double, void *);
+int powX2(size_t, const double *, double *, void *);
+int TwoPowX3(size_t, const double *, double *, void *);
 
-
-
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_funcs\n");
-
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * cheb = ChebGetSuite();
-    CuSuite * leg = LegGetSuite();
-    CuSuite * herm = HermGetSuite();
-    CuSuite * sp = StandardPolyGetSuite();
-    CuSuite * alg = PolyAlgorithmsGetSuite();
-    CuSuite * ser = PolySerializationGetSuite();
-    
-    CuSuite * lelm = LelmGetSuite();
-
-    /* CuSuite * ll = LinkedListGetSuite(); */
-    /* CuSuite * pp = PiecewisePolyGetSuite(); */
-    /* CuSuite * pap = PolyApproxSuite(); */
-	
-    CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg); 
-    CuSuiteAddSuite(suite, herm); 
-    CuSuiteAddSuite(suite, sp);
-    CuSuiteAddSuite(suite, alg);
-    CuSuiteAddSuite(suite, ser);
-    
-    CuSuiteAddSuite(suite, lelm);
-
-    /* CuSuiteAddSuite(suite, ll); */
-    /* CuSuiteAddSuite(suite, pp); */
-    /* CuSuiteAddSuite(suite, pap); */
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(cheb);
-    CuSuiteDelete(leg);
-    CuSuiteDelete(herm);
-    CuSuiteDelete(sp);
-    CuSuiteDelete(alg);
-    CuSuiteDelete(ser);
-    
-    CuSuiteDelete(lelm);
-    
-    /* CuSuiteDelete(ll); */
-    /* CuSuiteDelete(pp); */
-    /* CuSuiteDelete(pap); */
-    CuStringDelete(output);
-    free(suite);
-}
-
-int main(void) {
-    RunAllTests();
-}
+#endif

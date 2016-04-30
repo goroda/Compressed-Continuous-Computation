@@ -40,9 +40,12 @@
 #include <assert.h>
 #include <float.h>
 
+#include "CuTest.h"
+#include "testfunctions.h"
+
 #include "array.h"
 #include "lib_linalg.h"
-#include "CuTest.h"
+
 
 #include "lib_funcs.h"
 
@@ -50,9 +53,10 @@ typedef struct OrthPolyExpansion* opoly_t;
 #define POLY_EVAL orth_poly_expansion_eval
 #define POLY_FREE orth_poly_expansion_free
 
-void compute_error(double lb,double ub, size_t N, opoly_t cpoly,
-                   double (*func)(double,void*), void* arg,
-                   double * abs_err, double * func_norm)
+static void
+compute_error(double lb,double ub, size_t N, opoly_t cpoly,
+              double (*func)(double,void*), void* arg,
+              double * abs_err, double * func_norm)
 {
     double * xtest = linspace(lb,ub,N);
     size_t ii;
@@ -65,10 +69,11 @@ void compute_error(double lb,double ub, size_t N, opoly_t cpoly,
     free(xtest); xtest = NULL;
 }
 
-void compute_error_vec(double lb,double ub, size_t N, opoly_t cpoly,
-                       int (*func)(size_t, const double *,double *,void*),
-                       void* arg,
-                       double * abs_err, double * func_norm)
+static void
+compute_error_vec(double lb,double ub, size_t N, opoly_t cpoly,
+                  int (*func)(size_t, const double *,double *,void*),
+                  void* arg,
+                  double * abs_err, double * func_norm)
 {
     double * xtest = linspace(lb,ub,N);
     size_t ii;
@@ -83,42 +88,6 @@ void compute_error_vec(double lb,double ub, size_t N, opoly_t cpoly,
     free(xtest); xtest = NULL;
 }
 
-/* struct counter{ int N; }; */
-
-// first function
-int Sin3xTx2(size_t N, const double * x, double * out, void * args)
-{
-    (void)(args);
-    for (size_t ii = 0; ii < N; ii++ ){
-        out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]);
-    }
-    return 0;
-}
-
-double funcderiv(double x, void * args){
-    assert ( args == NULL );
-    return 3.0 * cos(3.0 * x) + 2.0 * x;
-}
-
-// second function
-int powX2(size_t N, const double * x, double * out, void * args)
-{
-    (void)(args);
-    for (size_t ii = 0; ii < N; ii++){
-        out[ii] = pow(x[ii],2);
-    }
-    return 0;
-}
-
-// third function
-int TwoPowX3(size_t N, const double * x, double * out, void * args)
-{
-    (void)(args);
-    for (size_t ii = 0; ii < N; ii++){
-        out[ii] = 2.0 * pow(x[ii],3.0);
-    }
-    return 0;
-}
 
 void Test_cheb_approx(CuTest * tc){
 

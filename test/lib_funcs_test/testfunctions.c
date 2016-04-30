@@ -33,68 +33,45 @@
 
 //Code
 
-#include <stdlib.h>
-#include <stdio.h>
+// first function
 
-#include "CuTest.h"
-#include "functest.h"
+#include "testfunctions.h"
+#include <assert.h>
+#include <math.h>
 
-
-
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_funcs\n");
-
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * cheb = ChebGetSuite();
-    CuSuite * leg = LegGetSuite();
-    CuSuite * herm = HermGetSuite();
-    CuSuite * sp = StandardPolyGetSuite();
-    CuSuite * alg = PolyAlgorithmsGetSuite();
-    CuSuite * ser = PolySerializationGetSuite();
-    
-    CuSuite * lelm = LelmGetSuite();
-
-    /* CuSuite * ll = LinkedListGetSuite(); */
-    /* CuSuite * pp = PiecewisePolyGetSuite(); */
-    /* CuSuite * pap = PolyApproxSuite(); */
-	
-    CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg); 
-    CuSuiteAddSuite(suite, herm); 
-    CuSuiteAddSuite(suite, sp);
-    CuSuiteAddSuite(suite, alg);
-    CuSuiteAddSuite(suite, ser);
-    
-    CuSuiteAddSuite(suite, lelm);
-
-    /* CuSuiteAddSuite(suite, ll); */
-    /* CuSuiteAddSuite(suite, pp); */
-    /* CuSuiteAddSuite(suite, pap); */
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(cheb);
-    CuSuiteDelete(leg);
-    CuSuiteDelete(herm);
-    CuSuiteDelete(sp);
-    CuSuiteDelete(alg);
-    CuSuiteDelete(ser);
-    
-    CuSuiteDelete(lelm);
-    
-    /* CuSuiteDelete(ll); */
-    /* CuSuiteDelete(pp); */
-    /* CuSuiteDelete(pap); */
-    CuStringDelete(output);
-    free(suite);
+int Sin3xTx2(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
 }
 
-int main(void) {
-    RunAllTests();
+double funcderiv(double x, void * args){
+    assert ( args == NULL );
+    return 3.0 * cos(3.0 * x) + 2.0 * x;
+}
+
+// second function
+int powX2(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = pow(x[ii],2);
+    }
+    return 0;
+}
+
+// third function
+int TwoPowX3(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = 2.0 * pow(x[ii],3.0);
+    }
+    return 0;
 }
