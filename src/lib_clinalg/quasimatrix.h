@@ -69,9 +69,9 @@ void quasimatrix_set_funcs(struct Quasimatrix *, struct GenericFunction **);
 void
 quasimatrix_get_funcs_ref(const struct Quasimatrix *,struct GenericFunction ***);
 
-struct Quasimatrix *
-quasimatrix_init(size_t,size_t,enum function_class *,void **,
-                 void **,void **);    
+/* struct Quasimatrix * */
+/* quasimatrix_init(size_t,size_t,enum function_class *,void **, */
+/*                  void **,void **);     */
 
 struct Quasimatrix * 
 quasimatrix_approx1d(size_t,double (**)(double, void *),

@@ -43,6 +43,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "lib_funcs.h"
 #include "quasimatrix.h"
 #include "linalg.h"
 
@@ -327,20 +328,25 @@ skeleton_decomp_init2d_from_pivots(
 
     struct FiberCut ** fx;  
     struct FiberCut ** fy;
+    
+    double * lb = bounding_box_get_lb(bounds);
+    double * ub = bounding_box_get_ub(bounds);
 
 
     fx = fiber_cut_2darray(f,args,0,r, pivy);
     quasimatrix_free(skd->xqm);
     skd->xqm = quasimatrix_approx_from_fiber_cuts(
-            r, fiber_cut_eval2d, fx, cargs->fclass[0], cargs->sub_type[0],
-            bounds->lb[0],bounds->ub[0], cargs->approx_args[0]);
+            r, fiber_cut_eval2d, fx, cargs->fclass[0], 
+            cargs->sub_type[0],
+            lb[0],ub[0], cargs->approx_args[0]);
     fiber_cut_array_free(r, fx);
 
     fy = fiber_cut_2darray(f,args,1,r, pivx);
     quasimatrix_free(skd->yqm);
     skd->yqm = quasimatrix_approx_from_fiber_cuts(
-            r, fiber_cut_eval2d, fy, cargs->fclass[1], cargs->sub_type[1],
-            bounds->lb[1],bounds->ub[1], cargs->approx_args[1]);
+            r, fiber_cut_eval2d, fy, cargs->fclass[1], 
+            cargs->sub_type[1],
+            lb[1],ub[1], cargs->approx_args[1]);
     fiber_cut_array_free(r, fy);
 
     
@@ -428,6 +434,9 @@ cross_approx_2d(double (*f)(double, double, void *),
         skd->skeleton[ii*r+ii] = 1.0;
     }
 
+    double * lb = bounding_box_get_lb(bounds);
+    double * ub = bounding_box_get_ub(bounds);
+
     int done = 0;
     size_t iter = 0;
     double reldist;
@@ -441,7 +450,7 @@ cross_approx_2d(double (*f)(double, double, void *),
         tempqm = quasimatrix_approx_from_fiber_cuts(
                 r, fiber_cut_eval2d, fy, cargs->fclass[1],
                 cargs->sub_type[1],
-                bounds->lb[1],bounds->ub[1], cargs->approx_args[1]);
+                lb[1],ub[1], cargs->approx_args[1]);
         fiber_cut_array_free(r, fy);
 
         Q = quasimatrix_householder_simple(tempqm,T);
@@ -459,8 +468,9 @@ cross_approx_2d(double (*f)(double, double, void *),
         quasimatrix_free(skd->xqm);
         fx = fiber_cut_2darray(f,args,0, r, pivy);
         skd->xqm = quasimatrix_approx_from_fiber_cuts(
-                r, fiber_cut_eval2d, fx, cargs->fclass[0], cargs->sub_type[0],
-                bounds->lb[0],bounds->ub[0], cargs->approx_args[0]);
+                r, fiber_cut_eval2d, fx, 
+                cargs->fclass[0], cargs->sub_type[0],
+                lb[0],ub[0], cargs->approx_args[0]);
         fiber_cut_array_free(r, fx);
         
         // check convergence here

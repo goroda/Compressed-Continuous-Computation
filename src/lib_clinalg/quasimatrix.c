@@ -190,41 +190,6 @@ quasimatrix_get_funcs_ref(const struct Quasimatrix * q,struct GenericFunction **
 }
 
 /*********************************************************//**
-    Allocate space for and initialize a quasimatrix
-
-    \param[in] fdim     - dimension of each function in the 
-                          quasimatrix
-    \param[in] n        - number of columns of quasimatrix
-    \param[in] fc       - function class of each column
-    \param[in] sub_type - sub_type of each column
-    \param[in] f        - functions which make up each column
-    \param[in] fargs     - function arguments
-
-    \return quasimatrix
-*************************************************************/
-struct Quasimatrix * 
-quasimatrix_init(size_t fdim,size_t n,
-                 enum function_class * fc,
-                 void ** sub_type,void ** f,void ** fargs)
-{
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] = generic_function_alloc(fdim,fc[ii],
-                                               sub_type[ii]);
-        qm->funcs[ii]->f = f[ii];
-        if (fargs == NULL){
-            qm->funcs[ii]->fargs = NULL;
-        }
-        else{
-            qm->funcs[ii]->fargs = fargs[ii];
-        }
-    }
-
-    return qm;
-}
-
-/*********************************************************//**
     Create a quasimatrix by approximating 1d functions
 
     \param[in] n     - number of columns of quasimatrix

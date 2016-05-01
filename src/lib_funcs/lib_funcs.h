@@ -47,6 +47,7 @@
 #include "linelm.h"
 #include "functions.h"
 #include "fwrap.h"
+#include "space.h"
 #include "monitoring.h"
 
 #endif

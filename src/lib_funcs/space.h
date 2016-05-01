@@ -49,8 +49,8 @@ struct BoundingBox *
 bounding_box_vec(size_t, const double *, const double *);
 
 void bounding_box_free(struct BoundingBox *);
-double * bounding_box_get_lb(struct BoundingBox *);
-double * bounding_box_get_ub(struct BoundingBox *);
+double * bounding_box_get_lb(const struct BoundingBox *);
+double * bounding_box_get_ub(const struct BoundingBox *);
 double bounding_box_get_ub_dim(const struct BoundingBox *, size_t);
 void bounding_box_set_ub_dim(struct BoundingBox *, size_t, double);
 double bounding_box_get_lb_dim(const struct BoundingBox *, size_t);
