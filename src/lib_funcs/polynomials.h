@@ -61,7 +61,6 @@ void ope_opts_set_maxnum(struct OpeOpts *, size_t);
 size_t ope_opts_get_maxnum(const struct OpeOpts *);
 void ope_opts_set_coeffs_check(struct OpeOpts *, size_t);
 void ope_opts_set_tol(struct OpeOpts *, double);
-
 void ope_opts_set_lb(struct OpeOpts *, double);
 double ope_opts_get_lb(const struct OpeOpts *);
 void ope_opts_set_ub(struct OpeOpts *, double);
@@ -189,6 +188,9 @@ orth_poly_expansion_init(enum poly_type, size_t, double, double);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_copy(struct OrthPolyExpansion *);
+
+enum poly_type 
+orth_poly_expansion_get_ptype(const struct OrthPolyExpansion *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_constant(double, struct OpeOpts *);

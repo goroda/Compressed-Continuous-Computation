@@ -60,13 +60,13 @@ void RunAllTests(void) {
     CuSuite * ll = LinkedListGetSuite();
 
     
-    /* CuSuite * pp = PiecewisePolyGetSuite(); */
-    /* CuSuite * pap = PolyApproxSuite(); */
+    CuSuite * pp = PiecewisePolyGetSuite();
+    CuSuite * pap = PolyApproxSuite();
 
     // polynomials
     CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg); 
-    CuSuiteAddSuite(suite, herm); 
+    CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, herm);
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
@@ -77,8 +77,8 @@ void RunAllTests(void) {
     // other stuff
     CuSuiteAddSuite(suite, ll);
     
-    /* CuSuiteAddSuite(suite, pp); */
-    /* CuSuiteAddSuite(suite, pap); */
+    CuSuiteAddSuite(suite, pp);
+    CuSuiteAddSuite(suite, pap);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -96,8 +96,9 @@ void RunAllTests(void) {
     
     CuSuiteDelete(ll);
     
-    /* CuSuiteDelete(pp); */
-    /* CuSuiteDelete(pap); */
+    CuSuiteDelete(pp);
+
+    CuSuiteDelete(pap);
     CuStringDelete(output);
     free(suite);
 }

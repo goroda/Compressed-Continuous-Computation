@@ -61,7 +61,7 @@ compute_error(double lb,double ub, size_t N, le_t cpoly,
     size_t ii;
     *abs_err = 0.0;
     *func_norm = 0.0;
-    for (ii = 0; ii < 1000; ii++){
+    for (ii = 0; ii < N; ii++){
         *abs_err += pow(LINELEM_EVAL(cpoly,xtest[ii]) - func(xtest[ii],arg),2);
         *func_norm += pow(func(xtest[ii],arg),2);
     }
@@ -79,7 +79,7 @@ compute_error_vec(double lb,double ub, size_t N, le_t le,
     *abs_err = 0.0;
     *func_norm = 0.0;
     double val;
-    for (ii = 0; ii < 1000; ii++){
+    for (ii = 0; ii < N; ii++){
         func(1,xtest+ii,&val,arg);
         *abs_err += pow(LINELEM_EVAL(le,xtest[ii]) - val,2);
         *func_norm += pow(val,2);

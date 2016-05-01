@@ -43,4 +43,6 @@ double funcderiv(double, void *);
 int powX2(size_t, const double *, double *, void *);
 int TwoPowX3(size_t, const double *, double *, void *);
 
+int polyroots(size_t, const double *, double *, void *);
+int maxminpoly(size_t, const double *, double *, void *);
 #endif

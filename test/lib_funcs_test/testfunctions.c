@@ -75,3 +75,24 @@ int TwoPowX3(size_t N, const double * x, double * out, void * args)
     }
     return 0;
 }
+
+// 6th function
+int polyroots(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = (x[ii] - 2.0) * (x[ii] - 1.0) * x[ii] *
+                  (x[ii] + 3.0) * (x[ii] - 1.0);
+    }
+    return 0;
+}
+
+// 7th function
+int maxminpoly(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = sin(3.14159 * x[ii]);
+    }
+    return 0;
+}

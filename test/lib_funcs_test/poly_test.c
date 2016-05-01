@@ -46,7 +46,6 @@
 #include "array.h"
 #include "lib_linalg.h"
 
-
 #include "lib_funcs.h"
 
 typedef struct OrthPolyExpansion* opoly_t;
@@ -62,7 +61,7 @@ compute_error(double lb,double ub, size_t N, opoly_t cpoly,
     size_t ii;
     *abs_err = 0.0;
     *func_norm = 0.0;
-    for (ii = 0; ii < 1000; ii++){
+    for (ii = 0; ii < N; ii++){
         *abs_err += pow(POLY_EVAL(cpoly,xtest[ii]) - func(xtest[ii],arg),2);
         *func_norm += pow(func(xtest[ii],arg),2);
     }
@@ -80,7 +79,7 @@ compute_error_vec(double lb,double ub, size_t N, opoly_t cpoly,
     *abs_err = 0.0;
     *func_norm = 0.0;
     double val;
-    for (ii = 0; ii < 1000; ii++){
+    for (ii = 0; ii < N; ii++){
         func(1,xtest+ii,&val,arg);
         *abs_err += pow(POLY_EVAL(cpoly,xtest[ii]) - val,2);
         *func_norm += pow(val,2);
@@ -1250,17 +1249,6 @@ CuSuite * StandardPolyGetSuite(){
     return suite;
 }
 
-
-int polyroots(size_t N, const double * x, double * out, void * args)
-{
-    (void)(args);
-    for (size_t ii = 0; ii < N; ii++){
-        out[ii] = (x[ii] - 2.0) * (x[ii] - 1.0) * x[ii] *
-                  (x[ii] + 3.0) * (x[ii] - 1.0);
-    }
-    return 0;
-}
-
 void Test_orth_poly_expansion_real_roots(CuTest * tc){
     
     printf("Testing function: orth_poly_expansion_real_roots \n");
@@ -1296,15 +1284,6 @@ void Test_orth_poly_expansion_real_roots(CuTest * tc){
     POLY_FREE(pl);
     ope_opts_free(opts);
     fwrap_destroy(fw);
-}
-
-int maxminpoly(size_t N, const double * x, double * out, void * args)
-{
-    (void)(args);
-    for (size_t ii = 0; ii < N; ii++){
-        out[ii] = sin(M_PI * x[ii]);
-    }
-    return 0;
 }
 
 void Test_maxmin_poly_expansion(CuTest * tc){

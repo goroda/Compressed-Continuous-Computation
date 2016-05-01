@@ -844,6 +844,12 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
     return p;
 }
 
+enum poly_type 
+orth_poly_expansion_get_ptype(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->p->ptype;
+}
 
 /********************************************************//**
 *   Generate a constant orthonormal polynomial expansion
