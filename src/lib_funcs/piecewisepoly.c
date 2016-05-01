@@ -867,8 +867,8 @@ double * piecewise_poly_rr(const struct PiecewisePoly * p, size_t * nkeep)
 /********************************************************//**
 *   Obtain the real roots of a pw polynomial (only gives 1 of repeating roots)
 *
-*   \param[in]      p     - piecewise polynomial
-*   \param[int,out] nkeep - returns how many real roots there are 
+*   \param[in]     p     - piecewise polynomial
+*   \param[in,out] nkeep - returns how many real roots there are 
 *
 *   \return real roots of the pw polynomial
 *
@@ -1112,7 +1112,7 @@ void piecewise_poly_ref_leaves(struct PiecewisePoly * p,
 /********************************************************//**
 *   Flatten a piecewise polynomial (make it so each branch is a leaf)
 *
-*   \param[in,ou] p - pw poly whose leaves to copy
+*   \param[in,out] p - pw poly whose leaves to copy
 *
 *   \note
 *       Should figure out how to do this without copying the leaves
@@ -2104,9 +2104,8 @@ piecewise_poly_approx2(double (*f)(double, void *), void * args, double lb,
 /********************************************************//**
 *   Create Approximation by hierarchical splitting
 *   
-*   \param[in] f       - function to approximate
-*   \param[in] args    - function arguments
-*   \param[in] aoptsin - approximation options
+*   \param[in] aopts - approximation options
+*   \param[in] fw    - wrapped function
 *
 *   \return piecewise - polynomial
 *************************************************************/
