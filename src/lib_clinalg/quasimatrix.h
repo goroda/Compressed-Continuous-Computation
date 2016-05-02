@@ -74,17 +74,17 @@ quasimatrix_get_funcs_ref(const struct Quasimatrix *,struct GenericFunction ***)
 /*                  void **,void **);     */
 
 struct Quasimatrix * 
-quasimatrix_approx1d(size_t,double (**)(double, void *),
-                    void **,enum function_class,void *,double,
-                    double,void *);
+quasimatrix_approx1d(size_t, struct Fwrap *,
+                     enum function_class *,
+                     void *);
 
-struct Quasimatrix * 
-quasimatrix_approx_from_fiber_cuts(size_t,
-                                   double (*)(double, void *),
-                                   struct FiberCut **,
-                                   enum function_class,
-                                   void *, double,
-                                   double, void *);
+/* struct Quasimatrix *  */
+/* quasimatrix_approx_from_fiber_cuts(size_t, */
+/*                                    double (*)(double, void *), */
+/*                                    struct FiberCut **, */
+/*                                    enum function_class, */
+/*                                    void *, double, */
+/*                                    double, void *); */
 
 struct Quasimatrix *
 quasimatrix_copy(const struct Quasimatrix *);
@@ -97,9 +97,9 @@ unsigned char *
 quasimatrix_deserialize(unsigned char *,
                         struct Quasimatrix **);
 
+
 struct Quasimatrix *
-quasimatrix_orth1d(enum function_class, 
-                   void *,size_t,double,double);
+quasimatrix_orth1d(size_t,enum function_class,void *);
 
 size_t
 quasimatrix_absmax(struct Quasimatrix *,
@@ -125,7 +125,7 @@ quasimatrix_daxpby(double, const struct Quasimatrix *,
 
 // decompositions
 struct Quasimatrix *
-quasimatrix_householder_simple(struct Quasimatrix *,double *); 
+quasimatrix_householder_simple(struct Quasimatrix *,double *,void*); 
 int quasimatrix_householder(struct Quasimatrix *,
                             struct Quasimatrix *, 
                             struct Quasimatrix *, double *);
@@ -135,12 +135,12 @@ int quasimatrix_qhouse(struct Quasimatrix *,
 
 int quasimatrix_lu1d(struct Quasimatrix *,
                      struct Quasimatrix *,
-                     double *,double *, void *);
+                     double *,double *,void*,void *);
 
 int quasimatrix_maxvol1d(struct Quasimatrix *,
-                         double *, double *);
+                         double *, double *,void*,void*);
 
-size_t quasimatrix_rank(const struct Quasimatrix *);
+size_t quasimatrix_rank(const struct Quasimatrix *,void*);
 double quasimatrix_norm(const struct Quasimatrix *);
 
 

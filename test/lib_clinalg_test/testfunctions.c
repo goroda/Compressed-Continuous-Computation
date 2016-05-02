@@ -33,24 +33,83 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
- */
+// first function
+
+#include "testfunctions.h"
+#include <assert.h>
+#include <math.h>
+
+int func(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = 1.0 + 0.0*x[ii];
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func2(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii];
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func3(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = pow(x[ii],2.0) + sin(3.14159*x[ii]);
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func4(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = 3.0*pow(x[ii],4.0) - 2.0*pow(x[ii],2.0);
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func5(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        //return 3.0*cos(M_PI*x) - 2.0*pow(x,0.5);
+        out[ii] = x[ii];
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func6(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = exp(5.0*x[ii]);
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
 
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "quasimatrix.h"
-#include "cross2d.h"
-
-/* #include "elements.h" */
-/* #include "indmanage.h" */
-/* #include "algs.h" */
-/* #include "dmrg.h" */
-/* #include "dmrgprod.h" */
-/* #include "qmarray_qr.h" */
-/* #include "diffusion.h" */
-/* #include "approximate.h" */
-
-#endif

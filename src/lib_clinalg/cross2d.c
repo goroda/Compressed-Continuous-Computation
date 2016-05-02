@@ -332,7 +332,6 @@ skeleton_decomp_init2d_from_pivots(
     double * lb = bounding_box_get_lb(bounds);
     double * ub = bounding_box_get_ub(bounds);
 
-
     fx = fiber_cut_2darray(f,args,0,r, pivy);
     quasimatrix_free(skd->xqm);
     skd->xqm = quasimatrix_approx_from_fiber_cuts(

@@ -436,6 +436,24 @@ enum poly_type piecewise_poly_get_ptype(const struct PiecewisePoly * pw)
     }
 }
 
+struct PiecewisePoly *
+piecewise_poly_genorder(size_t order, struct PwPolyOpts * opts)
+{
+    /* printf("we are in genorder\n"); */
+    assert (opts != NULL);
+    struct PiecewisePoly * p = piecewise_poly_alloc();
+
+    // only things necessary for const
+    struct OpeOpts * ope = ope_opts_alloc(opts->ptype);
+    /* printf("(lb,ub) = (%G,%G)\n",opts->lb,opts->ub); */
+    ope_opts_set_lb(ope,opts->lb);
+    ope_opts_set_ub(ope,opts->ub);
+
+    p->ope = orth_poly_expansion_genorder(order,ope);
+    ope_opts_free(ope); ope = NULL;
+    return p;
+}
+
 /********************************************************//**
 *   Construct a piecewise constant function
 *
@@ -453,7 +471,7 @@ piecewise_poly_constant(double value, struct PwPolyOpts * opts)
     // only things necessary for const
     struct OpeOpts * ope = ope_opts_alloc(opts->ptype);
     ope_opts_set_lb(ope,opts->lb);
-    ope_opts_set_lb(ope,opts->ub);
+    ope_opts_set_ub(ope,opts->ub);
 
     p->ope = orth_poly_expansion_constant(value,ope);
     ope_opts_free(ope); ope = NULL;
@@ -475,7 +493,7 @@ piecewise_poly_linear(double slope, double offset, struct PwPolyOpts * opts)
     struct PiecewisePoly * p = piecewise_poly_alloc();
     struct OpeOpts * ope = ope_opts_alloc(opts->ptype);
     ope_opts_set_lb(ope,opts->lb);
-    ope_opts_set_lb(ope,opts->ub);
+    ope_opts_set_ub(ope,opts->ub);
 
     p->ope = orth_poly_expansion_linear(slope, offset,ope);
     ope_opts_free(ope); ope = NULL;
@@ -1330,16 +1348,43 @@ struct PiecewisePoly *
 piecewise_poly_daxpby(double a,const struct PiecewisePoly * x,
                       double b,const struct PiecewisePoly * y)
 {
+
+    if ( (x == NULL) && (y == NULL)){
+        return NULL;
+    }
+    if (x == NULL){
+        struct PiecewisePoly * p = piecewise_poly_copy(y);
+        piecewise_poly_scale(b,p);
+        return p;
+    }
+    else if (y == NULL){
+        struct PiecewisePoly * p = piecewise_poly_copy(x);
+        piecewise_poly_scale(a,p);
+        return p;
+    }
+    assert (x != NULL);
+    assert (y != NULL);
+    /* printf("x == NULL = %d\n",x==NULL); */
+    /* printf("y == NULL = %d\n",y==NULL); */
+    /* printf("x == leaf = %d\n",x->leaf); */
+    /* printf("y == leaf = %d\n",y->leaf); */
+    /* printf("x->ope == NULL %d\n",x->ope==NULL); */
     enum poly_type ptype = piecewise_poly_get_ptype(x);
     double lb = piecewise_poly_lb(x);
     double ub = piecewise_poly_ub(x);
+    /* assert (fabs(lb-ub) > 1e-10); */
+
+    /* printf("ptype = %d\n",ptype); */
+    /* printf("lb = %G\n",lb); */
+    /* printf("ub = %G\n",ub); */
+    /* printf("a = %G\n",a); */
+    /* printf("b=%G\n",b); */
     struct PwPolyOpts * aopts = pw_poly_opts_alloc(ptype,lb,ub);
     pw_poly_opts_set_maxorder(aopts,7);
     pw_poly_opts_set_coeffs_check(aopts,2);
     pw_poly_opts_set_tol(aopts,1e-8);
     pw_poly_opts_set_minsize(aopts,1e-3);
     pw_poly_opts_set_nregions(aopts,5);
-
     
     struct PwCouple pwc;
     pwc.a = x;
@@ -1351,7 +1396,7 @@ piecewise_poly_daxpby(double a,const struct PiecewisePoly * x,
     fwrap_set_fvec(fw,pw_eval_sum,&pwc);
 
     struct PiecewisePoly * c = piecewise_poly_approx1_adapt(aopts,fw);
-    
+
     fwrap_destroy(fw);
     pw_poly_opts_free(aopts);
     return c;
@@ -2337,8 +2382,8 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
 *************************************************************/
 unsigned char *
 serialize_piecewise_poly(unsigned char * ser, 
-        struct PiecewisePoly * p,
-        size_t * totSizeIn)
+                         struct PiecewisePoly * p,
+                         size_t * totSizeIn)
 {
     
     size_t totsize; 
@@ -2420,11 +2465,9 @@ void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args)
     if (pw->ope != NULL){
         print_orth_poly_expansion(pw->ope,prec,args);
     }
-    /*
-    else{
-        printf("%G\n",pw->split);
-        printf("| \n");
-        print_piecewise_poly(pw->left,prec,args);
-    }
-    */
+    /* else{ */
+    /*     printf("%G\n",pw->split); */
+    /*     printf("| \n"); */
+    /*     print_piecewise_poly(pw->left,prec,args); */
+    /* } */
 }

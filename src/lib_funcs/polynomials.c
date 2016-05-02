@@ -954,10 +954,8 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 *   Generate a polynomial expansion with only the
 *   *order* coefficient being nonzero
 *
-*   \param[in] ptype - type of polynomial
 *   \param[in] order - order of the polynomial
-*   \param[in] lb    - lower bound
-*   \param[in] ub    - upper bound
+*   \param[in] opts  - options for building polynomial
 *
 *   \return p - orthogonal polynomial expansion
 *
@@ -966,13 +964,13 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 *       Orthogonal polynomials on [-1, 1] with weight 1.0;
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_genorder(enum poly_type ptype, size_t order, double lb, double ub)
+orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 {
     //printf("whhhh\n");
     struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(ptype, order+1, lb, ub);
+            orth_poly_expansion_init(opts->ptype, order+1, opts->lb, opts->ub);
     double m;
-    switch (ptype){
+    switch (opts->ptype){
     case LEGENDRE:
         m = (p->upper_bound - p->lower_bound) / 
             (p->p->upper - p->p->lower);
@@ -2155,7 +2153,7 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
 struct OrthPolyExpansion *
 orth_poly_expansion_lin_comb(size_t n, size_t ldx, 
         struct OrthPolyExpansion ** x, size_t ldc,
-        double * c )
+        const double * c )
 {
 
     struct OrthPolyExpansion * out = NULL;

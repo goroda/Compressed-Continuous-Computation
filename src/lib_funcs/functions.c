@@ -503,7 +503,7 @@ generic_function_deriv(const struct GenericFunction * gf)
          }
     }
     else {
-        //printf("in the else!\n");
+        /* printf("in the else!\n"); */
         if (x->fc == y->fc){
             out = generic_function_alloc(x->dim,x->fc);
             switch (x->fc) {
@@ -1127,7 +1127,17 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
  }
 
  /********************************************************//**
- *   Evalxwluate a generic function
+ *   Get the function class
+ ************************************************************/
+enum function_class generic_function_get_fc(const struct GenericFunction * f)
+{
+    assert (f != NULL);
+    return f->fc;
+}
+
+
+ /********************************************************//**
+ *   Evaluate a generic function
  *
  *   \param[in] f  - function
  *   \param[in] x  - location at which to evaluate
@@ -1481,9 +1491,6 @@ void generic_function_roundt(struct GenericFunction ** gf, double thresh)
     }
 }
 
-
-
-
 /********************************************************//**
 *   Evaluate an array of generic functions
 *
@@ -1538,7 +1545,7 @@ generic_function_1darray_eval2(size_t n,
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 
                            struct GenericFunction ** gfa,
-                           size_t ldc, double * c)
+                           size_t ldc, const double * c)
 {
     // this function is not optimal
     struct GenericFunction * out = NULL;
@@ -1724,7 +1731,7 @@ void generic_function_array_scale(double a, struct GenericFunction ** gf,
 ************************************************************/
 void generic_function_kronh(int left,
                             size_t r, size_t m, size_t n, size_t l, 
-                            double * a,
+                            const double * a,
                             struct GenericFunction ** c,
                             struct GenericFunction ** d)
 {
@@ -1982,6 +1989,7 @@ double fiber_cut_eval(double x, void * vfcut){
 // Utilities
 void print_generic_function(const struct GenericFunction * gf, size_t prec,void * args){
 
+    
     switch (gf->fc){
     case ZERO:                                                   break;
     case CONSTANT:                                               break;
@@ -2136,67 +2144,64 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction ** f,
     of a particular class and sub_type
 
     \param[in]     n       - number of columns
-    \param[in]     fc      - function class
     \param[in,out] gfarray - array to fill with functions
+    \param[in]     fc      - function class
     \param[in]     args    - extra arguments depending on 
                              function_class, sub_type, etc.
 ************************************************************/
-/* void  */
-/* generic_function_array_orth(size_t n,enum function_class fc, */
-/*                             struct GenericFunction ** gfarray,  */
-/*                             void * args) */
-/* { */
-    /* size_t ii; */
+void
+generic_function_array_orth(size_t n,
+                            struct GenericFunction ** gfarray,
+                            enum function_class fc,
+                            void * args)
+{
+    size_t ii;
     /* double lb, ub; */
-    /* switch (fc){ */
-    /* case ZERO: break; */
-    /* case CONSTANT: break; */
-    /* case PIECEWISE: */
-    /*     lb = ((struct Interval *) args)->lb; */
-    /*     ub = ((struct Interval *) args)->ub; */
-    /*     for (ii = 0; ii < n; ii++){ */
-    /*         gfarray[ii] = generic_function_alloc(1,fc); */
-    /*         ((struct PiecewisePoly *)gfarray[ii]->f)->ope =   */
-    /*             orth_poly_expansion_genorder(ii,lb,ub); */
-    /*         gfarray[ii]->fargs = NULL; */
-    /*     } */
-    /*     break; */
-    /* case POLYNOMIAL: */
-    /*     lb = ((struct Interval *) args)->lb; */
-    /*     ub = ((struct Interval *) args)->ub; */
-    /*     for (ii = 0; ii < n; ii++){ */
-    /*         gfarray[ii] = generic_function_alloc(1,fc); */
-    /*         gfarray[ii]->f = orth_poly_expansion_genorder(gfarray[ii]->sub_type.ptype,ii,lb,ub); */
-    /*         gfarray[ii]->fargs = NULL; */
-    /*     } */
-    /*     break; */
-    /* case LINELM: */
-    /*     //printf("orth1d array n = %zu\n",n); */
-    /*     lb = ((struct Interval *) args)->lb; */
-    /*     ub = ((struct Interval *) args)->ub; */
-    /*     struct LinElemExp *f[1000]; */
-    /*     assert (n <= 1000); */
-    /*     size_t nnodes = n; */
-    /*     if (n == 1){ */
-    /*         nnodes = 2; */
-    /*     } */
-    /*     double * nodes = linspace(lb,ub,nnodes); */
-    /*     double * fvals = calloc_double(nnodes); */
-    /*     for (ii = 0; ii < n; ii++){ */
-    /*         gfarray[ii] = generic_function_alloc(1,fc); */
-    /*         gfarray[ii]->f = lin_elem_exp_init(nnodes,nodes,fvals); */
-    /*         gfarray[ii]->fargs = NULL; */
-    /*         f[ii] = gfarray[ii]->f; */
-    /*     } */
-    /*     lin_elem_exp_orth_basis(n,f); */
-    /*     //printf("orth1d array done\n"); */
-    /*     free(nodes); nodes = NULL; */
-    /*     free(fvals); fvals = NULL; */
-    /*     break; */
-    /* case RATIONAL: */
-    /*     break; */
-    /* case KERNEL: */
-    /*     break; */
-    /* } */
+    switch (fc){
+    case ZERO: break;
+    case CONSTANT: break;
+    case PIECEWISE:
+        /* printf("generating orthonormal piecewise\n"); */
+        for (ii = 0; ii < n; ii++){
+            gfarray[ii] = generic_function_alloc(1,fc);
+            gfarray[ii]->f = piecewise_poly_genorder(ii,args);
+            gfarray[ii]->fargs = NULL;
+        }
+        break;
+    case POLYNOMIAL:
+        for (ii = 0; ii < n; ii++){
+            gfarray[ii] = generic_function_alloc(1,fc);
+            gfarray[ii]->f = orth_poly_expansion_genorder(ii,args);
+            gfarray[ii]->fargs = NULL;
+        }
+        break;
+    case LINELM:
+        //printf("orth1d array n = %zu\n",n);
+        /* lb = ((struct Interval *) args)->lb; */
+        /* ub = ((struct Interval *) args)->ub; */
+        /* struct LinElemExp *f[1000]; */
+        /* assert (n <= 1000); */
+        /* size_t nnodes = n; */
+        /* if (n == 1){ */
+        /*     nnodes = 2; */
+        /* } */
+        /* double * nodes = linspace(lb,ub,nnodes); */
+        /* double * fvals = calloc_double(nnodes); */
+        /* for (ii = 0; ii < n; ii++){ */
+        /*     gfarray[ii] = generic_function_alloc(1,fc); */
+        /*     gfarray[ii]->f = lin_elem_exp_init(nnodes,nodes,fvals); */
+        /*     gfarray[ii]->fargs = NULL; */
+        /*     f[ii] = gfarray[ii]->f; */
+        /* } */
+        /* lin_elem_exp_orth_basis(n,f); */
+        /* //printf("orth1d array done\n"); */
+        /* free(nodes); nodes = NULL; */
+        /* free(fvals); fvals = NULL; */
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        break;
+    }
 
-/* } */
+}

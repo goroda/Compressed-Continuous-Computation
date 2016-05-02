@@ -164,6 +164,8 @@ generic_function_approximate1d(enum function_class, struct Fwrap *, void*);
 // extraction functions
 double generic_function_get_lower_bound(const struct GenericFunction * f);
 double generic_function_get_upper_bound(const struct GenericFunction * f);
+enum function_class generic_function_get_fc(const struct GenericFunction * f);
+
 void
 generic_function_sum3_up(double, struct GenericFunction *,
                          double, struct GenericFunction *,
@@ -188,7 +190,7 @@ struct GenericFunction *
 generic_function_lin_comb(size_t,
                           struct GenericFunction **, const double *);
 struct GenericFunction * generic_function_lin_comb2(size_t, size_t, 
-                struct GenericFunction **, size_t, double *);
+                struct GenericFunction **, size_t, const double *);
 
 double generic_function_absmax(const struct GenericFunction *, double *,void *);
 double generic_function_array_absmax(size_t, size_t, 
@@ -198,7 +200,7 @@ void generic_function_scale(double, struct GenericFunction *);
 void generic_function_array_scale(double, struct GenericFunction **, size_t);
 void generic_function_kronh(int,
                             size_t, size_t, size_t, size_t, 
-                            double *, 
+                            const double *, 
                             struct GenericFunction **,
                             struct GenericFunction **);
 void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
@@ -214,8 +216,9 @@ void generic_function_array_orth1d_columns(
     void *, size_t,
     size_t, double,
     double);
-void generic_function_array_orth(size_t, enum function_class,
-                            struct GenericFunction **, void *);
+
+void generic_function_array_orth(size_t,struct GenericFunction **,
+                                 enum function_class,void *);
 void 
 generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
                                              size_t,size_t,

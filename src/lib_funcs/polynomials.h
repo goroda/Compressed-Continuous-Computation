@@ -202,7 +202,7 @@ struct OrthPolyExpansion *
 orth_poly_expansion_quadratic(double, double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
-orth_poly_expansion_genorder(enum poly_type, size_t, double, double);
+orth_poly_expansion_genorder(size_t,struct OpeOpts*);
 
 double orth_poly_expansion_deriv_eval(double, void *);
 struct OrthPolyExpansion *
@@ -281,8 +281,8 @@ orth_poly_expansion_sum3_up(double, struct OrthPolyExpansion *,
 
 struct OrthPolyExpansion *
 orth_poly_expansion_lin_comb(size_t, size_t, 
-        struct OrthPolyExpansion **, size_t,
-        double *);
+                             struct OrthPolyExpansion **, size_t,
+                             const double *);
 
 
 /////////////////////////////////////////////////////////////

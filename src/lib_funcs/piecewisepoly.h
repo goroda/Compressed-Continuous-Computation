@@ -93,6 +93,8 @@ void piecewise_poly_array_free(struct PiecewisePoly **, size_t);
 enum poly_type piecewise_poly_get_ptype(const struct PiecewisePoly * p);
 
 // some initializers
+struct PiecewisePoly *
+piecewise_poly_genorder(size_t, struct PwPolyOpts *);
 struct PiecewisePoly * 
 piecewise_poly_constant(double, struct PwPolyOpts *);
 struct PiecewisePoly * 

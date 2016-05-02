@@ -45,6 +45,16 @@ struct Fwrap * fwrap_create(size_t, const char *);
 void fwrap_set_f(struct Fwrap *, double(*)(const double*,void*),void*);
 void fwrap_set_fvec(struct Fwrap *, 
                     int (*)(size_t, const double*,double*,void*),void*);
+void fwrap_set_mofvec(struct Fwrap *, 
+                      int (*)(size_t,size_t,const double*,double*,void*),
+                      void*);
+void fwrap_set_which_eval(struct Fwrap *, size_t);
+size_t fwrap_get_which_eval(const struct Fwrap *);
+
+void fwrap_set_num_funcs(struct Fwrap *, size_t);
+void fwrap_set_func_array(struct Fwrap *,size_t,
+                          int (*)(size_t,const double*,double*,void *),
+                          void *);
 void fwrap_destroy(struct Fwrap *);
 int fwrap_eval(size_t, const double *, double *, void *);
 

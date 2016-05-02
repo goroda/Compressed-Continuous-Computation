@@ -33,24 +33,16 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
- */
+#ifndef TESTF_H
+#define TESTF_H
 
+#include <stdlib.h>
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
-
-#include "quasimatrix.h"
-#include "cross2d.h"
-
-/* #include "elements.h" */
-/* #include "indmanage.h" */
-/* #include "algs.h" */
-/* #include "dmrg.h" */
-/* #include "dmrgprod.h" */
-/* #include "qmarray_qr.h" */
-/* #include "diffusion.h" */
-/* #include "approximate.h" */
+int func(size_t, const double *, double *, void *);
+int func2(size_t, const double *, double *, void *);
+int func3(size_t, const double *, double *, void *);
+int func4(size_t, const double *, double *, void *);
+int func5(size_t, const double *, double *, void *);
+int func6(size_t, const double *, double *, void *);
 
 #endif

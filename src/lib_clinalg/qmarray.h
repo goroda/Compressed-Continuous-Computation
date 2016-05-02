@@ -67,4 +67,37 @@ struct Quasimatrix *
 qmarray_extract_column(const struct Qmarray *, size_t);
 
 
+// qmarrays
+
+// (qmarray - vector multiplication
+/* struct Quasimatrix * qmav(struct Qmarray *, double *); */
+struct Qmarray * qmam(const struct Qmarray *,const double *, size_t);
+struct Qmarray * qmatm(const struct Qmarray *,const double *, size_t);
+struct Qmarray * mqma(double *,const struct Qmarray *, size_t);
+struct Qmarray * qmaqma(const struct Qmarray * a, const struct Qmarray * b);
+struct Qmarray * qmatqma(const struct Qmarray * a, const struct Qmarray * b);
+struct Qmarray * qmaqmat(const struct Qmarray * a, const struct Qmarray * b);
+struct Qmarray * qmatqmat(const struct Qmarray * a, const struct Qmarray * b);
+double * qmatqma_integrate(const struct Qmarray *,const struct Qmarray *);
+double * qmaqmat_integrate(const struct Qmarray *, const struct Qmarray *);
+double * qmatqmat_integrate(const struct Qmarray *,const  struct Qmarray *);
+struct Qmarray * qmarray_kron(const struct Qmarray *, const struct Qmarray *);
+double * qmarray_kron_integrate(const struct Qmarray *, const struct Qmarray *);
+struct Qmarray * qmarray_vec_kron(const double *, const struct Qmarray *,
+                                  const struct Qmarray *);
+double * qmarray_vec_kron_integrate(const double *, const struct Qmarray *,
+                                    const struct Qmarray *);
+struct Qmarray * qmarray_mat_kron(size_t, const double *, const struct Qmarray *,
+                                  const struct Qmarray *);
+struct Qmarray * qmarray_kron_mat(size_t, const double *, const struct Qmarray *,
+                                  const struct Qmarray *);
+void qmarray_block_kron_mat(char, int, size_t,
+        struct Qmarray **, struct Qmarray *, size_t,
+        double *, struct Qmarray *);
+double * qmarray_integrate(const struct Qmarray *);
+double qmarray_norm2diff(const struct Qmarray *,const struct Qmarray *);
+double qmarray_norm2(const struct Qmarray *);
+void qmarray_axpy(double,const struct Qmarray *, struct Qmarray *);
+
+
 #endif

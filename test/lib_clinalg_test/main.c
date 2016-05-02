@@ -33,24 +33,66 @@
 
 //Code
 
-/** \file lib_clinalg.h
- * Groups header files of clinalg library together
- */
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <assert.h>
+#include <time.h>
+
+#include "CuTest.h"
+#include "clinalgtest.h"
+#include "testfunctions.h"
+
+#include "array.h"
+#include "lib_funcs.h"
+#include "lib_clinalg.h"
+#include "lib_linalg.h"
 
 
-#ifndef LIB_CLINALG_H
-#define LIB_CLINALG_H
+void RunAllTests(void) {
+    
+    printf("Running Test Suite: lib_clinalg\n");
+    srand(time(NULL));
 
-#include "quasimatrix.h"
-#include "cross2d.h"
+    CuString * output = CuStringNew();
+    CuSuite * suite = CuSuiteNew();
+    
+    CuSuite * clin = QuasimatrixGetSuite();
+    
+    /* CuSuite * qma = CLinalgQmarrayGetSuite(); */
+    /* CuSuite * ftr = CLinalgFuncTrainGetSuite(); */
+    /* CuSuite * cind = CLinalgCrossIndGetSuite(); */
+    /* CuSuite * fta = CLinalgFuncTrainArrayGetSuite(); */
+    /* CuSuite * dmrg = CLinalgDMRGGetSuite(); */
+    /* CuSuite * diff = CLinalgDiffusionGetSuite();*/
+    
+    CuSuiteAddSuite(suite, clin);
+    
+    /* CuSuiteAddSuite(suite, qma); */
+    /* CuSuiteAddSuite(suite, ftr); */
+    /* CuSuiteAddSuite(suite, cind); */
+    /* CuSuiteAddSuite(suite, fta); */
+    /* CuSuiteAddSuite(suite, dmrg); */
+    /* CuSuiteAddSuite(suite, diff); */
+    
+    CuSuiteRun(suite);
+    CuSuiteSummary(suite, output);
+    CuSuiteDetails(suite, output);
+    printf("%s \n", output->buffer);
+    
+    CuSuiteDelete(clin);
+    
+    /* CuSuiteDelete(qma); */
+    /* CuSuiteDelete(ftr); */
+    /* CuSuiteDelete(fta); */
+    /* CuSuiteDelete(cind); */
+    /* CuSuiteDelete(dmrg); */
+    /* CuSuiteDelete(diff); */
+    
+    CuStringDelete(output);
+    free(suite);
+}
 
-/* #include "elements.h" */
-/* #include "indmanage.h" */
-/* #include "algs.h" */
-/* #include "dmrg.h" */
-/* #include "dmrgprod.h" */
-/* #include "qmarray_qr.h" */
-/* #include "diffusion.h" */
-/* #include "approximate.h" */
-
-#endif
+int main(void) {
+    RunAllTests();
+}

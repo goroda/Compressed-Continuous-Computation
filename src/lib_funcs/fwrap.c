@@ -43,7 +43,7 @@
 #include <math.h>
 #include <string.h>
 
-typedef enum {ND=0, VEC, NUMFT} Ftype; 
+typedef enum {ND=0, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
 
 /** \struct Fwrap
  *  \brief Interface to function pointers
@@ -57,6 +57,10 @@ typedef enum {ND=0, VEC, NUMFT} Ftype;
  *  function arguments
  * \var Fwrap::ftype
  *  function type
+ * \var Fwrap::mofvec
+ *  vectorized multi output
+ * \var Fwrap::evalfunc
+ * indicator for which multioutput function to evaluate
  */
 struct Fwrap
 {
@@ -68,6 +72,16 @@ struct Fwrap
     void * fargs;
 
     Ftype ftype;
+
+    // special arguments if type == MOVEC (multioutput vec)
+    int (*mofvec)(size_t, size_t, const double *, double *, void *);
+    size_t evalfunc; // which function to eval from mofvec
+
+    // special arguments if type == ARRVEC (array of functions)
+    size_t nfuncs;
+    int (**arrfuncs)(size_t,const double*,double*,void*);
+    void ** farrargs;
+    
 };
 
 /**********************************************************//**
@@ -88,6 +102,14 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     else if ( (strcmp(type,"general-vec") == 0)){
         fw->ftype = VEC;
     }
+    else if ( (strcmp(type,"mo-vec") == 0)){
+        fw->ftype = MOVEC;
+        fw->evalfunc = 0;
+    }
+    else if ( (strcmp(type,"array-vec") == 0)){
+        fw->ftype = ARRVEC;
+    }
+        
     else{
         fprintf(stderr,"Unrecognized function type type %s\n",type);
         exit(1);
@@ -110,7 +132,7 @@ void fwrap_set_f(struct Fwrap * fwrap, double(*f)(const double*,void*),void*arg)
 }
 
 /***********************************************************//**
-    Set the vectorizedfunction
+    Set the vectorized function
 ***************************************************************/
 void fwrap_set_fvec(struct Fwrap * fwrap, 
                     int (*f)(size_t,const double*,double*,void*),
@@ -118,13 +140,89 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
 {
     assert (fwrap != NULL);
     if (fwrap->ftype != VEC){
-        fprintf(stderr,"Must set fwrap type to ND before calling set_f\n");
+        fprintf(stderr,"Must set fwrap type to VEC before calling set_f\n");
         exit(1);
     }
     fwrap->fvec = f;
     fwrap->fargs =arg;
 }
 
+/***********************************************************//**
+    Set the multi output vectorized function
+***************************************************************/
+void fwrap_set_mofvec(struct Fwrap * fwrap, 
+                      int (*f)(size_t,size_t, const double*,double*,void*),
+                      void* arg)
+{
+    assert (fwrap != NULL);
+    if (fwrap->ftype != MOVEC){
+        fprintf(stderr,"Must set fwrap type to MOVEC before calling set_mofvec\n");
+        exit(1);
+    }
+    fwrap->mofvec = f;
+    fwrap->fargs =arg;
+}
+
+/***********************************************************//**
+    Set which of the multi output functions to evaluate
+    when one needs to evaluate them one at a time
+***************************************************************/
+void fwrap_set_which_eval(struct Fwrap * fwrap, size_t which)
+{
+    assert (fwrap != NULL);
+    /* if (fwrap->ftype != MOVEC){ */
+    /*     fprintf(stderr,"Must set fwrap type to MOVEC before calling which_eval\n"); */
+    /*     exit(1); */
+    /* } */
+    fwrap->evalfunc = which;
+}
+
+/***********************************************************//**
+    Get which of the multi output functions to evaluate
+    when one needs to evaluate them one at a time
+***************************************************************/
+size_t fwrap_get_which_eval(const struct Fwrap * fwrap)
+{
+    assert (fwrap != NULL);
+    /* if (fwrap->ftype != MOVEC){ */
+    /*     fprintf(stderr,"Must set fwrap type to MOVEC before calling which_eval\n"); */
+    /*     exit(1); */
+    /* } */
+    return fwrap->evalfunc;
+}
+
+/***********************************************************//**
+   For an array of function pointers
+***************************************************************/
+void fwrap_set_num_funcs(struct Fwrap * fwrap, size_t nfuncs)
+{
+    assert (fwrap != NULL);
+    if (fwrap->ftype != ARRVEC){
+        fprintf(stderr,"Must set fwrap type to ARRVEC before set_num_funcs\n");
+        exit(1);
+    }
+    fwrap->nfuncs = nfuncs;
+    fwrap->arrfuncs = malloc(nfuncs * sizeof( int (*)(size_t,const double*,
+                                                      double*, void *)));
+    fwrap->farrargs = malloc(nfuncs * sizeof (void *));
+}
+
+/***********************************************************//**
+   For an array of function pointers
+***************************************************************/
+void fwrap_set_func_array(struct Fwrap * fwrap,size_t ind,
+                          int (*f)(size_t,const double*, double*, void *),
+                          void * args)
+{
+    assert (fwrap != NULL);
+    if (fwrap->ftype != ARRVEC){
+        fprintf(stderr,"Must set fwrap type to ARRVEC before set_num_funcs\n");
+        exit(1);
+    }
+    assert (ind < fwrap->nfuncs);
+    fwrap->arrfuncs[ind] = f;
+    fwrap->farrargs[ind] = args;
+}
 
 /***********************************************************//**
     Destroy
@@ -132,6 +230,10 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
 void fwrap_destroy(struct Fwrap * fw)
 {
     if (fw != NULL){
+        if (fw->ftype == ARRVEC){
+            free(fw->arrfuncs); fw->arrfuncs = NULL;
+            free(fw->farrargs); fw->farrargs = NULL;
+        }
         free(fw); fw = NULL;
     }
 }
@@ -155,6 +257,14 @@ int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
     else if (fw->ftype == VEC){
         assert (fw->fvec != NULL);
         return fw->fvec(nevals,x,out,fw->fargs);
+    }
+    else if (fw->ftype == MOVEC){
+        assert (fw->mofvec != NULL);
+        return fw->mofvec(nevals,fw->evalfunc,x,out,fw->fargs);
+    }
+    else if (fw->ftype == ARRVEC){
+        assert (fw->arrfuncs != NULL);
+        return fw->arrfuncs[fw->evalfunc](nevals,x,out,fw->farrargs[fw->evalfunc]);
     }
     else{
         fprintf(stderr,"Cannot evaluate function wrapper of type %d\n",fw->ftype);

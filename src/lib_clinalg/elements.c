@@ -313,8 +313,8 @@ qmarray_serialize(unsigned char * ser, struct Qmarray * qma,
 /***********************************************************//**
     Deserialize a qmarray
 
-    \param ser [in] - serialized qmarray
-    \param qma [inout] - qmarray
+    \param[in]     ser - serialized qmarray
+    \param[in,out] qma - qmarray
 
     \return ptr - shifted ser after deserialization
 ***************************************************************/

@@ -192,30 +192,28 @@ quasimatrix_get_funcs_ref(const struct Quasimatrix * q,struct GenericFunction **
 /*********************************************************//**
     Create a quasimatrix by approximating 1d functions
 
-    \param[in] n     - number of columns of quasimatrix
-    \param[in] funcs - functions
-    \param[in] args  - extra arguments to each function
-    \param[in] fc    - function class of each column
-    \param[in] st    - sub_type of each column
-    \param[in] lb    - lower bound of inputs to functions
-    \param[in] ub    - upper bound of inputs to functions
-    \param[in] aopts - approximation options
+    \param[in]     n     - number of columns of quasimatrix
+    \param[in,out] fw    - wrapped functions
+    \param[in]     fc    - function class of each column
+    \param[in]     aopts - approximation options
 
     \return quasimatrix
+    
+    // same approximation arguments in each dimension
 *************************************************************/
 struct Quasimatrix * 
-quasimatrix_approx1d(size_t n,double (**funcs)(double,void *),
-                     void ** args,enum function_class fc,
-                     void * st, double lb,
-                     double ub, void * aopts)
+quasimatrix_approx1d(size_t n, struct Fwrap * fw,
+                     enum function_class * fc,
+                     void * aopts)
+
 {
     struct Quasimatrix * qm = quasimatrix_alloc(n);
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] =
-            generic_function_approximate1d(funcs[ii],args[ii],
-                                           fc, st, lb, ub,
-                                           aopts);
+        /* printf("ii=%zu\n",ii); */
+        fwrap_set_which_eval(fw,ii);
+        qm->funcs[ii] = generic_function_approximate1d(fc[ii],fw,aopts);
+        /* printf("integral = %G\n",generic_function_integral(qm->funcs[ii])); */
     }
     return qm;
 }
@@ -234,24 +232,24 @@ quasimatrix_approx1d(size_t n,double (**funcs)(double,void *),
 
     \return quasimatrix
 *************************************************************/
-struct Quasimatrix * 
-quasimatrix_approx_from_fiber_cuts(size_t n, 
-                                   double (*f)(double,void *),
-                                   struct FiberCut ** fcut, 
-                                   enum function_class fc,
-                                   void * sub_type,double lb,
-                                   double ub, void * aopts)
-{
-    struct Quasimatrix * qm = quasimatrix_alloc(n);
-    size_t ii;
-    for (ii = 0; ii < n; ii++){
-        qm->funcs[ii] =
-            generic_function_approximate1d(f, fcut[ii], 
-                                           fc, sub_type,
-                                           lb, ub, aopts);
-    }
-    return qm;
-}
+/* struct Quasimatrix *  */
+/* quasimatrix_approx_from_fiber_cuts(size_t n,  */
+/*                                    double (*f)(double,void *), */
+/*                                    struct FiberCut ** fcut,  */
+/*                                    enum function_class fc, */
+/*                                    void * sub_type,double lb, */
+/*                                    double ub, void * aopts) */
+/* { */
+/*     struct Quasimatrix * qm = quasimatrix_alloc(n); */
+/*     size_t ii; */
+/*     for (ii = 0; ii < n; ii++){ */
+/*         qm->funcs[ii] = */
+/*             generic_function_approximate1d(f, fcut[ii],  */
+/*                                            fc, sub_type, */
+/*                                            lb, ub, aopts); */
+/*     } */
+/*     return qm; */
+/* } */
 
 /*********************************************************//**
     Copy a quasimatrix
@@ -287,24 +285,30 @@ quasimatrix_serialize(unsigned char * ser,
                       const struct Quasimatrix * qm, 
                       size_t *totSizeIn)
 {
-
+    printf("serializing quasimatrix doesn't work yet\n");
     // n -> func -> func-> ... -> func
-    size_t ii;
-    size_t totSize = sizeof(size_t);
-    size_t size_temp;
-    for (ii = 0; ii < qm->n; ii++){
-        serialize_generic_function(NULL,qm->funcs[ii],&size_temp);
-        totSize += size_temp;
-    }
     if (totSizeIn != NULL){
+        size_t ii;
+        size_t totSize = sizeof(size_t);
+        for (ii = 0; ii < qm->n; ii++){
+            printf("ii = %zu\n",ii);
+            size_t size_temp = 0 ;
+            serialize_generic_function(NULL,qm->funcs[ii],&size_temp);
+            printf("size = %zu\n",size_temp);
+            totSize += size_temp;
+        
+        }
         *totSizeIn = totSize;
         return ser;
     }
     
     unsigned char * ptr = ser;
     ptr = serialize_size_t(ptr, qm->n);
-    for (ii = 0; ii < qm->n; ii++){
+    for (size_t ii = 0; ii < qm->n; ii++){
+        printf("ii serializing the function\n");
         ptr = serialize_generic_function(ptr, qm->funcs[ii],NULL);
+        double integral = generic_function_integral(qm->funcs[ii]);
+        printf("integral = %G\n",integral);
     }
     return ptr;
 }
@@ -329,8 +333,14 @@ quasimatrix_deserialize(unsigned char * ser,
 
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        ptr = deserialize_generic_function(ptr,
-                                           &((*qm)->funcs[ii]));
+        printf("deserializing ii = %zu\n",ii);
+        struct GenericFunction * temp;
+        /* ptr = deserialize_generic_function(ptr, */
+        /*                                    &((*qm)->funcs[ii])); */
+        ptr = deserialize_generic_function(ptr, &temp);
+        double integral = generic_function_integral(temp);
+        printf("%G\n",integral);
+        
     }
     
     return ptr;
@@ -339,26 +349,19 @@ quasimatrix_deserialize(unsigned char * ser,
 /*********************************************************//**
     Generate a quasimatrix with orthonormal columns
 
-    \param[in] fc - function class
-    \param[in] st - function class sub_type
-    \param[in] n  -  number of columns
-    \param[in] lb - lower bound on functions
-    \param[in] ub - upper bound on functions
+    \param[in] n    - number of columns
+    \param[in] fc   - function class
+    \param[in] opts - options
+
 
     \return quasimatrix with orthonormal columns
 *************************************************************/
 struct Quasimatrix *
-quasimatrix_orth1d(enum function_class fc, void * st,
-                   size_t n, 
-                   double lb, double ub)
+quasimatrix_orth1d(size_t n, enum function_class fc,
+                   void * opts)
 {
-    struct Interval ob;
-    ob.lb = lb;
-    ob.ub = ub;
-
     struct Quasimatrix * qm = quasimatrix_alloc(n);
-    generic_function_array_orth(n, fc, st, qm->funcs,
-                                (void *)(&ob));
+    generic_function_array_orth(n,qm->funcs,fc,opts);
     return qm;
 }
 
@@ -542,8 +545,9 @@ quasimatrix_daxpby(double a, const struct Quasimatrix * x,
     quasimatrix. (Trefethan 2010) whose columns consist of
     one dimensional functions
 
-    \param[in,out] A - quasimatrix to triangularize
-    \param[in,out] R - upper triangluar matrix
+    \param[in,out] A    - quasimatrix to triangularize
+    \param[in,out] R    - upper triangluar matrix
+    \param[in]     opts - options for approximation
 
     \return quasimatrix denoting the Q term
     
@@ -553,22 +557,19 @@ quasimatrix_daxpby(double a, const struct Quasimatrix * x,
 *************************************************************/
 struct Quasimatrix *
 quasimatrix_householder_simple(struct Quasimatrix * A,
-                               double * R)
+                               double * R, void * opts)
 {
     
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
-
     size_t ncols = A->n;
-    enum poly_type ptype = LEGENDRE;
+
     // generate two quasimatrices needed for householder
-    struct Quasimatrix * Q = quasimatrix_orth1d(POLYNOMIAL, 
-                    (void *) (&ptype), ncols, lb, ub); 
+    enum function_class fc = generic_function_get_fc(A->funcs[0]);
+    struct Quasimatrix * Q = quasimatrix_orth1d(ncols,fc,opts);
     struct Quasimatrix * V = quasimatrix_alloc(ncols);
 
     int out = 0;
     out = quasimatrix_householder(A,Q,V,R);
-
+    
     assert(out == 0);
     out = quasimatrix_qhouse(Q,V);
     assert(out == 0);
@@ -603,6 +604,7 @@ quasimatrix_householder(struct Quasimatrix * A,
     double rho, sigma, alpha;
     double temp1;
     for (ii = 0; ii < A->n; ii++){
+        /* printf("ii = %zu\n",ii); */
         e = E->funcs[ii];    
         x = A->funcs[ii];
         rho = generic_function_norm(x);
@@ -612,12 +614,14 @@ quasimatrix_householder(struct Quasimatrix * A,
         alpha = generic_function_inner(e,x);
 
         if (alpha >= ZEROTHRESH){
-
             generic_function_flip_sign(e);
         }
 
+        /* printf("compute v, rho = %G\n",rho); */
+        /* printf("integral of x = %G\n",generic_function_integral(x)); */
+        /* printf("norm of e = %G\n",generic_function_norm(e)); */
         v = generic_function_daxpby(rho,e,-1.0,x);
-    
+        /* printf("got v\n"); */
         // skip step improve orthogonality
         // improve orthogonality
 
@@ -634,6 +638,7 @@ quasimatrix_householder(struct Quasimatrix * A,
         v2 = V->funcs[ii];
         
         for (jj = ii+1; jj < A->n; jj++){
+            /* printf("\t jj = %zu\n",jj); */
             temp1 = generic_function_inner(v2,A->funcs[jj]);
             if (fabs(temp1) < ZEROTHRESH){
                 temp1 = 0.0;
@@ -703,11 +708,12 @@ int quasimatrix_qhouse(struct Quasimatrix * Q,
     Compute the LU decomposition of a quasimatrix of one 
     dimensional functions (Townsend 2015)
 
-    \param[in]     A       - quasimatrix to decompose
-    \param[in,out] L       - quasimatrix representing L factor
-    \param[in,out] u       - allocated space for U factor
-    \param[in,out] p       - pivots 
-    \param[in]     optargs - optimization arguments
+    \param[in]     A          - quasimatrix to decompose
+    \param[in,out] L          - quasimatrix representing L factor
+    \param[in,out] u          - allocated space for U factor
+    \param[in,out] p          - pivots 
+    \param[in]     approxargs - approximation arguments for each column
+    \param[in]     optargs    - optimization arguments
 
     \return inno
 
@@ -718,15 +724,15 @@ int quasimatrix_qhouse(struct Quasimatrix * Q,
 *************************************************************/
 int quasimatrix_lu1d(struct Quasimatrix * A,
                      struct Quasimatrix * L, double * u,
-                     double * p, void * optargs)
+                     double * p, void * approxargs,
+                     void * optargs)
 {
     int info = 0;
     
     size_t ii,kk;
     double val, amloc;
     struct GenericFunction * temp;
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
+    
     for (kk = 0; kk < A->n; kk++){
 
         generic_function_absmax(A->funcs[kk], &amloc,optargs);
@@ -735,10 +741,8 @@ int quasimatrix_lu1d(struct Quasimatrix * A,
         val = generic_function_1d_eval(A->funcs[kk], amloc);
         
         if (fabs(val) < 2.0 * ZEROTHRESH){
-            enum poly_type ptype = LEGENDRE;
             L->funcs[kk] = 
-                generic_function_constant(1.0,POLYNOMIAL,
-                                          &ptype,lb,ub,NULL);
+                generic_function_constant(1.0,POLYNOMIAL,approxargs);
         }
         else{
             L->funcs[kk] =
@@ -774,9 +778,12 @@ int quasimatrix_lu1d(struct Quasimatrix * A,
     Perform a greedy maximum volume procedure to find the 
     maximum volume submatrix of quasimatrix 
 
-    \param[in]     A     - quasimatrix 
-    \param[in,out] Asinv - submatrix inv
-    \param[in,out] p     - pivots 
+    \param[in]     A          - quasimatrix 
+    \param[in,out] Asinv      - submatrix inv
+    \param[in,out] p          - pivots 
+    \param[in]     approxargs - approximation arguments for each column
+    \param[in]     optargs    - optimization arguments
+
 
     \return info 
     
@@ -788,7 +795,8 @@ int quasimatrix_lu1d(struct Quasimatrix * A,
         naive implementation without rank 1 updates
 *************************************************************/
 int quasimatrix_maxvol1d(struct Quasimatrix * A,
-                         double * Asinv, double * p)
+                         double * Asinv, double * p,
+                         void * approxargs, void * optargs)
 {
     int info = 0;
     double delta = 0.01;
@@ -804,7 +812,7 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A,
     }
     struct Quasimatrix * Acopy = qmm(A,eye,r);
 
-    info =  quasimatrix_lu1d(Acopy,L,U,p,NULL);
+    info = quasimatrix_lu1d(Acopy,L,U,p,approxargs,optargs);
     //printf("pivot immediate \n");
     //dprint(A->n, p);
 
@@ -871,22 +879,23 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A,
 /*********************************************************//**
     Compute rank of a quasimatrix
 
-    \param[in] A - quasimatrix 
+    \param[in] A    - quasimatrix 
+    \param[in] opts - options for QR decomposition
 
     \return rank 
 *************************************************************/
-size_t quasimatrix_rank(const struct Quasimatrix * A){
+size_t quasimatrix_rank(const struct Quasimatrix * A, void * opts)
+{
     size_t rank = A->n;
-
     size_t ncols = A->n;
-    enum poly_type ptype = LEGENDRE;
+    /* enum poly_type ptype = LEGENDRE; */
     // generate two quasimatrices needed for householder
     //
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
+    /* double lb = generic_function_get_lower_bound(A->funcs[0]); */
+    /* double ub = generic_function_get_upper_bound(A->funcs[0]); */
     
-    struct Quasimatrix * Q = quasimatrix_orth1d(POLYNOMIAL, 
-                    (void *) (&ptype), ncols, lb, ub); 
+    struct Quasimatrix * Q = quasimatrix_orth1d(ncols,POLYNOMIAL, opts);
+
     struct Quasimatrix * V = quasimatrix_alloc(ncols);
     double * R = calloc_double(rank * rank);
 
@@ -900,7 +909,7 @@ size_t quasimatrix_rank(const struct Quasimatrix * A){
     out = quasimatrix_householder(qm,Q,V,R);
 
     assert(out == 0);
-    
+    /* dprint2d_col(qm->n,qm->n,R); */
     for (ii = 0; ii < qm->n; ii++){
         if (fabs(R[ii * qm->n + ii]) < 10.0*ZEROTHRESH){
             rank = rank - 1;
@@ -918,7 +927,7 @@ size_t quasimatrix_rank(const struct Quasimatrix * A){
 /*********************************************************//**
     Compute norm of a quasimatrix
 
-    \param[in] A  - quasimatrix
+    \param[in] A - quasimatrix
 
     \return mag - norm of the quasimatrix
 *************************************************************/
