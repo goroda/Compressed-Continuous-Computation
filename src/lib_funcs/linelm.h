@@ -121,7 +121,7 @@ lin_elem_exp_approx(struct LinElemExpAopts *, struct Fwrap *);
 
 void lin_elem_exp_scale(double, struct LinElemExp *);
 void lin_elem_exp_flip_sign(struct LinElemExp *);
-void lin_elem_exp_orth_basis(size_t, struct LinElemExp **);
+void lin_elem_exp_orth_basis(size_t,struct LinElemExp **, struct LinElemExpAopts *);
 struct LinElemExp *
 lin_elem_exp_constant(double,
                       const struct LinElemExpAopts *);

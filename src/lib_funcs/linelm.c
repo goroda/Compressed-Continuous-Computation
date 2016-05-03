@@ -1413,13 +1413,19 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
     Uses modified gram schmidt to determine function coefficients
     Each function f[ii] must have the same nodes
 *************************************************************/
-void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f)
+void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExpAopts * opts)
 {
-    double norm, proj;
+    assert (opts != NULL);
+    assert (opts->nodes != NULL);
+    assert (n <= opts->num_nodes);
+
+    
+    double * zeros = calloc_double(opts->num_nodes);
     for (size_t ii = 0; ii < n; ii++){
-        assert (f[ii]->num_nodes >= n);
-        f[ii]->coeff[ii] = 1.0;        
+        f[ii] = lin_elem_exp_init(opts->num_nodes,opts->nodes,zeros);
+        f[ii]->coeff[ii] = 1.0;
     }
+    double norm, proj;
     for (size_t ii = 0; ii < n; ii++){
         norm = lin_elem_exp_norm(f[ii]);
         lin_elem_exp_scale(1/norm,f[ii]);
@@ -1428,6 +1434,20 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f)
             lin_elem_exp_axpy(-proj,f[ii],f[jj]);
         }
     }
+    
+    /* double norm, proj; */
+    /* for (size_t ii = 0; ii < n; ii++){ */
+    /*     assert (f[ii]->num_nodes >= n); */
+    /*     f[ii]->coeff[ii] = 1.0;         */
+    /* } */
+    /* for (size_t ii = 0; ii < n; ii++){ */
+    /*     norm = lin_elem_exp_norm(f[ii]); */
+    /*     lin_elem_exp_scale(1/norm,f[ii]); */
+    /*     for (size_t jj = ii+1; jj < n; jj++){ */
+    /*         proj = lin_elem_exp_inner(f[ii],f[jj]); */
+    /*         lin_elem_exp_axpy(-proj,f[ii],f[jj]); */
+    /*     } */
+    /* } */
 }
 
 /********************************************************//**

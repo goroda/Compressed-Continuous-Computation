@@ -215,13 +215,8 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 
     \param[in] nrows - number of rows of quasimatrix
     \param[in] ncols - number of cols of quasimatrix
-    \param[in] funcs - functions (nrows*ncols)
-    \param[in] args  - extra arguments to each function
-    \param[in] fc    - function class of each column
-    \param[in] st    - sub_type of each column
-    \param[in] lb    - lower bound of inputs to functions
-    \param[in] ub    - upper bound of inputs to functions
-    \param[in] aopts - approximation options
+    \param[in] fapp  - approximation arguments
+    \param[in] fw    - wrapped function
 
     \return qmarray
 ***************************************************************/
@@ -1423,7 +1418,7 @@ int eval_zpoly(size_t n, const double * x,double * out, void * args){
 
 void create_any_L(struct GenericFunction ** L, size_t nrows, 
                   size_t upto,size_t * piv, double * px,
-                  void * approxopts, void * optargs)
+                  struct OneApproxOpts * approxopts, void * optargs)
                   /* double lb, double ub, void * optargs) */
 {
     
@@ -1442,7 +1437,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
             }
         }
         if (count[ii] == 0){
-            L[ii] = generic_function_constant(1.0,POLYNOMIAL,approxopts);//&ptype,lb,ub,NULL);
+            L[ii] = generic_function_constant(1.0,approxopts->fc,approxopts->aopts);//&ptype,lb,ub,NULL);
         }
         else{
             struct Zeros zz;
@@ -1450,7 +1445,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
             zz.N = count[ii];
             struct Fwrap * fw = fwrap_create(1,"general-vec");
             fwrap_set_fvec(fw,eval_zpoly,&zz);
-            L[ii] = generic_function_approximate1d(POLYNOMIAL,fw,approxopts);
+            L[ii] = generic_function_approximate1d(approxopts->fc,fw,approxopts->aopts);
             fwrap_destroy(fw);
         }
         free(zeros[ii]); zeros[ii] = NULL;
@@ -1492,7 +1487,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
 
 void create_any_L_linelm(struct GenericFunction ** L, size_t nrows, 
                          size_t upto,size_t * piv, double * px,
-                         void * approxargs, void * optargs)
+                         struct OneApproxOpts * approxargs, void * optargs)
 {
     
     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
@@ -1583,13 +1578,13 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     \param[in,out] u       - allocated space for U factor
     \param[in,out] piv     - row of pivots 
     \param[in,out] px      - x values of pivots 
-    \param[in]     appargs - approximation arguments
+    \param[in]     app     - approximation arguments
     \param[in]     optargs - optimization arguments
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
-                 size_t * piv, double * px, void * app,
+                 size_t * piv, double * px, struct OneApproxOpts * app,
                  void * optargs)
 {
     int info = 0;
@@ -1676,12 +1671,13 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
                 double eval = generic_function_1d_eval(Lt[piv[zz]],px[zz]);
                 printf("\t ind=%zu x=%G val=%G\n",piv[zz],px[zz],eval);
             }
+            printf("-----------------------------------\n");
         }
 
         //printf("k start here\n");
         for (ii = 0; ii < A->ncols; ii++){
             if (VQMALU){
-                printf(" in lu qmarray ii=%zu/%zu \n",ii,A->ncols);
+                printf("In lu qmarray ii=%zu/%zu \n",ii,A->ncols);
             }
             if (ii == kk){
                 u[ii*A->ncols+kk] = val;
@@ -1793,7 +1789,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
         naive implementation without rank 1 updates
 ***************************************************************/
 int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi, 
-                     double * pivx, void * appargs, void * optargs)
+                     double * pivx, struct OneApproxOpts * appargs, void * optargs)
 {
     //printf("in maxvolqmarray!\n");
 

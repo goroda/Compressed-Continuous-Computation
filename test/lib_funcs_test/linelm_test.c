@@ -596,14 +596,15 @@ void Test_lin_elem_exp_orth_basis(CuTest * tc)
     double ub = 0.2;
     size_t N = 100;
     double * x = linspace(lb,ub,N);
-    double * coeff = calloc_double(N);
-
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
+    
+    /* double * coeff = calloc_double(N); */
     le_t f[100];
     for (size_t ii = 0; ii < N; ii++){
-        f[ii] = lin_elem_exp_init(N,x,coeff);
+        f[ii] = NULL;// lin_elem_exp_init(N,x,coeff);
     }
 
-    lin_elem_exp_orth_basis(N,f);
+    lin_elem_exp_orth_basis(N,f,opts);
     for (size_t ii = 0; ii < N; ii++){
         for (size_t jj = 0; jj < N; jj++){
             double val = lin_elem_exp_inner(f[ii],f[jj]);
@@ -620,7 +621,8 @@ void Test_lin_elem_exp_orth_basis(CuTest * tc)
         LINELEM_FREE(f[ii]);
     }
     free(x); x = NULL;
-    free(coeff); coeff = NULL;
+    /* free(coeff); coeff = NULL; */
+    lin_elem_exp_aopts_free(opts);
 }
 
 

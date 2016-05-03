@@ -145,8 +145,8 @@ void qmarray_axpy(double,const struct Qmarray *, struct Qmarray *);
 
 //struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
 int qmarray_lu1d(struct Qmarray *, struct Qmarray *, double *, size_t *,
-                 double *,void*,void *);
-int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *,void*,void *);
+                 double *,struct OneApproxOpts*,void *);
+int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *,struct OneApproxOpts*,void *);
 
 int qmarray_qhouse(struct Qmarray *, struct Qmarray *);
 int qmarray_qhouse_rows(struct Qmarray *, struct Qmarray *);

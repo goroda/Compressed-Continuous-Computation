@@ -52,7 +52,7 @@
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
  * only POLYNOMIAL is implemented!!!
  */
-enum function_class {ZERO,CONSTANT,PIECEWISE, POLYNOMIAL,
+enum function_class {CONSTANT,PIECEWISE, POLYNOMIAL,
                      LINELM, RATIONAL, KERNEL};
 
 /** \struct Interval

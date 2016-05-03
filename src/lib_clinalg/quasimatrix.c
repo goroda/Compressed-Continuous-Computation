@@ -327,7 +327,6 @@ quasimatrix_deserialize(unsigned char * ser,
 
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        struct GenericFunction * temp;
         ptr = deserialize_generic_function(ptr,
                                            &((*qm)->funcs[ii]));
     }
