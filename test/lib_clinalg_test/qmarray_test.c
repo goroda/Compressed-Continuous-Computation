@@ -255,7 +255,6 @@ void Test_qmarray_orth1d_columns(CuTest * tc)
 
     qmarray_test_col_orth(tc,Q,1e-14);
 
-
     qmarray_free(Q); Q = NULL;
     one_approx_opts_free(qmopts);
     ope_opts_free(opts);
@@ -795,6 +794,8 @@ void Test_qmarray_householder_linelm(CuTest * tc){
     struct Qmarray * Anew = qmam(Q,R,nc);
     qmarray_test_equality2(tc,A,Anew,1e-15);
 
+    qmarray_free(T);
+    free(x); x = NULL;
     lin_elem_exp_aopts_free(opts);
     one_approx_opts_free(qmopts);
     fwrap_destroy(fw);
@@ -835,6 +836,8 @@ void Test_qmarray_householder_rowslinelm(CuTest * tc){
     struct Qmarray * Anew = mqma(R,Q,nr);
     qmarray_test_equality2(tc,A,Anew,1e-15);
 
+    free(x); x = NULL;
+    qmarray_free(T);
     lin_elem_exp_aopts_free(opts);
     one_approx_opts_free(qmopts);
     fwrap_destroy(fw);
@@ -875,10 +878,8 @@ void Test_qmarray_svd(CuTest * tc){
     qmarray_test_col_orth(tc,Q,1e-14);
     
      // testt equivalence
-    struct Quasimatrix * temp = NULL;
     double * comb = calloc_double(2*2);
     double * sdiag = diag(2, s);
-    
     cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 2, 2, 2, 1.0,
                     sdiag, 2, vt, 2, 0.0, comb, 2);
     //comb = dgemm
@@ -887,7 +888,6 @@ void Test_qmarray_svd(CuTest * tc){
     free(vt);
 
     //printf("on the quasimatrix portion\n");
-    double diff;
     struct Qmarray * Anew = qmam(Q,comb,2);
     free(comb);
     qmarray_test_equality2(tc,Acopy,Anew,1e-12);
@@ -1071,79 +1071,64 @@ void Test_qmarray_lu1d_hermite(CuTest * tc){
     free(pivi);
 }
 
-/* void Test_qmarray_lu1d_linelm(CuTest * tc){ */
+void Test_qmarray_lu1d_linelm(CuTest * tc){
 
-/*     printf("Testing function: qmarray_lu1d with linelm \n"); */
-/*     //this is column ordered when convertest to Qmarray */
-/*     double (*funcs [6])(double, void *) = {&func,  &func4, &func,  */
-/*                                            &func4, &func5, &func6}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     struct counter c5; c5.N = 0; */
-/*     struct counter c6; c6.N = 0; */
-/*     void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6}; */
+    printf("Testing function: qmarray_lu1d with linelm \n");
 
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         2, 3, funcs, args, LINELM, NULL, -1.0, 1.0, NULL); */
-/*     //printf("A = (%zu,%zu)\n",A->nrows,A->ncols); */
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func4,NULL);
+    fwrap_set_func_array(fw,2,func,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
 
-/*     struct Qmarray * L = qmarray_alloc(2,3); */
-
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     double * U = calloc_double(3*3); */
-/*     size_t * pivi = calloc_size_t(3); */
-/*     double * pivx = calloc_double(3); */
-/*     qmarray_lu1d(A,L,U,pivi,pivx,NULL); */
+    double * x = linspace(-1.0,1.0,10);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(10,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
     
-/*     double eval; */
-    
-/*     //print_qmarray(A,0,NULL); */
-/*     // check pivots */
-/*     //printf("U = \n"); */
-/*     //dprint2d_col(2,2,U); */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < 3; ii++){ */
-/*         //printf("Checking column %zu \n",ii); */
-/*         //printf("---------------\n"); */
-/*         for (jj = 0; jj < ii; jj++){ */
-/*             //printf("Should have zero at (%zu,%G)\n",pivi[jj],pivx[jj]); */
-/*             eval = generic_function_1d_eval(L->funcs[2*ii+pivi[jj]], pivx[jj]); */
-/*             CuAssertDblEquals(tc,0.0,eval,1e-14); */
-/*             //printf("eval = %G\n",eval); */
-/*         } */
-/*         //printf("Should have one at (%zu,%G)\n",pivi[ii],pivx[ii]); */
-/*         eval = generic_function_1d_eval(L->funcs[2*ii+pivi[ii]], pivx[ii]); */
-/*         CuAssertDblEquals(tc,1.0,eval,1e-14); */
-/*         //printf("eval = %G\n",eval); */
-/*     } */
-/*     /\* */
-/*     eval = generic_function_1d_eval(L->funcs[2+ pivi[0]], pivx[0]); */
-/*     printf("eval = %G\n",eval); */
-/*     eval = generic_function_1d_eval(L->funcs[4+ pivi[1]], pivx[1]); */
-/*     printf("eval = %G\n",eval); */
-/*     eval = generic_function_1d_eval(L->funcs[4+ pivi[0]], pivx[0]); */
-/*     printf("eval = %G\n",eval); */
-/*     *\/ */
+    struct Qmarray * A = qmarray_approx1d(2,3,qmopts,fw);
+    struct Qmarray * L = qmarray_alloc(2,3);
+    struct Qmarray * Acopy = qmarray_copy(A);
 
-/*     //CuAssertDblEquals(tc, 0.0, eval, 1e-13); */
+    double * U = calloc_double(3*3);
+    size_t * pivi = calloc_size_t(3);
+    double * pivx = calloc_double(3);
+    qmarray_lu1d(A,L,U,pivi,pivx,qmopts,NULL);
     
-/*     struct Qmarray * Comb = qmam(L,U,3); */
-/*     double difff = qmarray_norm2diff(Comb,Acopy); */
-/*     //printf("difff = %G\n",difff); */
-/*     CuAssertDblEquals(tc,difff,0,1e-13); */
-    
-/*     //exit(1); */
-/*     qmarray_free(Acopy); */
-/*     qmarray_free(A); */
-/*     qmarray_free(Comb); */
-/*     qmarray_free(L); */
-/*     free(U); */
-/*     free(pivx); */
-/*     free(pivi); */
-/* } */
+    // check pivots
+    size_t ii,jj;
+    double eval;
+    struct GenericFunction * lf;
+    for (ii = 0; ii < 3; ii++){
+        for (jj = 0; jj < ii; jj++){
+            lf = qmarray_get_func(L,pivi[jj],ii);
+            eval = generic_function_1d_eval(lf,pivx[jj]);
+            CuAssertDblEquals(tc,0.0,eval,1e-14);
+        }
+
+        lf = qmarray_get_func(L,pivi[ii],ii);
+        eval = generic_function_1d_eval(lf,pivx[ii]);
+        CuAssertDblEquals(tc,1.0,eval,1e-14);
+    }
+
+    struct Qmarray * Comb = qmam(L,U,3);
+    double difff = qmarray_norm2diff(Comb,Acopy);
+    CuAssertDblEquals(tc,difff,0,1e-13);
+
+    fwrap_destroy(fw);
+    free(x);
+    one_approx_opts_free(qmopts);
+    lin_elem_exp_aopts_free(opts);
+    qmarray_free(Acopy);
+    qmarray_free(A);
+    qmarray_free(Comb);
+    qmarray_free(L);
+    free(U);
+    free(pivx);
+    free(pivi);
+}
 
 void Test_qmarray_maxvol1d(CuTest * tc){
 
@@ -1271,65 +1256,67 @@ void Test_qmarray_maxvol1d_hermite1(CuTest * tc){
     free(pivi);
 }
 
-/* void Test_qmarray_maxvol1d_linelm(CuTest * tc){ */
+void Test_qmarray_maxvol1d_linelm(CuTest * tc){
 
-/*     printf("Testing function: qmarray_maxvol1d linelm (1)\n"); */
+    printf("Testing function: qmarray_maxvol1d linelm (1)\n");
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func4,NULL);
+    fwrap_set_func_array(fw,2,func,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
 
-/*     double (*funcs [6])(double, void *) = */
-/*         {&func, &func2, &func3, &func4, */
-/*          &func5, &func6}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     struct counter c5; c5.N = 0; */
-/*     struct counter c6; c6.N = 0; */
-/*     void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6}; */
+    double * x = linspace(-1.0,1.0,10);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(10,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
+    struct Qmarray * A = qmarray_approx1d(3,2,qmopts,fw);
 
-/*     struct Qmarray * A = */
-/*         qmarray_approx1d(3, 2, funcs, args, LINELM, */
-/*                          NULL, -1.0, 1.0, NULL); */
-
-/*     unsigned char * text = NULL; */
-/*     size_t size; */
-/*     qmarray_serialize(NULL,A,&size); */
-/*     text = malloc(size * sizeof(unsigned char)); */
-/*     qmarray_serialize(text,A,NULL); */
+    unsigned char * text = NULL;
+    size_t size;
+    qmarray_serialize(NULL,A,&size);
+    text = malloc(size * sizeof(unsigned char));
+    qmarray_serialize(text,A,NULL);
     
-/*     struct Qmarray * C = NULL; */
-/*     qmarray_deserialize(text,&C); */
-/*     free(text); text = NULL; */
+    struct Qmarray * C = NULL;
+    qmarray_deserialize(text,&C);
+    free(text); text = NULL;
 
-/*     double diff = qmarray_norm2diff(A,C); */
-/*     CuAssertDblEquals(tc,0.0,diff,1e-10); */
-/*     qmarray_free(C); C = NULL; */
+    double diff = qmarray_norm2diff(A,C);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    qmarray_free(C); C = NULL;
 
     
-/*     double * Asinv = calloc_double(2*2); */
-/*     size_t * pivi = calloc_size_t(2); */
-/*     double * pivx= calloc_double(2); */
-
-/*     qmarray_maxvol1d(A,Asinv,pivi,pivx,NULL); */
+    double * Asinv = calloc_double(2*2);
+    size_t * pivi = calloc_size_t(2);
+    double * pivx= calloc_double(2);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,qmopts,NULL);
      
-/*     /\* */
-/*     printf("pivots at = \n"); */
-/*     iprint_sz(3,pivi); */
-/*     dprint(3,pivx); */
-/*     *\/ */
+    /*
+    printf("pivots at = \n");
+    iprint_sz(3,pivi);
+    dprint(3,pivx);
+    */
 
-/*     struct Qmarray * B = qmam(A,Asinv,2); */
-/*     double maxval, maxloc; */
-/*     size_t maxrow, maxcol; */
-/*     qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL); */
-/*     //printf("Less = %d", 1.0+1e-2 > maxval); */
-/*     CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval); */
-/*     qmarray_free(B); */
+    struct Qmarray * B = qmam(A,Asinv,2);
+    double maxval, maxloc;
+    size_t maxrow, maxcol;
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL);
+    //printf("Less = %d", 1.0+1e-2 > maxval);
+    CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
 
-/*     qmarray_free(A); */
-/*     free(Asinv); */
-/*     free(pivx); */
-/*     free(pivi); */
-/* } */
+
+    fwrap_destroy(fw);
+    one_approx_opts_free(qmopts);
+    lin_elem_exp_aopts_free(opts);
+    free(x); x= NULL;
+    qmarray_free(B);
+    qmarray_free(A);
+    free(Asinv);
+    free(pivx);
+    free(pivi);
+}
 
 void Test_fast_mat_kron(CuTest * tc)
 {
@@ -1840,13 +1827,12 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite);
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm); */
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm); */
-
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
 
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);
     SUITE_ADD_TEST(suite,Test_fast_kron_mat);

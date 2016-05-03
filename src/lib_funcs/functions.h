@@ -165,6 +165,15 @@ struct GenericFunction *
 generic_function_onezero(enum function_class, double, size_t,
                          double *, double, double);
 
+void generic_function_array_onezero(
+    struct GenericFunction **,
+    size_t,
+    enum function_class,
+    size_t,
+    size_t *,
+    double *,
+    void *);
+
 struct GenericFunction *
 generic_function_create_nodal(struct GenericFunction *,size_t, double *);
 struct GenericFunction *

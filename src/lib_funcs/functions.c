@@ -776,6 +776,69 @@ generic_function_create_nodal(struct GenericFunction * f,size_t N, double * x)
     return out;
 }
 
+struct GenericFunction * 
+generic_function_onezero2(
+    enum function_class fc,
+    size_t nzeros,
+    double * zero_locations,
+    void * opts
+    )
+{
+    assert (fc == LINELM);
+    struct GenericFunction * gf = generic_function_alloc(1,fc);
+    gf->f = lin_elem_exp_onezero(nzeros, zero_locations, opts);
+    return gf;
+}
+
+
+void generic_function_array_onezero(
+    struct GenericFunction ** L,
+    size_t n,
+    enum function_class fc,
+    size_t upto,
+    size_t * piv,
+    double * px,
+    void * opts)
+//    void * opt_args)
+{
+    //create an arbitrary array that has zeros at piv[:upto-1],px[:upto-1]
+    // and one at piv[upto],piv[upto] less than one every else
+    
+    // note that need to set piv[upto] and px[upto] in this function
+    // number of pivots per array
+
+    size_t * npiv = calloc_size_t(n); 
+    double ** x = malloc_dd(n); // pivots per function
+    for (size_t ii = 0; ii < upto; ii++){
+        npiv[piv[ii]]++;
+    }
+
+    for (size_t ii = 0; ii < n; ii++){
+        x[ii] = calloc_double(npiv[ii]);
+        size_t on = 0;
+        for (size_t jj = 0; jj < upto; jj++){
+            if (piv[jj] == ii){
+                x[ii][on] = px[jj];
+                on++;
+            }
+        }
+    }
+
+    for (size_t ii = 0; ii < n; ii++){
+        L[ii] = generic_function_onezero2(fc,npiv[ii],x[ii],opts);
+    }
+
+    double xval;
+    size_t amind;
+    generic_function_array_absmax(n, 1, L,&amind, &xval,NULL);//optargs);
+    px[upto] = xval;
+    piv[upto] = amind;
+    double val = generic_function_1d_eval(L[piv[upto]],px[upto]);
+    generic_function_array_scale(1.0/val,L,n);
+
+    free_dd(n,x);
+    free(npiv); npiv = NULL;
+}
 
 struct GenericFunction *
 generic_function_onezero(enum function_class fc, double one, size_t nz,

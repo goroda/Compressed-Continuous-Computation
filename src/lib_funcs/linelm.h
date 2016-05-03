@@ -130,6 +130,9 @@ lin_elem_exp_linear(double, double,
                     const struct LinElemExpAopts *);
 double lin_elem_exp_lb(struct LinElemExp *);
 double lin_elem_exp_ub(struct LinElemExp *);
+struct LinElemExp *
+lin_elem_exp_onezero(size_t, double *,
+                     struct LinElemExpAopts *);
 
 void print_lin_elem_exp(struct LinElemExp *, size_t, void *, FILE *);
 

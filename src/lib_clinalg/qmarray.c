@@ -1637,8 +1637,13 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
 
             if (A->funcs[kk*A->nrows]->fc == LINELM){
                 //printf("lets go!\n");
-                create_any_L_linelm(L->funcs+kk*L->nrows,
-                                    L->nrows,kk,piv,px,app,optargs);
+                /* create_any_L_linelm(L->funcs+kk*L->nrows, */
+                /*                     L->nrows,kk,piv,px,app,optargs); */
+                generic_function_array_onezero(
+                    L->funcs+kk*L->nrows,
+                    L->nrows, 
+                    app->fc,
+                    kk,piv,px,app->aopts);
             }
             else{
                 create_any_L(L->funcs+kk*L->nrows,L->nrows,

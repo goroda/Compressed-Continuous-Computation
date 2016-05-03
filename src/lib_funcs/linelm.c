@@ -1434,6 +1434,7 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExp
             lin_elem_exp_axpy(-proj,f[ii],f[jj]);
         }
     }
+    free(zeros); zeros = NULL;
     
     /* double norm, proj; */
     /* for (size_t ii = 0; ii < n; ii++){ */
@@ -1451,8 +1452,8 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExp
 }
 
 /********************************************************//**
-   Scale a function                                                         
-   
+   Scale a function 
+
    \param[in]     a - value
    \param[in,out] f - function
 *************************************************************/
@@ -1487,6 +1488,48 @@ double lin_elem_exp_ub(struct LinElemExp * f)
     return f->nodes[f->num_nodes-1];
 }
 
+
+/********************************************************//**
+    Create a linear element function with zeros at particular
+    locations and 1 everyhwhere else.
+
+    \param[in] nzeros    - number of zeros
+    \param[in] zero_locs - locations of zeros
+    \param[in] opts      - linear expansion options
+
+    \return upper bound
+*************************************************************/
+struct LinElemExp *
+lin_elem_exp_onezero(size_t nzeros, double * zero_locs,
+                     struct LinElemExpAopts * opts)
+{
+    assert (opts != NULL);
+    if (opts->adapt == 1){
+        // can do whatever I want
+        assert (1 == 0);
+        
+    }
+    else{
+        assert(opts->nodes != NULL);
+        assert(opts->num_nodes > nzeros);
+        double * coeff = calloc_double(opts->num_nodes);
+        struct LinElemExp * le = lin_elem_exp_init(opts->num_nodes, opts->nodes, coeff);
+        for (size_t ii = 0; ii < opts->num_nodes; ii++){
+            int nonzero = 1;
+            for (size_t jj = 0; jj < nzeros; jj++){
+                if (fabs(le->nodes[ii] - zero_locs[jj]) < 1e-14){
+                    nonzero = 0;
+                    break;
+                }
+            }
+            if (nonzero == 1){
+                le->coeff[ii] = 1.0;
+            }
+        }
+        free(coeff);
+        return le;
+    }
+}
 
 void print_lin_elem_exp(struct LinElemExp * f, size_t prec, 
                         void * args, FILE * stream)
