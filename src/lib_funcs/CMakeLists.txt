@@ -5,6 +5,7 @@ file(GLOB SRC_FILES
     piecewisepoly.c
     hpoly.c
     linelm.c
+    fapprox.c
     functions.c
     monitoring.c
     fwrap.c)

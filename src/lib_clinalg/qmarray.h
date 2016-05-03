@@ -46,6 +46,48 @@
 
 struct Qmarray;
 
+struct Qmarray * qmarray_alloc(size_t, size_t); 
+void qmarray_free(struct Qmarray *); 
+struct Qmarray * qmarray_copy(const struct Qmarray *);
+unsigned char * 
+qmarray_serialize(unsigned char *,const struct Qmarray *, size_t *);
+unsigned char * 
+qmarray_deserialize(unsigned char *, struct Qmarray **);
+
+struct Qmarray * 
+qmarray_approx1d(size_t, size_t, struct OneApproxOpts *,
+                 struct Fwrap *);
+
+/* struct Qmarray *  */
+/* qmarray_approx1d(size_t, size_t, double (**)(double, void *), */
+/*                     void **, enum function_class, void *, double, */
+/*                     double, void *); */
+struct Qmarray * 
+qmarray_from_fiber_cuts(size_t, size_t, 
+                    double (*f)(double, void *),struct FiberCut **, 
+                    enum function_class, void *, double,
+                    double, void *);
+
+struct Qmarray *
+qmarray_orth1d_rows(size_t, size_t, struct OneApproxOpts *);
+struct Qmarray *
+qmarray_orth1d_columns(size_t, size_t, struct OneApproxOpts *);
+struct Qmarray * 
+qmarray_zeros(size_t, size_t,struct OneApproxOpts *);
+
+/* struct Qmarray *  */
+/* qmarray_orth1d_columns(enum function_class,  */
+/*     void *, size_t, size_t, double, double); */
+/* struct Qmarray * */
+/* qmarray_orth1d_rows(enum function_class, void *, size_t, */
+/*                             size_t, double, double); */
+
+struct Qmarray *
+qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
+struct Qmarray * 
+qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
+
+
 
 // getters and setters
 struct GenericFunction *
@@ -66,6 +108,8 @@ void qmarray_set_column_gf(struct Qmarray *, size_t,
 struct Quasimatrix * 
 qmarray_extract_column(const struct Qmarray *, size_t);
 
+size_t qmarray_get_ncols(const struct Qmarray *);
+size_t qmarray_get_nrows(const struct Qmarray *);
 
 // qmarrays
 
@@ -73,7 +117,7 @@ qmarray_extract_column(const struct Qmarray *, size_t);
 /* struct Quasimatrix * qmav(struct Qmarray *, double *); */
 struct Qmarray * qmam(const struct Qmarray *,const double *, size_t);
 struct Qmarray * qmatm(const struct Qmarray *,const double *, size_t);
-struct Qmarray * mqma(double *,const struct Qmarray *, size_t);
+struct Qmarray * mqma(const double *,const struct Qmarray *, size_t);
 struct Qmarray * qmaqma(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmatqma(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmaqmat(const struct Qmarray * a, const struct Qmarray * b);
@@ -99,5 +143,45 @@ double qmarray_norm2diff(const struct Qmarray *,const struct Qmarray *);
 double qmarray_norm2(const struct Qmarray *);
 void qmarray_axpy(double,const struct Qmarray *, struct Qmarray *);
 
+//struct Quasimatrix * qmmt(struct Quasimatrix *, double *, size_t);
+int qmarray_lu1d(struct Qmarray *, struct Qmarray *, double *, size_t *,
+                 double *,void*,void *);
+int qmarray_maxvol1d(struct Qmarray *, double *, size_t *, double *,void*,void *);
 
+int qmarray_qhouse(struct Qmarray *, struct Qmarray *);
+int qmarray_qhouse_rows(struct Qmarray *, struct Qmarray *);
+int qmarray_householder(struct Qmarray *, struct Qmarray *, 
+                        struct Qmarray *, double *);
+int qmarray_householder_rows(struct Qmarray *, struct Qmarray *, 
+                             struct Qmarray *, double *);
+struct Qmarray *
+qmarray_householder_simple(char *, struct Qmarray *, double *,struct OneApproxOpts *);
+struct Qmarray *
+qmarray_householder_simple_grid(char *, struct Qmarray *, double *,
+                                struct c3Vector *);
+
+int qmarray_svd(struct Qmarray *, struct Qmarray **, double *, double *,
+                struct OneApproxOpts *);
+size_t qmarray_truncated_svd(struct Qmarray *, struct Qmarray **, 
+                             double **, double **, double, struct OneApproxOpts * );
+
+
+void qmarray_absmax1d(struct Qmarray *, double *, size_t *, 
+                      size_t *, double *, void *);
+struct Qmarray * qmarray_transpose(struct Qmarray * a);
+struct Qmarray * qmarray_stackh(struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_stackv(struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_deriv(struct Qmarray *);
+void qmarray_roundt(struct Qmarray **, double);
+
+void qmarray_eval(struct Qmarray *, double, double *);
+struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
+
+
+int qmarray_qr(struct Qmarray *, struct Qmarray **, double **, struct OneApproxOpts *);
+int qmarray_lq(struct Qmarray *, struct Qmarray **, double **, struct OneApproxOpts *);
+
+int qmarray_qr_gs(struct Qmarray *, double **);
+int qmarray_lq_gs(struct Qmarray *, double **);
 #endif

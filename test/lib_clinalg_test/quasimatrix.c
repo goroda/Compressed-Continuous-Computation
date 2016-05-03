@@ -328,6 +328,8 @@ void Test_quasimatrix_maxvol1d(CuTest * tc){
     quasimatrix_free(A);
     free(Asinv);
     free(piv);
+    pw_poly_opts_free(opts);
+    fwrap_destroy(fw);
 }
 
 /* double func2d(double x, double y, void * args) */
@@ -427,7 +429,6 @@ void Test_quasimatrix_serialize(CuTest * tc){
     text = malloc(ts * sizeof(unsigned char));
     quasimatrix_serialize(text,A,NULL);
 
-    //printf("text=\n%s\n",text);
 
     struct Quasimatrix * B = NULL;
     quasimatrix_deserialize(text, &B);
@@ -436,34 +437,17 @@ void Test_quasimatrix_serialize(CuTest * tc){
     CuAssertIntEquals(tc,3,bsize);
 
     for (size_t ii = 0; ii < 3; ii++){
-        printf("ii = %zu\n",ii);
+        /* printf("ii = %zu\n",ii); */
         struct GenericFunction * gf = quasimatrix_get_func(A,ii);
         double integral = generic_function_integral(gf);
-
+        /* printf("\t Integral A = %G\n ",integral); */
         struct GenericFunction * g2 = quasimatrix_get_func(B,ii);
         double integral2 = generic_function_integral(g2);
-        printf("Integral = %G,%G\n",integral,integral2);
-        /* CuAssertDblEquals(tc,integral,integral2,1e-13); */
-
-
-        unsigned char * t = NULL;
-        size_t M;
-        struct GenericFunction * pl = quasimatrix_get_func(A,ii);
-        serialize_generic_function(t, pl, &M);
-        printf("size should be %zu\n",M);
-        t = malloc(M * sizeof(char));
-        serialize_generic_function(t, pl, NULL);
-        struct GenericFunction * pt = NULL;
-        deserialize_generic_function(t, &pt);
-        double diff = generic_function_norm2diff(pl,pt);
-        printf("diff = %G\n",diff);
-        CuAssertDblEquals(tc,diff,0.0,1e-14);
-        free(t);
-        generic_function_free(pt);
+        /* printf("\t Integral B= %G\n",integral,integral2); */
+        CuAssertDblEquals(tc,integral,integral2,1e-13);
     }
 
-    /* quasimatrix_funcs_equal(tc,3,A,B,1e-13); */
-    
+    quasimatrix_funcs_equal(tc,3,A,B,1e-13);
     free(text);
     quasimatrix_free(A);
     quasimatrix_free(B);
@@ -480,7 +464,7 @@ CuSuite * QuasimatrixGetSuite(){
     SUITE_ADD_TEST(suite, Test_quasimatrix_householder_weird_domain);
     SUITE_ADD_TEST(suite, Test_quasimatrix_lu1d);
     SUITE_ADD_TEST(suite, Test_quasimatrix_maxvol1d);
-    /* SUITE_ADD_TEST(suite, Test_quasimatrix_serialize); */
+    SUITE_ADD_TEST(suite, Test_quasimatrix_serialize);
     /* SUITE_ADD_TEST(suite, Test_cross_approx_2d); */
     return suite;
 }

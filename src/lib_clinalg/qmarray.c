@@ -48,8 +48,11 @@
 #include "lib_funcs.h"
 
 #include "quasimatrix.h"
+#include "qmarray.h"
 
 #define ZEROTHRESH 1e2*DBL_EPSILON
+#define ZERO 1e2*DBL_EPSILON
+
 #ifndef VQMALU
     #define VQMALU 0
 #endif
@@ -130,7 +133,7 @@ void qmarray_free(struct Qmarray * qm){
 
     \return qmo  
 ***************************************************************/
-struct Qmarray * qmarray_copy(struct Qmarray * qm)
+struct Qmarray * qmarray_copy(const struct Qmarray * qm)
 {
     struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
     size_t ii;
@@ -141,11 +144,292 @@ struct Qmarray * qmarray_copy(struct Qmarray * qm)
     return qmo;
 }
 
+/***********************************************************//**
+    Serialize a qmarray
+
+    \param[in,out] ser       - stream to serialize to
+    \param[in]     qma       - quasimatrix array
+    \param[in,out] totSizeIn - if NULL then serialize, if not NULL
+                               then return size;
+
+    \return ser shifted by number of bytes
+***************************************************************/
+unsigned char * 
+qmarray_serialize(unsigned char * ser, const struct Qmarray * qma, 
+                  size_t *totSizeIn)
+{
+
+    // nrows -> ncols -> func -> func-> ... -> func
+    size_t ii;
+    size_t totSize = 2*sizeof(size_t);
+    size_t size_temp;
+    for (ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        serialize_generic_function(NULL,qma->funcs[ii],&size_temp);
+        totSize += size_temp;
+    }
+    if (totSizeIn != NULL){
+        *totSizeIn = totSize;
+        return ser;
+    }
+    
+    //printf("in serializing qmarray\n");
+    unsigned char * ptr = ser;
+    ptr = serialize_size_t(ptr, qma->nrows);
+    ptr = serialize_size_t(ptr, qma->ncols);
+    for (ii = 0; ii < qma->nrows * qma->ncols; ii++){
+       //printf("on function number (%zu/%zu)\n",ii,qma->nrows * qma->nrows);
+       // print_generic_function(qma->funcs[ii],3,NULL);
+        ptr = serialize_generic_function(ptr, qma->funcs[ii],NULL);
+    }
+    return ptr;
+}
+
+/***********************************************************//**
+    Deserialize a qmarray
+
+    \param[in]     ser - serialized qmarray
+    \param[in,out] qma - qmarray
+
+    \return ptr - shifted ser after deserialization
+***************************************************************/
+unsigned char *
+qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
+{
+    unsigned char * ptr = ser;
+
+    size_t nrows, ncols;
+    ptr = deserialize_size_t(ptr, &nrows);
+    ptr = deserialize_size_t(ptr, &ncols);
+    *qma = qmarray_alloc(nrows, ncols);
+
+    size_t ii;
+    for (ii = 0; ii < nrows * ncols; ii++){
+        ptr = deserialize_generic_function(ptr, &((*qma)->funcs[ii]));
+    }
+    
+    return ptr;
+}
+
+/***********************************************************//**
+    Create a qmarray by approximating 1d functions
+
+    \param[in] nrows - number of rows of quasimatrix
+    \param[in] ncols - number of cols of quasimatrix
+    \param[in] funcs - functions (nrows*ncols)
+    \param[in] args  - extra arguments to each function
+    \param[in] fc    - function class of each column
+    \param[in] st    - sub_type of each column
+    \param[in] lb    - lower bound of inputs to functions
+    \param[in] ub    - upper bound of inputs to functions
+    \param[in] aopts - approximation options
+
+    \return qmarray
+***************************************************************/
+struct Qmarray * 
+qmarray_approx1d(size_t nrows, size_t ncols, struct OneApproxOpts * fapp,
+                 struct Fwrap * fw)
+                 /* double (**funcs)(double, void *), */
+                 /* void ** args,  */
+                 /* enum function_class fc, void * st, double lb, */
+                 /* double ub, void * aopts) */
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    size_t ii;
+    for (ii = 0; ii < nrows*ncols; ii++){
+        fwrap_set_which_eval(fw,ii);
+        qm->funcs[ii] = 
+            generic_function_approximate1d(fapp->fc,
+                                           fw,
+                                           fapp->aopts);
+    }
+    return qm;
+}
+
+/***********************************************************//**
+    Create a qmarray from a fiber_cuts array
+
+    \param[in] nrows    - number of rows of qmarray
+    \param[in] ncols    - number of columns of qmarray
+    \param[in] f        - functions
+    \param[in] fcut     - array of fiber cuts
+    \param[in] fc       - function class of each column
+    \param[in] sub_type - sub_type of each column
+    \param[in] lb       - lower bound of inputs to functions
+    \param[in] ub       - upper bound of inputs to functions
+    \param[in] aopts    - approximation options
+
+    \return qmarray
+***************************************************************/
+/* struct Qmarray *  */
+/* qmarray_from_fiber_cuts(size_t nrows, size_t ncols,  */
+/*                     double (*f)(double, void *),struct FiberCut ** fcut,  */
+/*                     enum function_class fc, void * sub_type, double lb, */
+/*                     double ub, void * aopts) */
+/* { */
+/*     struct Qmarray * qm = qmarray_alloc(nrows,ncols); */
+/*     size_t ii; */
+/*     for (ii = 0; ii < nrows*ncols; ii++){ */
+/*         qm->funcs[ii] = generic_function_approximate1d(f, fcut[ii],  */
+/*                                     fc, sub_type, lb, ub, aopts); */
+/*     } */
+/*     return qm; */
+/* } */
+
+
+
+/***********************************************************//**
+    Generate a qmarray with orthonormal columns consisting of
+    one dimensional functions of linear elements on a certain grid
+
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] grid  - grid size
+
+    \return qmarray with orthonormal columns
+
+    \note
+        - Not super efficient because of copies
+***************************************************************/
+struct Qmarray *
+qmarray_orth1d_linelm_grid(size_t nrows,size_t ncols, struct c3Vector * grid)
+{
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    generic_function_array_orth1d_linelm_columns(qm->funcs,nrows,ncols,grid);
+    return qm;
+}
+
+/***********************************************************//**
+    Generate a qmarray with orthonormal rows
+
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] opts  - approximation optsion
+
+    \return qmarray with orthonormal rows
+
+    \note
+        Not super efficient because of copies
+***************************************************************/
+struct Qmarray *
+qmarray_orth1d_rows(size_t nrows, size_t ncols, struct OneApproxOpts * opts)
+{
+
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    
+    struct GenericFunction ** funcs = NULL;
+    if ( NULL == (funcs = malloc(nrows*sizeof(struct GenericFunction *)))){
+        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
+        exit(1);
+    }
+    size_t ii, jj,kk;
+    for (ii = 0; ii < nrows; ii++){
+        funcs[ii] = NULL;
+    }
+    //printf("wwwhat\n");
+    generic_function_array_orth(nrows, funcs, opts->fc, opts->aopts);
+    //printf("wwwhere\n");
+    
+    struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
+    for (jj = 0; jj < nrows; jj++){
+        qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
+        }
+        for (kk = onnon+1; kk < ncols; kk++){
+            qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == ncols){
+            onorder = onorder+1;
+            onnon = 0;
+        }
+    }
+    //printf("max order rows = %zu\n",onorder);
+    
+    for (ii = 0; ii < nrows;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
+    free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
+
+    return qm;
+}
+
+/***********************************************************//**
+    Generate a qmarray with orthonormal columns consisting of
+    one dimensional functions
+
+    \param[in] nrows - number of rows
+    \param[in] ncols - number of columns
+    \param[in] opts  - options
+
+    \return qmarray with orthonormal columns
+
+    \note
+        - Not super efficient because of copies
+***************************************************************/
+struct Qmarray *
+qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
+{
+
+    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
+    
+    struct GenericFunction ** funcs = NULL;
+    if ( NULL == (funcs = malloc(ncols*sizeof(struct GenericFunction *)))){
+        fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
+        exit(1);
+    }
+    size_t ii, jj,kk;
+    for (ii = 0; ii < ncols; ii++){
+        funcs[ii] = NULL;
+    }
+    
+    generic_function_array_orth(ncols, funcs, opts->fc, opts->aopts);
+    
+    struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
+    
+    size_t onnon = 0;
+    size_t onorder = 0;
+    for (jj = 0; jj < ncols; jj++){
+        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+        for (kk = 0; kk < onnon; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        for (kk = onnon+1; kk < nrows; kk++){
+            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+        }
+        onnon = onnon+1;
+        if (onnon == nrows){
+            onorder = onorder+1;
+            onnon = 0;
+        }
+    }
+    //printf("max order rows = %zu\n",onorder);
+    
+    for (ii = 0; ii < ncols;ii++){
+        generic_function_free(funcs[ii]);
+        funcs[ii] = NULL;
+    }
+    free(funcs); funcs=NULL;
+    generic_function_free(zero); zero = NULL;
+
+    /* return qm; */
+    /* struct Qmarray * qm = qmarray_alloc(nrows,ncols); */
+    /* struct Qmarray * qmtemp = qmarray_alloc(ncols,1); */
+    /* generic_function_array_orth1d_columns(qm->funcs,qmtemp->funcs, */
+    /*                                       fc,st,nrows,ncols,lb,ub); */
+    
+    /* qmarray_free(qmtemp); qmtemp = NULL; */
+    return qm;
+}
 
 /***********************************************************//**
     Create a Qmarray of zero functions
 
-    \param[in] fc    - function type
     \param[in] nrows - number of rows of quasimatrix
     \param[in] ncols - number of cols of quasimatrix
     \param[in] opts  - options
@@ -154,14 +438,12 @@ struct Qmarray * qmarray_copy(struct Qmarray * qm)
     \return qmarray
 ***************************************************************/
 struct Qmarray *
-qmarray_zeros(enum function_class fc, size_t nrows,
-              size_t ncols, void * opts)
+qmarray_zeros(size_t nrows,size_t ncols, struct OneApproxOpts * opts)
 {
-    
     struct Qmarray * qm = qmarray_alloc(nrows,ncols);
     size_t ii;
     for (ii = 0; ii < nrows*ncols; ii++){
-        qm->funcs[ii] = generic_function_constant(0.0,fc,opts);
+        qm->funcs[ii] = generic_function_constant(0.0,opts->fc,opts->aopts);
     }
     return qm;
 }
@@ -191,6 +473,8 @@ qmarray_poly_randu(enum poly_type ptype,
     }
     return qm;
 }
+
+
 
 // getters and setters
 /**********************************************************//**
@@ -307,6 +591,24 @@ qmarray_extract_column(const struct Qmarray * qma, size_t col)
     return qm;
 }
 
+/***********************************************************//**
+    get number of columns
+***************************************************************/
+size_t qmarray_get_ncols(const struct Qmarray * qma)
+{
+    assert (qma != NULL);
+    return qma->ncols;
+}
+
+/***********************************************************//**
+    get number of rows
+***************************************************************/
+size_t qmarray_get_nrows(const struct Qmarray * qma)
+{
+    assert (qma != NULL);
+    return qma->nrows;
+}
+
 //////////////////////////////////////////////////////////////////
 
 /***********************************************************//**
@@ -318,7 +620,7 @@ qmarray_extract_column(const struct Qmarray * qma, size_t col)
 
     \return B - qmarray
 ***************************************************************/
-struct Qmarray * qmam(struct Qmarray * Q, double * R, size_t b)
+struct Qmarray * qmam(const struct Qmarray * Q, const double * R, size_t b)
 {
     size_t nrows = Q->nrows;
     struct Qmarray * B = qmarray_alloc(nrows,b);
@@ -368,7 +670,7 @@ qmatm(const struct Qmarray * Q,const double * R, size_t b)
     \return B - qmarray (b x Q->ncols)
 ***************************************************************/
 struct Qmarray *
-mqma(double * R, struct Qmarray * Q, size_t b)
+mqma(const double * R, const struct Qmarray * Q, size_t b)
 {
     struct Qmarray * B = qmarray_alloc(b, Q->ncols);
     size_t ii,jj;
@@ -596,7 +898,7 @@ struct Qmarray * qmarray_kron(const struct Qmarray * a,const struct Qmarray * b)
 
     \return c -  qmarray kron(a,b)
 ***************************************************************/
-double * qmarray_kron_integrate(struct Qmarray * a, struct Qmarray * b)
+double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray * b)
 {
     double * c = calloc_double(a->nrows*b->nrows * a->ncols*b->ncols);
 
@@ -1281,12 +1583,14 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     \param[in,out] u       - allocated space for U factor
     \param[in,out] piv     - row of pivots 
     \param[in,out] px      - x values of pivots 
+    \param[in]     appargs - approximation arguments
     \param[in]     optargs - optimization arguments
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
 ***************************************************************/
 int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
-                 size_t * piv, double * px, void * optargs)
+                 size_t * piv, double * px, void * app,
+                 void * optargs)
 {
     int info = 0;
     
@@ -1295,8 +1599,8 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
     size_t amind;
     struct GenericFunction ** temp = NULL;
     
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
+    /* double lb = generic_function_get_lower_bound(A->funcs[0]); */
+    /* double ub = generic_function_get_upper_bound(A->funcs[0]); */
     for (kk = 0; kk < A->ncols; kk++){
 
         if (VQMALU){
@@ -1339,11 +1643,11 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
             if (A->funcs[kk*A->nrows]->fc == LINELM){
                 //printf("lets go!\n");
                 create_any_L_linelm(L->funcs+kk*L->nrows,
-                                    L->nrows,kk,piv,px,lb,ub,optargs);
+                                    L->nrows,kk,piv,px,app,optargs);
             }
             else{
                 create_any_L(L->funcs+kk*L->nrows,L->nrows,
-                             kk,piv,px,lb,ub,optargs);
+                             kk,piv,px,app,optargs);
             }
             amind = piv[kk];
             amloc = px[kk];
@@ -1477,6 +1781,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     \param[in,out] Asinv   - submatrix inv
     \param[in,out] pivi    - row pivots 
     \param[in,out] pivx    - x value in row pivots 
+    \param[in]     appargs - approximation arguments
     \param[in]     optargs - optimization arguments
 
     \return info = 
@@ -1488,7 +1793,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
         naive implementation without rank 1 updates
 ***************************************************************/
 int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi, 
-                     double * pivx, void * optargs)
+                     double * pivx, void * appargs, void * optargs)
 {
     //printf("in maxvolqmarray!\n");
 
@@ -1510,7 +1815,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
 
     //print_qmarray(Acopy,0,NULL);
-    info =  qmarray_lu1d(Acopy,L,U,pivi, pivx,optargs);
+    info =  qmarray_lu1d(Acopy,L,U,pivi,pivx,appargs,optargs);
     if (VQMAMAXVOL){
         printf("pivot immediate \n");
         iprint_sz(A->ncols, pivi);
@@ -2148,115 +2453,49 @@ int qmarray_qhouse_rows(struct Qmarray * Q, struct Qmarray * V)
     \param[in]     dir - type either "QR" or "LQ"
     \param[in,out] A   - qmarray to triangularize (destroyed in call)
     \param[in,out] R   - allocated space upper triangular factor
+    \param[in]     app - approximation arguments
 
     \return Q 
 ***************************************************************/
 struct Qmarray *
-qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
+qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
+                           struct OneApproxOpts * app)
 {
     
-    double lb = generic_function_get_lower_bound(A->funcs[0]);
-    double ub = generic_function_get_upper_bound(A->funcs[0]);
-    
-
     size_t ncols = A->ncols;
-    enum poly_type ptype = LEGENDRE;
+
     // generate two quasimatrices needed for householder
-   
     struct Qmarray * Q = NULL;
     if (strcmp(dir,"QR") == 0){
-        int out = 0;
-        int fastqr = 1;
-        int polyorth = 1;
-        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
-            if (A->funcs[ii]->fc == PIECEWISE){
-                fastqr = 0;
-            }
-            if (A->funcs[ii]->fc == LINELM){
-                polyorth = 0;
-                //fastqr = 0;
-            }
-        }
-
-        if (polyorth == 1){
-            Q = qmarray_orth1d_columns(POLYNOMIAL,
-                                       &(A->funcs[0]->sub_type.ptype),
-                                       A->nrows,
-                                       ncols, lb, ub);   
-            if (fastqr == 1){
-                out = qmarray_qr(A,&Q,&R);
-                assert (out == 0);
-            }
-            else if (fastqr == 0){
-                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-                out = qmarray_householder(A,Q,V,R);
-                assert(out == 0);
-                out = qmarray_qhouse(Q,V);
-                assert(out == 0);
-                qmarray_free(V);
-            }
+        
+        Q = qmarray_orth1d_columns(A->nrows,ncols,app);
+        if (app->fc != PIECEWISE){
+            int out = qmarray_qr(A,&Q,&R,app);
+            assert (out == 0);
         }
         else{
-            /* printf("should be in linelm!\n"); */
-            /* print_qmarray(A,0,NULL); */
-            Q = qmarray_orth1d_columns(LINELM, 
-                                       &ptype, A->nrows, ncols,
-                                       lb, ub);
-            /* printf("got orthonormal columns\n"); */
-            /* print_qmarray(Q,0,NULL); */
-            out = qmarray_qr(A,&Q,&R);
-            /* printf("performed qmarray_qr\n"); */
-            //printf("R = \n");
-            //dprint2d_col(ncols,ncols,R);
-
+            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+            int out = qmarray_householder(A,Q,V,R);
             assert(out == 0);
+            out = qmarray_qhouse(Q,V);
+            assert(out == 0);
+            qmarray_free(V);
         }
-        /* printf("done with QR\n"); */
     }
     else if (strcmp(dir, "LQ") == 0){
-      
-        int out = 0;
-        int fastqr = 1;
-        int polyorth = 1;
-        for (size_t ii = 0; ii < A->nrows*A->ncols;ii++){
-            if (A->funcs[ii]->fc == PIECEWISE){
-                fastqr = 0;
-                // break;
-            }
-            if  (A->funcs[ii]->fc == LINELM){
-                polyorth = 0;
-            }
-        }
-      
-        if (polyorth == 1){
-            Q = qmarray_orth1d_rows(POLYNOMIAL,
-                                    &(A->funcs[0]->sub_type.ptype),
-                                    A->nrows, ncols,
-                                    lb, ub); 
-            if (fastqr == 1){
-                //free(R); R = NULL;
-                out = qmarray_lq(A,&Q,&R);
-                assert (out == 0);
-            }
-            else{
-                struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
-                //printf("here\n");
-                out = qmarray_householder_rows(A,Q,V,R);
-                //printf("there!\n");
-                assert(out == 0);
-                out = qmarray_qhouse_rows(Q,V);
-                assert(out == 0);
-                qmarray_free(V); V = NULL;
-            }
+        Q = qmarray_orth1d_rows(A->nrows,ncols,app);
+        if (app->fc != PIECEWISE){
+            //free(R); R = NULL;
+            int out = qmarray_lq(A,&Q,&R,app);
+            assert (out == 0);
         }
         else{
-            //printf("here~\n");
-            Q = qmarray_orth1d_rows(LINELM, 
-                                    &ptype, A->nrows, ncols,
-                                    lb, ub);
-            //printf("there!\n");
-            out = qmarray_lq(A,&Q,&R);
+            struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
+            int out = qmarray_householder_rows(A,Q,V,R);
             assert(out == 0);
+            out = qmarray_qhouse_rows(Q,V);
+            assert(out == 0);
+            qmarray_free(V); V = NULL;
         }
     }
     else{
@@ -2278,53 +2517,54 @@ qmarray_householder_simple(char * dir, struct Qmarray * A, double * R)
 
     \return Q 
 ***************************************************************/
-struct Qmarray *
-qmarray_householder_simple_grid(char * dir, struct Qmarray * A, double * R,
-                                struct c3Vector * grid)
-{
+/* struct Qmarray * */
+/* qmarray_householder_simple_grid(char * dir, struct Qmarray * A, double * R, */
+/*                                 struct c3Vector * grid) */
+/* { */
     
-    for (size_t ii = 0; ii < A->nrows * A->ncols; ii++){
-        assert(A->funcs[ii]->fc == LINELM);
-    }
+/*     for (size_t ii = 0; ii < A->nrows * A->ncols; ii++){ */
+/*         assert(A->funcs[ii]->fc == LINELM); */
+/*     } */
 
-    struct Qmarray * Q = NULL;
-    if (strcmp(dir,"QR") == 0){
-        Q = qmarray_orth1d_linelm_grid(A->nrows, A->ncols, grid);
-        int out = qmarray_qr(A,&Q,&R);
-        assert (out == 0);
-    }
-    else if (strcmp(dir, "LQ") == 0){
-        struct Qmarray * temp = qmarray_orth1d_linelm_grid(A->nrows,A->ncols,grid);
-        Q = qmarray_transpose(temp);
-        int out = qmarray_lq(A,&Q,&R);
-        assert(out == 0);
-        qmarray_free(temp); temp = NULL;
-    }
-    else{
-        fprintf(stderr, "No clear QR/LQ decomposition for type=%s\n",dir);
-        exit(1);
-    }
-    return Q;
-}
+/*     struct Qmarray * Q = NULL; */
+/*     if (strcmp(dir,"QR") == 0){ */
+/*         Q = qmarray_orth1d_linelm_grid(A->nrows, A->ncols, grid); */
+/*         int out = qmarray_qr(A,&Q,&R); */
+/*         assert (out == 0); */
+/*     } */
+/*     else if (strcmp(dir, "LQ") == 0){ */
+/*         struct Qmarray * temp = qmarray_orth1d_linelm_grid(A->nrows,A->ncols,grid); */
+/*         Q = qmarray_transpose(temp); */
+/*         int out = qmarray_lq(A,&Q,&R); */
+/*         assert(out == 0); */
+/*         qmarray_free(temp); temp = NULL; */
+/*     } */
+/*     else{ */
+/*         fprintf(stderr, "No clear QR/LQ decomposition for type=%s\n",dir); */
+/*         exit(1); */
+/*     } */
+/*     return Q; */
+/* } */
 
 /***********************************************************//**
     Compute the svd of a quasimatrix array Udiag(lam)vt = A
 
-    \param[in,out] A   - qmarray to get SVD (destroyed)
-    \param[in,out] U   - qmarray with orthonormal columns
-    \param[in,out] lam - singular values
-    \param[in,out] vt  - matrix containing right singular vectors
+    \param[in,out] A    - qmarray to get SVD (destroyed)
+    \param[in,out] U    - qmarray with orthonormal columns
+    \param[in,out] lam  - singular values
+    \param[in,out] vt   - matrix containing right singular vectors
+    \param[in]     opts - options for approximations
 
     \return info - if not == 0 then error
 ***************************************************************/
 int qmarray_svd(struct Qmarray * A, struct Qmarray ** U, double * lam, 
-            double * vt)
+                double * vt, struct OneApproxOpts * opts)
 {
 
     int info = 0;
 
     double * R = calloc_double(A->ncols * A->ncols);
-    struct Qmarray * temp = qmarray_householder_simple("QR",A,R);
+    struct Qmarray * temp = qmarray_householder_simple("QR",A,R,opts);
 
     double * u = calloc_double(A->ncols * A->ncols);
     svd(A->ncols, A->ncols, A->ncols, R, u,lam,vt);
@@ -2347,6 +2587,7 @@ int qmarray_svd(struct Qmarray * A, struct Qmarray ** U, double * lam,
     \param[in,out] lam   - singular values 
     \param[in,out] vt    - matrix containing right singular vectors
     \param[in,out] delta - threshold
+    \param[in]     opts  - approximation options
 
     \return rank - rank of the qmarray
     
@@ -2355,12 +2596,13 @@ int qmarray_svd(struct Qmarray * A, struct Qmarray ** U, double * lam,
 ***************************************************************/
 size_t qmarray_truncated_svd(
     struct Qmarray * A, struct Qmarray ** U, 
-    double ** lam, double ** vt, double delta)
+    double ** lam, double ** vt, double delta,
+    struct OneApproxOpts * opts)
 {
 
     //int info = 0;
     double * R = calloc_double(A->ncols * A->ncols);
-    struct Qmarray * temp = qmarray_householder_simple("QR",A,R);
+    struct Qmarray * temp = qmarray_householder_simple("QR",A,R,opts);
 
     double * u = NULL;
     //printf("R = \n");
@@ -2583,4 +2825,376 @@ struct Qmarray * qmarray_create_nodal(struct Qmarray * qma, size_t N, double * x
         qmaout->funcs[ii] = generic_function_create_nodal(qma->funcs[ii],N,x);
     }
     return qmaout;
+}
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+int qmarray_qr(struct Qmarray * A, struct Qmarray ** Q, double ** R, 
+               struct OneApproxOpts * app)
+{
+
+    size_t ii,kk,ll;
+
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+    if ( (*Q) == NULL){
+        *Q = qmarray_orth1d_columns(nrows,ncols,app);
+    }
+
+   // print_qmarray(*Q,0,NULL);
+    
+    if ((*R) == NULL){
+        *R = calloc_double(ncols*ncols);
+    }
+    
+    struct Qmarray * V = qmarray_alloc(nrows,ncols);
+    for (ii = 0; ii < nrows * ncols; ii++){
+        V->funcs[ii] = generic_function_alloc_base(1);    
+    }
+    
+    /* printf("\n\n\n ------------------------------ \n"); */
+    /* printf("in qmarray QR\n"); */
+    /* for (size_t ii = 0; ii < ncols; ii++){ */
+    /*     struct GenericFunction * gf = qmarray_get_func(*Q,0,ii); */
+    /*     double integral = generic_function_integral(gf); */
+    /*     double norm = generic_function_norm(gf); */
+    /*     printf("\nintegral = %G, norm=%G\n",integral,norm); */
+    /*     /\* print_generic_function(gf,0,NULL); *\/ */
+    /* } */
+
+
+    double s, rho, alpha, sigma,v;
+    for (ii = 0; ii < ncols; ii++){
+       /* printf("ii = %zu \n", ii); */
+
+        rho = generic_function_array_norm(nrows,1,A->funcs+ii*nrows);
+        (*R)[ii*ncols+ii] = rho;
+        alpha = generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
+                                           A->funcs+ii*nrows);
+        
+        /* printf("\t rho=%G, \t  alpha=%G\n",rho,alpha); */
+        if (fabs(alpha) < ZERO){
+            alpha = 0.0;
+            s = 0.0;
+        }
+        else{
+            s = -alpha / fabs(alpha);    
+            if (s < 0.0){
+                generic_function_array_flip_sign(nrows,1,
+                                                 (*Q)->funcs+ii*nrows);
+            }
+        }
+
+//        printf("s = %G\n",s);
+
+        for (kk = 0; kk < nrows; kk++){
+            generic_function_weighted_sum_pa(
+                rho,(*Q)->funcs[ii*nrows+kk],-1.0,
+                A->funcs[ii*nrows+kk],
+                &(V->funcs[ii*nrows+kk]));
+        }
+
+        //improve orthogonality
+        for (size_t zz = 0; zz < ii; zz++){
+            v = generic_function_inner_sum(nrows,1,
+                                           V->funcs+ii*nrows,
+                                           1, (*Q)->funcs+zz*nrows);
+            generic_function_array_axpy(nrows,-v,(*Q)->funcs+zz*nrows,
+                                    V->funcs+ii*nrows);
+        }
+
+        sigma = 0.0;
+        for (kk = 0; kk < nrows; kk++){
+            sigma += generic_function_inner(V->funcs[ii*nrows+kk],
+                                            V->funcs[ii*nrows+kk]);
+        }
+
+        /* printf("\t sigma = %G\n",sigma); */
+        sigma = sqrt(sigma);
+        // weird that this line is needed for stabilization
+        // Need to add reorthoganlization
+        //sigma = sigma + 1e-16;
+        if (fabs(sigma) < ZERO){
+            //printf("less than zero sigma = %G,Zero=%G\n",sigma,ZERO);
+            //V=E
+            for (kk = 0; kk < nrows; kk++){
+                generic_function_free(V->funcs[ii*nrows+kk]);
+                V->funcs[ii*nrows+kk] = NULL;
+                V->funcs[ii*nrows+kk] = generic_function_copy(
+                    (*Q)->funcs[ii*nrows+kk]);
+                //generic_function_copy_pa((*Q)->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
+            }
+        }
+        else{
+            /* printf("\t scale that bad boy, sigma less? \n"); */
+            generic_function_array_scale(1.0/sigma,V->funcs+ii*nrows,
+                                         nrows);
+        }
+        
+        //printf("start inner loop\n");
+        double ev = generic_function_inner_sum(nrows,1,
+                                               (*Q)->funcs+ii*nrows,1,
+                                               V->funcs+ii*nrows);
+        for (kk = ii+1; kk < ncols; kk++){
+            double temp = 
+                generic_function_inner_sum(nrows,1,
+                                           V->funcs+ii*nrows,1,
+                                           A->funcs+kk*nrows);
+            (*R)[kk*ncols+ii]=
+                generic_function_inner_sum(nrows,1,
+                                           (*Q)->funcs+ii*nrows,1,
+                                           A->funcs+kk*nrows);
+            (*R)[kk*ncols+ii] += (-2.0 * ev * temp);
+            for (ll = 0; ll < nrows; ll++){
+                int success =
+                    generic_function_axpy(-2.0*temp,
+                                          V->funcs[ii*nrows+ll],
+                                          A->funcs[kk*nrows+ll]);
+                if (success == 1){
+                    return 1;
+                }
+                //assert (success == 0);
+                success = generic_function_axpy(
+                    -(*R)[kk*ncols+ii],
+                    (*Q)->funcs[ii*nrows+ll],
+                    A->funcs[kk*nrows+ll]);
+
+                if (success == 1){
+                    return 1;
+                }
+//                assert (success == 0);
+            }
+        }
+    }
+
+    /* printf("\nafter getting the reflectors V = \n"); */
+    /* for (size_t ii = 0; ii < ncols; ii++){ */
+    /*     struct GenericFunction * gf = qmarray_get_func(V,0,ii); */
+    /*     double integral = generic_function_integral(gf); */
+    /*     double norm = generic_function_norm(gf); */
+    /*     printf("integral = %G, norm=%G\n",integral,norm); */
+    /*     /\* print_generic_function(gf,0,NULL); *\/ */
+    /* } */
+
+    /* printf("\n ------------------------------ \n\n\n");     */
+    // form Q
+    size_t counter = 0;
+    ii = ncols-1;
+    size_t jj;
+    while (counter < ncols){
+        
+        for (jj = ii; jj < ncols; jj++){
+            double val = generic_function_inner_sum(nrows,1,
+                    (*Q)->funcs+jj*nrows, 1, V->funcs+ii*nrows);
+
+            for (ll = 0; ll < nrows; ll++){
+                generic_function_axpy(-2.0*val,V->funcs[ii*nrows+ll],
+                                        (*Q)->funcs[jj*nrows+ll]);
+
+            }
+        }
+
+        ii = ii - 1;
+        counter += 1;
+    }
+    
+    qmarray_free(V); V = NULL;
+    return 0;
+}
+
+int qmarray_lq(struct Qmarray * A, struct Qmarray ** Q, double ** L,
+               struct OneApproxOpts * app)
+{
+
+    size_t ii,kk,ll;
+
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+
+    if ( (*Q) == NULL){
+        *Q = qmarray_orth1d_rows(nrows,ncols,app);
+    }
+
+    if ((*L) == NULL){
+        *L = calloc_double(nrows*nrows);
+    }
+    
+    struct Qmarray * V = qmarray_alloc(nrows,ncols);
+    for (ii = 0; ii < nrows * ncols; ii++){
+        V->funcs[ii] = generic_function_alloc_base(1);    
+    }
+
+    double s, rho, alpha, sigma, v;
+    for (ii = 0; ii < nrows; ii++){
+        //printf("ii = %zu \n", ii);
+
+        rho = generic_function_array_norm(ncols,nrows,A->funcs+ii);
+        (*L)[ii*nrows+ii] = rho;
+        alpha = generic_function_inner_sum(ncols,nrows,(*Q)->funcs+ii,nrows, A->funcs+ii);
+        
+        //printf("alpha=%G\n",alpha);
+        if (fabs(alpha) < ZERO){
+            alpha = 0.0;
+            s = 0.0;
+        }
+        else{
+            s = -alpha / fabs(alpha);    
+            if (s < 0.0){
+                generic_function_array_flip_sign(ncols,nrows,(*Q)->funcs+ii);
+            }
+        }
+        
+        for (kk = 0; kk < ncols; kk++){
+            generic_function_weighted_sum_pa(
+                rho,(*Q)->funcs[kk*nrows+ii],-1.0,
+                A->funcs[kk*nrows+ii],
+                &(V->funcs[kk*nrows+ii]));
+        }
+
+        //improve orthogonality
+        for (size_t zz = 0; zz < ii; zz++){
+            v = generic_function_inner_sum(ncols,nrows,
+                                           V->funcs+ii,
+                                           nrows, (*Q)->funcs+zz);
+            for (size_t llz = 0; llz < ncols; llz++){
+                generic_function_axpy(-v,(*Q)->funcs[llz*nrows+zz],
+                                      V->funcs[llz*nrows+ii]);
+            }
+        }
+
+        sigma = 0.0;
+        for (kk = 0; kk < ncols;kk++){
+            sigma += generic_function_inner(V->funcs[kk*nrows+ii],
+                                            V->funcs[kk*nrows+ii]);
+        }
+
+        sigma = sqrt(sigma);
+        // weird that this line is needed for stabilization
+        // Need to add reorthoganlization
+        //sigma = sigma + ZERO*1e-3;
+        if (fabs(sigma) < ZERO){
+            //printf("less than zero sigma = %G,Zero=%G\n",sigma,ZERO);
+            //V=E
+            for (kk = 0; kk < ncols; kk++){
+                generic_function_free(V->funcs[kk*nrows+ii]);
+                V->funcs[kk*nrows+ii] = NULL;
+                V->funcs[kk*nrows+ii] = generic_function_copy((*Q)->funcs[kk*nrows+ii]);
+                //generic_function_copy_pa((*Q)->funcs[ii*nrows+kk],V->funcs[ii*nrows+kk]);
+            }
+        }
+        else{
+            for (kk = 0; kk < ncols; kk++){
+                generic_function_scale(1.0/sigma,V->funcs[kk*nrows+ii]);
+            }
+        }
+        
+        //printf("start inner loop\n");
+        double ev = generic_function_inner_sum(ncols,nrows,(*Q)->funcs+ii,nrows,V->funcs+ii);
+        for (kk = ii+1; kk < nrows; kk++){
+            double temp = generic_function_inner_sum(ncols,nrows,V->funcs+ii,nrows,A->funcs+kk);
+            (*L)[ii*nrows+kk]=generic_function_inner_sum(ncols,nrows,(*Q)->funcs+ii,nrows,A->funcs+kk);
+            (*L)[ii*nrows+kk] += (-2.0 * ev * temp);
+            for (ll = 0; ll < ncols; ll++){
+                int success = generic_function_axpy(-2.0*temp,V->funcs[ll*nrows+ii],A->funcs[ll*nrows+kk]);
+                assert (success == 0);
+                success = generic_function_axpy(-(*L)[ii*nrows+kk],
+                        (*Q)->funcs[ll*nrows+ii],A->funcs[ll*nrows+kk]);
+                assert (success == 0);
+            }
+        }
+    }
+    
+    // form Q
+    size_t counter = 0;
+    ii = nrows-1;
+    size_t jj;
+    while (counter < nrows){
+        
+        for (jj = ii; jj < nrows; jj++){
+            double val = generic_function_inner_sum(ncols,nrows,
+                    (*Q)->funcs+jj, nrows, V->funcs+ii);
+
+            for (ll = 0; ll < ncols; ll++){
+                generic_function_axpy(-2.0*val,V->funcs[ll*nrows+ii],
+                                        (*Q)->funcs[ll*nrows+jj]);
+
+            }
+        }
+
+        ii = ii - 1;
+        counter += 1;
+    }
+    
+    qmarray_free(V); V = NULL;
+    return 0;
+}
+
+int qmarray_qr_gs(struct Qmarray * A, double ** R)
+{
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+    if ((*R) == NULL){
+        *R = calloc_double(ncols*ncols);
+    }
+    
+    for (size_t ii = 0; ii < ncols; ii++ ){
+        (*R)[ii*ncols+ii] = generic_function_array_norm(nrows,1,A->funcs + ii*nrows);
+        if ((*R)[ii*ncols+ii] > ZERO){
+            generic_function_array_scale(1.0/(*R)[ii*ncols+ii],A->funcs+ii*nrows,nrows);
+            for (size_t jj = ii+1; jj < ncols; jj++){
+                (*R)[jj*ncols+ii] = generic_function_inner_sum(nrows,1,A->funcs+ii*nrows,
+                                                               1, A->funcs + jj*nrows);
+                generic_function_array_axpy(nrows,-(*R)[jj*ncols+ii],A->funcs+ii*nrows,A->funcs+jj*nrows);
+            }
+        }
+        else{
+            printf("warning!!\n");
+            printf("norm = %G\n",(*R)[ii*ncols+ii]);
+            assert(1 == 0);
+        }
+    }
+    return 0;
+}
+
+
+int qmarray_lq_gs(struct Qmarray * A, double ** R)
+{
+    size_t nrows = A->nrows;
+    size_t ncols = A->ncols;
+    if ((*R) == NULL){
+        *R = calloc_double(nrows*nrows);
+    }
+    
+    for (size_t ii = 0; ii < nrows; ii++ ){
+        (*R)[ii*nrows+ii] = generic_function_array_norm(ncols,nrows,A->funcs + ii);
+        if ((*R)[ii*nrows+ii] > ZERO){
+            for (size_t jj = 0; jj < ncols; jj++){
+                generic_function_scale(1.0/(*R)[ii*nrows+ii],A->funcs[jj*nrows+ii]);                
+            }
+            for (size_t jj = ii+1; jj < nrows; jj++){
+                (*R)[ii*nrows+jj] = generic_function_inner_sum(ncols,nrows,A->funcs+ii,
+                                                               nrows, A->funcs + jj);
+                for (size_t kk = 0; kk < ncols; kk++){
+                    generic_function_axpy(-(*R)[ii*nrows+jj],
+                                          A->funcs[kk*nrows+ii],
+                                          A->funcs[kk*nrows+jj]);
+                }
+            }
+        }
+        else{
+            printf("norm = %G\n",(*R)[ii*nrows+ii]);
+            assert (1 == 0);
+        }
+    }
+    return 0;
 }

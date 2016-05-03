@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,17 +33,26 @@
 
 //Code
 
-/** \file lib_funcs.h
- * Groups header files of function library together
+/** \file fapprox.h
+ * Provides header files and structure definitions for functions in fapprox.c 
  */
 
+#ifndef FAPPROX_H
+#define FAPPROX_H
 
-#ifndef LIB_ONEDFUNCS_H
-#define LIB_ONEDFUNCS_H
+#include <stdlib.h>
 
 #include "functions.h"
-#include "space.h"
-#include "monitoring.h"
-#include "fapprox.h"
+
+struct OneApproxOpts
+{
+    enum function_class fc;
+    void * aopts;
+};
+
+struct OneApproxOpts;
+struct OneApproxOpts * 
+one_approx_opts_alloc(enum function_class, void *);
+void one_approx_opts_free(struct OneApproxOpts *);
 
 #endif

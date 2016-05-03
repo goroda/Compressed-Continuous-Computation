@@ -966,9 +966,10 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 struct OrthPolyExpansion *
 orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 {
-    //printf("whhhh\n");
+
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(opts->ptype, order+1, opts->lb, opts->ub);
+
     double m;
     switch (opts->ptype){
     case LEGENDRE:

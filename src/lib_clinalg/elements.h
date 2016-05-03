@@ -50,47 +50,10 @@
 // qm_array (quasimatrix arrays)
 
 
-struct Qmarray * qmarray_alloc(size_t, size_t); 
-struct Qmarray * qmarray_zeros(enum poly_type,size_t, size_t,double,double);
-struct Qmarray * 
-qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
-struct Qmarray * qmarray_copy(struct Qmarray *);
-void qmarray_free(struct Qmarray *); 
-
-struct Qmarray * 
-qmarray_approx1d(size_t, size_t, double (**)(double, void *),
-                    void **, enum function_class, void *, double,
-                    double, void *);
-struct Qmarray * 
-qmarray_from_fiber_cuts(size_t, size_t, 
-                    double (*f)(double, void *),struct FiberCut **, 
-                    enum function_class, void *, double,
-                    double, void *);
-
-struct Qmarray * 
-qmarray_orth1d_columns(enum function_class, 
-    void *, size_t, size_t, double, double);
-struct Qmarray *
-qmarray_orth1d_rows(enum function_class, void *, size_t,
-                            size_t, double, double);
-struct Qmarray *
-qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
-
-
-unsigned char * 
-qmarray_serialize(unsigned char *, struct Qmarray *, size_t *);
-unsigned char * 
-qmarray_deserialize(unsigned char *, struct Qmarray ** );
-
 ////////////////////////////////////////////////////////////////////
 // function_train 
 
-struct FtOneApprox
-{
-    enum function_class fc;
-    void * sub_type;
-    void * aopts;
-};
+
 
 /** \struct FtApproxArgs
  * \brief function train approximation arguments

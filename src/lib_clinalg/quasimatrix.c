@@ -285,16 +285,13 @@ quasimatrix_serialize(unsigned char * ser,
                       const struct Quasimatrix * qm, 
                       size_t *totSizeIn)
 {
-    printf("serializing quasimatrix doesn't work yet\n");
     // n -> func -> func-> ... -> func
     if (totSizeIn != NULL){
         size_t ii;
         size_t totSize = sizeof(size_t);
         for (ii = 0; ii < qm->n; ii++){
-            printf("ii = %zu\n",ii);
             size_t size_temp = 0 ;
             serialize_generic_function(NULL,qm->funcs[ii],&size_temp);
-            printf("size = %zu\n",size_temp);
             totSize += size_temp;
         
         }
@@ -305,10 +302,7 @@ quasimatrix_serialize(unsigned char * ser,
     unsigned char * ptr = ser;
     ptr = serialize_size_t(ptr, qm->n);
     for (size_t ii = 0; ii < qm->n; ii++){
-        printf("ii serializing the function\n");
         ptr = serialize_generic_function(ptr, qm->funcs[ii],NULL);
-        double integral = generic_function_integral(qm->funcs[ii]);
-        printf("integral = %G\n",integral);
     }
     return ptr;
 }
@@ -333,14 +327,9 @@ quasimatrix_deserialize(unsigned char * ser,
 
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        printf("deserializing ii = %zu\n",ii);
         struct GenericFunction * temp;
-        /* ptr = deserialize_generic_function(ptr, */
-        /*                                    &((*qm)->funcs[ii])); */
-        ptr = deserialize_generic_function(ptr, &temp);
-        double integral = generic_function_integral(temp);
-        printf("%G\n",integral);
-        
+        ptr = deserialize_generic_function(ptr,
+                                           &((*qm)->funcs[ii]));
     }
     
     return ptr;

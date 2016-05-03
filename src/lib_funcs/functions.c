@@ -52,32 +52,6 @@
 #include "linelm.h"
 
 
-/** \struct GenericFunction
- * \brief Interface between the world and specific functions such as polynomials, radial
- * basis functions (future), etc (future)
- * \var GenericFunction::dim
- * dimension of the function
- * \var GenericFunction::fc
- * type of function
- * \var GenericFunction::sub_type
- * sub type of function
- * \var GenericFunction::f
- * function
- * \var GenericFunction::fargs
- * function arguments
- */
-struct GenericFunction {
-    
-    size_t dim;
-    enum function_class fc;
-    /* union */
-    /* { */
-    /*     enum poly_type ptype; */
-    /* } sub_type; */
-    void * f;
-    void * fargs;
-};
-
 /********************************************************//**
     Allocate memory for a generic function without specifying class or sub_type
 
@@ -269,16 +243,16 @@ serialize_generic_function(unsigned char * ser,
         return ptr;
     }
     else{
-        ptr = serialize_size_t(ser, gf->dim);
+        ptr = serialize_size_t(ptr, gf->dim);
         ptr = serialize_int(ptr, gf->fc);
         switch (gf->fc){
-        case ZERO:                                                         break;
-        case CONSTANT:   printf("not ser const correct\n");                break;
-        case PIECEWISE:  serialize_piecewise_poly(ptr,gf->f, NULL);        break;
-        case POLYNOMIAL: serialize_orth_poly_expansion(ptr,gf->f, NULL);   break;
-        case LINELM:     serialize_lin_elem_exp(ptr,gf->f, NULL);          break;
-        case RATIONAL:                                                     break;
-        case KERNEL:                                                       break;
+        case ZERO:                                                             break;
+        case CONSTANT:   printf("not ser const correct\n");                    break;
+        case PIECEWISE:  ptr = serialize_piecewise_poly(ptr,gf->f, NULL);      break;
+        case POLYNOMIAL: ptr = serialize_orth_poly_expansion(ptr,gf->f, NULL); break;
+        case LINELM:     ptr = serialize_lin_elem_exp(ptr,gf->f, NULL);        break;
+        case RATIONAL:                                                         break;
+        case KERNEL:                                                           break;
         }
     }
     return ptr;
@@ -418,7 +392,8 @@ generic_function_quadratic(double a, double offset,
 ************************************************************/
 struct GenericFunction * 
 generic_function_poly_randu(enum poly_type ptype,
-                            size_t maxorder, double lower, double upper)
+                            size_t maxorder, double lower, 
+                            double upper)
 {
     enum function_class fc = POLYNOMIAL;
     struct GenericFunction * gf = generic_function_alloc(1,fc);
@@ -758,17 +733,19 @@ double generic_function_norm(const struct GenericFunction * f){
  ************************************************************/
  double generic_function_integral(const struct GenericFunction * f){
      
-    double out = 0.0;
-    switch (f->fc){
-    case ZERO:       assert(1==0);                              break;
-    case CONSTANT:   assert(1==0);                              break;
-    case PIECEWISE:  out = piecewise_poly_integrate(f->f);      break;
-    case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
-    case LINELM:     out = lin_elem_exp_integrate(f->f);        break;
-    case RATIONAL:                                              break;
-    case KERNEL:                                                break;
-    }
-    return out;
+     assert (f != NULL);
+     /* printf("integrating fc = %d\n",f->fc); */
+     double out = 0.0;
+     switch (f->fc){
+     case ZERO:       assert(1==0);                              break;
+     case CONSTANT:   assert(1==0);                              break;
+     case PIECEWISE:  out = piecewise_poly_integrate(f->f);      break;
+     case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
+     case LINELM:     out = lin_elem_exp_integrate(f->f);        break;
+     case RATIONAL:                                              break;
+     case KERNEL:                                                break;
+     }
+     return out;
  }
 
  /********************************************************//**
@@ -2170,12 +2147,14 @@ generic_function_array_orth(size_t n,
         break;
     case POLYNOMIAL:
         for (ii = 0; ii < n; ii++){
+            /* printf("on ii = %zu, fc=%d\n",ii,fc); */
             gfarray[ii] = generic_function_alloc(1,fc);
             gfarray[ii]->f = orth_poly_expansion_genorder(ii,args);
             gfarray[ii]->fargs = NULL;
         }
         break;
     case LINELM:
+        assert (1 == 0);
         //printf("orth1d array n = %zu\n",n);
         /* lb = ((struct Interval *) args)->lb; */
         /* ub = ((struct Interval *) args)->ub; */

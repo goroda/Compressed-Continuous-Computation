@@ -58,17 +58,17 @@ void RunAllTests(void) {
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * clin = QuasimatrixGetSuite();
-    
-    /* CuSuite * qma = CLinalgQmarrayGetSuite(); */
+    CuSuite * qma = CLinalgQmarrayGetSuite();
+
     /* CuSuite * ftr = CLinalgFuncTrainGetSuite(); */
     /* CuSuite * cind = CLinalgCrossIndGetSuite(); */
     /* CuSuite * fta = CLinalgFuncTrainArrayGetSuite(); */
     /* CuSuite * dmrg = CLinalgDMRGGetSuite(); */
     /* CuSuite * diff = CLinalgDiffusionGetSuite();*/
     
-    CuSuiteAddSuite(suite, clin);
-    
-    /* CuSuiteAddSuite(suite, qma); */
+    /* CuSuiteAddSuite(suite, clin);x */
+    CuSuiteAddSuite(suite, qma);
+
     /* CuSuiteAddSuite(suite, ftr); */
     /* CuSuiteAddSuite(suite, cind); */
     /* CuSuiteAddSuite(suite, fta); */
@@ -82,7 +82,7 @@ void RunAllTests(void) {
     
     CuSuiteDelete(clin);
     
-    /* CuSuiteDelete(qma); */
+    CuSuiteDelete(qma);
     /* CuSuiteDelete(ftr); */
     /* CuSuiteDelete(fta); */
     /* CuSuiteDelete(cind); */

@@ -42,7 +42,11 @@
 
 #include "array.h"
 
-#include "lib_funcs.h"
+#include "polynomials.h"
+#include "piecewisepoly.h"
+#include "hpoly.h"
+#include "linelm.h"
+#include "fwrap.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -64,8 +68,32 @@ struct Interval
     double ub;
 };
 
+/** \struct GenericFunction
+ * \brief Interface between the world and specific functions such as polynomials, radial
+ * basis functions (future), etc (future)
+ * \var GenericFunction::dim
+ * dimension of the function
+ * \var GenericFunction::fc
+ * type of function
+ * \var GenericFunction::sub_type
+ * sub type of function
+ * \var GenericFunction::f
+ * function
+ * \var GenericFunction::fargs
+ * function arguments
+ */
+struct GenericFunction {
+    
+    size_t dim;
+    enum function_class fc;
+    /* union */
+    /* { */
+    /*     enum poly_type ptype; */
+    /* } sub_type; */
+    void * f;
+    void * fargs;
+};
 
-struct GenericFunction;
 struct GenericFunction * generic_function_alloc_base(size_t);
 struct GenericFunction ** generic_function_array_alloc(size_t);
 struct GenericFunction *

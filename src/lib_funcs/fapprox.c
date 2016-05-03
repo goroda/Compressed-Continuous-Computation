@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,19 +33,32 @@
 
 //Code
 
-/** \file qmarray_qr.h
- * Header files for qmarray_qr.c
+/** \file fapprox.c
+ * Provides basic routines for approximating functions
  */
 
-#ifndef QMARRAY_QR_H
-#define QMARRAY_QR_H
+#include <stdlib.h>
+#include <stdio.h>
 
-#include "elements.h"
-int qmarray_qr(struct Qmarray *, struct Qmarray **, double **);
-int qmarray_lq(struct Qmarray *, struct Qmarray **, double **);
+#include "fapprox.h"
 
-int qmarray_qr_gs(struct Qmarray *, double **);
-int qmarray_lq_gs(struct Qmarray *, double **);
-#endif
+struct OneApproxOpts * 
+one_approx_opts_alloc(enum function_class fc, void * aopts)
+{
 
+    struct OneApproxOpts * app = malloc(sizeof(struct OneApproxOpts));
+    if (app == NULL){
+        fprintf(stderr,"Cannot allocate OneApproxOpts\n");
+        exit(1);
+    }
+    app->fc = fc;
+    app->aopts = aopts;
+    return app;
+}
 
+void one_approx_opts_free(struct OneApproxOpts * oa)
+{
+    if (oa != NULL){
+        free(oa); oa = NULL;
+    }
+}

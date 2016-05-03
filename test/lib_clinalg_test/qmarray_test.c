@@ -40,450 +40,730 @@
 #include <time.h>
 
 #include "array.h"
+
 #include "CuTest.h"
+#include "testfunctions.h"
 
 #include "lib_funcs.h"
-#include "lib_clinalg.h"
 #include "lib_linalg.h"
 
-typedef struct orth_poly_expansion opoly_t;
+#include "quasimatrix.h"
+#include "qmarray.h"
+
+
+static void qmarray_test_col_orth(CuTest * tc, struct Qmarray * A, double tol)
+{
+    size_t ncols = qmarray_get_ncols(A);
+    for (size_t ii = 0; ii < ncols; ii++){
+        for (size_t jj = 0; jj < ncols; jj++){
+            struct Quasimatrix * q1a = qmarray_extract_column(A,ii);
+            struct Quasimatrix * q2a = qmarray_extract_column(A,jj);
+            if (ii == jj){
+                double test2 = quasimatrix_inner(q1a,q2a);
+                CuAssertDblEquals(tc,1.0,test2,tol);                
+            }
+            else{
+                double test1 = quasimatrix_inner(q1a,q2a);
+                CuAssertDblEquals(tc,0.0,test1,tol);
+            }
+            quasimatrix_free(q1a); q1a = NULL;
+            quasimatrix_free(q2a); q2a = NULL;
+        }
+    }
+}
+
+static void qmarray_test_row_orth(CuTest * tc, struct Qmarray * A, double tol)
+{
+    size_t nrows = qmarray_get_nrows(A);
+    for (size_t ii = 0; ii < nrows; ii++){
+        for (size_t jj = 0; jj < nrows; jj++){
+            struct Quasimatrix * q1a = qmarray_extract_row(A,ii);
+            struct Quasimatrix * q2a = qmarray_extract_row(A,jj);
+            if (ii == jj){
+                double test2 = quasimatrix_inner(q1a,q2a);
+                CuAssertDblEquals(tc,1.0,test2,tol);                
+            }
+            else{
+                double test1 = quasimatrix_inner(q1a,q2a);
+                CuAssertDblEquals(tc,0.0,test1,tol);
+            }
+            quasimatrix_free(q1a); q1a = NULL;
+            quasimatrix_free(q2a); q2a = NULL;
+        }
+    }
+}
+
+static void quasimatrix_test_col_orth(CuTest * tc, struct Quasimatrix * A, double tol)
+{
+    size_t ncols = quasimatrix_get_size(A);
+    double inner;
+    for (size_t ii = 0; ii < ncols; ii++){
+        for (size_t jj = 0; jj < ncols; jj++){
+            struct GenericFunction * f1 = quasimatrix_get_func(A,ii);
+            struct GenericFunction * f2 = quasimatrix_get_func(A,jj);
+            if (ii == jj){
+                inner = generic_function_inner(f1,f2);
+                CuAssertDblEquals(tc,1.0,inner,tol);                
+            }
+            else{
+                inner = generic_function_inner(f1,f2);
+                CuAssertDblEquals(tc,0.0,inner,tol);                
+            }
+        }
+    }
+}
+
+static void 
+qmarray_test_equality1(CuTest * tc, struct Qmarray * A,
+                       struct Qmarray * B, double tol)
+{
+    size_t nrowsA = qmarray_get_nrows(A);
+    size_t ncolsA = qmarray_get_ncols(A);
+
+    size_t nrowsB = qmarray_get_nrows(B);
+    size_t ncolsB = qmarray_get_ncols(B);
+
+    CuAssertIntEquals(tc,nrowsA,nrowsB);
+    CuAssertIntEquals(tc,ncolsA,ncolsB);
+
+    for (size_t ii = 0; ii < ncolsA; ii++){
+        struct Quasimatrix * a1 = qmarray_extract_column(A,ii);
+        struct Quasimatrix * a2 = qmarray_extract_column(A,ii);
+
+        struct Quasimatrix * temp = NULL;
+        double diff;
+        temp = quasimatrix_daxpby(1.0, a1,-1.0, a2);
+        diff = quasimatrix_norm(temp);
+        CuAssertDblEquals(tc, 0.0, diff, tol);
+
+        quasimatrix_free(temp); temp = NULL;
+        quasimatrix_free(a1);
+        quasimatrix_free(a2);        
+    }
+}
+
+static void 
+qmarray_test_equality2(CuTest * tc, struct Qmarray * A,
+                       struct Qmarray * B, double tol)
+{
+    size_t nrowsA = qmarray_get_nrows(A);
+    size_t ncolsA = qmarray_get_ncols(A);
+
+    size_t nrowsB = qmarray_get_nrows(B);
+    size_t ncolsB = qmarray_get_ncols(B);
+
+    CuAssertIntEquals(tc,nrowsA,nrowsB);
+    CuAssertIntEquals(tc,ncolsA,ncolsB);
+
+    for (size_t ii = 0; ii < nrowsA; ii++){
+        for (size_t jj = 0; jj < ncolsA; jj++){
+            struct GenericFunction *f,*g,*fg=NULL;
+            f = qmarray_get_func(A,ii,jj);
+            g = qmarray_get_func(B,ii,jj);
+            fg = generic_function_daxpby(1,f,-1.0,g);
+            double diff = generic_function_norm(fg);
+            CuAssertDblEquals(tc,0.0,diff,tol);
+            generic_function_free(fg);
+        }
+    }
+}
+
+static void 
+qmarray_quasimatrix_test_equality1(CuTest * tc, struct Qmarray * A,
+                                   struct Quasimatrix * B, double tol)
+{
+    size_t nrowsA = qmarray_get_nrows(A);
+    size_t ncolsA = qmarray_get_ncols(A);
+
+    size_t ncolsB = quasimatrix_get_size(B);
+
+    CuAssertIntEquals(tc,nrowsA,1);
+    CuAssertIntEquals(tc,ncolsA,ncolsB);
+
+    for (size_t ii = 0; ii < ncolsA; ii++){
+        struct GenericFunction * temp = NULL;
+        double diff;
+        struct GenericFunction *f1, *f2;
+        f1 = qmarray_get_func(A,0,ii);
+        f2 = quasimatrix_get_func(B,ii);
+        temp = generic_function_daxpby(1,f1,-1.0,f2);
+        diff = generic_function_norm(temp);
+        CuAssertDblEquals(tc, 0.0, diff,tol);
+        generic_function_free(temp);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+void Test_qmarray_serialize(CuTest * tc){
+
+    printf("Testing function: (de)qmarray_serialize\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct Qmarray * A = qmarray_approx1d(3,2,qmopts,fw);
+
+    unsigned char * text = NULL;
+    size_t size;
+    qmarray_serialize(NULL,A,&size);
+    text = malloc(size * sizeof(unsigned char));
+    qmarray_serialize(text,A,NULL);
+    
+    struct Qmarray * B = NULL;
+    qmarray_deserialize(text,&B);
+    free(text); text = NULL;
+
+    size_t nrows = qmarray_get_nrows(B);
+    size_t ncols = qmarray_get_ncols(B);
+
+    CuAssertIntEquals(tc,3,nrows);
+    CuAssertIntEquals(tc,2,ncols);
+
+    qmarray_test_equality2(tc,A,B,1e-15);
+
+    qmarray_free(A);
+    qmarray_free(B);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+    fwrap_destroy(fw);
+}
 
 void Test_qmarray_orth1d_columns(CuTest * tc)
 {
     printf("Testing function: qmarray_orth1d_columns\n");
-
-    enum poly_type ptype = LEGENDRE;
-    struct Qmarray * Q = qmarray_orth1d_columns(POLYNOMIAL,
-            &ptype, 2,2,-1.0,1.0);
     
-    CuAssertIntEquals(tc, 2, Q->nrows);
-    CuAssertIntEquals(tc, 2, Q->nrows);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
 
-    struct Quasimatrix * q1 = qmarray_extract_column(Q,0);
-    struct Quasimatrix * q2 = qmarray_extract_column(Q,1);
+    struct Qmarray * Q = qmarray_orth1d_columns(2,2,qmopts);
     
-    double test1 = quasimatrix_inner(q1,q1);
-    CuAssertDblEquals(tc,1.0,test1,1e-14);
-    double test2 = quasimatrix_inner(q2,q2);
-    CuAssertDblEquals(tc,1.0,test2,1e-14);
-    double test3 = quasimatrix_inner(q1,q2);
-    CuAssertDblEquals(tc,0.0,test3,1e-14);
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc, 2, nrows);
+    CuAssertIntEquals(tc, 2, ncols);
 
-    quasimatrix_free(q1); q1 = NULL;
-    quasimatrix_free(q2); q2 = NULL;
+    qmarray_test_col_orth(tc,Q,1e-14);
+
+
     qmarray_free(Q); Q = NULL;
+    one_approx_opts_free(qmopts);
+    ope_opts_free(opts);
 }
 
-/* void Test_qmarray_householder(CuTest * tc){ */
+void Test_qmarray_householder(CuTest * tc){
 
-/*     printf("Testing function: qmarray_householder (1/4)\n"); */
+    printf("Testing function: qmarray_householder (1/4)\n");
 
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,-1.0,1.0);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+    qmarray_test_equality1(tc,A,Acopy,1e-15);
+
+    double * R = calloc_double(2*2);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc,2,nrows);
+    CuAssertIntEquals(tc,2,ncols);
+
+    qmarray_test_col_orth(tc,Q,1e-14);
+    
+    // test equivalence
+    struct Qmarray * Anew = qmam(Q,R,2);
+    qmarray_test_equality1(tc,Anew,Acopy,1e-15);
+    
+    qmarray_free(A);
+    qmarray_free(Q);
+    qmarray_free(Acopy);
+    qmarray_free(Anew);
+    free(R);
+    fwrap_destroy(fw);
+    pw_poly_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder2(CuTest * tc){
+
+    printf("Testing function: qmarray_householder (2/4)\n");
+
+   // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
+    double * R = calloc_double(4*4);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+
+    enum function_class fc[4] = {POLYNOMIAL, POLYNOMIAL, POLYNOMIAL, POLYNOMIAL};
+    struct Quasimatrix * A2 = quasimatrix_approx1d(4,fw,fc,opts);
+    double * R2 = calloc_double(4*4);
+    struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2,opts);
+    
+    CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-14);
+
+    struct GenericFunction * temp = NULL;
+    double diff;
+    struct GenericFunction *f1,*f2;
+    f1 = qmarray_get_func(Q,0,0);
+    f2 = quasimatrix_get_func(Q2,0);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+
+    f1 = qmarray_get_func(Q,0,1);
+    f2 = quasimatrix_get_func(Q2,1);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+    
+    f1 = qmarray_get_func(Q,0,2);
+    f2 = quasimatrix_get_func(Q2,2);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+
+    f1 = qmarray_get_func(Q,0,3);
+    f2 = quasimatrix_get_func(Q2,3);
+    temp = generic_function_daxpby(1,f1,-1.0,f2);
+    diff = generic_function_norm(temp);
+    CuAssertDblEquals(tc, 0.0, diff ,1e-14);
+    generic_function_free(temp);
+
+    qmarray_free(A);
+    qmarray_free(Q);
+    quasimatrix_free(A2);
+    quasimatrix_free(Q2);
+    free(R);
+    free(R2);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder3(CuTest * tc){
+
+    printf("Testing function: qmarray_householder (3/4)\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct PwPolyOpts * pwopts = pw_poly_opts_alloc(LEGENDRE,-1.0,1.0);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,pwopts);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+
+    struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
+    size_t N = 100;
+    double * xtest = linspace(-1.0, 1.0, N);
+    double temp1, temp2, err;
+    size_t ii,jj;
+    for (ii = 0; ii < 4; ii++){
+        fwrap_set_which_eval(fw,ii);
+        err = 0.0;
+        struct GenericFunction * f = qmarray_get_func(A,0,ii);
+        for (jj = 0; jj < N; jj++){
+            fwrap_eval(1,xtest+jj,&temp1,fw);
+            temp2 = generic_function_1d_eval(f,xtest[jj]);
+            err += fabs(temp1-temp2);
+        }
+        //printf("err= %3.15G\n",err);
+        CuAssertDblEquals(tc,0.0,err,1e-6);
+    }
+    struct Qmarray * Acopy = qmarray_copy(A);
+    qmarray_test_equality1(tc,A,Acopy,1e-15);
+
+    double * R = calloc_double(4*4);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-14);
+    
+    enum function_class fc[4] = {POLYNOMIAL,POLYNOMIAL,POLYNOMIAL,POLYNOMIAL};
+    struct Quasimatrix * A2 = quasimatrix_approx1d(4,fw,fc,opts);
+
+    for (ii = 0; ii < 4; ii++){
+        fwrap_set_which_eval(fw,ii);
+        struct GenericFunction * gf = quasimatrix_get_func(A2,ii);
+        err = 0.0;
+        for (jj = 0; jj < N; jj++){
+            fwrap_eval(1,xtest+jj,&temp1,fw);
+
+            temp2 = generic_function_1d_eval(gf,xtest[jj]);
+            err += fabs(temp1-temp2);
+        }
+        //printf("err= %3.15G\n",err);
+        CuAssertDblEquals(tc,0.0,err,1e-11);
+    }
+    free(xtest); xtest = NULL;
+
+    double * R2 = calloc_double(4*4);
+    struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2,opts);
+    quasimatrix_test_col_orth(tc,Q2,1e-13);
 
 
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         2, 2, funcs, args, PIECEWISE, &p, -1.0, 1.0, NULL); */
+    CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-13);
+    qmarray_quasimatrix_test_equality1(tc,Q,Q2,1e-15);
+
+    qmarray_free(A);
+    qmarray_free(Acopy);
+    qmarray_free(Q);
+    quasimatrix_free(A2);
+    quasimatrix_free(Q2);
+    free(R);
+    free(R2);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    pw_poly_opts_free(pwopts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder4(CuTest * tc){
+
+    printf("Testing function: qmarray_householder (4/4)\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func3,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func3,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
+    double * R = calloc_double(4*4);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-13);
+
+    enum function_class fc[4] = {POLYNOMIAL,POLYNOMIAL,POLYNOMIAL,POLYNOMIAL};
+    struct Quasimatrix * A2 = quasimatrix_approx1d(4,fw,fc,opts);
+    double * R2 = calloc_double(4*4);
+    struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2,opts);
+    quasimatrix_test_col_orth(tc,Q2,1e-13);
+    
+    CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-14);
+    qmarray_quasimatrix_test_equality1(tc,Q,Q2,1e-15);
+
+    qmarray_free(A);
+    qmarray_free(Q);
+    quasimatrix_free(A2);
+    quasimatrix_free(Q2);
+    free(R);
+    free(R2);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder_hermite1(CuTest * tc){
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("Testing function: qmarray_householder for hermite (1)\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func3,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func3,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray* T = qmarray_orth1d_columns(2,2,qmopts);
+    qmarray_test_col_orth(tc,T,1e-13);
+
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    double * R = calloc_double(2*2);
+    struct Qmarray * Acopy = qmarray_copy(A);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-13);
+
+    struct Qmarray * Anew = qmam(Q,R,2);
+    qmarray_test_equality2(tc,Acopy,Anew,1e-14);
+
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+    qmarray_free(T);
+}
+
+void Test_qmarray_qr1(CuTest * tc)
+{
+    printf("Testing function: qmarray_qr (1/3)\n");
+    
+    double lb = -2.0;
+    double ub = 3.0;
+    size_t r1 = 5;
+    size_t r2 = 7;
+    size_t maxorder = 10;
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2,
+                                            maxorder,lb,ub);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    struct Qmarray * Q = NULL;
+    double * R = NULL;
+    qmarray_qr(A,&Q,&R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-13);
+
+    struct Qmarray * QR = qmam(Q,R,r2);
+    double diff = qmarray_norm2diff(QR,Acopy);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(QR); QR = NULL;
+    free(R); R = NULL;
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_qr2(CuTest * tc)
+{
+    printf("Testing function: qmarray_qr (2/3)\n");
+    
+    double lb = -2.0;
+    double ub = 3.0;
+    size_t r1 = 7;
+    size_t r2 = 5;
+    size_t maxorder = 10;
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2,
+                                            maxorder,lb,ub);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    struct Qmarray * Q = NULL;
+    double * R = NULL;
+    qmarray_qr(A,&Q,&R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-13);
+
+    struct Qmarray * QR = qmam(Q,R,r2);
+    double diff = qmarray_norm2diff(QR,Acopy);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(QR); QR = NULL;
+    free(R); R = NULL;
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_qr3(CuTest * tc){
+
+    printf("Testing function: qmarray_qr (3/3)\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func2,NULL);
+    fwrap_set_func_array(fw,3,func3,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    struct Qmarray * Q = NULL;
+    double * R = NULL;
+    qmarray_qr(A,&Q,&R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-13);
+
+    struct Qmarray * QR = qmam(Q,R,4);
+    double diff = qmarray_norm2diff(QR,Acopy);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+
+    free(R); R = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(QR); 
+    qmarray_free(Acopy);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+
+}
+
+void Test_qmarray_lq(CuTest * tc)
+{
+    printf("Testing function: qmarray_lq (1/3)\n");
+    
+    double lb = -2.0;
+    double ub = 3.0;
+    size_t r1 = 5;
+    size_t r2 = 7;
+    size_t maxorder = 10;
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2,
+                                            maxorder,lb,ub);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    struct Qmarray * Q = NULL;
+    double * L = NULL;
+    qmarray_lq(A,&Q,&L,qmopts);
+    qmarray_test_row_orth(tc,Q,1e-14);
+
+    struct Qmarray * LQ = mqma(L,Q,r1);
+    double diff = qmarray_norm2diff(LQ,Acopy);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-14);
+    
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(LQ); LQ = NULL;
+    free(L); L = NULL;
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+
+void Test_qmarray_householder_rows(CuTest * tc){
+
+    printf("Testing function: qmarray_householder_rows \n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+    qmarray_test_equality1(tc,A,Acopy,1e-15);
+   
+    double * R = calloc_double(2*2);
+    struct Qmarray * Q = qmarray_householder_simple("LQ",A,R,qmopts);
+
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc,2,nrows);
+    CuAssertIntEquals(tc,2,ncols);
+    qmarray_test_row_orth(tc,Q,1e-14);
+
+     // testt equivalence
+    struct Qmarray * Anew = mqma(R,Q,2);
+    qmarray_test_equality2(tc,Anew,Acopy,1e-14);
     
 
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
+    qmarray_free(Anew);
+    qmarray_free(A);
+    qmarray_free(Q);
+    qmarray_free(Acopy);
+    free(R);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder_rows_hermite(CuTest * tc){
+
+    printf("Testing function: qmarray_householder_rows with hermite polynomials \n");
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double * R = calloc_double(2*2);
+    struct Qmarray * Q = qmarray_householder_simple("LQ",A,R,qmopts);
+
+
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc,2,nrows);
+    CuAssertIntEquals(tc,2,ncols);
+    qmarray_test_row_orth(tc,Q,1e-15);
+
+     // testt equivalence
+    struct Qmarray * Anew = mqma(R,Q,2);
+    qmarray_test_equality2(tc,Anew,Acopy,1e-13);
+
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A); A = NULL;
+    qmarray_free(Acopy); Acopy = NULL;
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
 
-/*     struct Quasimatrix * a1 = qmarray_extract_column(A,0); */
-/*     struct Quasimatrix * a2 = qmarray_extract_column(A,1); */
-
-/*     struct Quasimatrix * a3 = qmarray_extract_column(Acopy,0); */
-/*     struct Quasimatrix * a4 = qmarray_extract_column(Acopy,1); */
-    
-/*     struct Quasimatrix * temp = NULL; */
-/*     double diff; */
-/*     temp = quasimatrix_daxpby(1.0, a1,-1.0, a3); */
-/*     diff = quasimatrix_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-/*     quasimatrix_free(temp); temp = NULL; */
-
-/*     temp = quasimatrix_daxpby(1.0, a2, -1.0, a4); */
-/*     diff = quasimatrix_norm(temp); */
-/*     quasimatrix_free(temp); temp = NULL; */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-
-/*     quasimatrix_free(a1); */
-/*     quasimatrix_free(a2); */
-/*     quasimatrix_free(a3); */
-/*     quasimatrix_free(a4); */
-
-    
-/*     double * R = calloc_double(2*2); */
-
-/*     struct Qmarray * Q = qmarray_householder_simple("QR", A,R); */
-/*     /\* printf("got QR\n"); *\/ */
-
-/*     CuAssertIntEquals(tc,2,Q->nrows); */
-/*     CuAssertIntEquals(tc,2,Q->ncols); */
-
-/*     // test orthogonality */
-/*     struct Quasimatrix * q1a = qmarray_extract_column(Q,0); */
-/*     struct Quasimatrix * q2a = qmarray_extract_column(Q,1); */
-/*     double test1 = quasimatrix_inner(q1a,q1a); */
-/*     CuAssertDblEquals(tc,1.0,test1,1e-13); */
-/*     double test2 = quasimatrix_inner(q2a,q2a); */
-/*     CuAssertDblEquals(tc,1.0,test2,1e-13); */
-/*     double test3 = quasimatrix_inner(q1a,q2a); */
-/*     CuAssertDblEquals(tc,0.0,test3,1e-13); */
-
-/*     quasimatrix_free(q1a); q1a = NULL; */
-/*     quasimatrix_free(q2a); q2a = NULL; */
-
-/*     //dprint2d_col(2,2,R); */
-    
-/*      // testt equivalence */
-/*     struct Qmarray * Anew = qmam(Q,R,2); */
-    
-/*     struct Quasimatrix * q1 = qmarray_extract_column(Anew,0); */
-/*     struct Quasimatrix * q2 = qmarray_extract_column(Anew,1); */
-
-/*     struct Quasimatrix * q3 = qmarray_extract_column(Acopy,0); */
-/*     struct Quasimatrix * q4 = qmarray_extract_column(Acopy,1); */
-    
-/*     temp = quasimatrix_daxpby(1.0, q1,-1.0, q3); */
-/*     diff = quasimatrix_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
-/*     quasimatrix_free(temp); */
-
-/*     temp = quasimatrix_daxpby(1.0, q2, -1.0, q4); */
-/*     diff = quasimatrix_norm(temp); */
-/*     quasimatrix_free(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
-
-/*     quasimatrix_free(q1); */
-/*     quasimatrix_free(q2); */
-/*     quasimatrix_free(q3); */
-/*     quasimatrix_free(q4); */
-/*     qmarray_free(Anew); */
-
-/*     qmarray_free(A); */
-/*     qmarray_free(Q); */
-/*     qmarray_free(Acopy); */
-/*     free(R); */
-/* } */
-
-/* void Test_qmarray_householder2(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_householder (2/4)\n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         1, 4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-/*     double * R = calloc_double(4*4); */
-/*     struct Qmarray * Q = qmarray_householder_simple("QR", A,R); */
-
-
-/*     struct Quasimatrix * A2 = quasimatrix_approx1d( */
-/*                         4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-/*     double * R2 = calloc_double(4*4); */
-/*     struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2); */
-    
- 
-/*     /\* */
-/*     printf("=========================\n"); */
-/*     printf("R=\n"); */
-/*     dprint2d_col(4,4,R); */
-
-/*     printf("R2=\n"); */
-/*     dprint2d_col(4,4,R2); */
-/*     *\/ */
-
-/*     CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-14); */
-
-/*     struct GenericFunction * temp = NULL; */
-/*     double diff; */
-/*     struct GenericFunction *f1,*f2; */
-/*     f1 = qmarray_get_func(Q,0,0); */
-/*     f2 = quasimatrix_get_func(Q2,0); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,1); */
-/*     f2 = quasimatrix_get_func(Q2,1); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-    
-/*     f1 = qmarray_get_func(Q,0,2); */
-/*     f2 = quasimatrix_get_func(Q2,2); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,3); */
-/*     f2 = quasimatrix_get_func(Q2,3); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     qmarray_free(A); */
-/*     qmarray_free(Q); */
-/*     quasimatrix_free(A2); */
-/*     quasimatrix_free(Q2); */
-/*     free(R); */
-/*     free(R2); */
-/* } */
-
-/* void Test_qmarray_householder3(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_householder (3/4)\n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func3}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         1, 4, funcs, args, PIECEWISE, &p, -1.0, 1.0, NULL); */
-/*     size_t N = 100; */
-/*     double * xtest = linspace(-1.0, 1.0, N); */
-/*     double temp1, temp2, err; */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < 4; ii++){ */
-/*         err = 0.0; */
-/*         for (jj = 0; jj < N; jj++){ */
-/*             temp1 = funcs[ii](xtest[jj],&c); */
-/*             temp2 = generic_function_1d_eval(A->funcs[ii],xtest[jj]); */
-/*             err += fabs(temp1-temp2); */
-/*         } */
-/*         //printf("err= %3.15G\n",err); */
-/*         CuAssertDblEquals(tc,0.0,err,1e-6); */
-/*     } */
-
-/*     double * R = calloc_double(4*4); */
-/*     struct Qmarray * Q = qmarray_householder_simple("QR", A,R); */
-
-/*     struct Quasimatrix * A2 = quasimatrix_approx1d( */
-/*                         4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-/*     for (ii = 0; ii < 4; ii++){ */
-/*         err = 0.0; */
-/*         for (jj = 0; jj < N; jj++){ */
-/*             temp1 = funcs[ii](xtest[jj],&c); */
-/*             struct GenericFunction * gf = quasimatrix_get_func(A2,ii); */
-/*             temp2 = generic_function_1d_eval(gf,xtest[jj]); */
-/*             err += fabs(temp1-temp2); */
-/*         } */
-/*         //printf("err= %3.15G\n",err); */
-/*         CuAssertDblEquals(tc,0.0,err,1e-11); */
-/*     } */
-/*     free(xtest); xtest = NULL; */
-
-/*     double * R2 = calloc_double(4*4); */
-/*     struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2); */
-
-/*     struct GenericFunction *f1,*f2,*f3,*f4; */
-/*     f1 = qmarray_get_func(Q,0,0); */
-/*     f2 = qmarray_get_func(Q,0,1); */
-/*     f3 = qmarray_get_func(Q,0,2); */
-/*     f4 = qmarray_get_func(Q,0,3); */
-
-/*     double inner; */
-/*     inner = generic_function_inner(f1,f1); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f2); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f3); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-12); */
-
-/*     inner = generic_function_inner(f2,f2); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f2,f3); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f2,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-
-/*     inner = generic_function_inner(f3,f3); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f3,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-
-/*     inner = generic_function_inner(f4,f4); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-11); */
-
-/*     f1 = quasimatrix_get_func(Q2,0); */
-/*     f2 = quasimatrix_get_func(Q2,1); */
-/*     f3 = quasimatrix_get_func(Q2,2); */
-/*     f4 = quasimatrix_get_func(Q2,3); */
-
-    
-/*     inner = generic_function_inner(f1,f1); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f2); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f3); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f1,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-12); */
-
-/*     inner = generic_function_inner(f2,f2); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f2,f3); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-/*     inner = generic_function_inner(f2,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-
-/*     inner = generic_function_inner(f3,f3); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-/*     inner = generic_function_inner(f3,f4); */
-/*     CuAssertDblEquals(tc,0.0,inner,1e-13); */
-
-/*     inner = generic_function_inner(f4,f4); */
-/*     CuAssertDblEquals(tc,1.0,inner,1e-13); */
-
-/*     /\* */
-/*     printf("=========================\n"); */
-/*     printf("R=\n"); */
-/*     dprint2d_col(4,4,R); */
-
-/*     printf("R2=\n"); */
-/*     dprint2d_col(4,4,R2); */
-/*     *\/ */
-
-/*     CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-13); */
-
-/*     struct GenericFunction * temp = NULL; */
-/*     double diff; */
-
-/*     f1 = qmarray_get_func(Q,0,0); */
-/*     f2 = quasimatrix_get_func(Q2,0); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-13); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,1); */
-/*     f2 = quasimatrix_get_func(Q2,1); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-13); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,2); */
-/*     f2 = quasimatrix_get_func(Q2,2); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-13); */
-/*     generic_function_free(temp); */
-
-/*     //temp = generic_function_daxpby(1,Q->funcs[3],-1.0,Q2->funcs[3]); */
-/*    // diff = generic_function_norm(temp); */
-/*     //CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*    // generic_function_free(temp); */
-
-
-/*     qmarray_free(A); */
-/*     qmarray_free(Q); */
-/*     quasimatrix_free(A2); */
-/*     quasimatrix_free(Q2); */
-/*     free(R); */
-/*     free(R2); */
-/* } */
-
-/* void Test_qmarray_householder4(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_householder (4/4)\n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func3, &func3, &func3}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         1, 4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-/*     double * R = calloc_double(4*4); */
-/*     struct Qmarray * Q = qmarray_householder_simple("QR", A,R); */
-
-
-/*     struct Quasimatrix * A2 = quasimatrix_approx1d( */
-/*                         4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-/*     double * R2 = calloc_double(4*4); */
-/*     struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2); */
-    
- 
-/*     /\* */
-/*     printf("=========================\n"); */
-/*     printf("R=\n"); */
-/*     dprint2d_col(4,4,R); */
-
-/*     printf("R2=\n"); */
-/*     dprint2d_col(4,4,R2); */
-/*     *\/ */
-
-/*     CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-14); */
-
-/*     struct GenericFunction * temp = NULL; */
-/*     double diff; */
-/*     struct GenericFunction *f1,*f2; */
-
-/*     f1 = qmarray_get_func(Q,0,0); */
-/*     f2 = quasimatrix_get_func(Q2,0); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,1); */
-/*     f2 = quasimatrix_get_func(Q2,1); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,2); */
-/*     f2 = quasimatrix_get_func(Q2,2); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     //print_generic_function(Q->funcs[2],0,NULL); */
-/*     //print_generic_function(Q2->funcs[2],0,NULL); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-/*     f1 = qmarray_get_func(Q,0,3); */
-/*     f2 = quasimatrix_get_func(Q2,3); */
-/*     temp = generic_function_daxpby(1,f1,-1.0,f2); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-/*     generic_function_free(temp); */
-
-
-/*     qmarray_free(A); */
-/*     qmarray_free(Q); */
-/*     quasimatrix_free(A2); */
-/*     quasimatrix_free(Q2); */
-/*     free(R); */
-/*     free(R2); */
-/* } */
 
 /* void Test_qmarray_householder_linelm(CuTest * tc){ */
     
@@ -580,442 +860,8 @@ void Test_qmarray_orth1d_columns(CuTest * tc)
 /*     qmarray_free(Acopy); */
 /* } */
 
-/* void Test_qmarray_householder_hermite1(CuTest * tc){ */
-    
-/*     // printf("\n\n\n\n\n\n\n\n\n\n"); */
-/*     printf("Testing function: qmarray_householder for hermite (1)\n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-/*     enum function_class fc = POLYNOMIAL; */
-/*     enum poly_type ptype = HERMITE; */
-/*     struct Qmarray* T = qmarray_orth1d_columns(fc,&ptype,2,2,-DBL_MAX,DBL_MAX); */
-/*     double * tmat= qmatqma_integrate(T,T); */
-/*     CuAssertDblEquals(tc,1.0,tmat[0],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,tmat[1],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,tmat[2],1e-14); */
-/*     CuAssertDblEquals(tc,1.0,tmat[3],1e-14); */
-/* //    printf("tmat = \n"); */
-/* //    dprint2d_col(2,2,tmat); */
-/*     qmarray_free(T); T = NULL; */
-/*     free(tmat); tmat = NULL; */
-    
-/*     size_t nr = 2; */
-/*     size_t nc = 2; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*         nr, nc, funcs, args, fc, &ptype, -1.0, 1.0, NULL); */
-    
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-    
-/*     double * R = calloc_double(nc*nc); */
-/*     struct Qmarray * Q = qmarray_householder_simple("QR",Acopy,R); */
-/*     struct Qmarray * Anew = qmam(Q,R,nc); */
-
-/*     double * qmat = qmatqma_integrate(Q,Q); */
-
-/*     struct GenericFunction *f1,*f2; */
-/*     f1 = qmarray_get_func(A,0,0); */
-/*     f2 = qmarray_get_func(Anew,0,0); */
-/*     double diff1=generic_function_norm2diff(f1,f2); */
-/*     f1 = qmarray_get_func(A,0,1); */
-/*     f2 = qmarray_get_func(Anew,0,1); */
-/*     double diff2=generic_function_norm2diff(f1,f2); */
-/*     f1 = qmarray_get_func(A,1,0); */
-/*     f2 = qmarray_get_func(Anew,1,0); */
-/*     double diff3=generic_function_norm2diff(f1,f2); */
-/*     f1 = qmarray_get_func(A,1,1); */
-/*     f2 = qmarray_get_func(Anew,1,1); */
-/*     double diff4=generic_function_norm2diff(f1,f2); */
-
-/*     CuAssertDblEquals(tc,1.0,qmat[0],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,qmat[1],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,qmat[2],1e-14); */
-/*     CuAssertDblEquals(tc,1.0,qmat[3],1e-14); */
-
-/*     CuAssertDblEquals(tc,0.0,diff1,1e-13); */
-/*     CuAssertDblEquals(tc,0.0,diff2,1e-13); */
-/*     CuAssertDblEquals(tc,0.0,diff3,1e-13); */
-/*     CuAssertDblEquals(tc,0.0,diff4,1e-10); */
-
-/*     qmarray_free(Anew); Anew = NULL; */
-/*     free(R); R = NULL; */
-/*     free(qmat); qmat = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(A); */
-/*     qmarray_free(Acopy); */
-/* } */
-
-/* void Test_qmarray_qr1(CuTest * tc) */
-/* { */
-/*     printf("Testing function: qmarray_qr (1/3)\n"); */
-    
-/*     double lb = -2.0; */
-/*     double ub = 3.0; */
-/*     size_t r1 = 5; */
-/*     size_t r2 = 7; */
-/*     size_t maxorder = 10; */
-
-/*     struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2, */
-/*                                             maxorder,lb,ub); */
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     struct Qmarray * Q = NULL; */
-/*     double * R = NULL; */
-/*     qmarray_qr(A,&Q,&R); */
-/*     //printf("got it \n"); */
-    
-/*     //printf("R = \n"); */
-/*     //dprint2d_col(r2,r2,R); */
-    
-/*     //printf("Check ortho\n"); */
-/*     double * mat = qmatqma_integrate(Q,Q); */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < r2; ii++){ */
-/*         for (jj = 0; jj < r2; jj++){ */
-/*             if (ii == jj){ */
-/*                CuAssertDblEquals(tc,1.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             else{ */
-/*                CuAssertDblEquals(tc,0.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             if (jj > ii){ */
-/*                 CuAssertDblEquals(tc,0.0,R[ii*r2+jj],1e-14); */
-/*             } */
-/*         } */
-/*     } */
-/*     //dprint2d_col(r2,r2,mat); */
-/*     free(mat); mat = NULL; */
-
-/*     struct Qmarray * QR = qmam(Q,R,r2); */
-    
-/*     double diff = qmarray_norm2diff(QR,Acopy); */
-/*     //printf("diff = %G\n",diff); */
-/*     CuAssertDblEquals(tc,0.0,diff*diff,1e-14); */
-    
-/*     qmarray_free(A); A = NULL; */
-/*     qmarray_free(Acopy); Acopy = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(QR); QR = NULL; */
-/*     free(R); R = NULL; */
-/* } */
-
-/* void Test_qmarray_qr2(CuTest * tc) */
-/* { */
-/*     printf("Testing function: qmarray_qr (2/3)\n"); */
-    
-/*     double lb = -2.0; */
-/*     double ub = 3.0; */
-/*     size_t r1 = 7; */
-/*     size_t r2 = 5; */
-/*     size_t maxorder = 10; */
-
-/*     struct Qmarray * A = qmarray_poly_randu(LEGENDRE, */
-/*                                             r1,r2,maxorder, */
-/*                                             lb,ub); */
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     struct Qmarray * Q = NULL; */
-/*     double * R = NULL; */
-/*     qmarray_qr(A,&Q,&R); */
-    
-/*     double * mat = qmatqma_integrate(Q,Q); */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < r2; ii++){ */
-/*         for (jj = 0; jj < r2; jj++){ */
-/*             if (ii == jj){ */
-/*                CuAssertDblEquals(tc,1.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             else{ */
-/*                CuAssertDblEquals(tc,0.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             if (jj > ii){ */
-/*                 CuAssertDblEquals(tc,0.0,R[ii*r2+jj],1e-14); */
-/*             } */
-/*         } */
-/*     } */
-/*     //dprint2d_col(r2,r2,mat); */
-/*     free(mat); mat = NULL; */
-
-/*     struct Qmarray * QR = qmam(Q,R,r2); */
-    
-/*     double diff = qmarray_norm2diff(QR,Acopy); */
-/*     //printf("diff = %G\n",diff); */
-/*     CuAssertDblEquals(tc,0.0,diff*diff,1e-14); */
-    
-/*     qmarray_free(A); A = NULL; */
-/*     qmarray_free(Acopy); Acopy = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(QR); QR = NULL; */
-/*     free(R); R = NULL; */
-/* } */
-
-/* void Test_qmarray_qr3(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_qr (3/3)\n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func2, &func3}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A =  */
-/*         qmarray_approx1d(1, 4, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-    
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-    
-/*     //size_t r1 = 1; */
-/*     size_t r2 = 4; */
-
-/*     struct Qmarray * Q = NULL; */
-/*     double * R = NULL; */
-/*     qmarray_qr(A,&Q,&R); */
-/*     //printf("R = \n"); */
-/*     //dprint2d_col(r2,r2,R); */
-    
-/*     double * mat = qmatqma_integrate(Q,Q); */
-/*     //printf("mat = \n"); */
-/*     //dprint2d_col(r2,r2,mat); */
-
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < r2; ii++){ */
-/*         for (jj = 0; jj < r2; jj++){ */
-/*             if (ii == jj){ */
-/*                CuAssertDblEquals(tc,1.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             else{ */
-/*                CuAssertDblEquals(tc,0.0,mat[ii*r2+jj],1e-14); */
-/*             } */
-/*             if (jj > ii){ */
-/*                 CuAssertDblEquals(tc,0.0,R[ii*r2+jj],1e-14); */
-/*             } */
-/*         } */
-/*     } */
-/*     free(mat); mat = NULL; */
-
-/*     struct Qmarray * QR = qmam(Q,R,r2); */
-    
-/*     double diff = qmarray_norm2diff(QR,Acopy); */
-/*     CuAssertDblEquals(tc,0.0,diff*diff,1e-14); */
-    
-/*     qmarray_free(A); A = NULL; */
-/*     qmarray_free(Acopy); Acopy = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(QR); QR = NULL; */
-/*     free(R); R = NULL; */
-/* } */
-
-/* void Test_qmarray_lq(CuTest * tc) */
-/* { */
-/*     printf("Testing function: qmarray_lq (1/3)\n"); */
-    
-/*     double lb = -2.0; */
-/*     double ub = 3.0; */
-/*     size_t r1 = 5; */
-/*     size_t r2 = 7; */
-/*     size_t maxorder = 10; */
-
-/*     struct Qmarray * A = qmarray_poly_randu(LEGENDRE,r1,r2, */
-/*                                             maxorder,lb,ub); */
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     struct Qmarray * Q = NULL; */
-/*     double * L = NULL; */
-/*     qmarray_lq(A,&Q,&L); */
-/*     //printf("got it \n"); */
-    
-/*     //printf("R = \n"); */
-/*     //dprint2d_col(r2,r2,R); */
-    
-/*     //printf("Check ortho\n"); */
-/*     double * mat = qmaqmat_integrate(Q,Q); */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < r1; ii++){ */
-/*         for (jj = 0; jj < r1; jj++){ */
-/*             if (ii == jj){ */
-/*                 CuAssertDblEquals(tc,1.0,mat[ii*r1+jj],1e-14); */
-/*             } */
-/*             else{ */
-/*                 CuAssertDblEquals(tc,0.0,mat[ii*r1+jj],1e-14); */
-/*             } */
-/*             if (jj < ii){ */
-/*                 CuAssertDblEquals(tc,0.0,L[ii*r1+jj],1e-14); */
-/*             } */
-/*         } */
-/*     } */
-/*     //dprint2d_col(r2,r2,mat); */
-/*     free(mat); mat = NULL; */
-
-/*     struct Qmarray * LQ = mqma(L,Q,r1); */
-    
-/*     double diff = qmarray_norm2diff(LQ,Acopy); */
-/*     //printf("diff = %G\n",diff); */
-/*     CuAssertDblEquals(tc,0.0,diff*diff,1e-14); */
-    
-/*     qmarray_free(A); A = NULL; */
-/*     qmarray_free(Acopy); Acopy = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(LQ); LQ = NULL; */
-/*     free(L); L = NULL; */
-/* } */
-
-/* void Test_qmarray_householder_rows(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_householder_rows \n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
 
 
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         2, 2, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
-    
-
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     struct Quasimatrix * a1 = qmarray_extract_row(A,0); */
-/*     struct Quasimatrix * a2 = qmarray_extract_row(A,1); */
-
-/*     struct Quasimatrix * a3 = qmarray_extract_row(Acopy,0); */
-/*     struct Quasimatrix * a4 = qmarray_extract_row(Acopy,1); */
-    
-/*     struct Quasimatrix * temp = NULL; */
-/*     double diff; */
-/*     temp = quasimatrix_daxpby(1.0, a1,-1.0, a3); */
-/*     diff = quasimatrix_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-/*     quasimatrix_free(temp); temp = NULL; */
-
-/*     temp = quasimatrix_daxpby(1.0, a2, -1.0, a4); */
-/*     diff = quasimatrix_norm(temp); */
-/*     quasimatrix_free(temp); temp = NULL; */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-
-/*     quasimatrix_free(a1); */
-/*     quasimatrix_free(a2); */
-/*     quasimatrix_free(a3); */
-/*     quasimatrix_free(a4); */
-
-    
-/*     double * R = calloc_double(2*2); */
-
-/*     struct Qmarray * Q = qmarray_householder_simple("LQ", A,R); */
-
-/*     CuAssertIntEquals(tc,2,Q->nrows); */
-/*     CuAssertIntEquals(tc,2,Q->ncols); */
-
-/*     // test orthogonality */
-/*     struct Quasimatrix * q1a = qmarray_extract_row(Q,0); */
-/*     struct Quasimatrix * q2a = qmarray_extract_row(Q,1); */
-/*     double test1 = quasimatrix_inner(q1a,q1a); */
-/*     CuAssertDblEquals(tc,1.0,test1,1e-14); */
-/*     double test2 = quasimatrix_inner(q2a,q2a); */
-/*     CuAssertDblEquals(tc,1.0,test2,1e-14); */
-/*     double test3 = quasimatrix_inner(q1a,q2a); */
-/*     CuAssertDblEquals(tc,0.0,test3,1e-14); */
-
-/*     quasimatrix_free(q1a); q1a = NULL; */
-/*     quasimatrix_free(q2a); q2a = NULL; */
-
-/*     //dprint2d_col(2,2,R); */
-    
-/*      // testt equivalence */
-/*     struct Qmarray * Anew = mqma(R,Q,2); */
-    
-/*     struct Quasimatrix * q1 = qmarray_extract_row(Anew,0); */
-/*     struct Quasimatrix * q2 = qmarray_extract_row(Anew,1); */
-
-/*     struct Quasimatrix * q3 = qmarray_extract_row(Acopy,0); */
-/*     struct Quasimatrix * q4 = qmarray_extract_row(Acopy,1); */
-    
-/*     temp = quasimatrix_daxpby(1.0, q1,-1.0, q3); */
-/*     diff = quasimatrix_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-12); */
-/*     quasimatrix_free(temp); */
-
-/*     temp = quasimatrix_daxpby(1.0, q2, -1.0, q4); */
-/*     diff = quasimatrix_norm(temp); */
-/*     quasimatrix_free(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-12); */
-
-/*     quasimatrix_free(q1); */
-/*     quasimatrix_free(q2); */
-/*     quasimatrix_free(q3); */
-/*     quasimatrix_free(q4); */
-/*     qmarray_free(Anew); */
-
-/*     qmarray_free(A); */
-/*     qmarray_free(Q); */
-/*     qmarray_free(Acopy); */
-/*     free(R); */
-/* } */
-/* void Test_qmarray_householder_rows_hermite(CuTest * tc){ */
-
-/*     printf("Testing function: qmarray_householder_rows with hermite polynomials \n"); */
-
-/*     double (*funcs [4])(double, void *) = {&func, &func2, &func3, &func4}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     void * args[4] = {&c, &c2, &c3, &c4}; */
-
-
-/*     enum poly_type p = HERMITE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         2, 2, funcs, args, POLYNOMIAL, &p, */
-/*                         -DBL_MAX, DBL_MAX, NULL); */
-    
-/*     struct Qmarray * Acopy = qmarray_copy(A); */
-
-/*     double * R = calloc_double(2*2); */
-
-/*     struct Qmarray * Q = qmarray_householder_simple("LQ", Acopy,R); */
-
-/*     CuAssertIntEquals(tc,2,Q->nrows); */
-/*     CuAssertIntEquals(tc,2,Q->ncols); */
-/*     struct Qmarray * Anew = mqma(R,Q,2); */
-/*     double * qmat = qmaqmat_integrate(Q,Q); */
-
-/*     double diff1=generic_function_norm2diff(A->funcs[0],Anew->funcs[0]); */
-/*     double diff2=generic_function_norm2diff(A->funcs[1],Anew->funcs[1]); */
-/*     double diff3=generic_function_norm2diff(A->funcs[2],Anew->funcs[2]); */
-/*     double diff4=generic_function_norm2diff(A->funcs[3],Anew->funcs[3]); */
-
-/*     CuAssertDblEquals(tc,1.0,qmat[0],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,qmat[1],1e-14); */
-/*     CuAssertDblEquals(tc,0.0,qmat[2],1e-14); */
-/*     CuAssertDblEquals(tc,1.0,qmat[3],1e-14); */
-
-/*     /\* print_qmarray(A,0,NULL); *\/ */
-/*     /\* printf("*************\n"); *\/ */
-/*     /\* print_qmarray(Anew,0,NULL) *\/; */
-    
-/*     CuAssertDblEquals(tc,0.0,diff1,1e-14); */
-/*     CuAssertDblEquals(tc,0.0,diff2,1e-12); */
-/*     CuAssertDblEquals(tc,0.0,diff3,1e-12); */
-/*     CuAssertDblEquals(tc,0.0,diff4,1e-12); */
-    
-/*     qmarray_free(Anew); Anew = NULL; */
-/*     free(R); R = NULL; */
-/*     free(qmat); qmat = NULL; */
-/*     qmarray_free(Q); Q = NULL; */
-/*     qmarray_free(A); A = NULL; */
-/*     qmarray_free(Acopy); Acopy = NULL; */
-
-/* } */
 
 /* void Test_qmarray_householder_rowslinelm(CuTest * tc){ */
     
@@ -1635,94 +1481,512 @@ void Test_qmarray_orth1d_columns(CuTest * tc)
 /*     qmarray_free(Acopy); */
 /* } */
 
-/* void Test_qmarray_serialize(CuTest * tc){ */
-
-/*     printf("Testing function: (de)qmarray_serialize\n"); */
-
-/*     double (*funcs [6])(double, void *) = {&func, &func2, &func3, &func4, */
-/*                                             &func5, &func6}; */
-/*     struct counter c; c.N = 0; */
-/*     struct counter c2; c2.N = 0; */
-/*     struct counter c3; c3.N = 0; */
-/*     struct counter c4; c4.N = 0; */
-/*     struct counter c5; c5.N = 0; */
-/*     struct counter c6; c6.N = 0; */
-/*     void * args[6] = {&c, &c2, &c3, &c4, &c5, &c6}; */
 
 
-/*     enum poly_type p = LEGENDRE; */
-/*     struct Qmarray * A = qmarray_approx1d( */
-/*                         3, 2, funcs, args, POLYNOMIAL, &p, -1.0, 1.0, NULL); */
+void Test_fast_mat_kron(CuTest * tc)
+{
+
+    printf("Testing Function: fast_mat_kron \n");
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    size_t r11 = 5;
+    size_t r12 = 6;
+    size_t r21 = 7;
+    size_t r22 = 8;
+    size_t k = 5;
+    double diff; 
     
-/*     unsigned char * text = NULL; */
-/*     size_t size; */
-/*     qmarray_serialize(NULL,A,&size); */
-/*     text = malloc(size * sizeof(unsigned char)); */
-/*     qmarray_serialize(text,A,NULL); */
+    struct Qmarray * mat1 = qmarray_poly_randu(LEGENDRE,r11,r12,
+                                               maxorder,lb,ub);
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+
+    double * mat = drandu(k*r11*r21);
+
+    struct Qmarray * mat3 = qmarray_kron(mat1,mat2);
+    struct Qmarray * shouldbe = mqma(mat,mat3,k);
+    struct Qmarray * is = qmarray_mat_kron(k,mat,mat1,mat2);
+
+    diff = qmarray_norm2diff(shouldbe,is);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    free(mat); mat = NULL;
+    qmarray_free(mat1); mat1 = NULL;
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(mat3); mat3 = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    qmarray_free(is); is = NULL;
+}
+
+void Test_fast_kron_mat(CuTest * tc)
+{
+
+    printf("Testing Function: fast_kron_mat \n");
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    size_t r11 = 3;
+    size_t r12 = 4;
+    size_t r21 = 5;
+    size_t r22 = 6;
+    size_t k = 2;
+    double diff; 
+    
+    struct Qmarray * mat1 = 
+        qmarray_poly_randu(LEGENDRE,r11,r12,maxorder,lb,ub);
+    struct Qmarray * mat2 = 
+        qmarray_poly_randu(LEGENDRE,r21,r22,maxorder,lb,ub);
+
+    double * mat = drandu(k*r12*r22);
+
+    struct Qmarray * mat3 = qmarray_kron(mat1,mat2);
+    struct Qmarray * shouldbe = qmam(mat3,mat,k);
+    struct Qmarray * is = qmarray_kron_mat(k,mat,mat1,mat2);
+
+    diff = qmarray_norm2diff(shouldbe,is);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    free(mat); mat = NULL;
+    qmarray_free(mat1); mat1 = NULL;
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(mat3); mat3 = NULL;
+    qmarray_free(shouldbe); shouldbe = NULL;
+    qmarray_free(is); is = NULL;
+}
+
+void Test_block_kron_mat1(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (1/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
     
 
-/*     struct Qmarray * B = NULL; */
-/*     qmarray_deserialize(text,&B); */
-/*     free(text); text = NULL; */
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
 
-/*     CuAssertIntEquals(tc,3,B->nrows); */
-/*     CuAssertIntEquals(tc,2,B->ncols); */
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl1*r21);
 
-/*     struct GenericFunction * temp; */
-/*     double diff; */
+    struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
+    qmarray_block_kron_mat('D',1,nblocks,mat1,mat2,k,mat,is);
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[0],-1.0,B->funcs[0]); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-/*     generic_function_free(temp); */
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[1],-1.0,B->funcs[1]); */
-/*     diff = generic_function_norm(temp); */
-/*     generic_function_free(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
+    struct Qmarray * big1 = qmarray_blockdiag(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_blockdiag(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_blockdiag(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_blockdiag(big3,mat1[4]);
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[2],-1.0,B->funcs[2]); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
-/*     generic_function_free(temp); */
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = mqma(mat,mid,k);
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[3],-1.0,B->funcs[3]); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-15); */
-/*     generic_function_free(temp); */
+    struct Qmarray * is2 = qmarray_mat_kron(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[4],-1.0,B->funcs[4]); */
-/*     diff = generic_function_norm(temp); */
-/*     generic_function_free(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
 
-/*     temp = generic_function_daxpby(1.0, A->funcs[5],-1.0,B->funcs[5]); */
-/*     diff = generic_function_norm(temp); */
-/*     CuAssertDblEquals(tc, 0.0, diff, 1e-13); */
-/*     generic_function_free(temp); */
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
 
-/*     qmarray_free(A); */
-/*     qmarray_free(B); */
-/* } */
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+}
 
+void Test_block_kron_mat2(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (2/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {4, 4, 4, 4, 4};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
+    size_t sum_rl1 = 4;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl1*r21);
+
+    struct Qmarray * is = qmarray_alloc(k, sum_rl2* r22);
+    qmarray_block_kron_mat('R',1,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_stackh(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackh(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackh(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackh(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = mqma(mat,mid,k);
+
+    //struct Qmarray * is2 = qmarray_mat_kron(k,mat,big4,mat2);
+    //diff = qmarray_norm2diff(shouldbe,is2);
+    //CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    //qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+void Test_block_kron_mat3(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (3/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {4, 4, 4, 4, 4};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 4;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl1*r21);
+
+    struct Qmarray * is = qmarray_alloc(k, sum_rl2 * r22);
+    qmarray_block_kron_mat('C',1,nblocks,mat1,mat2,k,mat,is);
+    
+    struct Qmarray * big1 = qmarray_stackv(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackv(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackv(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackv(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = mqma(mat,mid,k);
+
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+}
+
+void Test_block_kron_mat4(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (4/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 4, 6, 5, 3};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('D',0,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_blockdiag(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_blockdiag(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_blockdiag(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_blockdiag(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+
+void Test_block_kron_mat5(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (5/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {2, 2, 2, 2, 2};
+    size_t rl2[5] = {2, 4, 2, 5, 3};
+    size_t sum_rl1 = 2;
+    size_t sum_rl2 = 0;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl2 += rl2[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('R',0,nblocks,mat1,mat2,k,mat,is);
+
+    struct Qmarray * big1 = qmarray_stackh(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackh(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackh(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackh(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
+
+void Test_block_kron_mat6(CuTest * tc)
+{
+    printf("Testing Function: block_kron_mat (6/6) \n");
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+
+    size_t nblocks = 5;
+    size_t rl1[5] = {3, 6, 9, 1, 6};
+    size_t rl2[5] = {2, 2, 2, 2, 2};
+    size_t sum_rl1 = 0;
+    size_t sum_rl2 = 2;
+    struct Qmarray * mat1[5];
+    
+
+    size_t r21 = 7;
+    size_t r22 = 3;
+    size_t k = 8;
+    double diff; 
+    
+    size_t ii;
+    for (ii = 0; ii < nblocks; ii++){
+        sum_rl1 += rl1[ii];
+        mat1[ii] = qmarray_poly_randu(LEGENDRE,rl1[ii],rl2[ii],
+                                      maxorder,lb,ub);
+    }
+    struct Qmarray * mat2 = qmarray_poly_randu(LEGENDRE,r21,r22,
+                                               maxorder,lb,ub);
+    double * mat = drandu(k*sum_rl2*r22);
+
+    struct Qmarray * is = qmarray_alloc(sum_rl1 * r21,k);
+    qmarray_block_kron_mat('C',0,nblocks,mat1,mat2,k,mat,is);
+
+
+    struct Qmarray * big1 = qmarray_stackv(mat1[0],mat1[1]);
+    struct Qmarray * big2 = qmarray_stackv(big1,mat1[2]);
+    struct Qmarray * big3 = qmarray_stackv(big2,mat1[3]);
+    struct Qmarray * big4 = qmarray_stackv(big3,mat1[4]);
+
+    struct Qmarray * mid = qmarray_kron(big4, mat2);
+    struct Qmarray * shouldbe = qmam(mid,mat,k);
+
+    struct Qmarray * is2 = qmarray_kron_mat(k,mat,big4,mat2);
+    diff = qmarray_norm2diff(shouldbe,is2);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    diff = qmarray_norm2diff(is,shouldbe);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+
+    qmarray_free(big1);
+    qmarray_free(big2);
+    qmarray_free(big3);
+    qmarray_free(big4);
+    qmarray_free(mid);
+    qmarray_free(shouldbe);
+    qmarray_free(is2);
+
+    free(mat); mat = NULL;
+    for (ii = 0; ii < nblocks; ii++){
+        qmarray_free(mat1[ii]); mat1[ii] = NULL;
+    }
+    qmarray_free(mat2); mat2 = NULL;
+    qmarray_free(is); is = NULL;
+
+    //qmarray_free(mat3); mat3 = NULL;
+    //qmarray_free(shouldbe); shouldbe = NULL;
+
+}
 
 CuSuite * CLinalgQmarrayGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_qmarray_serialize);
     SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns);
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder3); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder4); */
+    SUITE_ADD_TEST(suite, Test_qmarray_householder);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder2);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder3);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder4);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr1);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr2);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr3);
+    SUITE_ADD_TEST(suite, Test_qmarray_lq);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite);
+
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr1); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr3); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lq); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm); */
+
     /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d2); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite); */
@@ -1732,7 +1996,15 @@ CuSuite * CLinalgQmarrayGetSuite(){
     /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_svd); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_serialize); */
+
+    SUITE_ADD_TEST(suite,Test_fast_mat_kron);
+    SUITE_ADD_TEST(suite,Test_fast_kron_mat);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat1);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat2);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat3);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat4);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat5);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat6);
     
     return suite;
 }
