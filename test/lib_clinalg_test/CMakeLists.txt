@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 
 file(GLOB SRC_FILES
+  ft_test.c
   qmarray_test.c
   quasimatrix.c
   testfunctions.c

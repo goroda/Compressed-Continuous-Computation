@@ -44,8 +44,9 @@
 #include "testfunctions.h"
 
 #include "lib_funcs.h"
-#include "lib_clinalg.h"
 #include "lib_linalg.h"
+
+#include "quasimatrix.h"
 
 static void
 quasimatrix_funcs_equal(CuTest * tc,

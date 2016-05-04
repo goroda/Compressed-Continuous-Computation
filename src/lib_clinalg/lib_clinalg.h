@@ -41,8 +41,8 @@
 #ifndef LIB_CLINALG_H
 #define LIB_CLINALG_H
 
-#include "quasimatrix.h"
-#include "cross2d.h"
+#include "ft.h"
+//#include "cross2d.h"
 
 /* #include "elements.h" */
 /* #include "indmanage.h" */

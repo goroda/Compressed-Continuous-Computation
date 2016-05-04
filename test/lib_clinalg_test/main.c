@@ -43,12 +43,6 @@
 #include "clinalgtest.h"
 #include "testfunctions.h"
 
-#include "array.h"
-#include "lib_funcs.h"
-#include "lib_clinalg.h"
-#include "lib_linalg.h"
-
-
 void RunAllTests(void) {
     
     printf("Running Test Suite: lib_clinalg\n");
@@ -60,16 +54,18 @@ void RunAllTests(void) {
     CuSuite * clin = QuasimatrixGetSuite();
     CuSuite * qma = CLinalgQmarrayGetSuite();
 
-    /* CuSuite * ftr = CLinalgFuncTrainGetSuite(); */
+    CuSuite * ftr = CLinalgFuncTrainGetSuite();
+
     /* CuSuite * cind = CLinalgCrossIndGetSuite(); */
     /* CuSuite * fta = CLinalgFuncTrainArrayGetSuite(); */
     /* CuSuite * dmrg = CLinalgDMRGGetSuite(); */
     /* CuSuite * diff = CLinalgDiffusionGetSuite();*/
     
-    /* CuSuiteAddSuite(suite, clin);x */
-    CuSuiteAddSuite(suite, qma);
+    /* CuSuiteAddSuite(suite, clin); */
+    /* CuSuiteAddSuite(suite, qma); */
 
-    /* CuSuiteAddSuite(suite, ftr); */
+    CuSuiteAddSuite(suite, ftr);
+
     /* CuSuiteAddSuite(suite, cind); */
     /* CuSuiteAddSuite(suite, fta); */
     /* CuSuiteAddSuite(suite, dmrg); */
@@ -81,9 +77,9 @@ void RunAllTests(void) {
     printf("%s \n", output->buffer);
     
     CuSuiteDelete(clin);
-    
     CuSuiteDelete(qma);
-    /* CuSuiteDelete(ftr); */
+
+    CuSuiteDelete(ftr);
     /* CuSuiteDelete(fta); */
     /* CuSuiteDelete(cind); */
     /* CuSuiteDelete(dmrg); */

@@ -55,4 +55,23 @@ struct OneApproxOpts *
 one_approx_opts_alloc(enum function_class, void *);
 void one_approx_opts_free(struct OneApproxOpts *);
 
+
+
+struct MultiApproxOpts;
+struct MultiApproxOpts * multi_approx_opts_alloc(size_t);
+void multi_approx_opts_free(struct MultiApproxOpts *);
+void multi_approx_opts_set_dim(struct MultiApproxOpts *,
+                               size_t ,
+                               struct OneApproxOpts *);
+void
+multi_approx_opts_set_all_same(struct MultiApproxOpts *,
+                               struct OneApproxOpts *);
+
+enum function_class 
+multi_approx_opts_get_fc(const struct MultiApproxOpts *, size_t);
+void * multi_approx_opts_get_aopts(const struct MultiApproxOpts *, size_t);
+size_t multi_approx_opts_get_dim(const struct MultiApproxOpts *);
+
+
+
 #endif

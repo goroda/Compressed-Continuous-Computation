@@ -65,22 +65,6 @@
     #define VQMAHOUSEHOLDER 0
 #endif
 
-/** \struct Qmarray
- * \brief Defines a matrix-valued function (a Quasimatrix array)
- * \var Qmarray::nrows
- * number of rows
- * \var Qmarray::ncols
- * number of columns
- * \var Qmarray::funcs
- * functions in column-major order 
- */
-struct Qmarray {
-    size_t nrows;
-    size_t ncols;
-    struct GenericFunction ** funcs; // fortran order
-};
-
-
 /***********************************************************//**
     Allocate space for a qmarray
 
@@ -3198,4 +3182,20 @@ int qmarray_lq_gs(struct Qmarray * A, double ** R)
         }
     }
     return 0;
+}
+
+
+void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
+{
+
+    printf("Quasimatrix Array (%zu,%zu)\n",qm->nrows, qm->ncols);
+    printf("=========================================\n");
+    size_t ii,jj;
+    for (ii = 0; ii < qm->nrows; ii++){
+        for (jj = 0; jj < qm->ncols; jj++){
+            printf("(%zu, %zu)\n",ii,jj);
+            print_generic_function(qm->funcs[jj*qm->nrows+ ii],prec,args);
+            printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        }
+    }
 }

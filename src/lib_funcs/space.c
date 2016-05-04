@@ -44,6 +44,7 @@
 #include <math.h>
 #include <assert.h>
 
+#include "array.h"
 
 /** \struct BoundingBox
  * \brief An array of pairs of lower and upper bounds
@@ -158,11 +159,20 @@ void bounding_box_free(struct BoundingBox * b)
 }
 
 /********************************************************//**
+    Get bounding box dimension
+************************************************************/
+size_t bounding_box_get_dim(const struct BoundingBox * b)
+{
+    assert (b != NULL);
+    return b->dim;
+}
+
+/********************************************************//**
     Return a reference to the lower bounds
 ************************************************************/
 double * bounding_box_get_lb(const struct BoundingBox * b)
 {
-    assert (b! = NULL);
+    assert (b != NULL);
     return b->lb;
 }
 

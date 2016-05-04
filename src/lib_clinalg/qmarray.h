@@ -42,9 +42,23 @@
 
 #include <stdlib.h>
 
-#include "../lib_funcs/lib_funcs.h"
+#include "quasimatrix.h"
 
-struct Qmarray;
+/* struct Qmarray; */
+/** \struct Qmarray
+ * \brief Defines a matrix-valued function (a Quasimatrix array)
+ * \var Qmarray::nrows
+ * number of rows
+ * \var Qmarray::ncols
+ * number of columns
+ * \var Qmarray::funcs
+ * functions in column-major order 
+ */
+struct Qmarray {
+    size_t nrows;
+    size_t ncols;
+    struct GenericFunction ** funcs; // fortran order
+};
 
 struct Qmarray * qmarray_alloc(size_t, size_t); 
 void qmarray_free(struct Qmarray *); 
@@ -59,14 +73,10 @@ qmarray_approx1d(size_t, size_t, struct OneApproxOpts *,
                  struct Fwrap *);
 
 /* struct Qmarray *  */
-/* qmarray_approx1d(size_t, size_t, double (**)(double, void *), */
-/*                     void **, enum function_class, void *, double, */
+/* qmarray_from_fiber_cuts(size_t, size_t,  */
+/*                     double (*f)(double, void *),struct FiberCut **,  */
+/*                     enum function_class, void *, double, */
 /*                     double, void *); */
-struct Qmarray * 
-qmarray_from_fiber_cuts(size_t, size_t, 
-                    double (*f)(double, void *),struct FiberCut **, 
-                    enum function_class, void *, double,
-                    double, void *);
 
 struct Qmarray *
 qmarray_orth1d_rows(size_t, size_t, struct OneApproxOpts *);
@@ -75,19 +85,11 @@ qmarray_orth1d_columns(size_t, size_t, struct OneApproxOpts *);
 struct Qmarray * 
 qmarray_zeros(size_t, size_t,struct OneApproxOpts *);
 
-/* struct Qmarray *  */
-/* qmarray_orth1d_columns(enum function_class,  */
-/*     void *, size_t, size_t, double, double); */
-/* struct Qmarray * */
-/* qmarray_orth1d_rows(enum function_class, void *, size_t, */
-/*                             size_t, double, double); */
 
 struct Qmarray *
 qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
 struct Qmarray * 
 qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
-
-
 
 // getters and setters
 struct GenericFunction *
@@ -184,4 +186,6 @@ int qmarray_lq(struct Qmarray *, struct Qmarray **, double **, struct OneApproxO
 
 int qmarray_qr_gs(struct Qmarray *, double **);
 int qmarray_lq_gs(struct Qmarray *, double **);
+
+void print_qmarray(struct Qmarray *, size_t, void *);
 #endif

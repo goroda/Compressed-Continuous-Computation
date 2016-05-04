@@ -54,68 +54,6 @@
 // function_train 
 
 
-
-/** \struct FtApproxArgs
- * \brief function train approximation arguments
- * \var FtApproxArgs::dim
- * function dimension
- * \var FtApproxArgs::aopts
- * function approximation options
- */
-struct FtApproxArgs
-{
-    size_t dim;
-    struct FtOneApprox ** aopts;
-};
-
-struct FtApproxArgs * 
-ft_approx_args_createpoly(size_t, enum poly_type *,
-                          struct OpeAdaptOpts *);
-struct FtApproxArgs * 
-ft_approx_args_createpwpoly(size_t, enum poly_type *,
-                            struct PwPolyAdaptOpts *);
-struct FtApproxArgs * 
-ft_approx_args_create_le(size_t, 
-                         struct LinElemExpAopts *);
-
-struct FtApproxArgs * 
-ft_approx_args_create_le2(size_t, 
-                         struct LinElemExpAopts **);
-
-enum function_class 
-ft_approx_args_getfc(struct FtApproxArgs *, size_t);
-
-void * ft_approx_args_getst(struct FtApproxArgs *, size_t);
-void * ft_approx_args_getaopts(struct FtApproxArgs *, size_t);
-
-void ft_approx_args_free(struct FtApproxArgs *);
-
-
-/** \struct FunctionTrain
- * \brief Functrain train
- * \var FunctionTrain::dim
- * dimension of function
- * \var FunctionTrain::ranks
- * function train ranks
- * \var FunctionTrain::cores
- * function train cores
- */
-struct FunctionTrain {
-    size_t dim;
-    size_t * ranks;
-    struct Qmarray ** cores;
-    
-    double * evalspace1;
-    double * evalspace2;
-    double * evalspace3;
-
-    double ** evaldd1;
-    double ** evaldd2;
-    double ** evaldd3;
-    double ** evaldd4;
-   
-};
-
 struct BoundingBox * function_train_bds(struct FunctionTrain *);
 
 struct FunctionTrain * function_train_alloc(size_t); 
@@ -125,6 +63,10 @@ void function_train_free(struct FunctionTrain *);
 struct FunctionTrain *
 function_train_poly_randu(enum poly_type,struct BoundingBox *, size_t *, size_t);
 
+struct FunctionTrain *
+function_train_rankone(struct MultiApproxOpts *, struct Fwrap *);
+
+
 struct FunctionTrain * function_train_initsum(size_t, 
         double (**)(double, void *), void **, struct BoundingBox *,
         struct FtApproxArgs * ); 
@@ -133,9 +75,6 @@ struct FunctionTrain *
 function_train_initsum2(size_t,  double (*f)(double, size_t, void *), 
         void *, struct BoundingBox *, struct FtApproxArgs *);
 
-struct FunctionTrain *
-function_train_rankone(size_t,  double (*)(double, size_t, void *), 
-        void *, struct BoundingBox *, struct FtApproxArgs *);
 
 
 struct FunctionTrain * 
@@ -168,17 +107,7 @@ function_train_deserialize(unsigned char *, struct FunctionTrain ** );
 int function_train_save(struct FunctionTrain *, char *);
 struct FunctionTrain * function_train_load(char *);
 
-/** \struct FT1DArray
- * \brief One dimensional array of function trains
- * \var FT1DArray::size
- * size of array
- * \var FT1DArray::ft
- * array of function trains
- */
-struct FT1DArray{
-    size_t size;
-    struct FunctionTrain ** ft;
-};
+
 
 struct FT1DArray * ft1d_array_alloc(size_t);
 unsigned char * ft1d_array_serialize(unsigned char *, struct FT1DArray *, size_t *);

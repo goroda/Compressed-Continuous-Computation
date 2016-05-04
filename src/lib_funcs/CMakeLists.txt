@@ -8,6 +8,7 @@ file(GLOB SRC_FILES
     fapprox.c
     functions.c
     monitoring.c
+    space.c
     fwrap.c)
 
 if ( ${static_libs} )

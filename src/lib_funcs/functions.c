@@ -321,7 +321,7 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
 /*******************************************************//**
     Return a linear function
 
-    \param[in] a      -  slope of the function
+    \param[in] a      - slope of the function
     \param[in] offset - offset of the function
     \param[in] fc     - function class
     \param[in] aopts  - extra arguments depending on function_class, 
