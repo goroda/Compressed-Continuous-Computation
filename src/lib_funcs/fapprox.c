@@ -145,8 +145,8 @@ void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
     in the function train. Specifically, legendre polynomials
     for all dimensions
 
-    \param[in,out] mopts 
-    \param[in]     opts 
+    \param[in,out] mopts - multidimensional options to update
+    \param[in]     opts  - options with which to update
 
     \return approximation arguments
 ***************************************************************/

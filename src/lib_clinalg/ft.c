@@ -751,8 +751,8 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
 
-    \param[in] a    - value
-    \param[in] opts - approximation options
+    \param[in] a     - value
+    \param[in] aopts - approximation options
 
     \return function train
 
@@ -792,11 +792,11 @@ function_train_constant(double a, struct MultiApproxOpts * aopts)
 
     \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
 
-    \param[in] c    - slope of the function in each dimension (ldc x dim)
-    \param[in] ldc  - stride of c
-    \param[in] a    - value
-    \param[in] lda  - stride of a
-    \param[in] opts - approximation options
+    \param[in] c     - slope of the function in each dimension (ldc x dim)
+    \param[in] ldc   - stride of c
+    \param[in] a     - value
+    \param[in] lda   - stride of a
+    \param[in] aopts - approximation options
 
     \return function train
 ***************************************************************/
