@@ -171,8 +171,8 @@ size_t qmarray_truncated_svd(struct Qmarray *, struct Qmarray **,
 void qmarray_absmax1d(struct Qmarray *, double *, size_t *, 
                       size_t *, double *, void *);
 struct Qmarray * qmarray_transpose(struct Qmarray * a);
-struct Qmarray * qmarray_stackh(struct Qmarray *, struct Qmarray *);
-struct Qmarray * qmarray_stackv(struct Qmarray *, struct Qmarray *);
+struct Qmarray * qmarray_stackh(const struct Qmarray *,const struct Qmarray *);
+struct Qmarray * qmarray_stackv(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_deriv(struct Qmarray *);
 void qmarray_roundt(struct Qmarray **, double);

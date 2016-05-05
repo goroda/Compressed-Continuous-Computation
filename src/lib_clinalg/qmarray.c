@@ -217,9 +217,7 @@ qmarray_approx1d(size_t nrows, size_t ncols, struct OneApproxOpts * fapp,
     for (ii = 0; ii < nrows*ncols; ii++){
         fwrap_set_which_eval(fw,ii);
         qm->funcs[ii] = 
-            generic_function_approximate1d(fapp->fc,
-                                           fw,
-                                           fapp->aopts);
+            generic_function_approximate1d(fapp->fc,fapp->aopts,fw);
     }
     return qm;
 }
@@ -2659,13 +2657,15 @@ qmarray_transpose(struct Qmarray * a)
 /***********************************************************//**
     Stack two qmarrays horizontally
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
     \return c - \f$ [a b] \f$
 ***************************************************************/
-struct Qmarray * qmarray_stackh(struct Qmarray * a, struct Qmarray * b)
+struct Qmarray * qmarray_stackh(const struct Qmarray * a,const struct Qmarray * b)
 {
+    assert (a != NULL);
+    assert (b != NULL);
     assert (a->nrows == b->nrows);
     struct Qmarray * c = qmarray_alloc(a->nrows, a->ncols + b->ncols);
     size_t ii;
@@ -2681,13 +2681,15 @@ struct Qmarray * qmarray_stackh(struct Qmarray * a, struct Qmarray * b)
 /***********************************************************//**
     Stack two qmarrays vertically
 
-    \param a [in] - qmarray 1
-    \param b [in] - qmarray 2
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
 
     \return  c : \f$ [a; b] \f$
 ***************************************************************/
-struct Qmarray * qmarray_stackv(struct Qmarray * a, struct Qmarray * b)
+struct Qmarray * qmarray_stackv(const struct Qmarray * a, const struct Qmarray * b)
 {
+    assert (a != NULL);
+    assert (b != NULL);
     assert (a->ncols == b->ncols);
     struct Qmarray * c = qmarray_alloc(a->nrows+b->nrows, a->ncols);
     size_t ii, jj;

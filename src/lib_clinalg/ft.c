@@ -50,9 +50,18 @@
 
 #include "ft.h"
 
-#ifndef ZERODEF
-#define ZEROTHRESH 1e2*DBL_EPSILON
+#ifndef ZEROTHRESH
+    #define ZEROTHRESH 1e2*DBL_EPSILON
 #endif
+
+#ifndef VPREPCORE
+    #define VPREPCORE 0
+#endif
+
+#ifndef VFTCROSS
+    #define VFTCROSS 0
+#endif
+
 
 /** \struct FunctionTrain
  * \brief Functrain train
@@ -668,7 +677,7 @@ function_train_rankone(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
         ft->ranks[onDim] = 1;
         ft->cores[onDim] = qmarray_alloc(1,1);
         ft->cores[onDim]->funcs[0] = 
-            generic_function_approximate1d(aopt->fc,fw,aopt->aopts);
+            generic_function_approximate1d(aopt->fc,aopt->aopts,fw);
     }
     ft->ranks[dim] = 1;
     return ft;
@@ -705,7 +714,7 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
     }
 
     ft->cores[onDim]->funcs[0] = 
-        generic_function_approximate1d(aopt->fc,fw,aopt->aopts);
+        generic_function_approximate1d(aopt->fc,aopt->aopts,fw);
     ft->cores[onDim]->funcs[1] = generic_function_constant(1.0, aopt->fc, 
                                                            aopt->aopts);
 
@@ -721,7 +730,7 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
                 generic_function_constant(1.0,aopt->fc,aopt->aopts); 
 
             ft->cores[onDim]->funcs[1] =
-                generic_function_approximate1d(aopt->fc,fw,aopt->aopts);
+                generic_function_approximate1d(aopt->fc,aopt->aopts,fw);
 
             ft->cores[onDim]->funcs[2] = 
                 generic_function_constant(0.0, aopt->fc, aopt->aopts);
@@ -742,7 +751,7 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
             generic_function_constant(1.0, aopt->fc, aopt->aopts);
 
         ft->cores[onDim]->funcs[1] = 
-            generic_function_approximate1d(aopt->fc,fw,aopt->aopts);
+            generic_function_approximate1d(aopt->fc,aopt->aopts,fw);
     }
 
     return ft;
@@ -1313,6 +1322,7 @@ function_train_sum(const struct FunctionTrain * a,
     ft->cores[0] = qmarray_stackh(a->cores[0], b->cores[0]);
     ft->ranks[0] = a->ranks[0];
     // middle cores
+    
     size_t ii;
     for (ii = 1; ii < ft->dim-1; ii++){
         ft->cores[ii] = qmarray_blockdiag(a->cores[ii], b->cores[ii]);
@@ -1472,6 +1482,637 @@ double function_train_relnorm2diff(const struct FunctionTrain * a,
     function_train_free(d); d = NULL;
     return val;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+/////////////////////                          ///////////////////////////
+/////////////////////    Cross Approximation   ///////////////////////////
+/////////////////////                          ///////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+/** \struct FtCrossArgs
+ *  \brief Arguments for function-train cross approximation
+ *  \var FtCrossArgs::dim
+ *  dimension of function
+ *  \var FtCrossArgs::ranks
+ *  (dim+1,) array of ranks
+ *  \var FtCrossArgs::epsilon
+ *  cross-approximation convergence criteria
+ *  \var FtCrossArgs::maxiter
+ *  maximum number of iteration for cross approximation
+ *  \var FtCrossArgs::epsround
+ *  rounding tolerance for adaptive rank cross approximation
+ *  \var FtCrossArgs::kickrank
+ *  size of rank increase for adaptation
+ *  \var FtCrossArgs::maxranks
+ *  maximum rank to go to during adaptation (dim-1,1)
+ *  \var FtCrossArgs::verbose
+ *  verbosity level (0,1,2)
+ * */
+struct FtCrossArgs
+{
+    size_t dim;
+    size_t * ranks;
+    double epsilon;
+    size_t maxiter;
+    
+    // adaptation parameters
+    int adapt;
+    double epsround;
+    size_t kickrank;
+    size_t * maxranks; //maxiteradapt;
+
+    int verbose;
+};
+
+/***********************************************************//**
+   Allocate space for cross approximation arguments
+   Set elements to a default value
+***************************************************************/
+struct FtCrossArgs * ft_cross_args_alloc(size_t dim, size_t start_rank)
+{
+
+    struct FtCrossArgs * ftc = malloc(sizeof(struct FtCrossArgs));
+    if (ftc == NULL){
+        fprintf(stderr,"Failure allocating FtCrossArgs\n");
+        exit(1);
+    }
+    
+    ftc->dim = dim;
+    ftc->ranks = calloc_size_t(dim+1);
+    ftc->ranks[0] = 1;
+    for (size_t ii = 1; ii < dim; ii++){
+        ftc->ranks[ii] = start_rank;
+    }
+    ftc->ranks[dim] = 1;
+    ftc->epsilon = 1e-10;
+    ftc->maxiter = 5;
+
+    ftc->adapt = 1;    
+    ftc->epsround = 1e-10;
+    ftc->kickrank = 5;
+//    ftc->maxiteradapt = 5;
+    ftc->maxranks = calloc_size_t(dim-1);
+    for (size_t ii = 0; ii < dim-1;ii++){
+        // 4 adaptation steps
+        ftc->maxranks[ii] = ftc->ranks[ii+1] + ftc->kickrank*4; 
+    }
+
+    ftc->verbose = 0;
+
+    return ftc;
+}
+
+
+/***********************************************************//**
+    Set the rounding tolerance
+***************************************************************/
+void ft_cross_args_set_round_tol(struct FtCrossArgs * fca, double epsround)
+{
+    fca->epsround = epsround;
+}
+/***********************************************************//**
+    Set the kickrank
+***************************************************************/
+void ft_cross_args_set_kickrank(struct FtCrossArgs * fca, size_t kickrank)
+{
+    fca->kickrank = kickrank;
+}
+
+/***********************************************************//**
+    Set the maxiter
+***************************************************************/
+void ft_cross_args_set_maxiter(struct FtCrossArgs * fca, size_t maxiter)
+{
+    fca->maxiter = maxiter;
+}
+
+/***********************************************************//**
+    Turn off adaptation
+***************************************************************/
+void ft_cross_args_set_no_adaptation(struct FtCrossArgs * fca)
+{
+    fca->adapt = 0;
+}
+
+/***********************************************************//**
+    Turn onn adaptation
+***************************************************************/
+void ft_cross_args_set_adaptation(struct FtCrossArgs * fca)
+{
+    fca->adapt = 1;
+}
+
+/***********************************************************//**
+    Set maximum ranks for adaptation
+***************************************************************/
+void ft_cross_args_set_maxrank_all(struct FtCrossArgs * fca, size_t maxrank)
+{
+//    fca->maxiteradapt = maxiteradapt;
+    for (size_t ii = 0; ii < fca->dim-1; ii++){
+        fca->maxranks[ii] = maxrank;
+    }
+}
+
+/***********************************************************//**
+    Set maximum ranks for adaptation per dimension
+***************************************************************/
+void 
+ft_cross_args_set_maxrank_ind(struct FtCrossArgs * fca, size_t maxrank, size_t ind)
+{
+//    fca->maxiteradapt = maxiteradapt;
+    assert (ind < (fca->dim-1));
+    fca->maxranks[ind] = maxrank;
+}
+
+/***********************************************************//**
+    Set the cross approximation tolerance
+***************************************************************/
+void ft_cross_args_set_cross_tol(struct FtCrossArgs * fca, double tol)
+{
+    fca->epsilon = tol;
+}
+
+/***********************************************************//**
+    Set the verbosity level
+***************************************************************/
+void ft_cross_args_set_verbose(struct FtCrossArgs * fca, int verbose)
+{
+    fca->verbose = verbose;
+}
+
+/***********************************************************//**
+    Get the ranks
+***************************************************************/
+size_t * ft_cross_args_get_ranks(const struct FtCrossArgs * fca)
+{
+    assert (fca != NULL);
+    return fca->ranks;
+}
+
+
+
+/***********************************************************//**
+    Copy cross approximation arguments
+***************************************************************/
+struct FtCrossArgs * ft_cross_args_copy(const struct FtCrossArgs * fca)
+{
+    if (fca == NULL){
+        return NULL;
+    }
+    else{
+        struct FtCrossArgs * f2 = malloc(sizeof(struct FtCrossArgs));
+        assert (f2 != NULL);
+        f2->dim = fca->dim;
+        f2->ranks = calloc_size_t(fca->dim+1);
+        memmove(f2->ranks,fca->ranks,(fca->dim+1) * sizeof(size_t));
+        f2->epsilon = fca->epsilon;
+        f2->maxiter = fca->maxiter;
+        f2->adapt = fca->adapt;
+        f2->epsround = fca->epsround;
+        f2->kickrank = fca->kickrank;
+        f2->maxranks = calloc_size_t(fca->dim-1);
+        memmove(f2->maxranks,fca->maxranks, (fca->dim-1)*sizeof(size_t));
+        f2->verbose = fca->verbose;
+
+        return f2;
+    }
+}
+
+/***********************************************************//**
+    free cross approximation arguments
+***************************************************************/
+void ft_cross_args_free(struct FtCrossArgs * fca)
+{
+    if (fca != NULL){
+        free(fca->ranks); fca->ranks = NULL;
+        free(fca->maxranks); fca->maxranks = NULL;
+        free(fca); fca = NULL;
+    }
+}
+
+struct Qmarray *
+prepCore(size_t ii, size_t nrows, size_t ncols,
+         struct Fwrap * fw, struct OneApproxOpts * o,
+         struct CrossIndex ** left_ind,struct CrossIndex ** right_ind)
+{
+    assert (fw != NULL);
+    assert (o != NULL);
+    assert (left_ind != NULL);
+    assert (right_ind != NULL);
+
+    if (VPREPCORE) printf("in prepCore \n");
+    size_t ncuts = nrows * ncols;
+    fwrap_initialize_fiber_approx(fw,ii,ncuts);
+    if (VPREPCORE) printf("initialized fiber approx ncuts=%zu \n",ncuts);
+
+    double * left = NULL, *right = NULL;
+    size_t nl, nr;
+    for (size_t jj = 0; jj < ncols; jj++){
+        nr = 0;
+        right = cross_index_get_node_value(right_ind[ii],jj,&nr);
+        for (size_t kk = 0; kk < nrows; kk++){
+            nl = 0;
+            left = cross_index_get_node_value(left_ind[ii],kk,&nl);
+            fwrap_add_fiber(fw,jj*nrows+kk,nl,left,nr,right);
+        }
+    }
+
+    if (VPREPCORE) printf("compute from fibercuts \n");
+   
+    struct Qmarray * temp = qmarray_alloc(nrows,ncols);
+    for (size_t jj = 0; jj < ncols; jj++){
+        for (size_t kk = 0; kk < nrows; kk++){
+            fwrap_set_which_fiber(fw,jj*nrows+kk);
+            temp->funcs[jj*nrows+kk] = 
+                generic_function_approximate1d(o->fc,o->aopts,fw);
+        }
+    }
+
+    if (VPREPCORE) printf("computed!\n");
+    
+
+    fwrap_clean_fiber_approx(fw);
+    return temp;
+}
+
+/***********************************************************//**
+    Cross approximation of a of a dim-dimensional function
+    (with adaptation)
+    
+    \param[in]     fw        - wrapped function
+    \param[in]     cargs     - cross approximation arguments
+    \param[in,out] left_ind  - left indices
+    \param[in,out] right_ind - right indices
+    \param[in]     apargs    - approximation arguments
+    \param[in]     optargs   - fiber optimizationa arguments
+    \param[in]     ftref     - reference ft for first error approximation
+
+    \return function train decomposition of \f$ f \f$
+
+    \note
+    both left and right indices are nested
+***************************************************************/
+struct FunctionTrain *
+ftapprox_cross(struct Fwrap * fw,
+               struct FtCrossArgs * cargs,
+               struct CrossIndex ** left_ind,
+               struct CrossIndex ** right_ind,
+               struct MultiApproxOpts * apargs,
+               struct FiberOptArgs * optargs,
+               struct FunctionTrain * ftref)
+{
+    assert (fw != NULL);
+    assert (cargs != NULL);
+    assert (left_ind != NULL);
+    assert (right_ind != NULL);
+    assert (apargs != NULL);
+    assert (optargs != NULL);
+    
+    size_t dim = multi_approx_opts_get_dim(apargs);
+    struct OneApproxOpts * o = NULL;
+    void * opt = NULL;
+    int info;
+    /* size_t nrows, ii, oncore; */
+    size_t ii,oncore;
+    struct Qmarray * temp = NULL;
+    struct Qmarray * Q = NULL;
+    struct Qmarray * Qt = NULL;
+    double * R = NULL;
+    size_t * pivind = NULL;
+    double * pivx = NULL;
+    double diff, diff2, den;
+    
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    memmove(ft->ranks, cargs->ranks, (dim+1)*sizeof(size_t));
+    size_t * ranks = function_train_get_ranks(ft);
+
+    struct FunctionTrain * fti = function_train_copy(ftref);
+    struct FunctionTrain * fti2 = NULL;
+
+    int done = 0;
+    size_t iter = 0;
+
+    while (done == 0){
+        if (cargs->verbose > 0)
+            printf("cross iter=%zu \n",iter);
+      
+        // left right sweep;
+//        nrows = 1;
+        for (ii = 0; ii < dim-1; ii++){
+            o = multi_approx_opts_get_aopts(apargs,ii);
+            opt = fiber_opt_args_get_opts(optargs,ii);
+
+            //  printf("sub_type ftcross= %d\n",
+            //         *(int *)ft_approx_args_getst(apargs,ii));
+            if (cargs->verbose > 1){
+                printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
+            }
+            //printf("ii=%zu\n",ii);
+            pivind = calloc_size_t(ft->ranks[ii+1]);
+            pivx = calloc_double(ft->ranks[ii+1]);
+            
+            if (VFTCROSS){
+                printf( "prepCore \n");
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+
+            temp = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,
+                            left_ind,right_ind);
+
+            if (VFTCROSS == 2){
+                printf ("got it \n");
+                //print_qmarray(temp,0,NULL);
+                struct Qmarray * tempp = qmarray_copy(temp);
+                printf("core is \n");
+                //print_qmarray(tempp,0,NULL);
+                R = calloc_double(temp->ncols * temp->ncols);
+                Q = qmarray_householder_simple("QR",temp,R,o);
+                printf("R=\n");
+                dprint2d_col(temp->ncols, temp->ncols, R);
+//                print_qmarray(Q,0,NULL);
+
+                struct Qmarray * mult = qmam(Q,R,temp->ncols);
+                //print_qmarray(Q,3,NULL);
+                double difftemp = qmarray_norm2diff(mult,tempp);
+                printf("difftemp = %3.15G\n",difftemp);
+                qmarray_free(tempp);
+                qmarray_free(mult);
+            }
+            else{
+                R = calloc_double(temp->ncols * temp->ncols);
+                Q = qmarray_householder_simple("QR", temp,R,o);
+            }
+
+            
+            info = qmarray_maxvol1d(Q,R,pivind,pivx,o,opt);
+
+            if (VFTCROSS){
+                printf( " got info=%d\n",info);
+                printf("indices and pivots\n");
+                iprint_sz(ft->ranks[ii+1],pivind);
+                dprint(ft->ranks[ii+1],pivx);
+            }
+
+            if (info < 0){
+                fprintf(stderr, "no invertible submatrix in maxvol in cross\n");
+            }
+            if (info > 0){
+                fprintf(stderr, " error in qmarray_maxvol1d \n");
+                exit(1);
+            }
+
+            cross_index_free(left_ind[ii+1]);
+            if (ii > 0){
+                left_ind[ii+1] =
+                    cross_index_create_nested_ind(0,ft->ranks[ii+1],pivind,
+                                                  pivx,left_ind[ii]);
+            }
+            else{
+                left_ind[ii+1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[1]; zz++){
+                    cross_index_add_index(left_ind[1],1,&(pivx[zz]));
+                }
+            }
+            
+            qmarray_free(ft->cores[ii]); ft->cores[ii]=NULL;
+            ft->cores[ii] = qmam(Q,R, temp->ncols);
+//            nrows = left_ind[ii+1]->n;
+
+            qmarray_free(temp); temp = NULL;
+            qmarray_free(Q); Q = NULL;
+            free(pivind); pivind =NULL;
+            free(pivx); pivx = NULL;
+            free(R); R=NULL;
+
+        }
+        ii = dim-1;
+        if (cargs->verbose > 1){
+            printf(" ............. on left-right sweep (%zu/%zu)\n",ii,dim-1);
+        }
+        qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
+        /* ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd, */
+        /*                          left_ind,right_ind,cargs,apargs,1); */
+        ft->cores[ii] = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,
+                                 left_ind,right_ind);
+
+        if (VFTCROSS == 2){
+            printf ("got it \n");
+            //print_qmarray(ft->cores[ii],0,NULL);
+            printf("integral = %G\n",function_train_integrate(ft));
+            struct FunctionTrain * tprod = function_train_product(ft,ft);
+            printf("prod integral = %G\n",function_train_integrate(tprod));
+            printf("norm2 = %G\n",function_train_norm2(ft));
+            print_qmarray(tprod->cores[0],0,NULL);
+            //print_qmarray(tprod->cores[1],0,NULL);
+            function_train_free(tprod);
+        }
+
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Left-Right cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
+        }
+        
+        //printf("compute difference \n");
+        //printf("norm fti = %G\n",function_train_norm2(fti));
+        //printf("norm ft = %G\n",function_train_norm2(ft));
+        diff = function_train_relnorm2diff(ft,fti);
+        //printf("diff = %G\n",diff);
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
+
+        if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
+            printf("...... New FT norm L/R Sweep = %E\n",den);
+            printf("...... Error L/R Sweep = %E\n",diff);
+        }
+        
+        if (diff < cargs->epsilon){
+            done = 1;
+            break;
+        }
+        
+        /* function_train_free(fti); fti=NULL; */
+        /* fti = function_train_copy(ft); */
+        
+        //printf("copied \n");
+        //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
+
+        ///////////////////////////////////////////////////////
+        // right-left sweep
+        for (oncore = 1; oncore < dim; oncore++){
+            
+            ii = dim-oncore;
+            o = multi_approx_opts_get_aopts(apargs,ii);
+            opt = fiber_opt_args_get_opts(optargs,ii);
+
+
+            if (cargs->verbose > 1){
+                printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1);
+            }
+
+//            nrows = ft->ranks[ii];
+
+            if (VFTCROSS){
+                printf("do prep\n");
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            //printf("prep core\n");
+            /* temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0); */
+            temp = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,left_ind,right_ind);
+            //printf("prepped core\n");
+
+            R = calloc_double(temp->nrows * temp->nrows);
+            Q = qmarray_householder_simple("LQ", temp,R,o);
+            Qt = qmarray_transpose(Q);
+            pivind = calloc_size_t(ft->ranks[ii]);
+            pivx = calloc_double(ft->ranks[ii]);
+            info = qmarray_maxvol1d(Qt,R,pivind,pivx,o,opt);
+                        
+            if (VFTCROSS){
+                printf("got info=%d\n",info);
+                printf("indices and pivots\n");
+                iprint_sz(ft->ranks[ii],pivind);
+                dprint(ft->ranks[ii],pivx);
+            }
+
+            //printf("got maxvol\n");
+            if (info < 0){
+                fprintf(stderr, "noinvertible submatrix in maxvol in rl cross\n");
+            }
+
+            if (info > 0){
+                fprintf(stderr, " error in qmarray_maxvol1d \n");
+                exit(1);
+            }
+            qmarray_free(Q); Q = NULL;
+
+            //printf("pivx \n");
+            //dprint(ft->ranks[ii], pivx);
+
+            Q = qmam(Qt,R, temp->nrows);
+
+            qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
+            ft->cores[ii] = qmarray_transpose(Q);
+
+            cross_index_free(right_ind[ii-1]);
+            if (ii < dim-1){
+                //printf("are we really here? oncore=%zu,ii=%zu\n",oncore,ii);
+                right_ind[ii-1] =
+                    cross_index_create_nested_ind(1,ft->ranks[ii],pivind,
+                                                  pivx,right_ind[ii]);
+            }
+            else{
+                //printf("lets update the cross index ii=%zu\n",ii);
+                right_ind[ii-1] = cross_index_alloc(1);
+                for (size_t zz = 0; zz < ft->ranks[ii]; zz++){
+                    cross_index_add_index(right_ind[ii-1],1,&(pivx[zz]));
+                }
+                //printf("updated\n");
+            }
+
+            qmarray_free(temp); temp = NULL;
+            qmarray_free(Q); Q = NULL;
+            qmarray_free(Qt); Qt = NULL;
+            free(pivind);
+            free(pivx);
+            free(R); R=NULL;
+
+        }
+
+        ii = 0;
+        qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
+
+        if (cargs->verbose > 1)
+            printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1);
+        /* ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,cargs,apargs,-1); */
+        ft->cores[ii] = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,left_ind,right_ind);
+        if (cargs->verbose > 1)
+            printf(" ............. done with right left sweep\n");
+ 
+
+        if (VFTCROSS){
+            printf("\n\n\n Index sets after Right-left cross\n");
+            for (ii = 0; ii < dim; ii++){
+                printf("ii = %zu\n",ii);
+                printf( "left index set = \n");
+                print_cross_index(left_ind[ii]);
+                printf( "right index set = \n");
+                print_cross_index(right_ind[ii]);
+            }
+            printf("\n\n\n");
+        }
+
+        diff = function_train_relnorm2diff(ft,fti);
+        if (fti2 != NULL){
+            diff2 = function_train_relnorm2diff(ft,fti2);
+        }
+        else{
+            diff2 = diff;
+        }
+
+        //den = function_train_norm2(ft);
+        //diff = function_train_norm2diff(ft,fti);
+        //if (den > ZEROTHRESH){
+        //    diff /= den;
+       // }
+
+        if (cargs->verbose > 0){
+            den = function_train_norm2(ft);
+            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
+        }
+
+        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+            done = 1;
+            break;
+        }
+
+        function_train_free(fti2); fti2 = NULL;
+        fti2 = function_train_copy(fti);
+        function_train_free(fti); fti=NULL;
+        fti = function_train_copy(ft);
+
+        iter++;
+        if (iter  == cargs->maxiter){
+            done = 1;
+            break;
+        }
+    }
+
+    function_train_free(fti); fti=NULL;
+    function_train_free(fti2); fti2=NULL;
+    return ft;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////

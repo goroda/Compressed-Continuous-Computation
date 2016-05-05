@@ -196,7 +196,7 @@ void generic_function_weighted_sum_pa(double, struct GenericFunction *,
 
 
 struct GenericFunction *
-generic_function_approximate1d(enum function_class, struct Fwrap *, void*);
+generic_function_approximate1d(enum function_class,void *,struct Fwrap *);
 
 // extraction functions
 double generic_function_get_lower_bound(const struct GenericFunction * f);

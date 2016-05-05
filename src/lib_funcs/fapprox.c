@@ -70,6 +70,29 @@ void one_approx_opts_free(struct OneApproxOpts * oa)
     }
 }
 
+/***********************************************************//**
+  Free one dimensional approximations (deep)
+***************************************************************/
+void one_approx_opts_free_deep(struct OneApproxOpts * oa)
+{
+    if (oa != NULL){
+        if (oa->fc == PIECEWISE){
+            pw_poly_opts_free(oa->aopts); oa->aopts = NULL;
+        }
+        else if (oa->fc == POLYNOMIAL){
+            ope_opts_free(oa->aopts); oa->aopts = NULL;
+        }
+        else if (oa->fc == LINELM){
+            lin_elem_exp_aopts_free(oa->aopts); oa->aopts = NULL;
+        }
+        else{
+            fprintf(stderr,"Cannot free one_approx options of type %d\n",
+                    oa->fc);
+        }
+        free(oa); oa = NULL;
+    }
+}
+
 //////////////////////////////////////////////////////
 /** \struct MultiApproxOpts
  * \brief Multidimensional approximation arguments
@@ -86,6 +109,7 @@ struct MultiApproxOpts
 
 /***********************************************************//**
   Allocate multi_approx_opts
+
   \param[in] dim - dimension
   
   \return approximation options
@@ -118,10 +142,22 @@ struct MultiApproxOpts * multi_approx_opts_alloc(size_t dim)
 void multi_approx_opts_free(struct MultiApproxOpts * fargs)
 {
     if (fargs != NULL){
-        /* for (size_t ii = 0; ii < fargs->dim;ii++){ */
-        /*     one_approx_optsfree(fargs->aopts[ii]); */
-        /*     fargs->aopts[ii] = NULL; */
-        /* } */
+        free(fargs->aopts); fargs->aopts = NULL;
+        free(fargs); fargs = NULL;
+    }
+}
+/***********************************************************//**
+    Free memory allocated to MultiApproxOpts (deep)
+
+    \param[in,out] fargs - function train approximation arguments
+***************************************************************/
+void multi_approx_opts_free_deep(struct MultiApproxOpts * fargs)
+{
+    if (fargs != NULL){
+        for (size_t ii = 0; ii < fargs->dim;ii++){
+            one_approx_opts_free_deep(fargs->aopts[ii]);
+            fargs->aopts[ii] = NULL;
+        }
         free(fargs->aopts); fargs->aopts = NULL;
         free(fargs); fargs = NULL;
     }
@@ -198,4 +234,139 @@ size_t multi_approx_opts_get_dim(const struct MultiApproxOpts * f)
 {
     assert (f != NULL);
     return f->dim;
+}
+
+///////////////////////////////////////////////////////////////////
+
+struct FiberOptArgs
+{
+    size_t dim;
+    void ** opts;
+};
+
+
+/***********************************************************//**
+  Allocate fiber optimization options
+***************************************************************/
+struct FiberOptArgs * fiber_opt_args_alloc()
+{
+    struct FiberOptArgs * fopt = NULL;
+    fopt = malloc(sizeof(struct FiberOptArgs));
+    if (fopt == NULL){
+        fprintf(stderr,"Memory failure allocating FiberOptArgs\n");
+        exit(1);
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Initialize a baseline optimization arguments class
+
+    \param[in] dim - dimension of problem
+
+    \return fiber optimzation arguments that are NULL in each dimension
+***************************************************************/
+struct FiberOptArgs * fiber_opt_args_init(size_t dim)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = NULL;
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+   set optimization arguments to something
+***************************************************************/
+void fiber_opt_args_set_dim(struct FiberOptArgs * fopt, size_t ii, void * arg)
+{
+    assert (fopt != NULL);
+    assert (ii < fopt->dim);
+    fopt->opts[ii] = arg; 
+}
+
+/***********************************************************//**
+    Initialize a bruteforce optimization with the same nodes 
+    in each dimension
+
+    \param[in] dim   - dimension of problem
+    \param[in] nodes - nodes over which to optimize 
+                       (same ones used for each dimension)
+
+    \return fiber opt args
+***************************************************************/
+struct FiberOptArgs * 
+fiber_opt_args_bf_same(size_t dim, struct c3Vector * nodes)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = nodes;
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Initialize a bruteforce optimization with different nodes
+    in each dimension
+
+    \param[in] dim   - dimension of problem
+    \param[in] nodes - nodes over which to optimize 
+                       (same ones used for each dimension)
+
+    \return fiber opt args
+***************************************************************/
+struct FiberOptArgs * 
+fiber_opt_args_bf(size_t dim, struct c3Vector ** nodes)
+{
+    struct FiberOptArgs * fopt = fiber_opt_args_alloc();
+    fopt->dim = dim;
+    
+    fopt->opts = malloc(dim * sizeof(void *));
+    if (fopt->opts == NULL){
+        fprintf(stderr,"Memory failure initializing fiber opt args\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        fopt->opts[ii] = nodes[ii];
+    }
+    return fopt;
+}
+
+/***********************************************************//**
+    Free memory allocate to fiber optimization arguments
+
+    \param[in,out] fopt - fiber optimization structure
+***************************************************************/
+void * fiber_opt_args_get_opts(const struct FiberOptArgs * fopts, size_t ind)
+{
+    assert (fopts != NULL);
+    assert (ind < fopts->dim);
+    return fopts->opts[ind];
+}
+
+/***********************************************************//**
+    Free memory allocate to fiber optimization arguments
+
+    \param[in,out] fopt - fiber optimization structure
+***************************************************************/
+void fiber_opt_args_free(struct FiberOptArgs * fopt)
+{
+    if (fopt != NULL){
+        free(fopt->opts); fopt->opts = NULL;
+        free(fopt); fopt = NULL;
+    }
 }

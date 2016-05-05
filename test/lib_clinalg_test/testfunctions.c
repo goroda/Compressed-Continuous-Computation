@@ -113,3 +113,67 @@ int func6(size_t n, const double * x, double * out, void * args)
 }
 
 
+// 2 dimensional function
+int funcnda(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii];
+    }
+    
+    return 0;
+}
+
+int funcndb(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = pow(x[ii],2);
+    }
+
+    return 0;
+}
+
+// two dimensions
+int funcnd1(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+
+    for (size_t ii = 0; ii < n; ii++){
+        double vala, valb;
+        funcnda(1,x+ii*2,&vala,NULL);
+        funcndb(1,x+ii*2+1,&valb,NULL);
+        out[ii] = vala + valb;
+    }
+
+    return 0;
+}
+
+int funcnd2(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii*4] + x[ii*4+1] + x[ii*4+2] + x[ii*4+3];        
+    }
+    return 0;
+}
+
+int disc2d(size_t n, const double * xy, double * out, void * args)
+{
+    (void)(args);
+     
+    for (size_t ii = 0; ii < n; ii++){
+        double x = xy[ii*2];
+        double y = xy[ii*2+1];
+        if ((x > 0.5) || (y > 0.4)){
+            out[ii] = 0.0;    
+        }
+        else{
+            out[ii] = exp(5.0 * x + 5.0 * y);
+        }
+    }
+    return 0;
+}
+
+

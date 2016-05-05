@@ -41,7 +41,7 @@
 #ifndef LIB_CLINALG_H
 #define LIB_CLINALG_H
 
-#include "ft.h"
+#include "approximate.h"
 //#include "cross2d.h"
 
 /* #include "elements.h" */

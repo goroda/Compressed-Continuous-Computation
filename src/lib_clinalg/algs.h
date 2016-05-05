@@ -45,57 +45,6 @@
 #include "indmanage.h"
 //#include "quasimatrix.h"
 
-/** \struct FtCrossArgs
- *  \brief Arguments for function-train cross approximation
- *  \var FtCrossArgs::dim
- *  dimension of function
- *  \var FtCrossArgs::ranks
- *  (dim+1,) array of ranks
- *  \var FtCrossArgs::epsilon
- *  cross-approximation convergence criteria
- *  \var FtCrossArgs::maxiter
- *  maximum number of iteration for cross approximation
- *  \var FtCrossArgs::epsround
- *  rounding tolerance for adaptive rank cross approximation
- *  \var FtCrossArgs::kickrank
- *  size of rank increase for adaptation
- *  \var FtCrossArgs::maxranks
- *  maximum rank to go to during adaptation (dim-1,1)
- *  \var FtCrossArgs::verbose
- *  verbosity level (0,1,2)
- *  \var FtCrossArgs::optargs
- *  optimization arguments
- * */
-struct FtCrossArgs
-{
-    size_t dim;
-    size_t * ranks;
-    double epsilon;
-    size_t maxiter;
-    
-    int adapt;
-    double epsround;
-    size_t kickrank;
-    size_t * maxranks; //maxiteradapt;
-
-    int verbose;
-
-    struct FiberOptArgs * optargs;
-};
-struct FtCrossArgs * ft_cross_args_alloc(size_t, size_t);
-void ft_cross_args_set_round_tol(struct FtCrossArgs *, double);
-void ft_cross_args_set_kickrank(struct FtCrossArgs *, size_t);
-void ft_cross_args_set_maxiter(struct FtCrossArgs *, size_t);
-void ft_cross_args_set_no_adaptation(struct FtCrossArgs *);
-void ft_cross_args_set_adaptation(struct FtCrossArgs *);
-void ft_cross_args_set_maxrank_all(struct FtCrossArgs *, size_t);
-void ft_cross_args_set_maxrank_ind(struct FtCrossArgs *, size_t, size_t);
-void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
-void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
-void ft_cross_args_set_optargs(struct FtCrossArgs *, void*);
-struct FtCrossArgs * ft_cross_args_copy(struct FtCrossArgs *);
-void ft_cross_args_free(struct FtCrossArgs *);
-void ft_cross_args_init(struct FtCrossArgs *);
 
 
 

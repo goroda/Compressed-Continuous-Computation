@@ -2027,8 +2027,8 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     \return gf - generic function
 ************************************************************/
 struct GenericFunction * 
-generic_function_approximate1d(enum function_class fc, struct Fwrap * f,
-                               void * aopts)
+generic_function_approximate1d(enum function_class fc, void * aopts,
+                               struct Fwrap * f)
 {
     struct GenericFunction * gf = generic_function_alloc(1,fc);
     switch (fc){

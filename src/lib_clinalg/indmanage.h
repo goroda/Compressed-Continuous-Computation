@@ -48,6 +48,9 @@ void cross_index_free(struct CrossIndex *);
 void cross_index_add_index(struct CrossIndex *, size_t, double *);
 void cross_index_add_nested(struct CrossIndex *, int, 
                             size_t, double *, double);
+double * 
+cross_index_get_node_value(struct CrossIndex *,size_t,size_t *);
+
 struct CrossIndex *
 cross_index_create_nested(int, int, size_t, size_t,
                           double *, struct CrossIndex *);

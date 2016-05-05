@@ -103,6 +103,7 @@ void cross_node_add_nested(struct CrossNode ** cn, int left, size_t nold, double
     free(x); x = NULL;
 }
 
+
 struct CrossNode * cross_node_get(struct CrossNode * cn, size_t ind)
 {
     struct CrossNode * out = cn;
@@ -172,6 +173,22 @@ struct CrossNode * cross_index_get_node(struct CrossIndex * c, size_t ind)
 {
     assert (ind < c->n);
     return cross_node_get(c->nodes,ind);
+}
+
+double * cross_index_get_node_value(struct CrossIndex * c, size_t ind, size_t *n)
+{
+    if (c == NULL){
+        return NULL;
+    }
+    assert (ind < c->n);
+    struct CrossNode * temp = cross_node_get(c->nodes,ind);
+    if (temp == NULL){
+        *n = 0;
+        return NULL;
+    }
+    double * x = temp->x;
+    *n = temp->n;
+    return x;
 }
 
 struct CrossIndex *

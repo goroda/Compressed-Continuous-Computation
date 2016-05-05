@@ -549,22 +549,255 @@ void Test_function_train_inner(CuTest * tc)
     all_opts_free(fw,opts,qmopts,fopts);
 }
 
+void Test_ftapprox_cross(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross  (1/4)\n");
+    size_t dim = 2;
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,2);
+    fwrap_set_func_array(fw,0,funcnda,NULL);
+    fwrap_set_func_array(fw,1,funcndb,NULL);
+
+    // two funcnd1 is funcda + funcdb
+    struct Fwrap * fw2 = fwrap_create(2,"general-vec");
+    fwrap_set_fvec(fw2,funcnd1,NULL);
+ 
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+
+    struct FunctionTrain * ftref = function_train_initsum(fopts,fw);
+    
+    double * yr[2];
+    yr[1] = calloc_double(3);
+    yr[1][0] = -1.0;
+    yr[1][1] =  0.0;
+    yr[1][2] =  1.0;
+    yr[0] = calloc_double(3);
+
+    size_t init_rank = 3;
+    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_rank);
+    ft_cross_args_set_cross_tol(fca,1e-5);
+    ft_cross_args_set_maxiter(fca,10);
+    ft_cross_args_set_verbose(fca,0);
+    size_t * rank = ft_cross_args_get_ranks(fca);
+
+    struct FiberOptArgs * optim = fiber_opt_args_init(dim);
+
+    struct CrossIndex * isl[2];
+    struct CrossIndex * isr[2];
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,rank,yr);
+
+    struct FunctionTrain * ft = ftapprox_cross(fw2,fca,isl,isr,fopts,optim,ftref);
+    
+    size_t N = 20;
+    double * xtest = linspace(-1,1,N);
+    size_t ii,jj;
+    double err = 0.0;
+    double den = 0.0;
+    double val;
+    double pt[2];
+    for (ii = 0; ii < N; ii++){
+        for (jj = 0; jj < N; jj++){
+            pt[0] = xtest[ii];
+            pt[1] = xtest[jj];
+            funcnd1(1,pt,&val,NULL);
+            den += pow(val,2);
+            err += pow(val - function_train_eval(ft,pt),2);
+        }
+    }
+    
+    err /= den;
+    CuAssertDblEquals(tc,0.0,err,1e-15);
+    free(xtest);
+
+    cross_index_free(isl[1]);
+    cross_index_free(isr[0]);
+    all_opts_free(fw,opts,qmopts,fopts);
+    fwrap_destroy(fw2);
+    ft_cross_args_free(fca);
+    fiber_opt_args_free(optim);
+    function_train_free(ft);
+    function_train_free(ftref);
+    free(yr[0]);
+    free(yr[1]);
+
+}
+
+
+void Test_ftapprox_cross2(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross  (2/4)\n");
+     
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcnd2,NULL);
+    // set function monitor
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+
+    size_t N = 10;
+    double * xtest = linspace(-1.0,1.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double val;
+    double pt[4];
+    
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            for (size_t kk = 0; kk < N; kk++){
+                for (size_t ll = 0; ll < N; ll++){
+                    pt[0] = xtest[ii]; pt[1] = xtest[jj];
+                    pt[2] = xtest[kk]; pt[3] = xtest[ll];
+                    funcnd2(1,pt,&val,NULL);
+                    den += pow(val,2.0);
+                    err += pow(val-function_train_eval(ft,pt),2.0);
+                }
+            }
+        }
+    }
+    err = err/den;
+    CuAssertDblEquals(tc,0.0,err,1e-10);
+    free(xtest);
+
+    function_train_free(ft);
+    /* c3approx_destroy(c3a); */
+    free_dd(dim, start);
+}
+
+
+void Test_ftapprox_cross3(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross  (3/4)\n");
+    size_t dim = 2;
+
+    // reference function
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,0.0);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+    double slopes[2] = {0.5, 0.5};
+    double offset[2] = {0.0, 0.0};
+    struct FunctionTrain * ftref = function_train_linear(slopes,1,offset,1,fopts);
+    all_opts_free(NULL,opts,qmopts,fopts);
+
+    // functions
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,disc2d,NULL);
+//    fwrap_set_monitoring(fw,1);
+
+    size_t start_ranks = 2;
+    struct FiberOptArgs * opt = fiber_opt_args_init(dim);
+    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,start_ranks);
+    ft_cross_args_set_cross_tol(fca,1e-6);
+    ft_cross_args_set_maxiter(fca,5);
+    ft_cross_args_set_verbose(fca,0);
+
+    double * yr[2];
+    yr[1] = calloc_double(2);
+    yr[1][0] = 0.3;
+    yr[1][1] =  0.0;
+    yr[0] = calloc_double(2);
+
+    struct CrossIndex * isl[2];
+    struct CrossIndex * isr[2];
+    size_t * ranks = ft_cross_args_get_ranks(fca);
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
+    cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+
+    struct PwPolyOpts * aopts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
+    pw_poly_opts_set_maxorder(aopts,7);
+    pw_poly_opts_set_coeffs_check(aopts,2);
+    pw_poly_opts_set_tol(aopts,1e-6);
+    pw_poly_opts_set_minsize(aopts,1e-8);
+    pw_poly_opts_set_nregions(aopts,5);
+
+    qmopts = one_approx_opts_alloc(PIECEWISE,aopts);
+    fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+
+    struct FunctionTrain * ft = ftapprox_cross(fw,fca,isl,isr,fopts,opt,ftref);
+
+
+    free(yr[0]);
+    free(yr[1]);
+
+    cross_index_free(isr[0]);
+    cross_index_free(isl[1]);
+            
+    double v1, v2;
+    size_t ii,jj;
+    size_t N1 = 40;
+    size_t N2 = 40;
+    double * xtest = linspace(0.0,1.0,N1);
+    double * ytest = linspace(0.0,1.0,N2);
+
+    double out1=0.0;
+    double den=0.0;
+    double pt[2];
+    for (ii = 0; ii < N1; ii++){
+        for (jj = 0; jj < N2; jj++){
+            pt[0] = xtest[ii]; pt[1] = ytest[jj];
+            disc2d(1,pt,&v1,NULL);
+            v2 = function_train_eval(ft,pt);
+            den += pow(v1,2.0);
+            out1 += pow(v1-v2,2.0);
+            //printf("f(%G,%G) = %G, pred = %G\n",pt[0],pt[1],v1,v2);
+        }
+    }
+    free(xtest);
+    free(ytest);
+
+    double err = sqrt(out1/den);
+
+    CuAssertDblEquals(tc,0.0,err,1e-10);
+
+    //
+
+    ft_cross_args_free(fca);
+    fwrap_destroy(fw);
+    multi_approx_opts_free(fopts);
+    one_approx_opts_free(qmopts);
+    fiber_opt_args_free(opt);
+    pw_poly_opts_free(aopts);
+    function_train_free(ftref);
+    function_train_free(ft);
+
+}
+
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_function_train_initsum);
-    SUITE_ADD_TEST(suite, Test_function_train_linear);
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic);
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
-    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
-    SUITE_ADD_TEST(suite, Test_function_train_scale);
-    SUITE_ADD_TEST(suite, Test_function_train_product);
-    SUITE_ADD_TEST(suite, Test_function_train_integrate);
-    SUITE_ADD_TEST(suite, Test_function_train_inner);
-    
+    /* SUITE_ADD_TEST(suite, Test_function_train_initsum); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_linear); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic2); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_scale); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_product); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_inner); */
     /* SUITE_ADD_TEST(suite, Test_ftapprox_cross); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross2); */
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
     /* SUITE_ADD_TEST(suite, Test_ftapprox_cross3); */
+
     /* SUITE_ADD_TEST(suite, Test_ftapprox_cross4); */
     /* SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb); */
     /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1); */

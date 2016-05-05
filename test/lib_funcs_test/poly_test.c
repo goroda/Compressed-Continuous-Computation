@@ -1417,7 +1417,7 @@ void Test_serialize_generic_function(CuTest * tc){
     ope_opts_set_ub(opts,ub);
     
     struct GenericFunction * pl =
-        generic_function_approximate1d(POLYNOMIAL,fw,opts);
+        generic_function_approximate1d(POLYNOMIAL,opts,fw);
     
     unsigned char * text = NULL;
     size_t size_to_be;

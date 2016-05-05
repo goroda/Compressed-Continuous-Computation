@@ -45,4 +45,9 @@ int func4(size_t, const double *, double *, void *);
 int func5(size_t, const double *, double *, void *);
 int func6(size_t, const double *, double *, void *);
 
+int funcnda(size_t, const double *, double *, void *);
+int funcndb(size_t, const double *, double *, void *);
+int funcnd1(size_t, const double *, double *, void *);
+int funcnd2(size_t, const double *, double *, void *);
+int disc2d(size_t, const double *, double *, void *);
 #endif
