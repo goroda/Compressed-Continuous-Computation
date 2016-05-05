@@ -1475,7 +1475,7 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExp
         // not on a grid I can do whatever I want
         assert (n > 1);
         double * nodes = linspace(opts->lb,opts->ub,n);
-        double * zeros = calloc_double(opts->num_nodes);
+        double * zeros = calloc_double(n);
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = lin_elem_exp_init(n,nodes,zeros);
             f[ii]->coeff[ii] = 1.0;

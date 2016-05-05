@@ -60,12 +60,12 @@ void RunAllTests(void) {
     CuSuite * diff = CLinalgDiffusionGetSuite();
     
     CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
+    CuSuiteAddSuite(suite, qma); 
     CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, cind);
     CuSuiteAddSuite(suite, fta);
     CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
+    CuSuiteAddSuite(suite, diff); 
     
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

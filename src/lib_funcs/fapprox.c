@@ -61,6 +61,23 @@ one_approx_opts_alloc(enum function_class fc, void * aopts)
 }
 
 /***********************************************************//**
+  Allocate one dimensional approximations
+***************************************************************/
+struct OneApproxOpts * 
+one_approx_opts_alloc_ref(enum function_class fc, void ** aopts)
+{
+
+    struct OneApproxOpts * app = malloc(sizeof(struct OneApproxOpts));
+    if (app == NULL){
+        fprintf(stderr,"Cannot allocate OneApproxOpts\n");
+        exit(1);
+    }
+    app->fc = fc;
+    app->aopts = *aopts;
+    return app;
+}
+
+/***********************************************************//**
   Free one dimensional approximations
 ***************************************************************/
 void one_approx_opts_free(struct OneApproxOpts * oa)
@@ -76,28 +93,41 @@ void one_approx_opts_free(struct OneApproxOpts * oa)
 void one_approx_opts_free_deep(struct OneApproxOpts ** oa)
 {
     if (*oa != NULL){
-        /* printf("in here!\n"); */
-        if ((*oa)->aopts != NULL){
+        //printf("before this oa==NULL=%d,%d\n",oa==NULL,*oa==NULL);
+        /* if ((*oa)->aopts != NULL){ */
             /* printf("\ttrying to free options opts == NULL %d\n",(*oa)->aopts == NULL); */
             if ((*oa)->fc == PIECEWISE){
+
                 struct PwPolyOpts * opts = (*oa)->aopts;
-                pw_poly_opts_free_deep(&opts); (*oa)->aopts = NULL;
+                pw_poly_opts_free(opts); 
+                /* pw_poly_opts_free_deep(&opts); */
+                (*oa)->aopts = NULL;
             }
             else if ((*oa)->fc == POLYNOMIAL){
                 struct OpeOpts * opts = (*oa)->aopts;
                 ope_opts_free_deep(&opts); (*oa)->aopts = NULL;
+                ope_opts_free(opts);
+                (*oa)->aopts = NULL;
             }
             else if ((*oa)->fc == LINELM){
+                
                 struct LinElemExpAopts * opts = (*oa)->aopts;
-                lin_elem_exp_aopts_free_deep(&opts); (*oa)->aopts = NULL;
+                /* lin_elem_exp_aopts_free_deep(&opts); */
+                lin_elem_exp_aopts_free(opts);
+                //printf("right here\n");
+                /* free((*oa)->aopts); */
+                //printf("right there\n");
+                (*oa)->aopts = NULL;
             }
             else{
                 fprintf(stderr,"Cannot free one_approx options of type %d\n",
                         (*oa)->fc);
             }
-        }
-        /* printf("right before this thing\n"); */
-        /* free(*oa); *oa = NULL; */
+        /* } */
+        //printf("right before this thing\n");
+        free(*oa); *oa = NULL;
+        //printf("after this thing\n");
+
     }
 }
 
@@ -150,6 +180,11 @@ struct MultiApproxOpts * multi_approx_opts_alloc(size_t dim)
 void multi_approx_opts_free(struct MultiApproxOpts * fargs)
 {
     if (fargs != NULL){
+        /* for (size_t ii = 0; ii < fargs->dim; ii++){ */
+        /*     one_approx_opts_free(fargs->aopts[ii]); */
+        /*     fargs->aopts[ii] = NULL; */
+        /* } */
+
         free(fargs->aopts); fargs->aopts = NULL;
         free(fargs); fargs = NULL;
     }
@@ -163,11 +198,24 @@ void multi_approx_opts_free_deep(struct MultiApproxOpts ** fargs)
 {
     if (*fargs != NULL){
         for (size_t ii = 0; ii < (*fargs)->dim; ii++){
-            /* printf("ii freeing deep %zu %d\n",ii, (*fargs)->aopts[ii] == NULL); */
+            printf("ii freeing deep %zu %d\n",ii, (*fargs)->aopts[ii] == NULL);
+           /* one_approx_opts_free((*fargs)->aopts[ii]); */
+            printf("here\n");
+            /* one_approx_opts_free_deep(&((*fargs)->aopts[ii])); */
+
+            /* one_approx_opts_free((*fargs)->aopts[ii]); */
             if ((*fargs)->aopts[ii] != NULL){
-                one_approx_opts_free_deep(&((*fargs)->aopts[ii]));
-                (*fargs)->aopts[ii] = NULL;
+                free((*fargs)->aopts[ii]);
+                ((*fargs)->aopts[ii]) = NULL;
             }
+            printf("there\n");
+
+
+
+            /*     /\* one_approx_opts_free((*fargs)->aopts[ii]); *\/ */
+            /*     free((*fargs)->aopts[ii]); */
+            /*     (*fargs)->aopts[ii] = NULL; */
+            /* } */
         }
         free((*fargs)->aopts); (*fargs)->aopts = NULL;
         free(*fargs); *fargs = NULL;
@@ -185,6 +233,19 @@ void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
     assert (fargs != NULL);
     assert (ind < fargs->dim);
     fargs->aopts[ind] = opts;
+}
+
+/***********************************************************//**
+    Set approximation options for a particular dimension
+    \param[in,out] fargs - function train approximation arguments
+***************************************************************/
+void multi_approx_opts_set_dim_ref(struct MultiApproxOpts * fargs,
+                                   size_t ind,
+                                   struct OneApproxOpts ** opts)
+{
+    assert (fargs != NULL);
+    assert (ind < fargs->dim);
+    fargs->aopts[ind] = *opts;
 }
 
 /***********************************************************//**

@@ -89,6 +89,7 @@ void Test_ftapprox_grad(CuTest * tc)
     ft1d_array_free(ftg); ftg = NULL;
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,start);
 }
 
@@ -144,6 +145,7 @@ void Test_ft1d_array_serialize(CuTest * tc)
     free(text);
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,start);
 }
 
@@ -222,6 +224,7 @@ void Test_ftapprox_hess(CuTest * tc)
     ft1d_array_free(fth); fth = NULL;
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,start);
 }
 

@@ -113,18 +113,24 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
 void c3approx_destroy(struct C3Approx * c3a)
 {
     if (c3a != NULL){
-        multi_approx_opts_free_deep(&(c3a->fapp)); c3a->fapp = NULL;
+        //multi_approx_opts_free_deep(&(c3a->fapp)); //c3a->fapp = NULL;
+        multi_approx_opts_free(c3a->fapp); c3a->fapp = NULL; 
+        free(c3a->fapp); c3a->fapp = NULL;
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
+        ft_cross_args_free(c3a->fca); c3a->fca = NULL;
         if (c3a->isl != NULL){
             for (size_t ii = 0; ii < c3a->dim; ii++){
                 cross_index_free(c3a->isl[ii]); c3a->isl[ii] = NULL;
             }
+            free(c3a->isl); c3a->isl = NULL;
         }
         if (c3a->isr != NULL){
             for (size_t ii = 0; ii < c3a->dim; ii++){
                 cross_index_free(c3a->isr[ii]); c3a->isr[ii] = NULL;
             }
+            free(c3a->isr); c3a->isr = NULL;
         }
+
         function_train_free(c3a->ftref); c3a->ftref = NULL;
         free(c3a); c3a = NULL;
     }
@@ -146,6 +152,8 @@ void c3approx_set_approx_opts_dim(struct C3Approx * c3a, size_t ii,
     assert (ii < c3a->dim);
     
     multi_approx_opts_set_dim(c3a->fapp,ii,opts);
+    /* multi_approx_opts_set_dim_ref(c3a->fapp,ii,opts); */
+
 }
 
 /***********************************************************//**

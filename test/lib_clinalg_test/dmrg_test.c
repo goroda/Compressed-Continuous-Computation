@@ -49,8 +49,6 @@
 
 #include "lib_clinalg.h"
 
-
-
 void Test_rightorth(CuTest * tc)
 {
     printf("Testing Function: function_train_orthor\n");
@@ -104,6 +102,7 @@ void Test_rightorth(CuTest * tc)
     function_train_free(ao); ao = NULL;
     fwrap_destroy(fw); fw = NULL;
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,start);
 }
 
@@ -157,6 +156,7 @@ void Test_dmrg_prod(CuTest * tc)
     function_train_free(rounded); rounded = NULL;
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,startp);
 }
 
@@ -580,6 +580,7 @@ void Test_diffusion_op_struct(CuTest * tc)
 
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,startp);
 }
 
@@ -632,6 +633,7 @@ void Test_diffusion_dmrg(CuTest * tc)
 
     fwrap_destroy(fw);
     c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     free_dd(dim,startp);
 }
 
