@@ -2120,6 +2120,167 @@ ftapprox_cross(struct Fwrap * fw,
 }
 
 
+/***********************************************************//**
+    Cross approximation of a of a dim-dimensional function with rank adaptation
+
+    \param[in]     f      - function
+    \param[in]     args   - function arguments
+    \param[in]     bds    - bounds on input space
+    \param[in,out] ftref  - initial ftrain decomposition, 
+                            changed in func
+    \param[in,out] isl    - left indices (first element should be NULL)
+    \param[in,out] isr    - right indices (last element should be NULL)
+    \param[in]     fca    - algorithm parameters, 
+                            if NULL then default paramaters used
+    \param[in]     apargs - function approximation args 
+
+    \return function train decomposition of f
+
+    \note
+    both left and right indices are nested
+***************************************************************/
+struct FunctionTrain *
+ftapprox_cross_rankadapt(struct Fwrap * fw,
+                         struct FtCrossArgs * cargs,
+                         struct CrossIndex ** isl, 
+                         struct CrossIndex ** isr,
+                         struct MultiApproxOpts * apargs,
+                         struct FiberOptArgs * optargs,
+                         struct FunctionTrain * ftref)
+{
+
+
+    assert (fw != NULL);
+    assert (cargs != NULL);
+    assert (isl != NULL);
+    assert (isr != NULL);
+    assert (apargs != NULL);
+    assert (optargs != NULL);
+
+    size_t dim = multi_approx_opts_get_dim(apargs);
+    double eps = cargs->epsround;
+    size_t kickrank = cargs->kickrank;
+
+    struct FunctionTrain * ft = NULL;
+
+    ft = ftapprox_cross(fw,cargs,isl,isr,apargs,optargs,ftref);
+    if (cargs->adapt == 0){
+        return ft;
+    }
+    // printf("found left index\n");
+    // print_cross_index(isl[1]);
+    // printf("found right index\n");
+    //print_cross_index(isr[0]);
+    
+    //return ft;
+    if (cargs->verbose > 0){
+        printf("done with first cross... rounding\n");
+    }
+    size_t * ranks_found = calloc_size_t(dim+1);
+    memmove(ranks_found,cargs->ranks,(dim+1)*sizeof(size_t));
+    
+    struct FunctionTrain * ftc = function_train_copy(ft);
+    struct FunctionTrain * ftr = function_train_round(ft,eps,apargs);
+    /* printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks); */
+    //struct FunctionTrain * ftr = function_train_copy(ft);
+    //return ftr; 
+    //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
+    int adapt = 0;
+    size_t ii;
+    for (ii = 1; ii < dim; ii++){
+        /* printf("%zu == %zu\n",ranks_found[ii],ftr->ranks[ii]); */
+        if (ranks_found[ii] == ftr->ranks[ii]){
+            if (cargs->ranks[ii] < cargs->maxranks[ii-1]){
+                adapt = 1;
+                size_t kicksize; 
+                if ( (ranks_found[ii]+kickrank) <= cargs->maxranks[ii-1]){
+                    kicksize = kickrank;
+                }
+                else{
+                    kicksize = cargs->maxranks[ii-1] -ranks_found[ii];
+                }
+                cargs->ranks[ii] = ranks_found[ii] + kicksize;
+                
+                // simply repeat the last nodes
+                // this is not efficient but I don't have a better
+                // idea. Could do it using random locations but
+                // I don't want to.
+                cross_index_copylast(isr[ii-1],kicksize);
+            
+                ranks_found[ii] = cargs->ranks[ii];
+            }
+        }
+    }
+
+    //printf("adapt here! adapt=%zu\n",adapt);
+
+    size_t iter = 0;
+//    double * xhelp = NULL;
+    while ( adapt == 1 )
+    {
+        adapt = 0;
+        if (cargs->verbose > 0){
+            printf("adapting \n");
+            printf("Increasing rank\n");
+            iprint_sz(ft->dim+1,cargs->ranks);
+        }
+        
+        function_train_free(ft); ft = NULL;
+        
+        ft = ftapprox_cross(fw,cargs,isl,isr,apargs,optargs,ftref);
+         
+        function_train_free(ftc); ftc = NULL;
+        function_train_free(ftr); ftr = NULL;
+
+        //printf("copying\n");
+        function_train_free(ftc); ftc = NULL;
+        ftc = function_train_copy(ft);
+        //printf("rounding\n");
+        function_train_free(ftr); ftr = NULL;
+        //ftr = function_train_copy(ft);//, eps);
+        ftr = function_train_round(ft,eps,apargs);
+        //printf("done rounding\n");
+        for (ii = 1; ii < dim; ii++){
+            if (ranks_found[ii] == ftr->ranks[ii]){
+                if (cargs->ranks[ii] < cargs->maxranks[ii-1]){
+                    adapt = 1;
+                    size_t kicksize; 
+                    if ( (ranks_found[ii]+kickrank) <= cargs->maxranks[ii-1]){
+                        kicksize = kickrank;
+                    }
+                    else{
+                        kicksize = cargs->maxranks[ii-1] -ranks_found[ii];
+                    }
+                    cargs->ranks[ii] = ranks_found[ii] + kicksize;
+                
+            
+                    // simply repeat the last nodes
+                    // this is not efficient but I don't have a better
+                    // idea. Could do it using random locations but
+                    // I don't want to.
+                    cross_index_copylast(isr[ii-1],kicksize);
+            
+                    ranks_found[ii] = cargs->ranks[ii];
+                }
+            }
+        }
+
+        iter++;
+        /* if (iter == fca->maxiteradapt) { */
+        /*     adapt = 0; */
+        /* } */
+        //adapt = 0;
+
+    }
+    function_train_free(ft); ft = NULL;
+    function_train_free(ftc); ftc = NULL;
+    free(ranks_found);
+    return ftr;
+}
+
+
+
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////

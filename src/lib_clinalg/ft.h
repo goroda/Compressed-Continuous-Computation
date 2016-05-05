@@ -177,6 +177,15 @@ ftapprox_cross(struct Fwrap *,
                struct FiberOptArgs *,
                struct FunctionTrain *);
 
+struct FunctionTrain *
+ftapprox_cross_rankadapt(struct Fwrap *,
+                         struct FtCrossArgs *,
+                         struct CrossIndex **, 
+                         struct CrossIndex **,
+                         struct MultiApproxOpts *,
+                         struct FiberOptArgs *,
+                         struct FunctionTrain *);
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////

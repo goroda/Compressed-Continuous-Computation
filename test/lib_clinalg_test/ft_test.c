@@ -649,7 +649,7 @@ void Test_ftapprox_cross2(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     size_t N = 10;
     double * xtest = linspace(-1.0,1.0,N);
@@ -801,14 +801,14 @@ void Test_ftapprox_cross4(CuTest * tc)
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 5;
+    size_t init_rank = 2;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     size_t N = 10;
     double * xtest = linspace(-1.0,1.0,N);
@@ -864,7 +864,7 @@ void Test_function_train_eval_co_peruturb(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     double pt[4] = {0.5, 0.2 ,0.3, 0.8};
     double pert[8] = { 0.3, 0.6, 0.1, 0.9, 0.4, 0.6, -0.2, -0.4};
@@ -915,7 +915,7 @@ void Test_ftapprox_cross_hermite1(CuTest * tc)
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 5;
+    size_t init_rank = 2;
     double ** start = malloc_dd(dim);
     // optimization stuff
     size_t N = 100;
@@ -929,7 +929,7 @@ void Test_ftapprox_cross_hermite1(CuTest * tc)
        
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
 
     N = 10;
@@ -1011,7 +1011,7 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
         start[ii] = linspace(-5.0,5.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     size_t * ranks = function_train_get_ranks(ft);
     for (size_t ii = 1; ii < dim; ii++){
@@ -1092,7 +1092,7 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     N = 10;
     double * xtest = linspace(-1.0,1.0,N);
@@ -1168,7 +1168,7 @@ void Test_ftapprox_cross_linelm2(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     size_t N = 10;
     double * xtest = linspace(-1.0,1.0,N);
@@ -1241,7 +1241,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
 
     //printf("finished !\n");
@@ -1298,7 +1298,7 @@ void Test_sin10dint(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-5);
     c3approx_set_cross_maxiter(c3a,10);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
        
     
     unsigned char * text = NULL;
@@ -1352,7 +1352,7 @@ void Test_sin100dint(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-5);
     c3approx_set_cross_maxiter(c3a,10);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     double intval = function_train_integrate(ft);
     double should = -0.00392679526107635150777939525615131307695379649361;
@@ -1392,7 +1392,7 @@ void Test_sin1000dint(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-5);
     c3approx_set_cross_maxiter(c3a,10);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     double intval = function_train_integrate(ft);
     double should = -2.6375125156875276773939642726964969819689605535e-19;

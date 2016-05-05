@@ -289,7 +289,7 @@ void c3approx_set_adapt_maxrank_all(struct C3Approx * c3a, size_t maxrank)
     Perform cross approximation of a function
 ***************************************************************/
 struct FunctionTrain *
-c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw)
+c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw, int adapt)
 {
     assert (c3a != NULL);
     assert (c3a->fca != NULL);
@@ -300,8 +300,14 @@ c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw)
     assert (c3a->ftref != NULL);
 
     struct FunctionTrain * ft = NULL;
-    ft = ftapprox_cross(fw,c3a->fca,c3a->isl,c3a->isr,
+    if (adapt == 0){
+        ft = ftapprox_cross(fw,c3a->fca,c3a->isl,c3a->isr,
                         c3a->fapp,c3a->fopt,c3a->ftref);
+    }
+    else{
+        ft = ftapprox_cross_rankadapt(fw,c3a->fca,c3a->isl,c3a->isr,
+                        c3a->fapp,c3a->fopt,c3a->ftref);
+    }
     return ft;
 }
 

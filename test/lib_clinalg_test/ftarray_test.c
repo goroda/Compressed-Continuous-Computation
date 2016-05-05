@@ -72,7 +72,7 @@ void Test_ftapprox_grad(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
      
     struct FT1DArray * ftg = function_train_gradient(ft);
 
@@ -116,7 +116,7 @@ void Test_ft1d_array_serialize(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
     struct FT1DArray * ftg = function_train_gradient(ft);
 
     unsigned char * text = NULL;
@@ -174,7 +174,7 @@ void Test_ftapprox_hess(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
     
     //printf("ranks are\n");
     //iprint_sz(dim+1,ft->ranks);

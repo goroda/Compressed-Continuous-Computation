@@ -71,7 +71,7 @@ void Test_rightorth(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     struct FunctionTrain * fcopy = function_train_copy(ft);
     struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
@@ -135,7 +135,7 @@ void Test_dmrg_prod(CuTest * tc)
         startp[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,startp);
-    struct FunctionTrain * a = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * a = c3approx_do_cross(c3a,fw,1);
     struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
     struct FunctionTrain * ft = function_train_product(a,a);
     struct FunctionTrain * fcopy = function_train_copy(ft);
@@ -470,7 +470,7 @@ void Test_diffusion_op_struct(CuTest * tc)
         startp[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,startp);
-    struct FunctionTrain * f = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * f = c3approx_do_cross(c3a,fw,0);
 
     size_t ranks[5] = {1,2,2,2,1};
     double lb = -1.0;
@@ -607,7 +607,7 @@ void Test_diffusion_dmrg(CuTest * tc)
         startp[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,startp);
-    struct FunctionTrain * f = c3approx_do_cross(c3a,fw);
+    struct FunctionTrain * f = c3approx_do_cross(c3a,fw,0);
 
     
     size_t ranks[5] = {1,2,2,2,1};

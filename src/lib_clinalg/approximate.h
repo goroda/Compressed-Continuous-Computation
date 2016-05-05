@@ -65,7 +65,7 @@ void c3approx_set_cross_maxiter(struct C3Approx *, size_t);
 
 // perform cross approximation
 struct FunctionTrain *
-c3approx_do_cross(struct C3Approx *,struct Fwrap *);
+c3approx_do_cross(struct C3Approx *,struct Fwrap *,int);
 
 //getting
 struct MultiApproxOpts * c3approx_get_approx_args(const struct C3Approx *);
