@@ -73,23 +73,31 @@ void one_approx_opts_free(struct OneApproxOpts * oa)
 /***********************************************************//**
   Free one dimensional approximations (deep)
 ***************************************************************/
-void one_approx_opts_free_deep(struct OneApproxOpts * oa)
+void one_approx_opts_free_deep(struct OneApproxOpts ** oa)
 {
-    if (oa != NULL){
-        if (oa->fc == PIECEWISE){
-            pw_poly_opts_free(oa->aopts); oa->aopts = NULL;
+    if (*oa != NULL){
+        /* printf("in here!\n"); */
+        if ((*oa)->aopts != NULL){
+            /* printf("\ttrying to free options opts == NULL %d\n",(*oa)->aopts == NULL); */
+            if ((*oa)->fc == PIECEWISE){
+                struct PwPolyOpts * opts = (*oa)->aopts;
+                pw_poly_opts_free_deep(&opts); (*oa)->aopts = NULL;
+            }
+            else if ((*oa)->fc == POLYNOMIAL){
+                struct OpeOpts * opts = (*oa)->aopts;
+                ope_opts_free_deep(&opts); (*oa)->aopts = NULL;
+            }
+            else if ((*oa)->fc == LINELM){
+                struct LinElemExpAopts * opts = (*oa)->aopts;
+                lin_elem_exp_aopts_free_deep(&opts); (*oa)->aopts = NULL;
+            }
+            else{
+                fprintf(stderr,"Cannot free one_approx options of type %d\n",
+                        (*oa)->fc);
+            }
         }
-        else if (oa->fc == POLYNOMIAL){
-            ope_opts_free(oa->aopts); oa->aopts = NULL;
-        }
-        else if (oa->fc == LINELM){
-            lin_elem_exp_aopts_free(oa->aopts); oa->aopts = NULL;
-        }
-        else{
-            fprintf(stderr,"Cannot free one_approx options of type %d\n",
-                    oa->fc);
-        }
-        free(oa); oa = NULL;
+        /* printf("right before this thing\n"); */
+        /* free(*oa); *oa = NULL; */
     }
 }
 
@@ -151,15 +159,18 @@ void multi_approx_opts_free(struct MultiApproxOpts * fargs)
 
     \param[in,out] fargs - function train approximation arguments
 ***************************************************************/
-void multi_approx_opts_free_deep(struct MultiApproxOpts * fargs)
+void multi_approx_opts_free_deep(struct MultiApproxOpts ** fargs)
 {
-    if (fargs != NULL){
-        for (size_t ii = 0; ii < fargs->dim;ii++){
-            one_approx_opts_free_deep(fargs->aopts[ii]);
-            fargs->aopts[ii] = NULL;
+    if (*fargs != NULL){
+        for (size_t ii = 0; ii < (*fargs)->dim; ii++){
+            /* printf("ii freeing deep %zu %d\n",ii, (*fargs)->aopts[ii] == NULL); */
+            if ((*fargs)->aopts[ii] != NULL){
+                one_approx_opts_free_deep(&((*fargs)->aopts[ii]));
+                (*fargs)->aopts[ii] = NULL;
+            }
         }
-        free(fargs->aopts); fargs->aopts = NULL;
-        free(fargs); fargs = NULL;
+        free((*fargs)->aopts); (*fargs)->aopts = NULL;
+        free(*fargs); *fargs = NULL;
     }
 }
 
@@ -184,7 +195,6 @@ void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
     \param[in,out] mopts - multidimensional options to update
     \param[in]     opts  - options with which to update
 
-    \return approximation arguments
 ***************************************************************/
 void
 multi_approx_opts_set_all_same(struct MultiApproxOpts * mopts,
@@ -347,9 +357,10 @@ fiber_opt_args_bf(size_t dim, struct c3Vector ** nodes)
 }
 
 /***********************************************************//**
-    Free memory allocate to fiber optimization arguments
+    Get optimization arguments for a certain dimension
 
-    \param[in,out] fopt - fiber optimization structure
+    \param[in,out] fopts - fiber optimization structure
+    \param[in]     ind   - dimension
 ***************************************************************/
 void * fiber_opt_args_get_opts(const struct FiberOptArgs * fopts, size_t ind)
 {

@@ -40,8 +40,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "lib_clinalg.h"
-#include "array.h"
+#include "diffusion.h"
 
 void dmrg_diffusion_midleft(struct Qmarray * dA, struct Qmarray * A,
                  struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
@@ -343,19 +342,21 @@ void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
 /***********************************************************//**
     Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] using ALS+DMRG
 
-    \param a [in] - scalar coefficients
-    \param f [in] - input to diffusion operator
-    \param delta [in] - threshold to stop iterating
-    \param max_sweeps [in] - maximum number of left-right-left sweeps 
-    \param epsilon [in] - SVD tolerance for rank determination
-    \param verbose [in] - verbosity level 0 or >0
+    \param[in] a          - scalar coefficients
+    \param[in] f          - input to diffusion operator
+    \param[in] delta      - threshold to stop iterating
+    \param[in] max_sweeps - maximum number of left-right-left sweeps 
+    \param[in] epsilon    - SVD tolerance for rank determination
+    \param[in] verbose    - verbosity level 0 or >0
+    \param[in] opts       - approximation options
 
     \return na - approximate application of diffusion operator
 ***************************************************************/
 struct FunctionTrain * dmrg_diffusion(
     struct FunctionTrain * a,
     struct FunctionTrain * f,
-    double delta, size_t max_sweeps, double epsilon, int verbose)
+    double delta, size_t max_sweeps, double epsilon, int verbose,
+    struct MultiApproxOpts * opts)
 {
     
     size_t dim = f->dim;
@@ -383,7 +384,7 @@ struct FunctionTrain * dmrg_diffusion(
 
     struct FunctionTrain * guess = function_train_copy(f);
     struct FunctionTrain * na = dmrg_approx(guess,dmrg_diffusion_support,&dd,
-                                            delta,max_sweeps,epsilon,verbose);
+                                            delta,max_sweeps,epsilon,verbose,opts);
 
     for (ii = 0; ii < dim; ii++){
         qmarray_free(dd.dA[ii]); dd.dA[ii] = NULL;
@@ -403,8 +404,9 @@ struct FunctionTrain * dmrg_diffusion(
 /***********************************************************//**
     Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] exactly
 
-    \param a [in] - scalar coefficients
-    \param f [in] - input to diffusion operator
+    \param[in] a    - scalar coefficients
+    \param[in] f    - input to diffusion operator
+    \param[in] opts - approxmation options
 
     \return out - exact application of diffusion operator 
     
@@ -412,7 +414,7 @@ struct FunctionTrain * dmrg_diffusion(
         Result is not rounded. Might want to perform rounding afterwards
 ***************************************************************/
 struct FunctionTrain * exact_diffusion(
-    struct FunctionTrain * a, struct FunctionTrain * f)
+    struct FunctionTrain * a, struct FunctionTrain * f, struct MultiApproxOpts * opts)
 {
     size_t dim = a->dim;
     struct FunctionTrain * out = function_train_alloc(dim);
@@ -444,16 +446,15 @@ struct FunctionTrain * exact_diffusion(
     qmarray_free(l1); l1 = NULL;
     qmarray_free(l2); l2 = NULL;
     qmarray_free(l3); l3 = NULL;
-    
+
+    struct OneApproxOpts * o = NULL; 
     for (ii = 1; ii < dim-1; ii++){
-        enum poly_type ptype = LEGENDRE;
-        double lb = generic_function_get_lower_bound(f->cores[ii]->funcs[0]);
-        double ub = generic_function_get_upper_bound(f->cores[ii]->funcs[0]);
+        o = multi_approx_opts_get_aopts(opts,ii);
         struct Qmarray * addf = qmarray_kron(a->cores[ii],ddf[ii]);
         struct Qmarray * dadf = qmarray_kron(da[ii],df[ii]);
         qmarray_axpy(1.0,addf,dadf);
         struct Qmarray * af = qmarray_kron(a->cores[ii],f->cores[ii]);
-        struct Qmarray * zer = qmarray_zeros(ptype,af->nrows,af->ncols,lb,ub);
+        struct Qmarray * zer = qmarray_zeros(af->nrows,af->ncols,o);
         struct Qmarray * l3l1 = qmarray_stackv(af,dadf);
         struct Qmarray * zl3 = qmarray_stackv(zer,af);
         out->cores[ii] = qmarray_stackh(l3l1,zl3);

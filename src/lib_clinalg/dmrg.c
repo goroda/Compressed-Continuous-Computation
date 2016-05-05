@@ -41,22 +41,21 @@
 #include <assert.h>
 #include <math.h>
 
-#include "array.h"
+#include "dmrg.h"
 #include "lib_linalg.h"
-#include "lib_clinalg.h"
 
 /***********************************************************//**
     Perform and store a reduced QR or LQ decompositions
 
-    \param a [in] - qmarray to decompose
-    \param type [in] - 1 then QR, 0 then LQ
+    \param[in] a    - qmarray to decompose
+    \param[in] type - 1 then QR, 0 then LQ
 
     \return qr - QR structure
 
     \note
         Doesnt actually do reduced QR because it seems to break the algorithm
 ***************************************************************/
-struct QR * qr_reduced(struct Qmarray * a, int type)
+struct QR * qr_reduced(const struct Qmarray * a, int type, struct OneApproxOpts * o)
 {
     struct Qmarray * ac = qmarray_copy(a);
     struct QR * qr = NULL;
@@ -70,14 +69,14 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
         qr->right = 0;
         qr->mr = a->nrows;
         qr->mc = a->nrows;
-        int success = qmarray_lq(ac,&(qr->Q),&(qr->mat));
+        int success = qmarray_lq(ac,&(qr->Q),&(qr->mat),o);
         assert (success == 0);
     }
     else if (type == 1){
         qr->right = 1;
         qr->mc = a->ncols;
         qr->mr = a->ncols;
-        int success = qmarray_qr(ac,&(qr->Q),&(qr->mat));
+        int success = qmarray_qr(ac,&(qr->Q),&(qr->mat),o);
         assert (success == 0);
     }
     else{
@@ -92,7 +91,7 @@ struct QR * qr_reduced(struct Qmarray * a, int type)
 /***********************************************************//**
     Free memory allocated to QR decomposition
 
-    \param qr [inout] - QR structure to free
+    \param[in,out] qr - QR structure to free
 ***************************************************************/
 void qr_free(struct QR * qr)
 {
@@ -106,7 +105,7 @@ void qr_free(struct QR * qr)
 /***********************************************************//**
     Allocate memory for an array of QR structures
     
-    \param n [in] - size of array
+    \param[in] n - size of array
 
     \return qr - array of QR structure (each of which is set to NULL)
 ***************************************************************/
@@ -128,8 +127,8 @@ struct QR ** qr_array_alloc(size_t n)
 /***********************************************************//**
     Free memory allocated to array of QR structures
 
-    \param qr [inout] - array to free
-    \param n [in] - number of QR structures
+    \param[in,out] qr - array to free
+    \param[in]     n  - number of QR structures
 
 ***************************************************************/
 void qr_array_free(struct QR ** qr, size_t n)
@@ -147,21 +146,23 @@ void qr_array_free(struct QR ** qr, size_t n)
 /***********************************************************//**
     Update right side component of supercore for FT product
 
-    \param a [in] - core 1
-    \param b [in] - core 2
-    \param prev [in] - previous right side to update
-    \param z [in] - right multiplier
+    \param[in] a    - core 1
+    \param[in] b    - core 2
+    \param[in] prev - previous right side to update
+    \param[in] z    - right multiplier
+    \param[in] o    - approximation options
     
     \return lq - new right side component
 ***************************************************************/
 struct QR * dmrg_super_rprod(struct Qmarray * a, struct Qmarray * b,
-                             struct QR * prev, struct Qmarray * z)
+                             struct QR * prev, struct Qmarray * z,
+                             struct OneApproxOpts * o)
 {
 
     double * val = qmaqmat_integrate(prev->Q,z);
     struct Qmarray * temp = qmarray_kron_mat(z->nrows,val,a,b);
     //struct Qmarray * temp = qmam(nextleft,val,z->nrows);
-    struct QR * lq = qr_reduced(temp,0);
+    struct QR * lq = qr_reduced(temp,0,o);
     qmarray_free(temp); temp = NULL;
     free(val); val = NULL;
     return lq;
@@ -170,17 +171,19 @@ struct QR * dmrg_super_rprod(struct Qmarray * a, struct Qmarray * b,
 /***********************************************************//**
     Update right side component of supercore
     
-    \param dim [in] - core which we are considering
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param prev [in] - previous right side to update
-    \param z [in] - right multiplier
+    \param[in] dim  - core which we are considering
+    \param[in] f    - specialized function to multiply core by matrix
+    \param[in] args - arguments to f
+    \param[in] prev - previous right side to update
+    \param[in] z    - right multiplier
+    \param[in] o    - approximation options
     
     \return lq - new right side component
 ***************************************************************/
-struct QR * dmrg_super_r(size_t dim,
-    void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
-    void * args, struct QR * prev, struct Qmarray * z)
+struct QR *
+dmrg_super_r(size_t dim,
+             void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
+             void * args, struct QR * prev, struct Qmarray * z,struct OneApproxOpts *o)
 {
 
     double * val = qmaqmat_integrate(prev->Q,z);
@@ -188,7 +191,7 @@ struct QR * dmrg_super_r(size_t dim,
     struct Qmarray * temp = NULL;
     f('R',dim,z->nrows,val,&temp,args);
 
-    struct QR * lq = qr_reduced(temp,0);
+    struct QR * lq = qr_reduced(temp,0,o);
     qmarray_free(temp); temp = NULL;
     free(val); val = NULL;
     return lq;
@@ -197,18 +200,20 @@ struct QR * dmrg_super_r(size_t dim,
 /***********************************************************//**
     Update all right side components of supercore 
 
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param z [in] - guess
+    \param[in] f    - specialized function to multiply core by matrix
+    \param[in] args - arguments to f
+    \param[in] z    - guess
+    \param[in] opts - approximation options
     
     \return lq - new right side component
 ***************************************************************/
 struct QR ** 
 dmrg_super_r_all(
       void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
-      void * args, struct FunctionTrain * z)
+      void * args, struct FunctionTrain * z, struct MultiApproxOpts * opts)
 {
-    size_t dim = z->dim;
+    struct OneApproxOpts * o = NULL;
+    size_t dim = function_train_get_dim(z);
     struct QR ** right = NULL;
     if ( NULL == (right = malloc((dim-1)*sizeof(struct QR *)))){
         fprintf(stderr, "failed to allocate memory for dmrg all right QR decompositions.\n");
@@ -216,12 +221,14 @@ dmrg_super_r_all(
     }
     struct Qmarray * temp = NULL;
     f('R',dim-1,1,NULL,&temp,args);
-    right[dim-2] = qr_reduced(temp,0);
+    o = multi_approx_opts_get_aopts(opts,dim-1);
+    right[dim-2] = qr_reduced(temp,0,o);
     qmarray_free(temp);
 
     int ii;
     for (ii = dim-3; ii > -1; ii--){
-        right[ii] = dmrg_super_r((size_t)ii+1,f,args,right[ii+1],z->cores[ii+2]);
+        o = multi_approx_opts_get_aopts(opts,(size_t)ii+1);
+        right[ii] = dmrg_super_r((size_t)ii+1,f,args,right[ii+1],z->cores[ii+2],o);
     }
     return right;
 }
@@ -230,30 +237,34 @@ dmrg_super_r_all(
 /***********************************************************//**
     Perform a left-right dmrg sweep 
 
-    \param z [in] - initial guess
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param phil [inout] - left multipliers
-    \param psir [in] - right multiplies
-    \param epsilon [in] - splitting tolerance
+    \param[in]     z       - initial guess
+    \param[in]     f       - specialized function to multiply core by matrix
+    \param[in]     args    - arguments to f
+    \param[in,out] phil    - left multipliers
+    \param[in]     psir    - right multiplies
+    \param[in]     epsilon - splitting tolerance
+    \param[in]     opts    - approximation options
 
     \return na - a new approximation
 ***************************************************************/
 struct FunctionTrain * 
 dmrg_sweep_lr(struct FunctionTrain * z, 
-            void (*f)(char,size_t,size_t, double *, struct Qmarray **, void *),
-            void * args, struct QR ** phil, struct QR ** psir, double epsilon)
+              void (*f)(char,size_t,size_t, double *, struct Qmarray **, void *),
+              void * args, struct QR ** phil, struct QR ** psir, double epsilon,
+              struct MultiApproxOpts * opts)
 {
     double * RL = NULL;
     size_t dim = z->dim;
     struct FunctionTrain * na = function_train_alloc(dim);
+    struct OneApproxOpts * o = NULL;
     na->ranks[0] = 1;
     na->ranks[na->dim] = 1;
     
     if (phil[0] == NULL){
         struct Qmarray * temp0 = NULL;
-        f('L',0,1,NULL,&temp0,args); 
-        phil[0] = qr_reduced(temp0,1);
+        f('L',0,1,NULL,&temp0,args);
+        o = multi_approx_opts_get_aopts(opts,0);
+        phil[0] = qr_reduced(temp0,1,o);
         qmarray_free(temp0); temp0 = NULL;
     }
     
@@ -284,7 +295,8 @@ dmrg_sweep_lr(struct FunctionTrain * z,
         f('L',ii,rank,newphi,&temp,args);
 
         qr_free(phil[ii]); phil[ii] = NULL;
-        phil[ii] = qr_reduced(temp,1);
+        o = multi_approx_opts_get_aopts(opts,ii);
+        phil[ii] = qr_reduced(temp,1,o);
         
         free(RL); RL = NULL;
         free(newphi); newphi = NULL;
@@ -327,31 +339,34 @@ dmrg_sweep_lr(struct FunctionTrain * z,
 /***********************************************************//**
     Perform a right-left dmrg sweep as part of ft-product
 
-    \param z [in] - initial guess
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param phil [inout] - left multipliers
-    \param psir [in] - right multiplies
-    \param epsilon [in] - splitting tolerance
+    \param[in]     z       - initial guess
+    \param[in]     f       - specialized function to multiply core by matrix
+    \param[in]     args    - arguments to f
+    \param[in,out] phil    - left multipliers
+    \param[in]     psir    - right multiplies
+    \param[in]     epsilon - splitting tolerance
+    \param[in]     opts    - approximation options
 
     \return na - a new approximation
 ***************************************************************/
 struct FunctionTrain * 
 dmrg_sweep_rl(struct FunctionTrain * z, 
-        void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
-        void * args, struct QR ** phil, struct QR ** psir, double epsilon)
+              void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
+              void * args, struct QR ** phil, struct QR ** psir, double epsilon,
+              struct MultiApproxOpts * opts)
 {
     double * RL = NULL;
     size_t dim = z->dim;
     struct FunctionTrain * na = function_train_alloc(dim);
     na->ranks[0] = 1;
     na->ranks[na->dim] = 1;
-    
+    struct OneApproxOpts * o = NULL;
     if (psir[dim-2] == NULL){
         struct Qmarray * temp0 = NULL;
         f('R',dim-1,1,NULL,&temp0,args);
         //qmarray_kron(a->cores[dim-1],b->cores[dim-1]);
-        psir[dim-2] = qr_reduced(temp0,0);
+        o = multi_approx_opts_get_aopts(opts,dim-1);
+        psir[dim-2] = qr_reduced(temp0,0,o);
         qmarray_free(temp0); temp0 = NULL;
     }
     
@@ -384,7 +399,8 @@ dmrg_sweep_rl(struct FunctionTrain * z,
         f('R',(size_t)ii+1,rank,newpsi,&temp,args);
 
         qr_free(psir[ii]); psir[ii] = NULL;
-        psir[ii] = qr_reduced(temp,0);
+        o = multi_approx_opts_get_aopts(opts,(size_t)ii+1);
+        psir[ii] = qr_reduced(temp,0,o);
         
         free(RL); RL = NULL;
         free(newpsi); newpsi = NULL;
@@ -425,48 +441,53 @@ dmrg_sweep_rl(struct FunctionTrain * z,
 /***********************************************************//**
     Perform a left-right-left dmrg sweep for FT product
 
-    \param z [in] - initial guess
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param phil [inout] - left multipliers
-    \param psir [inout] - right multiplies
-    \param epsilon [in] - splitting tolerance
+    \param[in]     z       - initial guess
+    \param[in]     f       - specialized function to multiply core by matrix
+    \param[in]     args    - arguments to f
+    \param[in,out] phil    - left multipliers
+    \param[in,out] psir    - right multiplies
+    \param[in,out] epsilon - splitting tolerance
+    \param[in]     opts    - approximation options
 
     \return na - a new approximation
 ***************************************************************/
 struct FunctionTrain * 
 dmrg_sweep_lrl(struct FunctionTrain * z,
             void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
-            void * args, struct QR ** phil, struct QR ** psir, double epsilon)
+               void * args, struct QR ** phil, struct QR ** psir, double epsilon,
+               struct MultiApproxOpts * opts)
 {
 
-    struct FunctionTrain * temp = dmrg_sweep_lr(z,f,args,phil,psir,epsilon);
-    struct FunctionTrain * na = dmrg_sweep_rl(temp,f,args,phil,psir,epsilon);
+    struct FunctionTrain * temp = dmrg_sweep_lr(z,f,args,phil,psir,epsilon,opts);
+    struct FunctionTrain * na = dmrg_sweep_rl(temp,f,args,phil,psir,epsilon,opts);
     function_train_free(temp); temp = NULL;
     return na;
 }
 
 /***********************************************************//**
-    Compute \f$ z(x) = a(x)b(x) \f$ using ALS+DMRG
+    Compute ALS+DMRG
 
-    \param z [inout] - initial guess (destroyed);
-    \param f [in] - specialized function to multiply core by matrix
-    \param args [in] - arguments to f
-    \param delta [in] - threshold to stop iterating
-    \param max_sweeps [in] - maximum number of left-right-left sweeps 
-    \param epsilon [in] - SVD tolerance for rank determination
-    \param verbose [in] - verbosity level 0 or >0
+    \param[in,out] z          - initial guess (destroyed);
+    \param[in]     f          - specialized function to multiply core by matrix
+    \param[in]     args       - arguments to f
+    \param[in]     delta      - threshold to stop iterating
+    \param[in]     max_sweeps - maximum number of left-right-left sweeps 
+    \param[in]     epsilon    - SVD tolerance for rank determination
+    \param[in]     verbose    - verbosity level 0 or >0
+    \param[in]     opts       - approximation options
 
+    \returns function train
 ***************************************************************/
-struct FunctionTrain * dmrg_approx(struct FunctionTrain * z,
+struct FunctionTrain *
+dmrg_approx(struct FunctionTrain * z,
             void (*f)(char,size_t,size_t,double *,struct Qmarray **,void *),
             void * args, double delta, size_t max_sweeps, 
-            double epsilon, int verbose)
+            double epsilon, int verbose, struct MultiApproxOpts * opts)
 {
     size_t dim = z->dim;
-    struct FunctionTrain * na = function_train_orthor(z);
+    struct FunctionTrain * na = function_train_orthor(z,opts);
 
-    struct QR ** psir = dmrg_super_r_all(f,args,na);
+    struct QR ** psir = dmrg_super_r_all(f,args,na,opts);
     struct QR ** phil = qr_array_alloc(dim-1);
     
     size_t ii;
@@ -475,7 +496,7 @@ struct FunctionTrain * dmrg_approx(struct FunctionTrain * z,
         if (verbose>0){
             printf("On Sweep (%zu/%zu) \n",ii+1,max_sweeps);
         }
-        struct FunctionTrain * check = dmrg_sweep_lrl(na,f,args,phil,psir,epsilon);
+        struct FunctionTrain * check = dmrg_sweep_lrl(na,f,args,phil,psir,epsilon,opts);
         diff = function_train_relnorm2diff(check,na);
         function_train_free(na); na = NULL;
         na = function_train_copy(check);

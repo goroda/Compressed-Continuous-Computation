@@ -42,6 +42,10 @@
 #define LIB_CLINALG_H
 
 #include "approximate.h"
+#include "dmrgprod.h"
+#include "diffusion.h"
+//#include "dmrg.h"
+
 //#include "cross2d.h"
 
 /* #include "elements.h" */

@@ -219,6 +219,21 @@ void pw_poly_opts_free(struct PwPolyOpts * pw)
     }
 }
 
+void pw_poly_opts_free_deep(struct PwPolyOpts ** pw)
+{
+    if ((*pw) != NULL){
+        if ((*pw)->pts_alloc == 1){
+            if ((*pw)->pts != NULL){
+                free((*pw)->pts); (*pw)->pts = NULL;
+            }
+        }
+        if ((*pw)->opeopts != NULL){
+            ope_opts_free((*pw)->opeopts); (*pw)->opeopts = NULL;
+        }
+        /* free(*pw); *pw = NULL; */
+    }
+}
+
 void pw_poly_opts_set_ptype(struct PwPolyOpts * pw, enum poly_type ptype)
 {
     assert (pw != NULL);

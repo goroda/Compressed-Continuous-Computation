@@ -113,7 +113,7 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
 void c3approx_destroy(struct C3Approx * c3a)
 {
     if (c3a != NULL){
-        multi_approx_opts_free_deep(c3a->fapp); c3a->fapp = NULL;
+        multi_approx_opts_free_deep(&(c3a->fapp)); c3a->fapp = NULL;
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
         if (c3a->isl != NULL){
             for (size_t ii = 0; ii < c3a->dim; ii++){

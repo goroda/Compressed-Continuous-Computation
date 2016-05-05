@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 
 file(GLOB SRC_FILES 
   #cross2d.c
+  diffusion.c
+  dmrgprod.c
+  dmrg.c
   approximate.c
   indmanage.c
   ft.c

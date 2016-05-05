@@ -72,18 +72,21 @@ void dmrg_prod_support(char type, size_t core, size_t r, double * mat,
 /***********************************************************//**
     Compute \f$ z(x) = a(x)b(x) \f$ using ALS+DMRG
 
-    \param z [inout] - initial guess (destroyed);
-    \param a [in] - first element of product
-    \param b [in] - second element of product
-    \param delta [in] - threshold to stop iterating
-    \param max_sweeps [in] - maximum number of left-right-left sweeps 
-    \param epsilon [in] - SVD tolerance for rank determination
-    \param verbose [in] - verbosity level 0 or >0
+    \param[in,out] z          - initial guess (destroyed);
+    \param[in]     a          - first element of product
+    \param[in]     b          - second element of product
+    \param[in]     delta      - threshold to stop iterating
+    \param[in]     max_sweeps - maximum number of left-right-left sweeps 
+    \param[in]     epsilon    - SVD tolerance for rank determination
+    \param[in]     verbose    - verbosity level 0 or >0
+    \param[in]     opts       - approximation options
 
 ***************************************************************/
-struct FunctionTrain * dmrg_product(struct FunctionTrain * z,
-            struct FunctionTrain * a, struct FunctionTrain * b,
-            double delta, size_t max_sweeps, double epsilon, int verbose)
+struct FunctionTrain *
+dmrg_product(struct FunctionTrain * z,
+             struct FunctionTrain * a, struct FunctionTrain * b,
+             double delta, size_t max_sweeps, double epsilon, int verbose,
+             struct MultiApproxOpts * opts)
 {
     assert(a != NULL);
     assert(b != NULL);
@@ -99,7 +102,7 @@ struct FunctionTrain * dmrg_product(struct FunctionTrain * z,
         zin = z;
     }
     struct FunctionTrain * na =
-        dmrg_approx(zin,dmrg_prod_support,&dm,delta,max_sweeps,epsilon,verbose);
+        dmrg_approx(zin,dmrg_prod_support,&dm,delta,max_sweeps,epsilon,verbose,opts);
 
     if (z == NULL){
         function_train_free(zin);

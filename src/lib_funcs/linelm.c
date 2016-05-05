@@ -165,6 +165,21 @@ void lin_elem_exp_aopts_free(struct LinElemExpAopts * aopts)
 }
 
 /********************************************************//**
+    (deep)Free memory allocated to approximation arguments
+
+    \param[in,out] aopts - approximation arguments
+*************************************************************/
+void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts ** aopts)
+{
+    if (*aopts != NULL){
+        if ((*aopts)->node_alloc == 1){
+            free((*aopts)->nodes); (*aopts)->nodes = NULL;
+        }
+        free(*aopts); *aopts = NULL;
+    }
+}
+
+/********************************************************//**
     Sets new nodes (by reference) for approximation options.
     frees old ones if
     previously allocated
@@ -376,7 +391,7 @@ unsigned char * deserialize_lin_elem_exp(unsigned char * ser,
     ptr = deserialize_size_t(ptr,&((*f)->num_nodes));
     ptr = deserialize_doublep(ptr, &((*f)->nodes), &((*f)->num_nodes));
     ptr = deserialize_doublep(ptr, &((*f)->coeff), &((*f)->num_nodes));
-    
+
     return ptr;
 }
 
@@ -692,10 +707,10 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
                                         f->coeff, g->coeff);
     }
     else{
-        assert ( (f->num_nodes + g->num_nodes) < 10000);
-        double xnew[10000];
-        double fnew[10000];
-        double gnew[10000];
+        assert ( (f->num_nodes + g->num_nodes) < 1000);
+        double xnew[1000];
+        double fnew[1000];
+        double gnew[1000];
 //        printf("here\n");
 
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
@@ -710,6 +725,12 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
         }
         else{
             printf("weird =\n");
+
+            printf("f = \n");
+            print_lin_elem_exp(f,3,NULL,stdout);
+            printf("g = \n");
+            print_lin_elem_exp(g,3,NULL,stdout);
+            
             assert(1 == 0);
         }
         //       printf("there\n");
@@ -1330,7 +1351,8 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         }
             
     }
-
+    
+    assert (lexp->num_nodes != 0);
     return lexp;
 }
 
@@ -1348,14 +1370,20 @@ lin_elem_exp_constant(double a,
 {
     
     struct LinElemExp * lexp = lin_elem_exp_alloc();
-    lexp->num_nodes = opts->num_nodes;
-    lexp->nodes = calloc_double(opts->num_nodes);
-    memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
-    lexp->coeff = calloc_double(opts->num_nodes);
-    for (size_t ii = 0; ii < opts->num_nodes; ii++){
+    if (opts->num_nodes == 0){
+        lexp->num_nodes = 2;
+        lexp->nodes = linspace(opts->lb,opts->ub,2);
+    }
+    else{
+        lexp->num_nodes = opts->num_nodes;
+        lexp->nodes = calloc_double(opts->num_nodes);
+        memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
+    }
+    lexp->coeff = calloc_double(lexp->num_nodes);
+    for (size_t ii = 0; ii < lexp->num_nodes; ii++){
         lexp->coeff[ii] = a;
     }
-
+    assert (lexp->num_nodes != 0);
     return lexp;
 }
 
@@ -1377,16 +1405,20 @@ lin_elem_exp_linear(double a, double b,
 {
 
     struct LinElemExp * lexp = lin_elem_exp_alloc();
-    lexp->num_nodes = opts->num_nodes;
-    
-    lexp->nodes = calloc_double(opts->num_nodes);
-    memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
-    
-    lexp->coeff = calloc_double(opts->num_nodes);
-    for (size_t ii = 0; ii < opts->num_nodes; ii++){
+    if (opts->num_nodes == 0){
+        lexp->num_nodes = 2;
+        lexp->nodes = linspace(opts->lb,opts->ub,2);
+    }
+    else{
+        lexp->num_nodes = opts->num_nodes;
+        lexp->nodes = calloc_double(opts->num_nodes);
+        memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
+    }
+    lexp->coeff = calloc_double(lexp->num_nodes);
+    for (size_t ii = 0; ii < lexp->num_nodes; ii++){
         lexp->coeff[ii] = a * lexp->nodes[ii] + b;
     }
-
+    assert (lexp->num_nodes != 0);
     return lexp;
 }
 
@@ -1400,6 +1432,7 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
     for (size_t ii = 0; ii < f->num_nodes; ii++){
         f->coeff[ii] *= -1.0;
     }
+    assert (f->num_nodes != 0);
 }
 
 /********************************************************//**
@@ -1416,25 +1449,52 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
 void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExpAopts * opts)
 {
     assert (opts != NULL);
-    assert (opts->nodes != NULL);
-    assert (n <= opts->num_nodes);
 
-    
-    double * zeros = calloc_double(opts->num_nodes);
-    for (size_t ii = 0; ii < n; ii++){
-        f[ii] = lin_elem_exp_init(opts->num_nodes,opts->nodes,zeros);
-        f[ii]->coeff[ii] = 1.0;
-    }
-    double norm, proj;
-    for (size_t ii = 0; ii < n; ii++){
-        norm = lin_elem_exp_norm(f[ii]);
-        lin_elem_exp_scale(1/norm,f[ii]);
-        for (size_t jj = ii+1; jj < n; jj++){
-            proj = lin_elem_exp_inner(f[ii],f[jj]);
-            lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+    if (opts->adapt == 0){
+        assert (opts->nodes != NULL);
+        assert (n <= opts->num_nodes);
+        double * zeros = calloc_double(opts->num_nodes);
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = lin_elem_exp_init(opts->num_nodes,opts->nodes,zeros);
+            f[ii]->coeff[ii] = 1.0;
         }
+        double norm, proj;
+        for (size_t ii = 0; ii < n; ii++){
+            norm = lin_elem_exp_norm(f[ii]);
+            lin_elem_exp_scale(1/norm,f[ii]);
+            assert (f[ii]->num_nodes != 0);
+            for (size_t jj = ii+1; jj < n; jj++){
+                proj = lin_elem_exp_inner(f[ii],f[jj]);
+                lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+            }
+            
+        }
+        free(zeros); zeros = NULL;
     }
-    free(zeros); zeros = NULL;
+    else{
+        // not on a grid I can do whatever I want
+        assert (n > 1);
+        double * nodes = linspace(opts->lb,opts->ub,n);
+        double * zeros = calloc_double(opts->num_nodes);
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = lin_elem_exp_init(n,nodes,zeros);
+            f[ii]->coeff[ii] = 1.0;
+        }
+        double norm, proj;
+        for (size_t ii = 0; ii < n; ii++){
+            norm = lin_elem_exp_norm(f[ii]);
+            lin_elem_exp_scale(1/norm,f[ii]);
+            assert (f[ii]->num_nodes != 0);
+            for (size_t jj = ii+1; jj < n; jj++){
+                proj = lin_elem_exp_inner(f[ii],f[jj]);
+                lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+            }
+
+        }
+        free(zeros); zeros = NULL;
+        free(nodes); nodes = NULL;
+    }
+
     
     /* double norm, proj; */
     /* for (size_t ii = 0; ii < n; ii++){ */
@@ -1489,6 +1549,18 @@ double lin_elem_exp_ub(struct LinElemExp * f)
 }
 
 
+static int compare_le (const void * a, const void * b)
+{
+    const double * aa = a;
+    const double * bb = b;
+    if (*aa > *bb){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
 /********************************************************//**
     Create a linear element function with zeros at particular
     locations and 1 everyhwhere else.
@@ -1506,8 +1578,96 @@ lin_elem_exp_onezero(size_t nzeros, double * zero_locs,
     assert (opts != NULL);
     if (opts->adapt == 1){
         // can do whatever I want
-        assert (1 == 0);
-        
+        if (nzeros == 0){
+            double * nodes = calloc_double(2);
+            double * coeff = calloc_double(2);
+            struct LinElemExp * le = lin_elem_exp_init(2,nodes,coeff);
+            le->coeff[0] = 1.0;
+            free(nodes); nodes = NULL;
+            free(coeff); coeff = NULL;
+            /* print_lin_elem_exp(le,3,NULL,stdout); */
+            return le;
+        }
+        else{
+            struct LinElemExp * le = NULL;
+            double * sorted_arr = calloc_double(nzeros);
+            memmove(sorted_arr,zero_locs,nzeros*sizeof(double));
+            qsort (sorted_arr, nzeros, sizeof(double), compare_le);
+            
+            int onlb = 0;
+            int onub = 0;
+            double difflb = fabs(sorted_arr[0]-opts->lb);
+            if (difflb < 1e-14){
+                onlb = 1;
+            }
+            double diffub = fabs(zero_locs[nzeros-1]-opts->ub);
+            if (diffub < 1e-14){
+                onub = 1;
+            }
+            if ((onlb == 0) && (onub == 0)){
+                double * nodes = calloc_double(nzeros+2);
+                double * coeff = calloc_double(nzeros+2);
+                nodes[0] = opts->lb;
+                coeff[0] = 0.0;
+                for (size_t jj = 1; jj < nzeros+1; jj++){
+                    nodes[jj] = sorted_arr[jj-1];
+                    coeff[jj] = 0.0;
+                }
+                nodes[nzeros+1] = opts->ub;
+                coeff[nzeros+1] = 1.0;
+                le = lin_elem_exp_init(nzeros+2,nodes,coeff);
+                free(nodes); nodes = NULL;
+                free(coeff); coeff = NULL;
+            }
+            else if ((onlb == 1) && (onub == 1)){
+                double * nodes = calloc_double(nzeros+1);
+                double * coeff = calloc_double(nzeros+1);
+                nodes[0] = opts->lb;
+                coeff[0] = 0.0;
+                nodes[1] = (opts->lb + sorted_arr[1])/2.0;
+                coeff[1] = 1.0;
+                for (size_t jj = 2; jj< nzeros+1; jj++){
+                    nodes[jj] = sorted_arr[jj-1];
+                    coeff[jj] = 0.0;
+                }
+                le = lin_elem_exp_init(nzeros+1,nodes,coeff);
+                free(nodes); nodes = NULL;
+                free(coeff); coeff = NULL;
+            }
+            else if ((onlb == 1) && (onub == 0)){
+                double * nodes = calloc_double(nzeros+1);
+                double * coeff = calloc_double(nzeros+1);
+                nodes[0] = opts->lb;
+                coeff[0] = 0.0;
+                for (size_t jj = 1; jj < nzeros; jj++){
+                    nodes[jj] = sorted_arr[jj-1];
+                    coeff[jj] = 0.0;
+                }
+                nodes[nzeros] = opts->ub;
+                coeff[nzeros] = 1.0;
+                le = lin_elem_exp_init(nzeros+1,nodes,coeff);
+                free(nodes); nodes = NULL;
+                free(coeff); coeff = NULL;
+            }
+            else if ((onlb == 0) && (onub == 1)){
+                double * nodes = calloc_double(nzeros+1);
+                double * coeff = calloc_double(nzeros+1);
+                nodes[0] = opts->lb;
+                coeff[0] = 1.0;
+                for (size_t jj = 1; jj< nzeros+1; jj++){
+                    nodes[jj] = sorted_arr[jj-1];
+                    coeff[jj] = 0.0;
+                }
+                le = lin_elem_exp_init(nzeros+1,nodes,coeff);
+                free(nodes); nodes = NULL;
+                free(coeff); coeff = NULL;
+            }
+            else{
+                assert (1 == 0);
+            }
+            /* print_lin_elem_exp(le,3,NULL,stdout); */
+            return le;
+        }
     }
     else{
         assert(opts->nodes != NULL);
@@ -1531,7 +1691,7 @@ lin_elem_exp_onezero(size_t nzeros, double * zero_locs,
     }
 }
 
-void print_lin_elem_exp(struct LinElemExp * f, size_t prec, 
+void print_lin_elem_exp(const struct LinElemExp * f, size_t prec, 
                         void * args, FILE * stream)
 {
     if (f == NULL){

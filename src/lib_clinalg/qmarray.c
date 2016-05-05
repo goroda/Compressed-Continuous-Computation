@@ -1427,7 +1427,7 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
             zz.N = count[ii];
             struct Fwrap * fw = fwrap_create(1,"general-vec");
             fwrap_set_fvec(fw,eval_zpoly,&zz);
-            L[ii] = generic_function_approximate1d(approxopts->fc,fw,approxopts->aopts);
+            L[ii] = generic_function_approximate1d(approxopts->fc,approxopts->aopts,fw);
             fwrap_destroy(fw);
         }
         free(zeros[ii]); zeros[ii] = NULL;
@@ -1949,7 +1949,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
 ***************************************************************/
 int 
 qmarray_householder(struct Qmarray * A, struct Qmarray * E, 
-        struct Qmarray * V, double * R)
+                    struct Qmarray * V, double * R)
 {
     //printf("\n\n\n\n\n\n\n\n\nSTARTING QMARRAY_HOUSEHOLDER\n");
     size_t ii, jj;
@@ -2080,7 +2080,9 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
         else {
             //printf("quasi daxpby\n");
             //printf("sigma = %G\n",sigma);
+            /* printf("we are here\n"); */
             v2 = quasimatrix_daxpby(1.0/sigma, v, 0.0, NULL);
+            /* printf("and now there\n"); */
             v2fs = quasimatrix_get_funcs(v2);
             //printf("quasi got it daxpby\n");
         }
@@ -2155,7 +2157,7 @@ qmarray_householder(struct Qmarray * A, struct Qmarray * E,
 
         quasimatrix_free(v2);
     }
-    
+    /* printf("done?\n"); */
     //printf("qmarray v after = \n");
     //print_qmarray(V,0,NULL);
 
@@ -2194,7 +2196,7 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
     print_qmarray(V, 0, NULL);
     */
     while (counter < Q->ncols){
-        //printf("INCREMENT COUNTER \n");
+        /* printf("INCREMENT COUNTER \n"); */
         for (jj = ii; jj < Q->ncols; jj++){
 
             temp1 = generic_function_inner_sum(V->nrows,1,V->funcs + ii*V->nrows,
@@ -2203,9 +2205,11 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
             q2 = quasimatrix_alloc(Q->nrows);
             quasimatrix_free_funcs(q2);
             struct GenericFunction ** q2funcs = quasimatrix_get_funcs(q2);
+            /* printf("lets go\n"); */
             q2funcs = generic_function_array_daxpby(Q->nrows, 1.0, 1, 
                         Q->funcs + jj * Q->nrows, -2.0 * temp1, 1, 
                         V->funcs + ii * V->nrows);
+            /* printf("why?!\n"); */
             quasimatrix_set_funcs(q2,q2funcs);
             qmarray_set_column(Q,jj, q2);
             //printf("Q new = \n");
@@ -2219,6 +2223,7 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
         ii = ii - 1;
         counter = counter + 1;
     }
+    /* printf("done\n"); */
     //printf("************Q after*************\n");
     //print_qmarray(Q, 0, NULL);
     //printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");

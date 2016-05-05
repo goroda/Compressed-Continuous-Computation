@@ -176,4 +176,126 @@ int disc2d(size_t n, const double * xy, double * out, void * args)
     return 0;
 }
 
+//4 dimensional
+int funcH4(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = 2.0*x[ii*4] + x[ii*4+1]*pow(x[ii*4+2],4) +  x[ii*4+3]*pow(x[ii*4+0],2);
+    }
+    return 0;
+}
 
+// 4 dimensional
+int funch1(size_t n, const double * x, double * out, void * arg)
+{
+    (void)(arg);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii*4+0] + x[ii*4+1] + x[ii*4+2] + x[ii*4+3];
+    }
+
+    return 0;
+}
+
+// 4 dimensional
+int funch2(size_t n, const double * x, double * out, void * arg)
+{
+    (void)(arg);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii*4+0]*x[ii*4+1] + x[ii*4+2]*x[ii*4+3] +
+            x[ii*4+1]*pow(x[ii*4+2],5) + pow(x[ii*4+1],8)*pow(x[ii*4+3],2);        
+    }
+
+//    double out = x[0]*x[1] + x[2]*x[3] + x[0]*exp(-x[2]*x[3]);
+//    double out = x[0]*x[1] + x[2]*x[3] + x[0]*sin(x[1]*x[2]);
+    /* printf("x = "); dprint(4,x); */
+    /* printf("out = %G\n",out); */
+    return 0;
+}
+
+
+// 6 dimensional
+int func_not_all(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii*6+1] + x[ii*6+4];
+    }
+    return 0;
+}
+
+
+int sin10d(size_t n, const double * x, double * out, void * args)
+{
+    
+    (void)(args);
+
+    for (size_t jj = 0; jj < n; jj++ ){
+        out[jj] = 0.0;
+        for (size_t ii = 0; ii < 10; ii++){
+            out[jj] += x[jj*10+ii];
+        }
+        out[jj] = sin(out[jj]);        
+    }
+    return 0;
+}
+
+int sin100d(size_t n, const double * x, double * out, void * args)
+{
+    
+    (void)(args);
+
+    for (size_t jj = 0; jj < n; jj++ ){
+        out[jj] = 0.0;
+        for (size_t ii = 0; ii < 100; ii++){
+            out[jj] += x[jj*100+ii];
+        }
+        out[jj] = sin(out[jj]);        
+    }
+    return 0;
+}
+
+int sin1000d(size_t n, const double * x, double * out, void * args)
+{
+    
+    (void)(args);
+
+    for (size_t jj = 0; jj < n; jj++ ){
+        out[jj] = 0.0;
+        for (size_t ii = 0; ii < 1000; ii++){
+            out[jj] += x[jj*1000+ii];
+        }
+        out[jj] = sin(out[jj]);        
+    }
+    return 0;
+}
+
+int funcGrad(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = x[ii*4+0] * x[ii*4+1] + x[ii*4+2] * x[ii*4+3];
+    }
+    return 0;
+}
+
+int funcHess(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    //double out = 2.0*x[0] + x[1]*pow(x[2],4) + x[3]*pow(x[0],2);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] =  x[ii*3+0] + pow(x[ii*3+0],2)*x[ii*3+2] +  x[ii*3+1] * pow(x[ii*3+2],4) ;// + x[3]*pow(x[0],2);
+    }
+    return 0;
+}
+
+
+//4 dimensional
+int funcCheck2(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = pow(x[ii*4+ 0] * x[ii*4 + 1],2) + x[ii*4 + 2] * x[ii*4+3]  + x[ii*4+1]*sin(x[ii*4+3]); 
+    }
+    return 0;
+}

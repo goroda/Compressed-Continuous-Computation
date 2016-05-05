@@ -50,4 +50,17 @@ int funcndb(size_t, const double *, double *, void *);
 int funcnd1(size_t, const double *, double *, void *);
 int funcnd2(size_t, const double *, double *, void *);
 int disc2d(size_t, const double *, double *, void *);
+int funcH4(size_t, const double *, double *,void *);
+int funch1(size_t, const double *, double *, void *);
+int funch2(size_t, const double *, double *, void *);
+int func_not_all(size_t, const double *, double *, void *);
+int sin10d(size_t, const double *, double *, void *);
+int sin100d(size_t, const double *, double *, void *);
+int sin1000d(size_t, const double *, double *, void *);
+
+int funcGrad(size_t, const double *, double *, void *);
+int funcHess(size_t, const double *, double *, void *);
+
+int funcCheck2(size_t, const double *, double *, void *);
+
 #endif

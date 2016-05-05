@@ -212,7 +212,7 @@ quasimatrix_approx1d(size_t n, struct Fwrap * fw,
     for (ii = 0; ii < n; ii++){
         /* printf("ii=%zu\n",ii); */
         fwrap_set_which_eval(fw,ii);
-        qm->funcs[ii] = generic_function_approximate1d(fc[ii],fw,aopts);
+        qm->funcs[ii] = generic_function_approximate1d(fc[ii],aopts,fw);
         /* printf("integral = %G\n",generic_function_integral(qm->funcs[ii])); */
     }
     return qm;

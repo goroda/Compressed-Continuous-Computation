@@ -321,7 +321,7 @@ void Test_qmarray_householder2(CuTest * tc){
     struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
     double * R = calloc_double(4*4);
     struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
-
+    
     enum function_class fc[4] = {POLYNOMIAL, POLYNOMIAL, POLYNOMIAL, POLYNOMIAL};
     struct Quasimatrix * A2 = quasimatrix_approx1d(4,fw,fc,opts);
     double * R2 = calloc_double(4*4);

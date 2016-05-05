@@ -40,7 +40,7 @@
 #ifndef DMRGPROD_H
 #define DMRGPROD_H
 
-#include "lib_clinalg.h"
+#include "dmrg.h"
 
 struct DmProd
 {
@@ -48,9 +48,10 @@ struct DmProd
     struct FunctionTrain * b;
 };
 
-struct FunctionTrain * dmrg_product(struct FunctionTrain *,
-            struct FunctionTrain *, struct FunctionTrain *,
-            double, size_t, double, int);
+struct FunctionTrain *
+dmrg_product(struct FunctionTrain *,
+             struct FunctionTrain *, struct FunctionTrain *,
+             double, size_t, double, int, struct MultiApproxOpts *);
 
 #endif
  

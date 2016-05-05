@@ -231,6 +231,13 @@ void ope_opts_free(struct OpeOpts * ope)
     }
 }
 
+void ope_opts_free_deep(struct OpeOpts ** ope)
+{
+    if (*ope != NULL){
+        free(*ope); *ope = NULL;
+    }
+}
+
 void ope_opts_set_start(struct OpeOpts * ope, size_t start)
 {
     assert (ope != NULL);

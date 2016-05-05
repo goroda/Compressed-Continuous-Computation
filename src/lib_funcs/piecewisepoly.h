@@ -46,6 +46,7 @@ struct PwPolyOpts;
 struct PwPolyOpts;
 struct PwPolyOpts * pw_poly_opts_alloc(enum poly_type, double,double);
 void pw_poly_opts_free(struct PwPolyOpts *);
+void pw_poly_opts_free_deep(struct PwPolyOpts **);
 
 void pw_poly_opts_set_lb(struct PwPolyOpts *, double);
 double pw_poly_opts_get_lb(const struct PwPolyOpts *);

@@ -40,6 +40,8 @@
 #ifndef DIFFUSION_H
 #define DIFFUSION_H
 
+#include "dmrg.h"
+
 void dmrg_diffusion_midleft(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
@@ -69,9 +71,10 @@ struct DmDiff
 struct FunctionTrain * dmrg_diffusion(
     struct FunctionTrain *,
     struct FunctionTrain *,
-    double, size_t, double, int);
+    double, size_t, double, int, struct MultiApproxOpts *);
 
-struct FunctionTrain * exact_diffusion(
-        struct FunctionTrain *, struct FunctionTrain *);
+struct FunctionTrain *
+exact_diffusion(struct FunctionTrain *, struct FunctionTrain *,
+                struct MultiApproxOpts *);
 
 #endif

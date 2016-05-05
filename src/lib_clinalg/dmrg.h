@@ -40,7 +40,7 @@
 #ifndef DMRG_H
 #define DMRG_H
 
-#include "lib_clinalg.h"
+#include "ft.h"
 
 /** \struct QR
  *  \brief Holds Q and R for qmarray
@@ -65,14 +65,15 @@ struct QR
 
 };
 
-struct QR * qr_reduced(struct Qmarray *,int);
+struct QR * qr_reduced(const struct Qmarray *,int,struct OneApproxOpts*);
 void qr_free(struct QR *);
 void qr_array_free(struct QR **, size_t);
 struct QR ** qr_array_alloc(size_t);
 
 
-struct FunctionTrain * dmrg_approx(struct FunctionTrain *,
-    void (*)(char,size_t,size_t,double *,struct Qmarray **,void *),
-    void *, double, size_t, double, int);
+struct FunctionTrain *
+dmrg_approx(struct FunctionTrain *,
+            void (*)(char,size_t,size_t,double *,struct Qmarray **,void *),
+            void *, double, size_t, double, int,struct MultiApproxOpts *);
 
 #endif

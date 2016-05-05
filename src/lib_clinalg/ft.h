@@ -43,7 +43,30 @@
 #include "qmarray.h"
 #include "indmanage.h"
 
-struct FunctionTrain;
+/** \struct FunctionTrain
+ * \brief Functrain train
+ * \var FunctionTrain::dim
+ * dimension of function
+ * \var FunctionTrain::ranks
+ * function train ranks
+ * \var FunctionTrain::cores
+ * function train cores
+ */
+struct FunctionTrain {
+    size_t dim;
+    size_t * ranks;
+    struct Qmarray ** cores;
+    
+    double * evalspace1;
+    double * evalspace2;
+    double * evalspace3;
+
+    double ** evaldd1;
+    double ** evaldd2;
+    double ** evaldd3;
+    double ** evaldd4;
+};
+
 struct FunctionTrain * function_train_alloc(size_t);
 struct FunctionTrain * function_train_copy(const struct FunctionTrain *);
 void function_train_free(struct FunctionTrain *);
@@ -56,6 +79,7 @@ int function_train_save(struct FunctionTrain *, char *);
 struct FunctionTrain * function_train_load(char *);
 
 // getters and setters
+size_t function_train_get_dim(const struct FunctionTrain *);
 size_t * function_train_get_ranks(const struct FunctionTrain *);
 size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
@@ -68,6 +92,9 @@ double function_train_eval_co_perturb(struct FunctionTrain *,
 
 // generators
 struct FunctionTrain *
+function_train_poly_randu(enum poly_type,struct BoundingBox *,
+                          size_t *, size_t);
+struct FunctionTrain *
 function_train_rankone(struct MultiApproxOpts *, struct Fwrap *);
 struct FunctionTrain *
 function_train_initsum(struct MultiApproxOpts *, struct Fwrap *);
@@ -79,7 +106,8 @@ function_train_linear(const double *, size_t, const double *, size_t,
 struct FunctionTrain *
 function_train_quadratic(const double *,const double *,
                              struct MultiApproxOpts *);
-
+struct FunctionTrain *
+function_train_create_nodal(const struct FunctionTrain *, size_t *, double **);
 
 // computations
 double
@@ -136,7 +164,7 @@ void ft_cross_args_set_maxrank_all(struct FtCrossArgs *, size_t);
 void ft_cross_args_set_maxrank_ind(struct FtCrossArgs *, size_t, size_t);
 void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
-;size_t * ft_cross_args_get_ranks(const struct FtCrossArgs *);
+size_t * ft_cross_args_get_ranks(const struct FtCrossArgs *);
 struct FtCrossArgs * ft_cross_args_copy(const struct FtCrossArgs *);
 void ft_cross_args_free(struct FtCrossArgs *);
 
@@ -148,4 +176,97 @@ ftapprox_cross(struct Fwrap *,
                struct MultiApproxOpts *,
                struct FiberOptArgs *,
                struct FunctionTrain *);
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+/////////////////////                          ///////////////////////////
+/////////////////////    Starting FT1D Array   ///////////////////////////
+/////////////////////                          ///////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+
+/** \struct FT1DArray
+ * \brief One dimensional array of function trains
+ * \var FT1DArray::size
+ * size of array
+ * \var FT1DArray::ft
+ * array of function trains
+ */
+struct FT1DArray{
+    size_t size;
+    struct FunctionTrain ** ft;
+};
+
+struct FT1DArray * ft1d_array_alloc(size_t);
+struct FT1DArray * function_train_gradient(const struct FunctionTrain *);
+unsigned char *
+ft1d_array_serialize(unsigned char *, struct FT1DArray *, size_t *);
+unsigned char *
+ft1d_array_deserialize(unsigned char *, struct FT1DArray **);
+int ft1d_array_save(struct FT1DArray *, char *);
+struct FT1DArray * ft1d_array_load(char *);
+struct FT1DArray * ft1d_array_copy(const struct FT1DArray *);
+void ft1d_array_free(struct FT1DArray *);
+struct FT1DArray * ft1d_array_jacobian(const struct FT1DArray *);
+struct FT1DArray * function_train_hessian(const struct FunctionTrain *);
+void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
+double * ft1d_array_eval(const struct FT1DArray *, const double *);
+void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);
+struct FunctionTrain *
+ft1d_array_sum_prod(size_t, double *,
+                    const struct FT1DArray *, const struct FT1DArray *,
+                    double);
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+/////////////////////                          ///////////////////////////
+/////////////////////    BLAS TYPE INTERFACE   ///////////////////////////
+/////////////////////                          ///////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double);
+void c3vaxpy_arr(size_t, double, struct FT1DArray *, 
+                size_t, double *, size_t, double,
+                struct FunctionTrain **, double);
+
+double c3dot(struct FunctionTrain *, struct FunctionTrain *);
+void c3gemv(double, size_t, struct FT1DArray *, size_t, 
+        struct FunctionTrain *,double, struct FunctionTrain *,double);
+
+void c3vaxpy(size_t, double, struct FT1DArray *, size_t, 
+            struct FT1DArray **, size_t, double);
+void c3vprodsum(size_t, double, struct FT1DArray *, size_t,
+                struct FT1DArray *, size_t, double,
+                struct FunctionTrain **, double);
+void c3vgemv(size_t, size_t, double, struct FT1DArray *, size_t,
+        struct FT1DArray *, size_t, double, struct FT1DArray **,
+        size_t, double );
+void c3vgemv_arr(int, size_t, size_t, double, double *, size_t,
+        struct FT1DArray *, size_t, double, struct FT1DArray **, 
+        size_t, double);
+
 #endif

@@ -62,31 +62,6 @@
     #define VFTCROSS 0
 #endif
 
-
-/** \struct FunctionTrain
- * \brief Functrain train
- * \var FunctionTrain::dim
- * dimension of function
- * \var FunctionTrain::ranks
- * function train ranks
- * \var FunctionTrain::cores
- * function train cores
- */
-struct FunctionTrain {
-    size_t dim;
-    size_t * ranks;
-    struct Qmarray ** cores;
-    
-    double * evalspace1;
-    double * evalspace2;
-    double * evalspace3;
-
-    double ** evaldd1;
-    double ** evaldd2;
-    double ** evaldd3;
-    double ** evaldd4;
-};
-
 /***********************************************************//**
     Allocate space for a function_train
 
@@ -318,6 +293,15 @@ struct FunctionTrain * function_train_load(char * filename)
     free(data); data = NULL;
     fclose(fp);
     return ft;
+}
+
+/***********************************************************//**
+    Get dim
+***************************************************************/
+size_t function_train_get_dim(const struct FunctionTrain * ft)
+{
+    assert(ft != NULL);
+    return ft->dim;
 }
 
 /***********************************************************//**
@@ -1061,6 +1045,28 @@ function_train_quadratic_aligned(const double * coeffs, const double * m,
 
     return ft;
 }
+
+/********************************************************//**
+    Interpolate a function-train onto a particular grid forming
+    another function_train with a nodela basis
+
+    \param[in] fta - Function train array to evaluate
+    \param[in] N   - number of nodes in each dimension
+    \param[in] x   - nodes in each dimension
+
+    \return new function train
+***********************************************************/
+struct FunctionTrain *
+function_train_create_nodal(const struct FunctionTrain * fta, size_t * N, double ** x)
+{
+    struct FunctionTrain * newft = function_train_alloc(fta->dim);
+    memmove(newft->ranks,fta->ranks, (fta->dim+1)*sizeof(size_t));
+    for (size_t ii = 0; ii < newft->dim; ii ++){
+        newft->cores[ii] = qmarray_create_nodal(fta->cores[ii],N[ii],x[ii]);
+    }
+    return newft;
+}
+
 
 /********************************************************//**
     Integrate a function in function train format
@@ -2132,389 +2138,355 @@ ftapprox_cross(struct Fwrap * fw,
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
+/***********************************************************//**
+    Allocate a 1d array of function trains
 
-/** \struct FT1DArray
- * \brief One dimensional array of function trains
- * \var FT1DArray::size
- * size of array
- * \var FT1DArray::ft
- * array of function trains
- */
-struct FT1DArray{
+    \param[in] dimout - number of function trains
+
+    \return function train array
+
+    \note
+        Each ft of the array is set to NULL;
+***************************************************************/
+struct FT1DArray * ft1d_array_alloc(size_t dimout)
+{
+    struct FT1DArray * fta = malloc(sizeof(struct FT1DArray));
+    if (fta == NULL){
+        fprintf(stderr, "Error allocating 1d function train array");
+        exit(1);
+    }
+    
+    fta->size = dimout;
+
+    fta->ft = malloc(dimout * sizeof(struct FunctionTrain *));
+    if (fta == NULL){
+        fprintf(stderr, "Error allocating 1d function train array");
+        exit(1);
+    }
+        
+    size_t ii;
+    for (ii = 0; ii < dimout; ii ++){
+        fta->ft[ii] = NULL;
+    }
+    
+    return fta;
+}
+
+/***********************************************************//**
+    Serialize a function train array
+
+    \param[in,out] ser        - stream to serialize to
+    \param[in]     ft         - function train array
+    \param[in,out] totSizeIn  - if NULL then serialize, if not NULL then return size
+
+    \return ptr - ser shifted by number of bytes
+***************************************************************/
+unsigned char *
+ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft,
+                     size_t *totSizeIn)
+{
+
+    // size -> ft1 -> ft2 -> ... ->ft[size]
+
+    // size
+    size_t totSize = sizeof(size_t);
+    size_t size_temp;
+    for (size_t ii = 0; ii < ft->size; ii++){
+        function_train_serialize(NULL,ft->ft[ii],&size_temp);
+        totSize += size_temp;
+    }
+    if (totSizeIn != NULL){
+        *totSizeIn = totSize;
+        return ser;
+    }
+
+    // serialize the size
+    unsigned char * ptr = ser;
+    ptr = serialize_size_t(ptr, ft->size);
+    
+    // serialize each function train
+    for (size_t ii = 0; ii < ft->size; ii++){
+        ptr = function_train_serialize(ptr,ft->ft[ii],NULL);
+    }
+    
+    return ptr;
+}
+
+/***********************************************************//**
+    Deserialize a function train array
+
+    \param[in,out] ser - serialized function train array
+    \param[in,out] ft  - function_train array
+
+    \return ptr - shifted ser after deserialization
+***************************************************************/
+unsigned char *
+ft1d_array_deserialize(unsigned char * ser, struct FT1DArray ** ft)
+{
+    unsigned char * ptr = ser;
+
+    // deserialize the number of fts in the array
     size_t size;
-    struct FunctionTrain ** ft;
-};
+    ptr = deserialize_size_t(ptr, &size);
+    *ft = ft1d_array_alloc(size);
 
-/* /\********************************************************\//\** */
-/*     Compute the gradient of a function train  */
+    // deserialize each function train
+    for (size_t ii = 0; ii < size; ii++){
+        ptr = function_train_deserialize(ptr, &((*ft)->ft[ii]));
+    }
+    return ptr;
+}
 
-/*     \param[in] ft - Function train  */
-
-/*     \return gradient */
-/* ***********************************************************\/ */
-/* struct FT1DArray * function_train_gradient(struct FunctionTrain * ft) */
-/* { */
-/*     struct FT1DArray * ftg = ft1d_array_alloc(ft->dim); */
-/*     size_t ii; */
-/*     for (ii = 0; ii < ft->dim; ii++){ */
-/*         //printf("**********\n\n\n**********\n"); */
-/*         //printf("ii = %zu\n",ii); */
-/*         ftg->ft[ii] = function_train_copy(ft); */
-/*         qmarray_free(ftg->ft[ii]->cores[ii]); */
-/*         ftg->ft[ii]->cores[ii] = NULL; */
-/*         //printf("get deriv ii = %zu\n",ii); */
-/*         //print_qmarray(ft->cores[ii],1,NULL); */
-/*         ftg->ft[ii]->cores[ii] = qmarray_deriv(ft->cores[ii]); */
-/*         //printf("got deriv ii = %zu\n",ii); */
-/*         //print_qmarray(ftg->ft[ii]->cores[ii],1,NULL); */
-/*     } */
-
-/*     return ftg; */
-/* } */
-
-/* /\***********************************************************\//\** */
-/*     Allocate a 1d array of function trains */
-
-/*     \param[in] dimout - number of function trains */
-
-/*     \return function train array */
-
-/*     \note  */
-/*         Each ft of the array is set to NULL; */
-/* ***************************************************************\/ */
-/* struct FT1DArray * ft1d_array_alloc(size_t dimout) */
-/* { */
-/*     struct FT1DArray * fta = malloc(sizeof(struct FT1DArray)); */
-/*     if (fta == NULL){ */
-/*         fprintf(stderr, "Error allocating 1d function train array"); */
-/*         exit(1); */
-/*     } */
+/***********************************************************//**
+    Save a function train array to file
     
-/*     fta->size = dimout; */
+    \param[in] ft       - function train array to save
+    \param[in] filename - name of file to save to
 
-/*     fta->ft = malloc(dimout * sizeof(struct FunctionTrain *)); */
-/*     if (fta == NULL){ */
-/*         fprintf(stderr, "Error allocating 1d function train array"); */
-/*         exit(1); */
-/*     } */
-        
-/*     size_t ii; */
-/*     for (ii = 0; ii < dimout; ii ++){ */
-/*         fta->ft[ii] = NULL; */
-/*     } */
+    \return success (1) or failure (0) of opening the file
+***************************************************************/
+int ft1d_array_save(struct FT1DArray * ft, char * filename)
+{
+
+    FILE *fp;
+    fp = fopen(filename, "w");
+    if (fp == NULL){
+        fprintf(stderr, "cat: can't open %s\n", filename);
+        return 0;
+    }
     
-/*     return fta; */
-/* } */
+    size_t totsize;
+    ft1d_array_serialize(NULL,ft, &totsize);
 
-/* /\***********************************************************\//\** */
-/*     Serialize a function train array */
-
-/*     \param[in,out] ser        - stream to serialize to */
-/*     \param[in]     ft         - function train array */
-/*     \param[in,out] totSizeIn  - if NULL then serialize, if not NULL then return size */
-
-/*     \return ptr - ser shifted by number of bytes */
-/* ***************************************************************\/ */
-/* unsigned char *  */
-/* ft1d_array_serialize(unsigned char * ser, struct FT1DArray * ft, */
-/*                      size_t *totSizeIn) */
-/* { */
-
-/*     // size -> ft1 -> ft2 -> ... ->ft[size] */
-
-/*     // size */
-/*     size_t totSize = sizeof(size_t); */
-/*     size_t size_temp; */
-/*     for (size_t ii = 0; ii < ft->size; ii++){ */
-/*         function_train_serialize(NULL,ft->ft[ii],&size_temp); */
-/*         totSize += size_temp; */
-/*     } */
-/*     if (totSizeIn != NULL){ */
-/*         *totSizeIn = totSize; */
-/*         return ser; */
-/*     } */
-
-/*     // serialize the size */
-/*     unsigned char * ptr = ser; */
-/*     ptr = serialize_size_t(ptr, ft->size); */
+    unsigned char * data = malloc(totsize+sizeof(size_t));
+    if (data == NULL){
+        fprintf(stderr, "can't allocate space for saving density\n");
+        return 0;
+    }
     
-/*     // serialize each function train */
-/*     for (size_t ii = 0; ii < ft->size; ii++){ */
-/*         ptr = function_train_serialize(ptr,ft->ft[ii],NULL); */
-/*     } */
+    // serialize size first!
+    unsigned char * ptr = serialize_size_t(data,totsize);
+    ptr = ft1d_array_serialize(ptr,ft,NULL);
+
+    fwrite(data,sizeof(unsigned char),totsize+sizeof(size_t),fp);
+
+    free(data); data = NULL;
+    fclose(fp);
+    return 1;
+}
+
+/***********************************************************//**
+    Load a function train array from a file
     
-/*     return ptr; */
-/* } */
+    \param[in] filename - filename of file to load
 
-/* /\***********************************************************\//\** */
-/*     Deserialize a function train array */
+    \return ft if successfull NULL otherwise
+***************************************************************/
+struct FT1DArray * ft1d_array_load(char * filename)
+{
+    FILE *fp;
+    fp =  fopen(filename, "r");
+    if (fp == NULL){
+        fprintf(stderr, "cat: can't open %s\n", filename);
+        return NULL;
+    }
 
-/*     \param[in,out] ser - serialized function train array */
-/*     \param[in,out] ft  - function_train array */
+    size_t totsize;
+    size_t k = fread(&totsize,sizeof(size_t),1,fp);
+    if ( k != 1){
+        printf("error reading file %s\n",filename);
+        return NULL;
+    }
 
-/*     \return ptr - shifted ser after deserialization */
-/* ***************************************************************\/ */
-/* unsigned char * */
-/* ft1d_array_deserialize(unsigned char * ser, struct FT1DArray ** ft) */
-/* { */
-/*     unsigned char * ptr = ser; */
+    unsigned char * data = malloc(totsize);
+    if (data == NULL){
+        fprintf(stderr, "can't allocate space for loading density\n");
+        return NULL;
+    }
 
-/*     // deserialize the number of fts in the array */
-/*     size_t size; */
-/*     ptr = deserialize_size_t(ptr, &size); */
-/*     *ft = ft1d_array_alloc(size); */
+    k = fread(data,sizeof(unsigned char),totsize,fp);
 
-/*     // deserialize each function train */
-/*     for (size_t ii = 0; ii < size; ii++){ */
-/*         ptr = function_train_deserialize(ptr, &((*ft)->ft[ii])); */
-/*     } */
-/*     return ptr; */
-/* } */
-
-/* /\***********************************************************\//\** */
-/*     Save a function train array to file */
+    struct FT1DArray * ft = NULL;
+    ft1d_array_deserialize(data,&ft);
     
-/*     \param[in] ft       - function train array to save */
-/*     \param[in] filename - name of file to save to */
+    free(data); data = NULL;
+    fclose(fp);
+    return ft;
+}
 
-/*     \return success (1) or failure (0) of opening the file */
-/* ***************************************************************\/ */
-/* int ft1d_array_save(struct FT1DArray * ft, char * filename) */
-/* { */
+/***********************************************************//**
+    Copy an array of function trains
 
-/*     FILE *fp; */
-/*     fp = fopen(filename, "w"); */
-/*     if (fp == NULL){ */
-/*         fprintf(stderr, "cat: can't open %s\n", filename); */
-/*         return 0; */
-/*     } */
-    
-/*     size_t totsize; */
-/*     ft1d_array_serialize(NULL,ft, &totsize); */
+    \param[in] fta - array to coppy
 
-/*     unsigned char * data = malloc(totsize+sizeof(size_t)); */
-/*     if (data == NULL){ */
-/*         fprintf(stderr, "can't allocate space for saving density\n"); */
-/*         return 0; */
-/*     } */
-    
-/*     // serialize size first! */
-/*     unsigned char * ptr = serialize_size_t(data,totsize); */
-/*     ptr = ft1d_array_serialize(ptr,ft,NULL); */
+    \return ftb - copied array
+***************************************************************/
+struct FT1DArray * ft1d_array_copy(const struct FT1DArray * fta)
+{
+    struct FT1DArray * ftb = ft1d_array_alloc(fta->size);
+    size_t ii;
+    for (ii = 0; ii < fta->size; ii++){
+        ftb->ft[ii] = function_train_copy(fta->ft[ii]);
+    }
+    return ftb;
+}
 
-/*     fwrite(data,sizeof(unsigned char),totsize+sizeof(size_t),fp); */
+/***********************************************************//**
+    Free a 1d array of function trains
 
-/*     free(data); data = NULL; */
-/*     fclose(fp); */
-/*     return 1; */
-/* } */
+    \param[in,out] fta - function train array to free
+***************************************************************/
+void ft1d_array_free(struct FT1DArray * fta)
+{
+    if (fta != NULL){
+        size_t ii = 0;
+        for (ii = 0; ii < fta->size; ii++){
+            function_train_free(fta->ft[ii]);
+            fta->ft[ii] = NULL;
+        }
+        free(fta->ft);
+        fta->ft = NULL;
+        free(fta);
+        fta = NULL;
+    }
+}
 
-/* /\***********************************************************\//\** */
-/*     Load a function train array from a file */
-    
-/*     \param[in] filename - filename of file to load */
+/********************************************************//**
+    Compute the gradient of a function train
 
-/*     \return ft if successfull NULL otherwise */
-/* ***************************************************************\/ */
-/* struct FT1DArray * ft1d_array_load(char * filename) */
-/* { */
-/*     FILE *fp; */
-/*     fp =  fopen(filename, "r"); */
-/*     if (fp == NULL){ */
-/*         fprintf(stderr, "cat: can't open %s\n", filename); */
-/*         return NULL; */
-/*     } */
+    \param[in] ft - Function train
 
-/*     size_t totsize; */
-/*     size_t k = fread(&totsize,sizeof(size_t),1,fp); */
-/*     if ( k != 1){ */
-/*         printf("error reading file %s\n",filename); */
-/*         return NULL; */
-/*     } */
+    \return gradient
+***********************************************************/
+struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
+{
+    struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        ftg->ft[ii] = function_train_copy(ft);
+        qmarray_free(ftg->ft[ii]->cores[ii]);
+        ftg->ft[ii]->cores[ii] = NULL;
+        ftg->ft[ii]->cores[ii] = qmarray_deriv(ft->cores[ii]);
+    }
 
-/*     unsigned char * data = malloc(totsize); */
-/*     if (data == NULL){ */
-/*         fprintf(stderr, "can't allocate space for loading density\n"); */
-/*         return NULL; */
-/*     } */
+    return ftg;
+} 
 
-/*     k = fread(data,sizeof(unsigned char),totsize,fp); */
 
-/*     struct FT1DArray * ft = NULL; */
-/*     ft1d_array_deserialize(data,&ft); */
-    
-/*     free(data); data = NULL; */
-/*     fclose(fp); */
-/*     return ft; */
-/* } */
+/********************************************************//**
+    Compute the Jacobian of a Function Train 1darray
 
-/* /\***********************************************************\//\** */
-/*     Copy an array of function trains */
+    \param[in] fta - Function train array
 
-/*     \param[in] fta - array to coppy */
-
-/*     \return ftb - copied array */
-/* ***************************************************************\/ */
-/* struct FT1DArray * ft1d_array_copy(struct FT1DArray * fta) */
-/* { */
-/*     struct FT1DArray * ftb = ft1d_array_alloc(fta->size); */
-/*     size_t ii; */
-/*     for (ii = 0; ii < fta->size; ii++){ */
-/*         ftb->ft[ii] = function_train_copy(fta->ft[ii]); */
-/*     } */
-/*     return ftb; */
-/* } */
-
-/* /\***********************************************************\//\** */
-/*     Free a 1d array of function trains */
-
-/*     \param[in,out] fta - function train array to free */
-/* ***************************************************************\/ */
-/* void ft1d_array_free(struct FT1DArray * fta) */
-/* { */
-/*     if (fta != NULL){ */
-/*         size_t ii = 0; */
-/*         for (ii = 0; ii < fta->size; ii++){ */
-/*             function_train_free(fta->ft[ii]); */
-/*             fta->ft[ii] = NULL; */
-/*         } */
-/*         free(fta->ft); */
-/*         fta->ft = NULL; */
-/*         free(fta); */
-/*         fta = NULL; */
-/*     } */
-/* } */
-
-/* /\********************************************************\//\** */
-/*     Compute the Jacobian of a Function Train 1darray */
-
-/*     \param[in] fta - Function train array */
-
-/*     \return jacobian */
-/* ***********************************************************\/ */
-/* struct FT1DArray * ft1d_array_jacobian(struct FT1DArray * fta) */
-/* { */
-/*     struct FT1DArray * jac = ft1d_array_alloc(fta->size * fta->ft[0]->dim); */
-/*     size_t ii,jj; */
-/*     for (ii = 0; ii < fta->ft[0]->dim; ii++){ */
-/*         for (jj = 0; jj < fta->size; jj++){ */
-/*             jac->ft[ii*fta->size+jj] = function_train_copy(fta->ft[jj]); */
-/*             qmarray_free(jac->ft[ii*fta->size+jj]->cores[ii]); */
-/*             jac->ft[ii*fta->size+jj]->cores[ii] = NULL; */
-/*             jac->ft[ii*fta->size+jj]->cores[ii] =  */
-/*                 qmarray_deriv(fta->ft[jj]->cores[ii]); */
+    \return jacobian
+***********************************************************/
+struct FT1DArray * ft1d_array_jacobian(const struct FT1DArray * fta)
+{
+    struct FT1DArray * jac = ft1d_array_alloc(fta->size * fta->ft[0]->dim);
+    size_t ii,jj;
+    for (ii = 0; ii < fta->ft[0]->dim; ii++){
+        for (jj = 0; jj < fta->size; jj++){
+            jac->ft[ii*fta->size+jj] = function_train_copy(fta->ft[jj]);
+            qmarray_free(jac->ft[ii*fta->size+jj]->cores[ii]);
+            jac->ft[ii*fta->size+jj]->cores[ii] = NULL;
+            jac->ft[ii*fta->size+jj]->cores[ii] =
+                qmarray_deriv(fta->ft[jj]->cores[ii]);
             
-/*         } */
-/*     } */
-/*     return jac; */
-/* } */
+        }
+    }
+    return jac;
+}
 
-/* /\********************************************************\//\** */
-/*     Compute the hessian of a function train  */
+/********************************************************//**
+    Compute the hessian of a function train
 
-/*     \param[in] fta - Function train  */
+    \param[in] fta - Function train
 
-/*     \return hessian of a function train */
-/* ***********************************************************\/ */
-/* struct FT1DArray * function_train_hessian(struct FunctionTrain * fta) */
-/* { */
-/*     struct FT1DArray * ftg = function_train_gradient(fta); */
+    \return hessian of a function train
+***********************************************************/
+struct FT1DArray * function_train_hessian(const struct FunctionTrain * fta)
+{
+    struct FT1DArray * ftg = function_train_gradient(fta);
 
-/*     struct FT1DArray * fth = ft1d_array_jacobian(ftg); */
+    struct FT1DArray * fth = ft1d_array_jacobian(ftg);
         
-/*     ft1d_array_free(ftg); ftg = NULL; */
-/*     return fth; */
-/* } */
+    ft1d_array_free(ftg); ftg = NULL;
+    return fth;
+}
 
-/* /\********************************************************\//\** */
-/*     Scale a function train array */
+/********************************************************//**
+    Scale a function train array
 
-/*     \param[in,out] fta   - function train array */
-/*     \param[in]     n     - number of elements in the array to scale */
-/*     \param[in]     inc   - increment between elements of array */
-/*     \param[in]     scale - value by which to scale */
-/* ***********************************************************\/ */
-/* void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale) */
-/* { */
-/*     size_t ii; */
-/*     for (ii = 0; ii < n; ii++){ */
-/*         function_train_scale(fta->ft[ii*inc],scale); */
-/*     } */
-/* } */
+    \param[in,out] fta   - function train array
+    \param[in]     n     - number of elements in the array to scale
+    \param[in]     inc   - increment between elements of array
+    \param[in]     scale - value by which to scale
+***********************************************************/
+void ft1d_array_scale(struct FT1DArray * fta, size_t n, size_t inc, double scale)
+{
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        function_train_scale(fta->ft[ii*inc],scale);
+    }
+}
 
-/* /\********************************************************\//\** */
-/*     Evaluate a function train 1darray */
+/********************************************************//**
+    Evaluate a function train 1darray
 
-/*     \param[in] fta - Function train array to evaluate */
-/*     \param[in] x   - location at which to obtain evaluations */
+    \param[in] fta - Function train array to evaluate
+    \param[in] x   - location at which to obtain evaluations
 
-/*     \return evaluation */
-/* ***********************************************************\/ */
-/* double * ft1d_array_eval(struct FT1DArray * fta, double * x) */
-/* { */
-/*     double * out = calloc_double(fta->size); */
-/*     size_t ii;  */
-/*     for (ii = 0; ii < fta->size; ii++){ */
-/*         out[ii] = function_train_eval(fta->ft[ii], x); */
-/*     } */
-/*     return out; */
-/* } */
+    \return evaluation
+***********************************************************/
+double * ft1d_array_eval(const struct FT1DArray * fta, const double * x)
+{
+    double * out = calloc_double(fta->size);
+    size_t ii;
+    for (ii = 0; ii < fta->size; ii++){
+        out[ii] = function_train_eval(fta->ft[ii], x);
+    }
+    return out;
+}
 
-/* /\********************************************************\//\** */
-/*     Evaluate a function train 1darray  */
+/********************************************************//**
+    Evaluate a function train 1darray
 
-/*     \param[in]     fta - Function train array to evaluate */
-/*     \param[in]     x   - location at which to obtain evaluations */
-/*     \param[in,out] out - evaluation */
+    \param[in]     fta - Function train array to evaluate
+    \param[in]     x   - location at which to obtain evaluations
+    \param[in,out] out - evaluation
 
-/* ***********************************************************\/ */
-/* void ft1d_array_eval2(struct FT1DArray * fta, double * x, double * out) */
-/* { */
-/*     size_t ii;  */
-/*     for (ii = 0; ii < fta->size; ii++){ */
-/*         out[ii] = function_train_eval(fta->ft[ii], x); */
-/*     } */
-/* } */
+***********************************************************/
+void ft1d_array_eval2(const struct FT1DArray * fta, const double * x, double * out)
+{
+    size_t ii;
+    for (ii = 0; ii < fta->size; ii++){
+        out[ii] = function_train_eval(fta->ft[ii], x);
+    }
+}
 
-/* /\********************************************************\//\** */
-/*     Interpolate a function-train onto a particular grid forming  */
-/*     another function_train with a nodela basis */
 
-/*     \param[in] fta - Function train array to evaluate */
-/*     \param[in] N   - number of nodes in each dimension */
-/*     \param[in] x   - nodes in each dimension */
-
-/*     \return new function train */
-/* ***********************************************************\/ */
-/* struct FunctionTrain * */
-/* function_train_create_nodal(struct FunctionTrain * fta, size_t * N, double ** x) */
-/* { */
-/*     struct FunctionTrain * newft = function_train_alloc(fta->dim); */
-/*     memmove(newft->ranks,fta->ranks, (fta->dim+1)*sizeof(size_t)); */
-/*     for (size_t ii = 0; ii < newft->dim; ii ++){ */
-/*         newft->cores[ii] = qmarray_create_nodal(fta->cores[ii],N[ii],x[ii]); */
-/*     } */
-/*     return newft; */
-/* } */
-
-/* /\********************************************************\//\** */
-/*     Multiply together and sum the elements of two function train arrays */
-/*     \f[  */
-/*         out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x)  */
-/*     \f] */
+/********************************************************//**
+    Multiply together and sum the elements of two function train arrays
+    \f[
+        out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x)
+    \f]
     
-/*     \param[in] N       - number of function trains in each array */
-/*     \param[in] coeff   - coefficients to multiply each element */
-/*     \param[in] f       - first array */
-/*     \param[in] g       - second array */
-/*     \param[in] epsilon - rounding accuracy */
+    \param[in] N       - number of function trains in each array
+    \param[in] coeff   - coefficients to multiply each element
+    \param[in] f       - first array
+    \param[in] g       - second array
+    \param[in] epsilon - rounding accuracy
 
-/*     \return function train */
-/* ***********************************************************\/ */
-/* struct FunctionTrain *  */
-/* ft1d_array_sum_prod(size_t N, double * coeff,  */
-/*                struct FT1DArray * f, struct FT1DArray * g,  */
-/*                double epsilon) */
+    \return function train
+
+    \note
+    this needs the approximation options because it does rounding
+    this is a bit unfortunate -- commenting it out for now
+***********************************************************/
+/* struct FunctionTrain * */
+/* ft1d_array_sum_prod(size_t N, double * coeff, */
+/*                     const struct FT1DArray * f, const struct FT1DArray * g, */
+/*                     double epsilon) */
 /* { */
     
 /*     struct FunctionTrain * ft1 = NULL; */
@@ -2550,252 +2522,271 @@ struct FT1DArray{
 /* } */
 
 
-/* /\***********************************************************\//\** */
-/*     Computes  */
-/*     \f[ */
-/*         y \leftarrow \texttt{round}(a x + y, epsilon) */
-/*     \f] */
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+/////////////////////                          ///////////////////////////
+/////////////////////    BLAS TYPE INTERFACE   ///////////////////////////
+/////////////////////                          ///////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
-/*     \param a [in] - scaling factor */
-/*     \param x [in] - first function train */
-/*     \param y [inout] - second function train */
-/*     \param epsilon - rounding accuracy (0 for exact) */
-/* ***************************************************************\/ */
-/* void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,  */
-/*             double epsilon) */
-/* { */
+
+/***********************************************************//**
+    Computes
+    \f[
+        y \leftarrow \texttt{round}(a x + y, epsilon)
+    \f]
+
+    \param a [in] - scaling factor
+    \param x [in] - first function train
+    \param y [inout] - second function train
+    \param epsilon - rounding accuracy (0 for exact)
+
+    \note
+    putting NULL it to round will cause an error
+***************************************************************/
+void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,
+            double epsilon)
+{
     
-/*     struct FunctionTrain * temp = function_train_copy(x); */
-/*     function_train_scale(temp,a); */
-/*     struct FunctionTrain * z = function_train_sum(temp,*y); */
-/*     function_train_free(*y); *y = NULL; */
-/*     if (epsilon > 0){ */
-/*         *y = function_train_round(z,epsilon); */
-/*         function_train_free(z); z = NULL; */
-/*     } */
-/*     else{ */
-/*         *y = z; */
-/*     } */
-/*     function_train_free(temp); temp = NULL; */
-/* } */
+    struct FunctionTrain * temp = function_train_copy(x);
+    function_train_scale(temp,a);
+    struct FunctionTrain * z = function_train_sum(temp,*y);
+    function_train_free(*y); *y = NULL;
+    if (epsilon > 0){
+        *y = function_train_round(z,epsilon,NULL);
+        function_train_free(z); z = NULL;
+    }
+    else{
+        *y = z;
+    }
+    function_train_free(temp); temp = NULL;
+}
 
-/* /\***********************************************************\//\** */
-/*     Computes  */
-/*     \f$ */
-/*         \langle x,y \rangle */
-/*     \f$ */
+/***********************************************************//**
+    Computes
+    \f$
+        \langle x,y \rangle
+    \f$
 
-/*     \param x [in] - first function train */
-/*     \param y [in] - second function train */
+    \param[in] x - first function train
+    \param[in] y - second function train
 
-/*     \return out - inner product between two function trains */
-/* ***************************************************************\/ */
-/* double c3dot(struct FunctionTrain * x, struct FunctionTrain * y) */
-/* { */
-/*     double out = function_train_inner(x,y); */
-/*     return out; */
-/* } */
+    \return out - inner product between two function trains
+***************************************************************/
+double c3dot(struct FunctionTrain * x, struct FunctionTrain * y)
+{
+    double out = function_train_inner(x,y);
+    return out;
+}
 
-/* ////////////////////////////////////////////////////////////////////// */
-/* // Blas type interface 2 */
-/* /\***********************************************************\//\** */
-/*     Computes  */
-/*     \f[ */
-/*         y \leftarrow alpha \sum_{i=1}^n \texttt{round}(\texttt{product}(A[i*inca],x),epsilon) + */
-/*          beta y  */
-/*     \f] */
-/*     \f[ */
-/*         y \leftarrow \texttt{round}(y,epsilon) */
-/*     \f] */
+
+
+/***********************************************************//**
+    Computes
+    \f[
+        y \leftarrow alpha \sum_{i=1}^n \texttt{round}(\texttt{product}(A[i*inca],x),epsilon) +
+         beta y
+    \f]
+    \f[
+        y \leftarrow \texttt{round}(y,epsilon)
+    \f]
     
-/*     \note */
-/*     Also rounds after every summation */
-/* ***************************************************************\/ */
-/* void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca, */
-/*         struct FunctionTrain * x,double beta, struct FunctionTrain * y, */
-/*         double epsilon) */
-/* { */
+    \note
+    Also rounds after every summation. Will cause an error because putting a NULL into it
+***************************************************************/
+void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
+        struct FunctionTrain * x,double beta, struct FunctionTrain * y,
+        double epsilon)
+{
 
-/*     size_t ii; */
-/*     assert (y != NULL); */
-/*     function_train_scale(y,beta); */
+    size_t ii;
+    assert (y != NULL);
+    function_train_scale(y,beta);
     
 
-/*     if (epsilon > 0){ */
-/*         struct FunctionTrain * runinit = function_train_product(A->ft[0],x); */
-/*         struct FunctionTrain * run = function_train_round(runinit,epsilon); */
-/*         for (ii = 1; ii < n; ii++){ */
-/*             struct FunctionTrain * temp =  */
-/*                 function_train_product(A->ft[ii*inca],x); */
-/*             struct FunctionTrain * tempround = function_train_round(temp,epsilon); */
-/*             c3axpy(1.0,tempround,&run,epsilon); */
-/*             function_train_free(temp); temp = NULL; */
-/*             function_train_free(tempround); tempround = NULL; */
-/*         } */
-/*         c3axpy(alpha,run,&y,epsilon); */
-/*         function_train_free(run); run = NULL; */
-/*         function_train_free(runinit); runinit = NULL; */
-/*     } */
-/*     else{ */
-/*         struct FunctionTrain * run = function_train_product(A->ft[0],x); */
-/*         for (ii = 1; ii < n; ii++){ */
-/*             struct FunctionTrain * temp =  */
-/*                 function_train_product(A->ft[ii*inca],x); */
-/*             c3axpy(1.0,temp,&run,epsilon); */
-/*             function_train_free(temp); temp = NULL; */
-/*         } */
-/*         c3axpy(alpha,run,&y,epsilon); */
-/*         function_train_free(run); run = NULL; */
-/*     } */
+    if (epsilon > 0){
+        struct FunctionTrain * runinit = function_train_product(A->ft[0],x);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon,NULL);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp =
+                function_train_product(A->ft[ii*inca],x);
+            struct FunctionTrain * tempround = function_train_round(temp,epsilon,NULL);
+            c3axpy(1.0,tempround,&run,epsilon);
+            function_train_free(temp); temp = NULL;
+            function_train_free(tempround); tempround = NULL;
+        }
+        c3axpy(alpha,run,&y,epsilon);
+        function_train_free(run); run = NULL;
+        function_train_free(runinit); runinit = NULL;
+    }
+    else{
+        struct FunctionTrain * run = function_train_product(A->ft[0],x);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp =
+                function_train_product(A->ft[ii*inca],x);
+            c3axpy(1.0,temp,&run,epsilon);
+            function_train_free(temp); temp = NULL;
+        }
+        c3axpy(alpha,run,&y,epsilon);
+        function_train_free(run); run = NULL;
+    }
        
-/* } */
+}
 
-/* ////////////////////////////////////////////////////////////////////// */
-/* // Blas type interface 1 (for ft arrays */
+/***********************************************************//**
+    Computes for \f$ i=1 \ldots n\f$
+    \f[
+        y[i*incy] \leftarrow \texttt{round}(a * x[i*incx] + y[i*incy],epsilon)
+    \f]
 
-/* /\***********************************************************\//\** */
-/*     Computes for \f$ i=1 \ldots n\f$ */
-/*     \f[ */
-/*         y[i*incy] \leftarrow \texttt{round}(a * x[i*incx] + y[i*incy],epsilon) */
-/*     \f] */
+***************************************************************/
+void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx,
+            struct FT1DArray ** y, size_t incy, double epsilon)
+{
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        c3axpy(a,x->ft[ii*incx],&((*y)->ft[ii*incy]),epsilon);
+    }
+}
 
-/* ***************************************************************\/ */
-/* void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx,  */
-/*             struct FT1DArray ** y, size_t incy, double epsilon) */
-/* { */
-/*     size_t ii; */
-/*     for (ii = 0; ii < n; ii++){ */
-/*         c3axpy(a,x->ft[ii*incx],&((*y)->ft[ii*incy]),epsilon); */
-/*     } */
-/* } */
+/***********************************************************//**
+    Computes for \f$ i=1 \ldots n\f$
+    \f[
+        z \leftarrow alpha\sum_{i=1}^n y[incy*ii]*x[ii*incx] + beta * z
+    \f]
 
-/* /\***********************************************************\//\** */
-/*     Computes for \f$ i=1 \ldots n\f$ */
-/*     \f[ */
-/*         z \leftarrow alpha\sum_{i=1}^n y[incy*ii]*x[ii*incx] + beta * z */
-/*     \f] */
+***************************************************************/
+void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,
+                size_t incx, double * y, size_t incy, double beta,
+                struct FunctionTrain ** z, double epsilon)
+{
+    assert (*z != NULL);
+    function_train_scale(*z,beta);
 
-/* ***************************************************************\/ */
-/* void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,  */
-/*                 size_t incx, double * y, size_t incy, double beta, */
-/*                 struct FunctionTrain ** z, double epsilon) */
-/* { */
-/*     assert (*z != NULL); */
-/*     function_train_scale(*z,beta); */
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon);
+    }
+}
 
-/*     size_t ii; */
-/*     for (ii = 0; ii < n; ii++){ */
-/*         c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon); */
-/*     } */
-/* } */
-
-/* /\***********************************************************\//\** */
-/*     Computes  */
-/*     \f[ */
-/*         z \leftarrow \texttt{round}(a\sum_{i=1}^n \texttt{round}(x[i*incx]*y[i*incy],epsilon) + beta * z,epsilon) */
+/***********************************************************//**
+    Computes
+    \f[
+        z \leftarrow \texttt{round}(a\sum_{i=1}^n \texttt{round}(x[i*incx]*y[i*incy],epsilon) + beta * z,epsilon)
         
-/*     \f] */
+    \f]
     
-/*     \note */
-/*     Also rounds after every summation. */
+    \note
+    Also rounds after every summation.
 
-/* ***************************************************************\/ */
-/* void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx, */
-/*                 struct FT1DArray * y, size_t incy, double beta, */
-/*                 struct FunctionTrain ** z, double epsilon) */
-/* { */
-/*     assert (*z != NULL); */
-/*     function_train_scale(*z,beta); */
+***************************************************************/
+void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
+                struct FT1DArray * y, size_t incy, double beta,
+                struct FunctionTrain ** z, double epsilon)
+{
+    assert (*z != NULL);
+    function_train_scale(*z,beta);
         
-/*     size_t ii; */
+    size_t ii;
 
-/*     if (epsilon > 0){ */
-/*         struct FunctionTrain * runinit =  */
-/*             function_train_product(x->ft[0],y->ft[0]); */
-/*         struct FunctionTrain * run = function_train_round(runinit,epsilon); */
-/*         for (ii = 1; ii < n; ii++){ */
-/*             struct FunctionTrain * tempinit =  */
-/*                 function_train_product(x->ft[ii*incx],y->ft[ii*incy]); */
-/*             struct FunctionTrain * temp = function_train_round(tempinit,epsilon); */
-/*             c3axpy(1.0,temp,&run,epsilon); */
-/*             function_train_free(temp); temp = NULL; */
-/*             function_train_free(tempinit); tempinit = NULL; */
-/*         } */
-/*         c3axpy(a,run,z,epsilon); */
-/*         function_train_free(run); run = NULL; */
-/*         function_train_free(runinit); runinit = NULL; */
-/*     } */
-/*     else{ */
-/*         struct FunctionTrain * run =  */
-/*             function_train_product(x->ft[0],y->ft[0]); */
-/*         for (ii = 1; ii < n; ii++){ */
-/*             struct FunctionTrain * temp =  */
-/*                 function_train_product(x->ft[ii*incx],y->ft[ii*incy]); */
-/*             c3axpy(1.0,temp,&run,epsilon); */
-/*             function_train_free(temp); temp = NULL; */
-/*         } */
-/*         c3axpy(a,run,z,epsilon); */
-/*         function_train_free(run); run = NULL; */
-/*     } */
-/* } */
+    if (epsilon > 0){
+        struct FunctionTrain * runinit =
+            function_train_product(x->ft[0],y->ft[0]);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon,NULL);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * tempinit =
+                function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
+            struct FunctionTrain * temp = function_train_round(tempinit,epsilon,NULL);
+            c3axpy(1.0,temp,&run,epsilon);
+            function_train_free(temp); temp = NULL;
+            function_train_free(tempinit); tempinit = NULL;
+        }
+        c3axpy(a,run,z,epsilon);
+        function_train_free(run); run = NULL;
+        function_train_free(runinit); runinit = NULL;
+    }
+    else{
+        struct FunctionTrain * run =
+            function_train_product(x->ft[0],y->ft[0]);
+        for (ii = 1; ii < n; ii++){
+            struct FunctionTrain * temp =
+                function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
+            c3axpy(1.0,temp,&run,epsilon);
+            function_train_free(temp); temp = NULL;
+        }
+        c3axpy(a,run,z,epsilon);
+        function_train_free(run); run = NULL;
+    }
+}
 
-/* /\***********************************************************\//\** */
-/*     Computes for \f$ i = 1 \ldots m \f$ */
-/*     \f[ */
-/*         y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j*lda],x[j*incx]) + beta * y[i*incy] */
-/*     \f] */
+/***********************************************************//**
+    Computes for \f$ i = 1 \ldots m \f$
+    \f[
+        y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j*lda],x[j*incx]) + beta * y[i*incy]
+    \f]
     
-/*     \note */
-/*     Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter. */
+    \note
+    Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter.
 
-/* ***************************************************************\/ */
-/* void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda, */
-/*         struct FT1DArray * x, size_t incx, double beta, struct FT1DArray ** y, */
-/*         size_t incy, double epsilon) */
-/* { */
+***************************************************************/
+void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
+        struct FT1DArray * x, size_t incx, double beta, struct FT1DArray ** y,
+        size_t incy, double epsilon)
+{
 
-/*     size_t ii; */
-/*     assert (*y != NULL); */
-/*     ft1d_array_scale(*y,m,incy,beta); */
+    size_t ii;
+    assert (*y != NULL);
+    ft1d_array_scale(*y,m,incy,beta);
     
-/*     struct FT1DArray * run = ft1d_array_alloc(m);  */
-/*     for (ii = 0; ii < m; ii++){ */
-/*         struct FT1DArray ftatemp; */
-/*         ftatemp.ft = A->ft+ii; */
-/*         c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii*incy]),epsilon); */
-/*     } */
-/*     c3vaxpy(m,alpha,run,1,y,incy,epsilon); */
+    struct FT1DArray * run = ft1d_array_alloc(m);
+    for (ii = 0; ii < m; ii++){
+        struct FT1DArray ftatemp;
+        ftatemp.ft = A->ft+ii;
+        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii*incy]),epsilon);
+    }
+    c3vaxpy(m,alpha,run,1,y,incy,epsilon);
 
-/*     ft1d_array_free(run); run = NULL; */
-/* } */
+    ft1d_array_free(run); run = NULL;
+}
 
-/* /\***********************************************************\//\** */
-/*     Computes for \f$ i = 1 \ldots m \f$ */
-/*     \f[ */
-/*         y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j],B[j*incb]) + beta * y[i*incy] */
-/*     \f] */
+/***********************************************************//**
+    Computes for \f$ i = 1 \ldots m \f$
+    \f[
+        y[i*incy] \leftarrow alpha*\sum_{j=1}^n \texttt{product}(A[i,j],B[j*incb]) + beta * y[i*incy]
+    \f]
     
-/*     \note */
-/*     Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter. */
-/*     trans = 0 means not to transpose A */
-/*     trans = 1 means to transpose A */
-/* ***************************************************************\/ */
-/* void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,  */
-/*         size_t lda, struct FT1DArray * B, size_t incb, double beta, */
-/*         struct FT1DArray ** y, size_t incy, double epsilon) */
-/* { */
-/*     size_t ii; */
-/*     assert (*y != NULL); */
-/*     ft1d_array_scale(*y,m,incy,beta); */
+    \note
+    Rounds with tolerance epsilon after summation and multiplication. Not shown to avoid clutter.
+    trans = 0 means not to transpose A
+    trans = 1 means to transpose A
+***************************************************************/
+void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
+        size_t lda, struct FT1DArray * B, size_t incb, double beta,
+        struct FT1DArray ** y, size_t incy, double epsilon)
+{
+    size_t ii;
+    assert (*y != NULL);
+    ft1d_array_scale(*y,m,incy,beta);
         
-/*     if (trans == 0){ */
-/*         for (ii = 0; ii < m; ii++){ */
-/*             c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon); */
-/*         } */
-/*     } */
-/*     else if (trans == 1){ */
-/*         for (ii = 0; ii < m; ii++){ */
-/*             c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon); */
-/*         } */
-/*     } */
-/* } */
+    if (trans == 0){
+        for (ii = 0; ii < m; ii++){
+            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon);
+        }
+    }
+    else if (trans == 1){
+        for (ii = 0; ii < m; ii++){
+            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon);
+        }
+    }
+}

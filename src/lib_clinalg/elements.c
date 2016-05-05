@@ -92,26 +92,7 @@ double eval_spec_func(double x, void * args)
 // function_train 
 //
 
-struct BoundingBox * function_train_bds(struct FunctionTrain * ft)
-{
-    
-    struct BoundingBox * bds = bounding_box_init_std(ft->dim);
-    size_t ii;
-    for (ii = 0; ii < ft->dim; ii++){
-        bds->lb[ii] = generic_function_get_lower_bound(ft->cores[ii]->funcs[0]);
-        bds->ub[ii] = generic_function_get_upper_bound(ft->cores[ii]->funcs[0]);
-    }
-
-    return bds;
-}   
-
-
-
 
 /////////////////////////////////////////////////////////
 // Utilities
 //
-
-
-
-
