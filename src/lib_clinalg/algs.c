@@ -733,6 +733,7 @@ function_train_cross_ub(double (*f)(double *, void *), void * args,
     return ft;
 }
 
+
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function with rank adaptation
 
