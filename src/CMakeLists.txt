@@ -8,10 +8,10 @@ add_subdirectory(lib_funcs)
 
 add_subdirectory(lib_clinalg)
 #add_subdirectory(lib_twodfuncs)
-# add_subdirectory(lib_tensor)
-# add_subdirectory(lib_tensdecomp)
-# add_subdirectory(lib_optimization)
-# add_subdirectory(lib_probability)
+add_subdirectory(lib_tensor)
+add_subdirectory(lib_tensdecomp)
+add_subdirectory(lib_optimization)
+#add_subdirectory(lib_probability)
 
 #create a libray containing everything!
 # file(GLOB SRC_FILES */*.c)

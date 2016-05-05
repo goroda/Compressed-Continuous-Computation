@@ -45,15 +45,15 @@ include_directories(src/lib_clinalg)
 include_directories(src/lib_quadrature)
 include_directories(src/lib_funcs)
 include_directories(src/lib_tensor)
-# include_directories(src/lib_tensdecomp)
-# include_directories(src/lib_funcdecomp)
+include_directories(src/lib_tensdecomp)
+include_directories(src/lib_funcdecomp)
 include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 # include_directories(include)
 
 add_subdirectory(src)
 add_subdirectory(test)
-# add_subdirectory(examples)
+add_subdirectory(examples)
 # add_subdirectory(benchmarks)
 
 
