@@ -214,7 +214,7 @@ void c3approx_set_verbose(struct C3Approx * c3a, int verbose)
 {
     assert (c3a != NULL);
     if (c3a->fca == NULL){
-        fprintf(stderr,"Must call c3approx_init_cross before setting epsround\n");
+        fprintf(stderr,"Must call c3approx_init_cross before setting verbose\n");
         exit(1);
     }
     ft_cross_args_set_verbose(c3a->fca,verbose);

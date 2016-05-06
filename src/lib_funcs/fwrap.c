@@ -257,7 +257,7 @@ int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
 {
     struct Fwrap * fw = fwin;
     assert (fw->ftype < NUMFT);
-    assert (fw->ftype > 0);
+    /* assert (fw->ftype > 0); */
     if (fw->fiber_approx == 1){
         return fwrap_eval_fiber(nevals,x,out,fwin);
     }
@@ -305,7 +305,7 @@ void fwrap_initialize_fiber_approx(struct Fwrap * fw, size_t ind, size_t nfibers
 
     assert (fw != NULL );
     assert (fw->ftype < NUMFT);
-    assert (fw->ftype > 0);
+    /* assert (fw->ftype > -1); */
 
     fw->fiber_approx = 1;
     fw->fiber_dim = ind;
@@ -354,7 +354,7 @@ void fwrap_set_which_fiber(struct Fwrap * fw, size_t which)
 {
     assert (fw != NULL);
     assert (fw->ftype < NUMFT);
-    assert (fw->ftype > 0);
+    /* assert (fw->ftype > 0); */
     assert (fw->fiber_approx == 1);
     assert (which < fw->nfibers);
     fw->onfiber = which;

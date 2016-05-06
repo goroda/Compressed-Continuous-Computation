@@ -18,29 +18,35 @@ struct gauss_opts
 
 };
 
-double gauss(double x, double y, void * args)
+int gauss(size_t n, const double * xin, double * out, void * args)
 {
+
     struct gauss_opts * opts = args;
 
     double rho = opts->v12 / sqrt(opts->v11) / sqrt(opts->v22);
 
     double den = 1.0/2.0/M_PI/sqrt(opts->v11)/sqrt(opts->v22);
     den /= sqrt(1.0-rho*rho);
-    
-    double z = pow(x-opts->m1,2.0)/opts->v11 + pow(y - opts->m2,2.0)/opts->v22;
-    z -= 2.0 * rho * (x-opts->m1) * (y-opts->m2) / 
-                    sqrt(opts->v11) / sqrt(opts->v22);
-    double num = exp(-z / 2.0 / (1.0-pow(rho,2.0)));
 
-    double out = num/den;
+    double x,y;
+    for (size_t ii = 0; ii < n; ii++){
+        x = xin[ii*2+0];
+        y = xin[ii*2+1];
+        double z = pow(x-opts->m1,2.0)/opts->v11 + pow(y - opts->m2,2.0)/opts->v22;
+        z -= 2.0 * rho * (x-opts->m1) * (y-opts->m2) / 
+            sqrt(opts->v11) / sqrt(opts->v22);
+        double num = exp(-z / 2.0 / (1.0-pow(rho,2.0)));
 
-    if (opts->sv != NULL){
-        double pt[2]; pt[0] = x; pt[1] = y;
-        opts->sv->nEvals+= 1;
-        PushVal(&(opts->sv->head),2, pt, out);
+        out[ii] = num/den;
+
+        if (opts->sv != NULL){
+            double pt[2]; pt[0] = x; pt[1] = y;
+            opts->sv->nEvals+= 1;
+            PushVal(&(opts->sv->head),2, pt, out[ii]);
+        }
     }
 
-    return out;
+    return 0;
 }
 
 int main( int argc, char *argv[])
@@ -51,7 +57,8 @@ int main( int argc, char *argv[])
        return 0;
     }
     // argv[5] is the correlation coefficient
-    
+
+    size_t dim = 2;
     size_t rank = 2;
     if (argc == 7){
         rank = (size_t)atol(argv[6]);
@@ -69,54 +76,29 @@ int main( int argc, char *argv[])
     sprintf(params, "m1:%s-m2:%s-v11:%s-v22:%s-rho:%s",argv[1],argv[2],
                                                     argv[3],argv[4],argv[5]);
     
-
     struct storevals_main * sv = malloc(sizeof(struct storevals_main));
     sv->nEvals = 0;
     sv->head = NULL;
     gopts.sv = sv;
 
-    struct BoundingBox * bounds = bounding_box_init_std(2); 
-    
-    double * pivx = linspace(-0.1,0.1, rank);
-    double * pivy = linspace(-0.1,0.1, rank);
-    
-    pivx[0] = gopts.m1;
-    pivy[0] = gopts.m2;
-    
-
-    struct OpeAdaptOpts * aopts = ope_adapt_opts_alloc();
-    ope_adapt_opts_set_start(aopts,5);
-    ope_adapt_opts_set_coeffs_check(aopts,4);
-    ope_adapt_opts_set_tol(aopts,1e-8);
-
-    enum poly_type p = LEGENDRE;
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,gauss,&gopts);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.0);
+    ope_opts_set_ub(opts,1.0);
+    ope_opts_set_start(opts,5);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-8);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
     int verbose = 2;
-    struct Cross2dargs * cargs=cross2d_args_create(rank,5e-3,POLYNOMIAL,&p,verbose);
-    cross2d_args_set_approx_args(cargs,aopts);
-
-    
-    printf("xpivots = ");
-    dprint(rank,pivx);
-    printf("pivots = ");
-    dprint(rank,pivy);
-
-    struct SkeletonDecomp * skd = skeleton_decomp_init2d_from_pivots(
-        gauss, &gopts, bounds, cargs,pivx,pivy);
-
-    
-    /*
-    printf("skeleton = \n");
-    dprint2d_col(skd->r,skd->r, skd->skeleton);
-    return(0);
-    */
-
-    struct SkeletonDecomp * skd_init = skeleton_decomp_copy(skd);
-
-    struct SkeletonDecomp * final = cross_approx_2d(gauss,&gopts,bounds,
-                                                    &skd,pivx,pivy,cargs);
-
-    //printf("Params=%s\n",params);
-
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-0.1,0.1,rank);
+    }
+    c3approx_init_cross(c3a,rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     char final_errs[256];
     sprintf(final_errs,"%s-final.dat",params);
@@ -143,8 +125,8 @@ int main( int argc, char *argv[])
         return 0;
     }
 
-    fprintf(fp2, "x y f f0 f1 df0 df1\n");
-    double v1, v2, v3;
+    fprintf(fp2, "x y f f1 df1\n");
+    double v1, v2;
 
     size_t ii,jj;
     size_t N1 = 40;
@@ -157,38 +139,38 @@ int main( int argc, char *argv[])
 
     gopts.sv = NULL;
     double out1=0.0;
-    double out2=0.0;
     double den=0.0;
+    double pts[2];
     for (ii = 0; ii < N1; ii++){
         for (jj = 0; jj < N2; jj++){
-            v1 = gauss(xtest[ii],ytest[jj],&gopts);
-            v2 = skeleton_decomp_eval(final,xtest[ii],ytest[jj]);
-            v3 = skeleton_decomp_eval(skd_init,xtest[ii],ytest[jj]);
+            pts[0] = xtest[ii];
+            pts[1] = ytest[jj];
+            gauss(1,pts,&v1,&gopts);
+            v2 = function_train_eval(ft,pts);
+            //v3 = skeleton_decomp_eval(skd_init,xtest[ii],ytest[jj]);
 
-            fprintf(fp2, "%3.5f %3.5f %3.5f %3.5f %3.5f %3.5f %3.5f \n", 
-                    xtest[ii], ytest[jj],v1,v2,v3, v1-v2,v1-v3);
+            fprintf(fp2, "%3.5f %3.5f %3.5f %3.5f %3.5f \n", 
+                    xtest[ii], ytest[jj],v1,v2,v1-v2);
             //printf("v2=%3.2f\n",v2);
             //printf("v3=%3.2f\n",v3);
             den += pow(v1,2.0);
             out1 += pow(v1-v2,2.0);
-            out2 += pow(v1-v3,2.0);
             //printf("out2=%3.2f\n",out2);
         }
     }
     //printf("out2 = %3.2f\n",out2);
-    printf("RMS Error of Initial = %G\n", out2/den);
     printf("RMS Error of Final = %G\n", out1/den);
     
-    ope_adapt_opts_free(aopts);
+
     fclose(fp2);
-    free(pivx);
-    free(pivy);
-    bounding_box_free(bounds);
-    cross2d_args_destroy(cargs);
-    skeleton_decomp_free(final);
-    skeleton_decomp_free(skd);
-    skeleton_decomp_free(skd_init);
     free(xtest);
     free(ytest);
+
+    function_train_free(ft);
+    one_approx_opts_free_deep(&qmopts);
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    free_dd(dim,start);
+    
     return 0;
 }

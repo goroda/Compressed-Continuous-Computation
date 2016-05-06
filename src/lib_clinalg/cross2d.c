@@ -85,7 +85,6 @@ struct Cross2dargs
     double delta;
 
     enum function_class fclass[2];
-    void * sub_type[2];
     void * approx_args [2];
     int verbose;
 };
@@ -95,7 +94,7 @@ struct Cross2dargs
 **************************************************************/
 struct Cross2dargs * cross2d_args_create(size_t r, double delta,
                                          enum function_class fc,
-                                         void * sub_type, int verbose)
+                                         int verbose)
 {
     struct Cross2dargs * cargs = malloc(sizeof(struct Cross2dargs));
     assert (cargs != NULL);
@@ -103,8 +102,6 @@ struct Cross2dargs * cross2d_args_create(size_t r, double delta,
     cargs->delta = delta;
     cargs->fclass[0] = fc;
     cargs->fclass[1] = fc;
-    cargs->sub_type[0] = sub_type;
-    cargs->sub_type[1] = sub_type;
     cargs->approx_args[0] = NULL;
     cargs->approx_args[1] = NULL;
     cargs->verbose = verbose;

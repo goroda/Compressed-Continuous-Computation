@@ -76,7 +76,7 @@ struct FunctionMonitor
 struct FunctionMonitor * 
 function_monitor_initnd( double (*)(double *, void *), void *, size_t, size_t);
 void function_monitor_free(struct FunctionMonitor *);
-double function_monitor_eval(double *, void *);
+double function_monitor_eval(const double *, void *);
 void function_monitor_print_to_file(struct FunctionMonitor *, FILE *);
 
 

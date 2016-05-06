@@ -93,7 +93,7 @@ void function_monitor_free( struct FunctionMonitor * fm)
 
     \return evaluation of a function
 ***************************************************************/
-double function_monitor_eval(double * x, void * args)
+double function_monitor_eval(const double * x, void * args)
 {
     //printf("In eval function monitor \n");   
     struct FunctionMonitor * fm = args;
@@ -103,7 +103,7 @@ double function_monitor_eval(double * x, void * args)
     //printf("fm->dim=%zu\n",fm->dim);
     //dprint(fm->dim,x);
     //printf("ok!\n");
-    char * ser = serialize_darray_to_text(fm->dim,x);
+    char * ser = serialize_darray_to_text(fm->dim,(double *)x);
 
     char * sval = lookup_key(fm->evals,ser);
     //printf("sval = %s\n",sval);
@@ -114,7 +114,7 @@ double function_monitor_eval(double * x, void * args)
         //printf("here! val=%3.5f\n",val);
     }
     else{
-        val = fm->f.fnd(x,fm->args);
+        val = fm->f.fnd((double *)x,fm->args);
         //printf("val=%G\n",val);
         sval = serialize_double_to_text(val);
         //printf("sval = %s\n",sval);

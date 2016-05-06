@@ -2123,16 +2123,13 @@ ftapprox_cross(struct Fwrap * fw,
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function with rank adaptation
 
-    \param[in]     f      - function
-    \param[in]     args   - function arguments
-    \param[in]     bds    - bounds on input space
-    \param[in,out] ftref  - initial ftrain decomposition, 
-                            changed in func
-    \param[in,out] isl    - left indices (first element should be NULL)
-    \param[in,out] isr    - right indices (last element should be NULL)
-    \param[in]     fca    - algorithm parameters, 
-                            if NULL then default paramaters used
-    \param[in]     apargs - function approximation args 
+    \param[in]     fw      - wrapped function
+    \param[in]     cargs   - cross approximation arguments
+    \param[in,out] isl     - left indices
+    \param[in,out] isr     - right indices
+    \param[in]     apargs  - approximation arguments
+    \param[in]     optargs - fiber optimizationa arguments
+    \param[in]     ftref   - reference ft for first error approximation
 
     \return function train decomposition of f
 

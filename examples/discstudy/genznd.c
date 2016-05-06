@@ -52,14 +52,6 @@ int main()
     size_t delta_dim = 20;
     size_t ndims = 7;
 
-    struct PwPolyAdaptOpts aopts;
-    aopts.ptype = LEGENDRE;
-    aopts.maxorder = 7;
-    aopts.minsize = 1e-5;
-    aopts.coeff_check= 0;
-    aopts.epsilon = 1e-5;
-    aopts.other = NULL;
-
     char integral[256];
     sprintf(integral,"integral.dat");
 
@@ -71,54 +63,37 @@ int main()
     }
     fprintf(fp, "dim int N relerr \n");
 
-    size_t ii,kk,dim;
+    size_t ii,dim;
     for (ii = 0; ii < ndims; ii++){
         dim = min_dim + ii * delta_dim;
-        aopts.epsilon = aopts.epsilon * 2.0;
+        /* aopts.epsilon = aopts.epsilon * 2.0; */
         printf("On dim (%zu/%zu) : %zu \n",ii,ndims,dim);
-        struct BoundingBox * bds = bounding_box_init_std(dim);
-        size_t * ranks = calloc_size_t(dim+1);
-        double * coeffs = calloc_double(dim);        
-        double ** yr  = malloc_dd(dim);
 
-        for (kk = 0; kk < dim; kk++){
-            bds->lb[kk] = 0.0;
-            ranks[kk] = 1;
-            coeffs[kk] = 1.0/(double) dim;
-            yr[kk] = calloc_double(1);
-            yr[kk][0] = 0.3;
+        struct FunctionMonitor * fm = function_monitor_initnd(discnd,&dim,dim,1000*dim);
+        struct Fwrap * fw = fwrap_create(dim,"general");
+        fwrap_set_f(fw,function_monitor_eval,fm);
+        struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
+        pw_poly_opts_set_maxorder(opts,7);
+        pw_poly_opts_set_minsize(opts,1e-5);
+        pw_poly_opts_set_coeffs_check(opts,2);
+        pw_poly_opts_set_tol(opts,1e-3);
+
+        struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
+        struct C3Approx * c3a = c3approx_create(CROSS,dim);
+        int verbose = 2;
+        double ** start = malloc_dd(dim);
+        size_t rank = 1;
+        for (size_t jj = 0; jj < dim; jj++){
+            c3approx_set_approx_opts_dim(c3a,jj,qmopts);
+            start[jj] = linspace(0.0,1.0,rank);
+            start[jj][0] = 0.2;
         }
-        ranks[0] = 1; ranks[dim] = 1;
-
-        enum poly_type ptype = LEGENDRE;
-        struct FunctionTrain * ftref = 
-            function_train_linear(POLYNOMIAL,&ptype,dim, bds, coeffs,NULL);
+        c3approx_init_cross(c3a,rank,verbose,start);
+        c3approx_set_cross_tol(c3a,1e-1);
+        c3approx_set_cross_maxiter(c3a,1);
+        c3approx_set_verbose(c3a,2);
         
-        struct FunctionMonitor * fm = 
-            function_monitor_initnd(discnd,&dim,dim,1000*dim);
-
-        struct CrossIndex ** isl = malloc(dim * sizeof(struct CrossIndex *));
-        struct CrossIndex ** isr = malloc(dim * sizeof(struct CrossIndex *));
-        assert (isl != NULL);
-        assert (isr != NULL);
-        cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-        cross_index_array_initialize(dim,isr,0,1,ranks,yr);
-
-        struct FtApproxArgs * fapp = 
-           ft_approx_args_createpwpoly(dim,&(aopts.ptype),&aopts);
-
-        struct FtCrossArgs fca;
-        ft_cross_args_init(&fca);
-        fca.epsilon = 1e-1;
-        fca.maxiter = 1;
-        fca.verbose = 2;
-        fca.dim = dim;
-        fca.ranks = ranks;
-
-        struct FunctionTrain * ft = 
-                ftapprox_cross(function_monitor_eval, fm,
-                               bds, ftref, isl, isr, &fca,fapp);
-        
+        struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
         
         double shouldbe = compute_int(dim);
 
@@ -132,19 +107,11 @@ int main()
                     dim, intval,nvals, relerr); 
 
         function_train_free(ft); ft = NULL;
-        ft_approx_args_free(fapp); fapp = NULL;
-        for (size_t ll = 0; ll < dim; ll++){
-            cross_index_free(isr[ll]); isr[ll] = NULL;
-            cross_index_free(isl[ll]); isl[ll] = NULL;
-        }
-        free(isr); isr = NULL;
-        free(isl); isl = NULL;
         function_monitor_free(fm); fm = NULL;
-        function_train_free(ftref); ftref = NULL;
-        free(ranks); ranks = NULL;
-        free_dd(dim,yr); yr = NULL;
-        free(coeffs); coeffs = NULL;
-        bounding_box_free(bds);
+        one_approx_opts_free_deep(&qmopts);
+        free_dd(dim,start);
+        fwrap_destroy(fw);
+        c3approx_destroy(c3a);
     }
 
     fclose(fp);

@@ -29,23 +29,10 @@ int main( void )
     size_t min_dim = 10;
     size_t delta_dim = 75;
     size_t ndims = 10;
-    
-    enum poly_type ptype = LEGENDRE;
-    size_t start_num = 6;
-    size_t c_check = 2;
-    struct OpeAdaptOpts * ao = ope_adapt_opts_alloc();
-    ope_adapt_opts_set_start(ao,start_num);
-    ope_adapt_opts_set_coeffs_check(ao,c_check);
 
     size_t ntols = 10;
     double * epsilons = logspace(-13, -1, ntols);
     
-    struct FtCrossArgs fca;
-    ft_cross_args_init(&fca);
-    fca.epsilon = 1e-5;
-    fca.maxiter = 10;
-    fca.verbose = 0;
-
     char integral[256];
     sprintf(integral,"integral.dat");
 
@@ -57,26 +44,11 @@ int main( void )
     }
     fprintf(fp, "dim tol int N relerr \n");
 
-    size_t ii,jj, kk;
+    size_t ii,jj;
     size_t dim;
     for (ii = 0; ii < ndims; ii++){
         dim = min_dim + ii * delta_dim;
         printf("On dim (%zu/%zu) : %zu \n",ii,ndims,dim);
-        struct BoundingBox * bds = bounding_box_init_std(dim);
-        size_t * ranks = calloc_size_t(dim+1);
-        double ** yr  = malloc_dd(dim);
-        double * coeffs = calloc_double(dim);
-        for (kk = 0; kk < dim; kk++){
-            bds->lb[kk] = 0.0;
-            ranks[kk] = 2;
-            yr[kk] = calloc_double(2);
-            yr[kk][1] = 0.2; // set one fiber to something  than 0;
-            coeffs[kk] = 1.0/(double) dim;
-        }
-        ranks[0] = 1; ranks[dim] = 1;
-
-        fca.dim = dim;
-        fca.ranks = ranks;
 
         double shouldbe = cimag( cpow( (cexp(I) - 1)/I , dim));
         //printf("shouldbe=%G\n",shouldbe);
@@ -84,27 +56,26 @@ int main( void )
         for (jj = 0; jj < ntols; jj++){
             printf("..... On tol (%zu/%zu) : %E \n", jj,ntols, epsilons[jj]);
 
-            struct CrossIndex ** isl = malloc(dim * sizeof(struct CrossIndex *));
-            struct CrossIndex ** isr = malloc(dim * sizeof(struct CrossIndex *));
-            assert (isl != NULL);
-            assert (isr != NULL);
-            cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-            cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+            struct FunctionMonitor * fm = function_monitor_initnd(sinsum,&dim,dim,1000*dim);
+            struct Fwrap * fw = fwrap_create(dim,"general");
+            fwrap_set_f(fw,function_monitor_eval,fm);
+            struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+            ope_opts_set_lb(opts,0.0);
+            ope_opts_set_start(opts,6);
+            ope_opts_set_coeffs_check(opts,2);
+            ope_opts_set_tol(opts,epsilons[jj]);
+            struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
             
-            ope_adapt_opts_set_tol(ao,epsilons[jj]);
-            struct FtApproxArgs * fapp = 
-                ft_approx_args_createpoly(dim,&ptype,ao);
-
-            struct FunctionTrain * ftref = 
-                function_train_linear(POLYNOMIAL,&ptype,dim,
-                                      bds, coeffs,NULL);
-            
-            struct FunctionMonitor * fm = 
-                    function_monitor_initnd(sinsum,&dim,dim,1000*dim);
-            
-            struct FunctionTrain * ft = ftapprox_cross(function_monitor_eval, fm,
-                                            bds, ftref, isl, isr, &fca,fapp);
-            
+            struct C3Approx * c3a = c3approx_create(CROSS,dim);
+            int verbose = 0;
+            size_t rank = 2;
+            double ** start = malloc_dd(dim);
+            for (size_t kk= 0; kk < dim; kk++){
+                c3approx_set_approx_opts_dim(c3a,kk,qmopts);
+                start[kk] = linspace(0.0,1.0,rank);
+            }
+            c3approx_init_cross(c3a,rank,verbose,start);
+            struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
             
             double intval = function_train_integrate(ft);
             double relerr = fabs(intval-shouldbe)/fabs(shouldbe);
@@ -116,26 +87,13 @@ int main( void )
                             dim,epsilons[jj],intval,nvals, relerr); 
 
             function_train_free(ft); ft = NULL;
-            function_train_free(ftref); ftref = NULL;
             function_monitor_free(fm); fm = NULL;
-            ft_approx_args_free(fapp); fapp = NULL;
-            for (size_t ll = 0; ll < dim; ll++){
-                cross_index_free(isr[ll]); isr[ll] = NULL;
-                cross_index_free(isl[ll]); isl[ll] = NULL;
-            }
-            free(isr); isr = NULL;
-            free(isl); isl = NULL;
-//            index_set_array_free(dim, isr); isr = NULL;
-//            index_set_array_free(dim, isl); isl = NULL;
+            one_approx_opts_free_deep(&qmopts);
+            fwrap_destroy(fw);
+            c3approx_destroy(c3a);
+            free_dd(dim,start);
         }
-
-        bounding_box_free(bds); bds = NULL;
-        free(ranks); ranks = NULL;
-        free_dd(dim,yr); yr = NULL;
-        free(coeffs); coeffs = NULL;
     }
-    
-    ope_adapt_opts_free(ao);
     free(epsilons);
     fclose(fp);
     return 0;

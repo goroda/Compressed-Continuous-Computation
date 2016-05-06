@@ -32,65 +32,33 @@ int main(void)
 //       printf("Correct function call = ./genz2d \n");
 //       return 0;
 //    }
-    
-    size_t dim = 2;
-    
-    struct BoundingBox * bds = bounding_box_init(2,0.0,1.0); 
-    
-    double coeffs[2] = {0.5, 0.5};
-    size_t ranks[3] = {1, 1, 1};
 
-    enum poly_type ptype = LEGENDRE;
-    struct FunctionTrain * ftref = 
-        function_train_linear(POLYNOMIAL,&ptype,dim,
-                              bds,coeffs,NULL);
-            
+    size_t dim = 2;
     struct FunctionMonitor * fm = 
             function_monitor_initnd(disc2d,NULL,dim,1000*dim);
-            
-    // double * yr  = calloc_double(dim);
-    // Setup fibers to use
-    double x[2] = {0.0,0.1};
-    double y[2] = {0.0,0.1};
-    double *yr[2];
-    yr[0] = x;
-    yr[0] = y;
 
-    struct CrossIndex * isl[2];
-    struct CrossIndex * isr[2];
-    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-    cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,function_monitor_eval,fm);
+    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
+    pw_poly_opts_set_maxorder(opts,5);
+    pw_poly_opts_set_minsize(opts,1e-3);
+    pw_poly_opts_set_coeffs_check(opts,41);
+    pw_poly_opts_set_tol(opts,1e-8);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 2;
+    size_t rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(0.0,1.0,rank);
+    }
+    c3approx_init_cross(c3a,rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-1);
+    c3approx_set_cross_maxiter(c3a,1);
+    c3approx_set_verbose(c3a,2);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-    struct FtCrossArgs fca;
-    ft_cross_args_init(&fca);
-    fca.epsilon = 1e-1;
-    fca.maxiter = 1;
-    fca.verbose = 2;
-    fca.dim = dim;
-    fca.ranks = ranks;
-    
-    struct PwPolyAdaptOpts aopts;
-    aopts.ptype = LEGENDRE;
-    aopts.maxorder = 5;
-    aopts.minsize = 1e-3;
-    aopts.coeff_check= 1 ;
-    aopts.epsilon=1e-3;
-    aopts.other = NULL;
-
-    struct FtApproxArgs * fapp = ft_approx_args_createpwpoly(dim,&ptype,&aopts);
-
-    struct FunctionTrain * ft = ftapprox_cross(function_monitor_eval, fm,
-                                    bds, ftref, isl, isr, &fca,fapp);
-    //struct FunctionTrain * ft = function_train_round(fr, 1e-5);
-
-    //struct FunctionTrain * ft = ftapprox_cross(disc2d, NULL,
-    //                                bds, dim, ftref, isl, isr, &fca);
-
-    ft_approx_args_free(fapp);
-    
-    cross_index_free(isr[0]);
-    cross_index_free(isl[1]);
-                
     char final_errs[256];
     sprintf(final_errs,"final.dat");
 
@@ -143,11 +111,14 @@ int main(void)
     printf("RMS Error of Final = %G\n", out1/den);
     
     fclose(fp2);
-    bounding_box_free(bds);
-    function_train_free(ftref);
-    function_train_free(ft);
     function_monitor_free(fm);
     free(xtest);
     free(ytest);
+
+    function_train_free(ft);
+    one_approx_opts_free_deep(&qmopts);
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+
     return 0;
 }
