@@ -29,19 +29,19 @@ void print_code_usage (FILE * stream, int exit_code)
     exit (exit_code);
 }
 
-double f0(double *x, void * args)
+double f0(const double *x, void * args)
 {
     assert(args == NULL);
     return x[0] + x[1] + x[2];
 }
 
-double f1(double *x, void * args)
+double f1(const double *x, void * args)
 {
     assert(args == NULL);
     return x[0] * x[1] * x[2];
 }
 
-double f2(double * x, void * args)
+double f2(const double * x, void * args)
 {
     assert (args == NULL);
     double out;
@@ -108,28 +108,39 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
     size_t dim = 3;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    double * nodes = linspace(lb,ub,n);
+    struct LinElemExpAopts * aopts=lin_elem_exp_aopts_alloc(n,nodes);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,aopts);
+    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    size_t init_rank = 3;
+    double ** start = malloc_dd(dim);
+    c3approx_set_approx_opts_dim(c3a,0,qmopts);
+    c3approx_set_approx_opts_dim(c3a,1,qmopts);
+    c3approx_set_approx_opts_dim(c3a,2,qmopts);
+    start[0] = calloc_double(init_rank);
+    start[0][0] = nodes[0];
+    start[0][1] = nodes[1];
+    start[0][2] = nodes[2];
+    start[1] = calloc_double(init_rank);
+    start[1][0] = nodes[0];
+    start[1][1] = nodes[1];
+    start[1][2] = nodes[2];
+    start[2] = calloc_double(init_rank);
+    start[2][0] = nodes[0];
+    start[2][1] = nodes[1];
+    start[2][2] = nodes[2];
 
-
-    double * xnodes = linspace(lb,ub,n);
-    struct c3Vector c3v = {n,xnodes};
-    struct FiberOptArgs * fopt = fiber_opt_args_bf_same(dim,&c3v);
-
-    struct LinElemExpAopts * aopts=lin_elem_exp_aopts_alloc(n,xnodes);
-    struct FtApproxArgs * fapp = ft_approx_args_create_le(dim,aopts);
-
-    size_t init_ranks = 3;
-    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
-    ft_cross_args_set_verbose(fca,verbose);
-    ft_cross_args_set_kickrank(fca,2);
-    ft_cross_args_set_maxiter(fca,10);
-    ft_cross_args_set_cross_tol(fca,1e-7);
-    ft_cross_args_set_round_tol(fca,1e-10);
-    ft_cross_args_set_maxrank_all(fca,init_ranks+5*2); 
-    ft_cross_args_set_optargs(fca,fopt);
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_adapt_kickrank(c3a,2);
+    c3approx_set_cross_maxiter(c3a,10);
+    c3approx_set_cross_tol(c3a,1e-7);
+    c3approx_set_round_tol(c3a,1e-10);
+    c3approx_set_adapt_maxrank_all(c3a,n);
+    c3approx_set_verbose(c3a,verbose);
 
     struct FunctionMonitor * fm = NULL;
-    double (*ff)(double *, void *);
+    double (*ff)(const double *, void *);
 
     if (function == 0){
         fm = function_monitor_initnd(f0,NULL,dim,1000*dim);
@@ -151,19 +162,13 @@ int main(int argc, char * argv[])
     // Done with setup
     if (verbose == 1){
         printf("nodes are\n");
-        dprint(n,xnodes);
+        dprint(n,nodes);
     }
-    assert (n > 3);
-    double startx[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
-    double starty[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
-    double startz[3] = {xnodes[0], xnodes[2], xnodes[n-1]};
-    double * start[3];
-    start[0] = startx;
-    start[1] = starty;
-    start[2] = startz;
-    struct FunctionTrain * ft = NULL;
-    ft = function_train_cross(function_monitor_eval,fm,bds,start,
-                              fca,fapp);
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,function_monitor_eval,fm);
+
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     size_t ntot = n*n*n;
@@ -232,12 +237,13 @@ int main(int argc, char * argv[])
     free(ytest);
     free(ztest);
 
-    ft_cross_args_free(fca);
-    lin_elem_exp_aopts_free(aopts);
+
     function_train_free(ft);
     function_monitor_free(fm);
-    ft_approx_args_free(fapp);
-    fiber_opt_args_free(fopt);
-    bounding_box_free(bds);
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    free_dd(dim,start);
+    one_approx_opts_free_deep(&qmopts);
+
     return 0;
 }

@@ -8,7 +8,7 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
-double disc2d(double * xy, void * args)
+double disc2d(const double * xy, void * args)
 {
     assert (args == NULL);
      

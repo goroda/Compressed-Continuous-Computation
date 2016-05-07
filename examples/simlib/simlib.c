@@ -9,7 +9,7 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
-double otlcircuit(double * x, void * args)
+double otlcircuit(const double * x, void * args)
 {
     assert (args == NULL );
     // 6 dimensions
@@ -30,7 +30,7 @@ double otlcircuit(double * x, void * args)
     return Vm;
 }
 
-double borehole(double * x, void * args)
+double borehole(const double * x, void * args)
 {
     assert (args == NULL);
     // 8 dimensions
@@ -49,7 +49,7 @@ double borehole(double * x, void * args)
     return f;
 }
 
-double piston (double * x, void * args)
+double piston (const double * x, void * args)
 {
     assert (args == NULL);
     // 7 dimensions
@@ -67,7 +67,7 @@ double piston (double * x, void * args)
     return C;
 }
 
-double robotarm(double * x, void * args)
+double robotarm(const double * x, void * args)
 {
     assert (args == NULL);
     // 8 dimensions
@@ -95,7 +95,7 @@ double robotarm(double * x, void * args)
     return f;
 }
 
-double wingweight (double * x, void * args)
+double wingweight (const double * x, void * args)
 {
     assert (args == NULL);
     // 10 dimensions
@@ -119,7 +119,7 @@ double wingweight (double * x, void * args)
 }
 
 
-double friedman (double * x, void * args)
+double friedman (const double * x, void * args)
 {
     assert (args == NULL);
     // 5 dimension
@@ -131,7 +131,7 @@ double friedman (double * x, void * args)
     return f;
 }
 
-double gramlee09 (double * x, void * args)
+double gramlee09 (const double * x, void * args)
 {
     //Gramacy & LEE (2009)
     assert (args == NULL);
@@ -143,7 +143,7 @@ double gramlee09 (double * x, void * args)
     return f;
 }
 
-double detpep10 (double * x, void * args)
+double detpep10 (const double * x, void * args)
 {
     //Dette & Pepelyshev (2010)
     assert (args == NULL);
@@ -166,7 +166,7 @@ double detpep10 (double * x, void * args)
     return f;
 }
 
-double detpep10exp (double * x, void * args)
+double detpep10exp (const double * x, void * args)
 {
     //Dette & Pepelyshev (2010) Exponential
     assert (args == NULL);
@@ -181,7 +181,7 @@ double detpep10exp (double * x, void * args)
     return f;
 }
 
-double xy (double * x, void * args){
+double xy (const double * x, void * args){
     
     assert (args == NULL);
     double out =  log(x[0] * x[1]+2.0) / pow(x[0]+2,2.0) * exp(10.0*x[0]*x[1]);
@@ -257,23 +257,36 @@ int main( int argc, char *argv[])
         return 0;
     }
 
-    struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
 
-    size_t start_rank = 5;
-    int verbose = 1;
-    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
-    c3approx_init_poly(c3a,LEGENDRE);
-    c3approx_init_cross(c3a,start_rank,verbose);
-    c3approx_set_poly_adapt_nstart(c3a,7);
-    c3approx_set_poly_adapt_ncheck(c3a,2);
-    c3approx_set_poly_adapt_tol(c3a,1e-7);
-    c3approx_set_poly_adapt_nmax(c3a,15);
-    c3approx_set_cross_tol(c3a,1e-3);
-    c3approx_set_round_tol(c3a,1e-4);
+    double lb = -1.0;
+    double ub = 1.0;
+        
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,function_monitor_eval,fm);
 
-    //double * center = darray_val(dim,0.0);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,7);
+    ope_opts_set_coeffs_check(opts,2);
+    ope_opts_set_tol(opts,1e-7);
+//    ope_opts_set_maxnum(opts,15);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
     
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,function_monitor_eval,fm);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(lb,ub,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_verbose(c3a,2);
+    c3approx_set_cross_tol(c3a,1e-8);
+    c3approx_set_round_tol(c3a,1e-8);
+
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     size_t nvals = nstored_hashtable_cp(fm->evals);
     printf("number of evaluations = %zu \n", nvals);
@@ -313,13 +326,14 @@ int main( int argc, char *argv[])
     printf("Relative RMSE = %G \n", sqrt(err));
 
     function_monitor_free(fm); fm = NULL;
-    bounding_box_free(bds); bds = NULL;
-
 
     c3approx_destroy(c3a);
+    fwrap_destroy(fw);
+    one_approx_opts_free_deep(&qmopts);
     //free(center); center = NULL;
     function_train_free(ft); ft = NULL;
     free(testpt); testpt = NULL;
+    free_dd(dim,start);
 
     return 0;
 }

@@ -65,7 +65,7 @@ struct FunctionMonitor
     int ftype;
     size_t dim;
     union ff {
-        double (*fnd)(double *, void *); //ftype = 0
+        double (*fnd)(const double *, void *); //ftype = 0
         double (*f1d)(double, void *);// ftype = 1
         double (*f2d)(double, double, void *); // ftype = 2
     } f;
@@ -74,7 +74,7 @@ struct FunctionMonitor
 };
 
 struct FunctionMonitor * 
-function_monitor_initnd( double (*)(double *, void *), void *, size_t, size_t);
+function_monitor_initnd( double (*)(const double *, void *), void *, size_t, size_t);
 void function_monitor_free(struct FunctionMonitor *);
 double function_monitor_eval(const double *, void *);
 void function_monitor_print_to_file(struct FunctionMonitor *, FILE *);

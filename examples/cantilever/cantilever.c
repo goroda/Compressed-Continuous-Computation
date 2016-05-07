@@ -17,7 +17,7 @@ static const double D_0 = 2.2535; // Displacement tolerance
 static const double E = 2.9e7;
 static const double R = 40000.0;
 
-double displacement(double * x, void * args)
+double displacement(const double * x, void * args)
 {
     assert (args == NULL );
     
@@ -37,7 +37,7 @@ double displacement(double * x, void * args)
     return dfact2;
 }
 
-double stress(double * x, void * args)
+double stress(const double * x, void * args)
 {
     assert (args == NULL );
     
@@ -54,24 +54,37 @@ double stress(double * x, void * args)
 int main()
 {
     size_t dim = 2;
-    struct BoundingBox * bds = bounding_box_init(dim,0.01,.99);
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,displacement,NULL);
+    struct Fwrap * fw2 = fwrap_create(dim,"general");
+    fwrap_set_f(fw2,stress,NULL);
 
-    size_t init_ranks = 5;
-    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
-    ft_cross_args_set_verbose(fca,0);
-    ft_cross_args_set_kickrank(fca,5);
-    ft_cross_args_set_maxiter(fca,10);
-    ft_cross_args_set_cross_tol(fca,1e-10);
-    ft_cross_args_set_round_tol(fca,1e-10);
-    ft_cross_args_set_maxrank_all(fca,init_ranks+10*5); 
+//    struct BoundingBox * bds = bounding_box_init(dim,0.01,.99);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,0.01);
+    ope_opts_set_ub(opts,0.99);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(0.01,0.99,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-10);
+    c3approx_set_round_tol(c3a,1e-10);
+
+    //ft_cross_args_set_maxrank_all(fca,init_ranks+10*5); 
 
     struct FunctionTrain * d = NULL; // displacement
     struct FunctionTrain * s = NULL; // stress
 
-    d = function_train_cross(displacement,NULL,bds,NULL,fca,NULL);
+    d = c3approx_do_cross(c3a,fw,1);
     printf("Displacement rank is %zu.\n",d->ranks[1]);
 
-    s = function_train_cross(stress,NULL,bds,NULL,NULL,NULL);
+    s = c3approx_do_cross(c3a,fw2,1);
     printf("Stress rank is %zu.\n", s->ranks[1]);
     
     double derr = 0.0;
@@ -100,9 +113,12 @@ int main()
     printf("L2 error for displacement is %G\n",derr/dden);
     printf("L2 error for stress is %G\n",serr/sden);
 
-    ft_cross_args_free(fca);
     function_train_free(d);
     function_train_free(s);
-    bounding_box_free(bds);
+    free_dd(dim,start);
+    one_approx_opts_free_deep(&qmopts);
+    c3approx_destroy(c3a);
+    fwrap_destroy(fw);
+    fwrap_destroy(fw2);
     return 0;
 }

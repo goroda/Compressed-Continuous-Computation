@@ -468,14 +468,19 @@ struct ProbabilityDensity * probability_density_load(char * filename)
 }
 
 
-double pdf_stdmvn_helper(double x, size_t dim, void * args)
+int pdf_stdmvn_helper(size_t n, size_t dim,const double *x, double * out, void * args)
 {
     size_t * totdim = args;
     assert (dim < *totdim);
+    
     double scale = 1.0 / sqrt(pow(2.0*M_PI,*totdim));
+    
     scale = pow(scale,1.0/( (double) *totdim));
-    double out = scale * exp(-0.5*x*x);
-    return out;
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = scale * exp(-0.5*pow(x[ii],2)); 
+    }
+
+    return 0;
 }
 
 /***********************************************************//**
@@ -487,33 +492,42 @@ double pdf_stdmvn_helper(double x, size_t dim, void * args)
 ***************************************************************/
 struct ProbabilityDensity * probability_density_standard_normal(size_t dim)
 {
-    struct BoundingBox * bds = bounding_box_init_std(dim);
-    size_t ii; 
-    for (ii = 0; ii < dim; ii++){
-        bds->lb[ii] = -10.0;
-        bds->ub[ii] = 10.0;
-    }
+    /* struct BoundingBox * bds = bounding_box_init_std(dim); */
+    /* size_t ii;  */
+    /* for (ii = 0; ii < dim; ii++){ */
+    /*     bds->lb[ii] = -10.0; */
+    /*     bds->ub[ii] = 10.0; */
+    /* } */
 
+    double lb = -10.0;
+    double ub = 10.0;
     double hmin = 1e-3;
     double delta = 1e-5;
-    size_t init_rank = 3;
-    double round_tol = 1e-3;
-    double cross_tol = 1e-8;
-    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
-    c3approx_init_lin_elem(c3a);
-    c3approx_set_lin_elem_delta(c3a,delta);
-    c3approx_set_lin_elem_hmin(c3a,hmin);
-    c3approx_init_cross(c3a,init_rank,0);
-    c3approx_set_round_tol(c3a,round_tol);
-    c3approx_set_cross_tol(c3a,cross_tol);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,lb,ub,delta,hmin);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
     
-    struct FtApproxArgs * fapp = c3approx_get_approx_args(c3a);
+    /* size_t init_rank = 3; */
+    /* double round_tol = 1e-3; */
+    /* double cross_tol = 1e-8; */
+    /* struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub); */
+    /* c3approx_init_cross(c3a,init_rank,0); */
+    /* c3approx_set_round_tol(c3a,round_tol); */
+    /* c3approx_set_cross_tol(c3a,cross_tol); */
+    /* struct FtApproxArgs * fapp = c3approx_get_approx_args(c3a); */
+    
     struct ProbabilityDensity * pdf = probability_density_alloc();
-    pdf->pdf = function_train_rankone(dim,pdf_stdmvn_helper,&dim,bds,fapp);
+    struct Fwrap * fw = fwrap_create(1,"MOVEC");
+    fwrap_set_mofvec(fw,pdf_stdmvn_helper,&dim);
+    
+    pdf->pdf = function_train_rankone(fopts,fw);
     pdf->type = GAUSSIAN;
     
-    bounding_box_free(bds);
-    c3approx_destroy(c3a);
+    /* bounding_box_free(bds); */
+    /* c3approx_destroy(c3a); */
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fopts);
+    fwrap_destroy(fw);
 
     return pdf;
 }
@@ -873,62 +887,62 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
         I can make this faster by precomputing the integrals of each
         core first.
 ***************************************************************/
-double * probability_density_mean(struct ProbabilityDensity * pdf)
-{
+/* double * probability_density_mean(struct ProbabilityDensity * pdf) */
+/* { */
     
-    size_t ii;
-    size_t dimft = pdf->pdf->dim; // dimension of ft
-    size_t dimpdf = dimft; // dimension of pdf variable
-    double * mean = NULL;
-    struct BoundingBox * bds = bounding_box_init_std(dimft);
-    for (ii = 0; ii < dimft; ii++){
-        bds->lb[ii] = 
-            generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]);
-        bds->ub[ii] = 
-            generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]);
-    }
-    if (pdf->transform == 1){
-        dimpdf = pdf->lt->dimout;   
-        mean = calloc_double(dimpdf);
-        double * offset = calloc_double(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            offset[0] = pdf->lt->b[ii];
-            struct FunctionTrain * ftlin = 
-                function_train_linear2(LINELM,NULL,dimft,
-                                       bds,pdf->lt->A+ii,dimpdf,
-                                       offset,1,NULL);
-            mean[ii] = function_train_inner(ftlin,pdf->pdf);
-            //printf("mean[%zu]=%G\n",ii,mean[ii]);
-            function_train_free(ftlin);
-        }
-        free(offset);
-    }
-    else{
-        mean = calloc_double(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            struct Qmarray * temp = qmarray_copy(pdf->pdf->cores[ii]);
-            struct Qmarray * tempx = qmarray_alloc(1,1);
-            tempx->funcs[0] = 
-                generic_function_linear(1.0,0.0,LINELM,NULL,
-                                    bds->lb[ii],bds->ub[ii],NULL);
+/*     size_t ii; */
+/*     size_t dimft = pdf->pdf->dim; // dimension of ft */
+/*     size_t dimpdf = dimft; // dimension of pdf variable */
+/*     double * mean = NULL; */
+/*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
+/*     for (ii = 0; ii < dimft; ii++){ */
+/*         bds->lb[ii] =  */
+/*             generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->ub[ii] =  */
+/*             generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*     } */
+/*     if (pdf->transform == 1){ */
+/*         dimpdf = pdf->lt->dimout;    */
+/*         mean = calloc_double(dimpdf); */
+/*         double * offset = calloc_double(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             offset[0] = pdf->lt->b[ii]; */
+/*             struct FunctionTrain * ftlin =  */
+/*                 function_train_linear2(LINELM,NULL,dimft, */
+/*                                        bds,pdf->lt->A+ii,dimpdf, */
+/*                                        offset,1,NULL); */
+/*             mean[ii] = function_train_inner(ftlin,pdf->pdf); */
+/*             //printf("mean[%zu]=%G\n",ii,mean[ii]); */
+/*             function_train_free(ftlin); */
+/*         } */
+/*         free(offset); */
+/*     } */
+/*     else{ */
+/*         mean = calloc_double(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             struct Qmarray * temp = qmarray_copy(pdf->pdf->cores[ii]); */
+/*             struct Qmarray * tempx = qmarray_alloc(1,1); */
+/*             tempx->funcs[0] =  */
+/*                 generic_function_linear(1.0,0.0,LINELM,NULL, */
+/*                                     bds->lb[ii],bds->ub[ii],NULL); */
 
-            qmarray_free(pdf->pdf->cores[ii]);
-            pdf->pdf->cores[ii] = qmarray_kron(tempx,temp);
+/*             qmarray_free(pdf->pdf->cores[ii]); */
+/*             pdf->pdf->cores[ii] = qmarray_kron(tempx,temp); */
             
-            mean[ii] = function_train_integrate(pdf->pdf);
+/*             mean[ii] = function_train_integrate(pdf->pdf); */
 
-            qmarray_free(pdf->pdf->cores[ii]);
-            pdf->pdf->cores[ii] = qmarray_copy(temp);
+/*             qmarray_free(pdf->pdf->cores[ii]); */
+/*             pdf->pdf->cores[ii] = qmarray_copy(temp); */
 
-            qmarray_free(temp);
-            qmarray_free(tempx);
-        }
-    }
+/*             qmarray_free(temp); */
+/*             qmarray_free(tempx); */
+/*         } */
+/*     } */
     
 
-    bounding_box_free(bds); bds = NULL;
-    return mean;
-}
+/*     bounding_box_free(bds); bds = NULL; */
+/*     return mean; */
+/* } */
 
 /***********************************************************//**
     Compute the covariance from the pdf
@@ -941,102 +955,102 @@ double * probability_density_mean(struct ProbabilityDensity * pdf)
         I can make this faster by precomputing the integrals of each
         core first.
 ***************************************************************/
-double * probability_density_cov(struct ProbabilityDensity * pdf)
-{
-    size_t ii, jj;
-    size_t dimft = pdf->pdf->dim; // dimension of ft
-    size_t dimpdf = dimft; // dimension of pdf variable
-    double * cov = NULL;
+/* double * probability_density_cov(struct ProbabilityDensity * pdf) */
+/* { */
+/*     size_t ii, jj; */
+/*     size_t dimft = pdf->pdf->dim; // dimension of ft */
+/*     size_t dimpdf = dimft; // dimension of pdf variable */
+/*     double * cov = NULL; */
     
-    struct BoundingBox * bds = bounding_box_init_std(dimft);
-    for (ii = 0; ii < dimft; ii++){
-        bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]);
-        bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]);
-    }
+/*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
+/*     for (ii = 0; ii < dimft; ii++){ */
+/*         bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*     } */
 
-    double * mean = probability_density_mean(pdf);
+/*     double * mean = probability_density_mean(pdf); */
 
-    if (pdf->transform  == 1){
+/*     if (pdf->transform  == 1){ */
 
-        dimpdf = pdf->lt->dimout;   
-        cov = calloc_double(dimpdf*dimpdf);
-        double * offset = calloc_double(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            offset[0] = pdf->lt->b[ii] - mean[ii];
-            struct FunctionTrain * ftleft = 
-                function_train_linear2(LINELM,NULL,dimft,bds,
-                                       pdf->lt->A+ii,dimpdf,offset,1,NULL);
+/*         dimpdf = pdf->lt->dimout;    */
+/*         cov = calloc_double(dimpdf*dimpdf); */
+/*         double * offset = calloc_double(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             offset[0] = pdf->lt->b[ii] - mean[ii]; */
+/*             struct FunctionTrain * ftleft =  */
+/*                 function_train_linear2(LINELM,NULL,dimft,bds, */
+/*                                        pdf->lt->A+ii,dimpdf,offset,1,NULL); */
 
-            struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
-            cov[ii*dimpdf+ii] = function_train_inner(temp,pdf->pdf);
-            function_train_free(temp);
+/*             struct FunctionTrain * temp = function_train_product(ftleft,ftleft); */
+/*             cov[ii*dimpdf+ii] = function_train_inner(temp,pdf->pdf); */
+/*             function_train_free(temp); */
 
-            for (jj = ii+1; jj < dimpdf; jj++){
-                offset[0] = pdf->lt->b[jj] - mean[jj];
-                struct FunctionTrain * ftright = 
-                    function_train_linear2(LINELM,NULL,dimft,bds,
-                                           pdf->lt->A+jj,dimpdf,offset,1,NULL);
+/*             for (jj = ii+1; jj < dimpdf; jj++){ */
+/*                 offset[0] = pdf->lt->b[jj] - mean[jj]; */
+/*                 struct FunctionTrain * ftright =  */
+/*                     function_train_linear2(LINELM,NULL,dimft,bds, */
+/*                                            pdf->lt->A+jj,dimpdf,offset,1,NULL); */
 
-                struct FunctionTrain * ftprod = NULL;
-                ftprod = function_train_product(ftleft,ftright);
-                cov[ii*dimpdf+jj] = function_train_inner(ftprod,pdf->pdf);
+/*                 struct FunctionTrain * ftprod = NULL; */
+/*                 ftprod = function_train_product(ftleft,ftright); */
+/*                 cov[ii*dimpdf+jj] = function_train_inner(ftprod,pdf->pdf); */
 
-                cov[jj*dimpdf+ii] = cov[ii*dimpdf+jj];
-                function_train_free(ftright); ftright = NULL;
-                function_train_free(ftprod); ftprod = NULL;
+/*                 cov[jj*dimpdf+ii] = cov[ii*dimpdf+jj]; */
+/*                 function_train_free(ftright); ftright = NULL; */
+/*                 function_train_free(ftprod); ftprod = NULL; */
 
-                function_train_free(ftright);
-                function_train_free(ftprod);
-            }
-            function_train_free(ftleft);
-        }
-        free(offset);
-    }
-    else{
-        cov = calloc_double(dimpdf * dimpdf);
-//        enum poly_type ptype = LEGENDRE;
-        struct FunctionTrain * ftc = function_train_copy(pdf->pdf);
-        struct FunctionTrain * xvals = function_train_alloc(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]);
-            double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]);
-            xvals->cores[ii] = qmarray_alloc(1,1);
-            xvals->cores[ii]->funcs[0] = 
-                generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL);
-        }
+/*                 function_train_free(ftright); */
+/*                 function_train_free(ftprod); */
+/*             } */
+/*             function_train_free(ftleft); */
+/*         } */
+/*         free(offset); */
+/*     } */
+/*     else{ */
+/*         cov = calloc_double(dimpdf * dimpdf); */
+/* //        enum poly_type ptype = LEGENDRE; */
+/*         struct FunctionTrain * ftc = function_train_copy(pdf->pdf); */
+/*         struct FunctionTrain * xvals = function_train_alloc(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]); */
+/*             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]); */
+/*             xvals->cores[ii] = qmarray_alloc(1,1); */
+/*             xvals->cores[ii]->funcs[0] =  */
+/*                 generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL); */
+/*         } */
 
-        for (ii = 0; ii < dimpdf; ii++){
+/*         for (ii = 0; ii < dimpdf; ii++){ */
 
-            struct Qmarray * temp = qmarray_kron(xvals->cores[ii],pdf->pdf->cores[ii]);
+/*             struct Qmarray * temp = qmarray_kron(xvals->cores[ii],pdf->pdf->cores[ii]); */
 
-            qmarray_free(ftc->cores[ii]);
-            ftc->cores[ii] = qmarray_kron(xvals->cores[ii],temp);
-            cov[ii*dimpdf+ii] = function_train_integrate(ftc);
+/*             qmarray_free(ftc->cores[ii]); */
+/*             ftc->cores[ii] = qmarray_kron(xvals->cores[ii],temp); */
+/*             cov[ii*dimpdf+ii] = function_train_integrate(ftc); */
 
-            qmarray_free(ftc->cores[ii]);
-            //maybe dont have to copy bc freeing later
-            ftc->cores[ii] = qmarray_copy(temp); 
-            qmarray_free(temp);
-            for (jj = ii+1; jj < dimpdf; jj++){
-                qmarray_free(ftc->cores[jj]);
-                ftc->cores[jj] = qmarray_kron(xvals->cores[jj],pdf->pdf->cores[jj]);
+/*             qmarray_free(ftc->cores[ii]); */
+/*             //maybe dont have to copy bc freeing later */
+/*             ftc->cores[ii] = qmarray_copy(temp);  */
+/*             qmarray_free(temp); */
+/*             for (jj = ii+1; jj < dimpdf; jj++){ */
+/*                 qmarray_free(ftc->cores[jj]); */
+/*                 ftc->cores[jj] = qmarray_kron(xvals->cores[jj],pdf->pdf->cores[jj]); */
                 
-                cov[ii*dimpdf+jj] = function_train_integrate(ftc);
-                cov[jj*dimpdf+ii] = cov[ii*dimpdf+jj];
+/*                 cov[ii*dimpdf+jj] = function_train_integrate(ftc); */
+/*                 cov[jj*dimpdf+ii] = cov[ii*dimpdf+jj]; */
 
-                qmarray_free(ftc->cores[jj]);
-                ftc->cores[jj] = qmarray_copy(pdf->pdf->cores[jj]);
-            }
-            qmarray_free(ftc->cores[ii]);
-            ftc->cores[ii] = qmarray_copy(pdf->pdf->cores[ii]);
-        }
-        function_train_free(xvals);
-        function_train_free(ftc);
-    }   
-    bounding_box_free(bds); bds=NULL;
-    free(mean); mean=NULL;
-    return cov;
-}
+/*                 qmarray_free(ftc->cores[jj]); */
+/*                 ftc->cores[jj] = qmarray_copy(pdf->pdf->cores[jj]); */
+/*             } */
+/*             qmarray_free(ftc->cores[ii]); */
+/*             ftc->cores[ii] = qmarray_copy(pdf->pdf->cores[ii]); */
+/*         } */
+/*         function_train_free(xvals); */
+/*         function_train_free(ftc); */
+/*     }    */
+/*     bounding_box_free(bds); bds=NULL; */
+/*     free(mean); mean=NULL; */
+/*     return cov; */
+/* } */
 
 /***********************************************************//**
     Compute the variance (only diagonal of covariance matrix) from the pdf
@@ -1049,73 +1063,73 @@ double * probability_density_cov(struct ProbabilityDensity * pdf)
         I can make this faster by precomputing the integrals of each
         core first.
 ***************************************************************/
-double * probability_density_var(struct ProbabilityDensity * pdf)
-{
+/* double * probability_density_var(struct ProbabilityDensity * pdf) */
+/* { */
 
-    size_t ii;
-    size_t dimft = pdf->pdf->dim; // dimension of ft
-    size_t dimpdf = dimft; // dimension of pdf variable
-    double * var = NULL;
+/*     size_t ii; */
+/*     size_t dimft = pdf->pdf->dim; // dimension of ft */
+/*     size_t dimpdf = dimft; // dimension of pdf variable */
+/*     double * var = NULL; */
 
-    struct BoundingBox * bds = bounding_box_init_std(dimft);
-    for (ii = 0; ii < dimft; ii++){
-        bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]);
-        bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]);
-    }
+/*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
+/*     for (ii = 0; ii < dimft; ii++){ */
+/*         bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*     } */
 
-    double * mean = probability_density_mean(pdf);
+/*     double * mean = probability_density_mean(pdf); */
 
-    if (pdf->transform  == 1){
+/*     if (pdf->transform  == 1){ */
 
-        dimpdf = pdf->lt->dimout;   
-        var = calloc_double(dimpdf);
-        double * offset = calloc_double(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            offset[0] = pdf->lt->b[ii] - mean[ii];
-            struct FunctionTrain * ftleft = 
-                function_train_linear2(LINELM,NULL,dimft,bds,
-                                       pdf->lt->A+ii,dimpdf,offset,1,NULL);
+/*         dimpdf = pdf->lt->dimout;    */
+/*         var = calloc_double(dimpdf); */
+/*         double * offset = calloc_double(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             offset[0] = pdf->lt->b[ii] - mean[ii]; */
+/*             struct FunctionTrain * ftleft =  */
+/*                 function_train_linear2(LINELM,NULL,dimft,bds, */
+/*                                        pdf->lt->A+ii,dimpdf,offset,1,NULL); */
             
-            struct FunctionTrain * temp = function_train_product(ftleft,ftleft);
-            var[ii] = function_train_inner(temp,pdf->pdf);
-            function_train_free(temp);
-            function_train_free(ftleft);
-        }
-        free(offset); offset=NULL;
-    }
-    else{
-        var = calloc_double(dimpdf);
+/*             struct FunctionTrain * temp = function_train_product(ftleft,ftleft); */
+/*             var[ii] = function_train_inner(temp,pdf->pdf); */
+/*             function_train_free(temp); */
+/*             function_train_free(ftleft); */
+/*         } */
+/*         free(offset); offset=NULL; */
+/*     } */
+/*     else{ */
+/*         var = calloc_double(dimpdf); */
 
-        struct FunctionTrain * ftc = function_train_copy(pdf->pdf);
-        struct FunctionTrain * xvals = function_train_alloc(dimft);
-        for (ii = 0; ii < dimpdf; ii++){
-            double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]);
-            double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]);
-            xvals->cores[ii] = qmarray_alloc(1,1);
-            xvals->cores[ii]->funcs[0] = 
-                generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL);
-        }
+/*         struct FunctionTrain * ftc = function_train_copy(pdf->pdf); */
+/*         struct FunctionTrain * xvals = function_train_alloc(dimft); */
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]); */
+/*             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]); */
+/*             xvals->cores[ii] = qmarray_alloc(1,1); */
+/*             xvals->cores[ii]->funcs[0] =  */
+/*                 generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL); */
+/*         } */
 
-        for (ii = 0; ii < dimpdf; ii++){
-            struct Qmarray * temp = qmarray_kron(xvals->cores[ii],pdf->pdf->cores[ii]);
+/*         for (ii = 0; ii < dimpdf; ii++){ */
+/*             struct Qmarray * temp = qmarray_kron(xvals->cores[ii],pdf->pdf->cores[ii]); */
 
-            qmarray_free(ftc->cores[ii]);
-            ftc->cores[ii] = qmarray_kron(xvals->cores[ii],temp);
-            qmarray_free(temp); temp = NULL;
-            var[ii] = function_train_integrate(ftc);
+/*             qmarray_free(ftc->cores[ii]); */
+/*             ftc->cores[ii] = qmarray_kron(xvals->cores[ii],temp); */
+/*             qmarray_free(temp); temp = NULL; */
+/*             var[ii] = function_train_integrate(ftc); */
 
-            qmarray_free(ftc->cores[ii]);
-            //maybe dont have to copy bc freeing later
-            ftc->cores[ii] = qmarray_copy(pdf->pdf->cores[ii]); 
-        }
-        function_train_free(xvals); xvals = NULL;
-        function_train_free(ftc); ftc = NULL;
-    }
+/*             qmarray_free(ftc->cores[ii]); */
+/*             //maybe dont have to copy bc freeing later */
+/*             ftc->cores[ii] = qmarray_copy(pdf->pdf->cores[ii]);  */
+/*         } */
+/*         function_train_free(xvals); xvals = NULL; */
+/*         function_train_free(ftc); ftc = NULL; */
+/*     } */
     
-    bounding_box_free(bds);
-    free(mean); mean = NULL;
-    return var;
-}
+/*     bounding_box_free(bds); */
+/*     free(mean); mean = NULL; */
+/*     return var; */
+/* } */
 
 /***********************************************************//**
     Get the lower bounds of the underlying (transformed) pdf
@@ -1184,57 +1198,57 @@ double like_poisson_helper(double x, size_t dim, void * args)
 
     \return like - likelihood function
 ***************************************************************/
-struct Likelihood *
-likelihood_alloc(size_t datadim, double * data, size_t paramdim, 
-                 double * param, size_t inputdim, 
-                 double lb, double ub, enum likelihood_type type)
-{
+/* struct Likelihood * */
+/* likelihood_alloc(size_t datadim, double * data, size_t paramdim,  */
+/*                  double * param, size_t inputdim,  */
+/*                  double lb, double ub, enum likelihood_type type) */
+/* { */
 
-    struct Likelihood * like = malloc(sizeof(struct Likelihood));
-    if (like == NULL){
-        fprintf(stderr, "Failed to allocate Likelihood\n");
-        exit(1);
-    }
+/*     struct Likelihood * like = malloc(sizeof(struct Likelihood)); */
+/*     if (like == NULL){ */
+/*         fprintf(stderr, "Failed to allocate Likelihood\n"); */
+/*         exit(1); */
+/*     } */
     
-    like->datadim = datadim;
-    like->paramdim = paramdim;
-    like->inputdim = inputdim;
-    like->type = type;
-    if (type == POISSON_LIKE){
-        enum poly_type ptype = LEGENDRE;
-        size_t start_num = 7;
-        size_t c_check = 2;
-        struct OpeAdaptOpts ao;
-        ao.start_num = start_num;
-        ao.coeffs_check = c_check;
-        ao.tol = 1e-10;
+/*     like->datadim = datadim; */
+/*     like->paramdim = paramdim; */
+/*     like->inputdim = inputdim; */
+/*     like->type = type; */
+/*     if (type == POISSON_LIKE){ */
+/*         enum poly_type ptype = LEGENDRE; */
+/*         size_t start_num = 7; */
+/*         size_t c_check = 2; */
+/*         struct OpeAdaptOpts ao; */
+/*         ao.start_num = start_num; */
+/*         ao.coeffs_check = c_check; */
+/*         ao.tol = 1e-10; */
         
-        struct FtApproxArgs * fapp = 
-                ft_approx_args_createpoly(inputdim,&ptype,&ao);
+/*         struct FtApproxArgs * fapp =  */
+/*                 ft_approx_args_createpoly(inputdim,&ptype,&ao); */
     
-        struct BoundingBox * bds = bounding_box_init_std(inputdim);
-        size_t ii; 
-        for (ii = 0; ii < inputdim; ii++){
-            bds->lb[ii] = lb; 
-            bds->ub[ii] = ub;
-        }
+/*         struct BoundingBox * bds = bounding_box_init_std(inputdim); */
+/*         size_t ii;  */
+/*         for (ii = 0; ii < inputdim; ii++){ */
+/*             bds->lb[ii] = lb;  */
+/*             bds->ub[ii] = ub; */
+/*         } */
 
-        struct LikeParamDataCouple args = {param,data};
+/*         struct LikeParamDataCouple args = {param,data}; */
     
-        //printf("compute here\n");
-        like->like = function_train_rankone(inputdim,like_poisson_helper,
-                                                &args,bds,fapp);
-        //printf("compute there\n");
-        like->loglike = 0;
+/*         //printf("compute here\n"); */
+/*         like->like = function_train_rankone(inputdim,like_poisson_helper, */
+/*                                                 &args,bds,fapp); */
+/*         //printf("compute there\n"); */
+/*         like->loglike = 0; */
 
-        bounding_box_free(bds);
-        ft_approx_args_free(fapp);
-    }
-    else{
-        like->like = NULL;
-    }
-    return like;
-}
+/*         bounding_box_free(bds); */
+/*         ft_approx_args_free(fapp); */
+/*     } */
+/*     else{ */
+/*         like->like = NULL; */
+/*     } */
+/*     return like; */
+/* } */
 
 /***********************************************************//**
     Allocate and initialize a Gaussian likelihood
@@ -1258,90 +1272,90 @@ likelihood_alloc(size_t datadim, double * data, size_t paramdim,
             - paramdim should be = datadim, 
               param specifies diff noise std for each dimension)
 ***************************************************************/
-struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
-    size_t datadim, double * data, size_t paramdim, double * param,
-    size_t inputdim, struct FT1DArray * meanfunc)
-{
+/* struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata, */
+/*     size_t datadim, double * data, size_t paramdim, double * param, */
+/*     size_t inputdim, struct FT1DArray * meanfunc) */
+/* { */
 
-    struct Likelihood * like = malloc(sizeof(struct Likelihood));
-    if (like == NULL){
-        fprintf(stderr, "Failed to allocate Likelihood\n");
-        exit(1);
-    }
+/*     struct Likelihood * like = malloc(sizeof(struct Likelihood)); */
+/*     if (like == NULL){ */
+/*         fprintf(stderr, "Failed to allocate Likelihood\n"); */
+/*         exit(1); */
+/*     } */
     
-    like->type = GAUSSIAN_LIKE;
-    like->datadim = datadim;
-    like->paramdim = paramdim;
-    like->inputdim = inputdim;
+/*     like->type = GAUSSIAN_LIKE; */
+/*     like->datadim = datadim; */
+/*     like->paramdim = paramdim; */
+/*     like->inputdim = inputdim; */
     
-    struct FunctionTrain * temp = NULL;
-    struct FunctionTrain * temp2 = NULL;
+/*     struct FunctionTrain * temp = NULL; */
+/*     struct FunctionTrain * temp2 = NULL; */
 
-    size_t ii,jj;
-    like->logextra = 0.0;
-    for (jj = 0; jj < ndata; jj++){
-//        printf("jj = %zu\n",jj);
-        struct FT1DArray * moff = ft1d_array_alloc(datadim);
-        for (ii = 0; ii < datadim; ii++){
-//            printf("ii=%zu, data=%G \n",ii,data[jj*datadim+ii]);
-            moff->ft[ii] = function_train_afpb(1.0,-data[jj*datadim+ii],
-                            meanfunc->ft[jj*datadim+ii],1e-12);
-        }
-//        printf("got moff noise_type = %d\n",noise_type);
+/*     size_t ii,jj; */
+/*     like->logextra = 0.0; */
+/*     for (jj = 0; jj < ndata; jj++){ */
+/* //        printf("jj = %zu\n",jj); */
+/*         struct FT1DArray * moff = ft1d_array_alloc(datadim); */
+/*         for (ii = 0; ii < datadim; ii++){ */
+/* //            printf("ii=%zu, data=%G \n",ii,data[jj*datadim+ii]); */
+/*             moff->ft[ii] = function_train_afpb(1.0,-data[jj*datadim+ii], */
+/*                             meanfunc->ft[jj*datadim+ii],1e-12); */
+/*         } */
+/* //        printf("got moff noise_type = %d\n",noise_type); */
 
-        if (noise_type == 0){
-            assert (paramdim == 1);
-            double * coeff = darray_val(datadim,-0.5/pow(param[0],2));
-//            printf("datadim = %zu\n",datadim);
-            temp = ft1d_array_sum_prod(datadim,coeff,moff,moff,1e-10);
-//            printf("got sum\n");
-            free(coeff); coeff = NULL;
-            //printf("here! %G \n", log(pow(pow(pow(param[0],2),datadim),-0.5)));
-            like->logextra += log(pow(2.0*M_PI,- ((double) datadim) /2.0) *
-                                  pow(pow(param[0] * param[0],datadim),-0.5));
+/*         if (noise_type == 0){ */
+/*             assert (paramdim == 1); */
+/*             double * coeff = darray_val(datadim,-0.5/pow(param[0],2)); */
+/* //            printf("datadim = %zu\n",datadim); */
+/*             temp = ft1d_array_sum_prod(datadim,coeff,moff,moff,1e-10); */
+/* //            printf("got sum\n"); */
+/*             free(coeff); coeff = NULL; */
+/*             //printf("here! %G \n", log(pow(pow(pow(param[0],2),datadim),-0.5))); */
+/*             like->logextra += log(pow(2.0*M_PI,- ((double) datadim) /2.0) * */
+/*                                   pow(pow(param[0] * param[0],datadim),-0.5)); */
 
-//            printf("log extra is now = %G\n", like->logextra);
-        }
-        else if (noise_type == 1){
-            assert (paramdim == datadim);
-            double * coeff = calloc_double(paramdim);
+/* //            printf("log extra is now = %G\n", like->logextra); */
+/*         } */
+/*         else if (noise_type == 1){ */
+/*             assert (paramdim == datadim); */
+/*             double * coeff = calloc_double(paramdim); */
 
-            double tempdet = 1.0;
-            for (ii = 0; ii < paramdim; ii++){
-                coeff[ii] = -0.5 / pow(param[ii],2);
-                tempdet *= pow(param[ii],2);
-            }
-            like->logextra += log( pow(2*M_PI,-(double) datadim/2.0) * 
-                                   pow(tempdet,-0.5));
-            temp = ft1d_array_sum_prod(datadim,coeff,moff,moff,1e-10);
-            free(coeff); coeff = NULL;
-        }
-        else{
-            fprintf(stderr,
-                    "Noise type (%d) not available for Gaussian likelihood",
-                    noise_type); 
-            exit(1);
-        }
-        if (jj == 0){
-            like->like = function_train_copy(temp);
-        }
-        else{
-            temp2 = function_train_sum(temp,like->like);
-            function_train_free(like->like); like->like = NULL;
+/*             double tempdet = 1.0; */
+/*             for (ii = 0; ii < paramdim; ii++){ */
+/*                 coeff[ii] = -0.5 / pow(param[ii],2); */
+/*                 tempdet *= pow(param[ii],2); */
+/*             } */
+/*             like->logextra += log( pow(2*M_PI,-(double) datadim/2.0) *  */
+/*                                    pow(tempdet,-0.5)); */
+/*             temp = ft1d_array_sum_prod(datadim,coeff,moff,moff,1e-10); */
+/*             free(coeff); coeff = NULL; */
+/*         } */
+/*         else{ */
+/*             fprintf(stderr, */
+/*                     "Noise type (%d) not available for Gaussian likelihood", */
+/*                     noise_type);  */
+/*             exit(1); */
+/*         } */
+/*         if (jj == 0){ */
+/*             like->like = function_train_copy(temp); */
+/*         } */
+/*         else{ */
+/*             temp2 = function_train_sum(temp,like->like); */
+/*             function_train_free(like->like); like->like = NULL; */
 
-            like->like = function_train_round(temp2,1e-10);
-            function_train_free(temp2); temp2 = NULL;
+/*             like->like = function_train_round(temp2,1e-10); */
+/*             function_train_free(temp2); temp2 = NULL; */
 
-        }
-        function_train_free(temp); temp = NULL;
-        ft1d_array_free(moff); moff = NULL;
+/*         } */
+/*         function_train_free(temp); temp = NULL; */
+/*         ft1d_array_free(moff); moff = NULL; */
        
-    }
-    like->loglike = 1;
+/*     } */
+/*     like->loglike = 1; */
 
 
-    return like;
-}
+/*     return like; */
+/* } */
 
 /***********************************************************//**
     Gaussian Likelihood for Linear Regression to infer parameters a_i in
@@ -1357,30 +1371,30 @@ struct Likelihood * likelihood_gaussian(int noise_type, size_t ndata,
 
     \return like - likelihood function
 ***************************************************************/
-struct Likelihood * likelihood_linear_regression(size_t dim, size_t N, 
-    double * data, double * covariates, double noise, struct BoundingBox * bds)
-{
-//    enum poly_type ptype = LEGENDRE;
-    struct FT1DArray * meanfunc = ft1d_array_alloc(N);
-    size_t ii;
-    double * pt = calloc_double(dim+1);
-    pt[0] = 1.0;
-    for (ii = 0; ii < N; ii++){
-        //printf("ii = %zu\n",ii);
-        memmove(pt+1,covariates + ii*dim,dim*sizeof(double));    
-//        meanfunc->ft[ii] = function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL);
-        meanfunc->ft[ii] = function_train_linear(LINELM,NULL,dim+1,bds,pt,NULL);
-    }
+/* struct Likelihood * likelihood_linear_regression(size_t dim, size_t N,  */
+/*     double * data, double * covariates, double noise, struct BoundingBox * bds) */
+/* { */
+/* //    enum poly_type ptype = LEGENDRE; */
+/*     struct FT1DArray * meanfunc = ft1d_array_alloc(N); */
+/*     size_t ii; */
+/*     double * pt = calloc_double(dim+1); */
+/*     pt[0] = 1.0; */
+/*     for (ii = 0; ii < N; ii++){ */
+/*         //printf("ii = %zu\n",ii); */
+/*         memmove(pt+1,covariates + ii*dim,dim*sizeof(double));     */
+/* //        meanfunc->ft[ii] = function_train_linear(POLYNOMIAL,&ptype,dim+1,bds,pt,NULL); */
+/*         meanfunc->ft[ii] = function_train_linear(LINELM,NULL,dim+1,bds,pt,NULL); */
+/*     } */
 
-    struct Likelihood * like = 
-            likelihood_gaussian(0,N,1,data,1,&noise,dim+1,meanfunc);
+/*     struct Likelihood * like =  */
+/*             likelihood_gaussian(0,N,1,data,1,&noise,dim+1,meanfunc); */
     
-    free(pt);
-    pt = NULL;
-    ft1d_array_free(meanfunc); 
-    meanfunc = NULL;
-    return like;
-}
+/*     free(pt); */
+/*     pt = NULL; */
+/*     ft1d_array_free(meanfunc);  */
+/*     meanfunc = NULL; */
+/*     return like; */
+/* } */
 
 /***********************************************************//**
     Free memory allocated to a likelihood function
@@ -1453,117 +1467,117 @@ double like_transform_helper(double * x, void * args)
 
     \return newlike - new likelihood
 ***************************************************************/
-struct Likelihood *
-likelihood_transform(struct Likelihood * like, struct LinearTransform * lt,
-                     struct BoundingBox * bds)
-{
+/* struct Likelihood * */
+/* likelihood_transform(struct Likelihood * like, struct LinearTransform * lt, */
+/*                      struct BoundingBox * bds) */
+/* { */
 
-    struct LikeLinCouple lc = {like,lt};
+/*     struct LikeLinCouple lc = {like,lt}; */
         
 
-//
-    size_t dim = lt->dimin;
-    size_t init_rank = 2;
-    double hmin = 1e-2;
-    double delta = 1e-5;
-    double round_tol = 1e-3;
-    double cross_tol = 1e-5;
-    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
-    c3approx_init_lin_elem(c3a);
-    c3approx_set_lin_elem_delta(c3a,delta);
-    c3approx_set_lin_elem_hmin(c3a,hmin);
-    c3approx_init_cross(c3a,init_rank,0);
-    c3approx_set_round_tol(c3a,round_tol);
-    c3approx_set_cross_tol(c3a,cross_tol);
+/* // */
+/*     size_t dim = lt->dimin; */
+/*     size_t init_rank = 2; */
+/*     double hmin = 1e-2; */
+/*     double delta = 1e-5; */
+/*     double round_tol = 1e-3; */
+/*     double cross_tol = 1e-5; */
+/*     struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub); */
+/*     c3approx_init_lin_elem(c3a); */
+/*     c3approx_set_lin_elem_delta(c3a,delta); */
+/*     c3approx_set_lin_elem_hmin(c3a,hmin); */
+/*     c3approx_init_cross(c3a,init_rank,0); */
+/*     c3approx_set_round_tol(c3a,round_tol); */
+/*     c3approx_set_cross_tol(c3a,cross_tol); */
 
-    /* struct FtCrossArgs temp; */
-    /* struct FtApproxArgs * fapp = NULL; */
-    //size_t ii;
-    /* size_t * init_ranks = calloc_size_t(dim+1); */
-    /* for (ii = 0; ii < dim ;ii++){ */
-    /*     init_ranks[ii] = init_rank; */
-    /* } */
-    /* init_ranks[0] = 1; */
-    /* init_ranks[dim] = 1; */
+/*     /\* struct FtCrossArgs temp; *\/ */
+/*     /\* struct FtApproxArgs * fapp = NULL; *\/ */
+/*     //size_t ii; */
+/*     /\* size_t * init_ranks = calloc_size_t(dim+1); *\/ */
+/*     /\* for (ii = 0; ii < dim ;ii++){ *\/ */
+/*     /\*     init_ranks[ii] = init_rank; *\/ */
+/*     /\* } *\/ */
+/*     /\* init_ranks[0] = 1; *\/ */
+/*     /\* init_ranks[dim] = 1; *\/ */
         
-    /* struct OpeAdaptOpts aopts; */
-    /* aopts.start_num = 10; */
-    /* aopts.coeffs_check = 0; */
-    /* aopts.tol = 1e-5; */
+/*     /\* struct OpeAdaptOpts aopts; *\/ */
+/*     /\* aopts.start_num = 10; *\/ */
+/*     /\* aopts.coeffs_check = 0; *\/ */
+/*     /\* aopts.tol = 1e-5; *\/ */
 
-    /* enum poly_type ptype = LEGENDRE; */
-    /* fapp = ft_approx_args_createpoly(dim,&ptype,&aopts); */
+/*     /\* enum poly_type ptype = LEGENDRE; *\/ */
+/*     /\* fapp = ft_approx_args_createpoly(dim,&ptype,&aopts); *\/ */
 
-    /* temp.dim = dim; */
-    /* temp.ranks = init_ranks; */
-    /* temp.epsilon = 1e-5; */
-    /* temp.maxiter = 10; */
-    /* temp.verbose = 2; */
+/*     /\* temp.dim = dim; *\/ */
+/*     /\* temp.ranks = init_ranks; *\/ */
+/*     /\* temp.epsilon = 1e-5; *\/ */
+/*     /\* temp.maxiter = 10; *\/ */
+/*     /\* temp.verbose = 2; *\/ */
     
-    /* temp.epsround = 100.0*DBL_EPSILON; */
-    /* temp.kickrank = 4; */
-    /* temp.maxiteradapt = 5; */
+/*     /\* temp.epsround = 100.0*DBL_EPSILON; *\/ */
+/*     /\* temp.kickrank = 4; *\/ */
+/*     /\* temp.maxiteradapt = 5; *\/ */
     
-    struct Likelihood * newlike = malloc(sizeof(struct Likelihood));
-    if (newlike == NULL){
-        fprintf(stderr, "Failed to allocate Likelihood\n");
-        exit(1);
-    }
+/*     struct Likelihood * newlike = malloc(sizeof(struct Likelihood)); */
+/*     if (newlike == NULL){ */
+/*         fprintf(stderr, "Failed to allocate Likelihood\n"); */
+/*         exit(1); */
+/*     } */
 
-    newlike->datadim = like->datadim;
-    newlike->paramdim = 0;
-    newlike->inputdim = dim;
-    newlike->type = GENERIC_LIKE;
-    //printf("here!!!\n");
-    /* newlike->like = function_train_cross(like_transform_helper,&lc,bds,NULL,&temp,fapp); */
-    newlike->like = c3approx_do_cross(c3a,like_transform_helper,&lc);
-    //printf("there!!!\n");
+/*     newlike->datadim = like->datadim; */
+/*     newlike->paramdim = 0; */
+/*     newlike->inputdim = dim; */
+/*     newlike->type = GENERIC_LIKE; */
+/*     //printf("here!!!\n"); */
+/*     /\* newlike->like = function_train_cross(like_transform_helper,&lc,bds,NULL,&temp,fapp); *\/ */
+/*     newlike->like = c3approx_do_cross(c3a,like_transform_helper,&lc); */
+/*     //printf("there!!!\n"); */
 
-    /* free(init_ranks); init_ranks = NULL; */
-    /* ft_approx_args_free(fapp); fapp = NULL; */
+/*     /\* free(init_ranks); init_ranks = NULL; *\/ */
+/*     /\* ft_approx_args_free(fapp); fapp = NULL; *\/ */
             
-    return newlike; 
-}
+/*     return newlike;  */
+/* } */
 
-/***********************************************************//**
-    Compute the gradient of the log posterior from bayes rule
+/* /\***********************************************************\//\** */
+/*     Compute the gradient of the log posterior from bayes rule */
     
-    \param[in] x    - location at which to obtain the gradient log posterior
-    \param[in] args - BayesRule structure holding likelihood and prior
+/*     \param[in] x    - location at which to obtain the gradient log posterior */
+/*     \param[in] args - BayesRule structure holding likelihood and prior */
 
-    \return out - gradient of log posterior
-***************************************************************/
-double * bayes_rule_log_gradient(double * x, void * args){
+/*     \return out - gradient of log posterior */
+/* ***************************************************************\/ */
+/* double * bayes_rule_log_gradient(double * x, void * args){ */
     
-    struct BayesRule * br = args;
-    size_t dim = br->like->inputdim;
+/*     struct BayesRule * br = args; */
+/*     size_t dim = br->like->inputdim; */
 
-    double * gradp = probability_density_log_gradient_eval(br->prior,x);
+/*     double * gradp = probability_density_log_gradient_eval(br->prior,x); */
 
-    struct FT1DArray * gradl = function_train_gradient(br->like->like);
-    double * gradl_eval = ft1d_array_eval(gradl,x);
+/*     struct FT1DArray * gradl = function_train_gradient(br->like->like); */
+/*     double * gradl_eval = ft1d_array_eval(gradl,x); */
 
 
-    double * out = calloc_double(dim);
-    size_t ii;
-    if (br->like->loglike == 0){
-        double likeval = function_train_eval(br->like->like,x);
-        for (ii = 0; ii < dim; ii++){
-            out[ii] = 1.0/likeval * gradl_eval[ii] + gradp[ii];
-        }
-    }
-    else{
-        for (ii = 0; ii < dim; ii++){
-            out[ii] = gradl_eval[ii] + gradp[ii];
-        }
-    }
+/*     double * out = calloc_double(dim); */
+/*     size_t ii; */
+/*     if (br->like->loglike == 0){ */
+/*         double likeval = function_train_eval(br->like->like,x); */
+/*         for (ii = 0; ii < dim; ii++){ */
+/*             out[ii] = 1.0/likeval * gradl_eval[ii] + gradp[ii]; */
+/*         } */
+/*     } */
+/*     else{ */
+/*         for (ii = 0; ii < dim; ii++){ */
+/*             out[ii] = gradl_eval[ii] + gradp[ii]; */
+/*         } */
+/*     } */
 
-    ft1d_array_free(gradl); gradl = NULL;
-    free(gradl_eval); gradl_eval = NULL;
-    free(gradp); gradp = NULL;
+/*     ft1d_array_free(gradl); gradl = NULL; */
+/*     free(gradl_eval); gradl_eval = NULL; */
+/*     free(gradp); gradp = NULL; */
 
-    return out;
-}
+/*     return out; */
+/* } */
 
 /***********************************************************//**
     Compute the gradient of the negative log posterior from bayes rule
@@ -1573,18 +1587,18 @@ double * bayes_rule_log_gradient(double * x, void * args){
 
     \return out - gradient of negative log posterior
 ***************************************************************/
-double * bayes_rule_log_gradient_negative(double * x, void * args){
+/* double * bayes_rule_log_gradient_negative(double * x, void * args){ */
     
-    struct BayesRule * br = args;
-    size_t dim = br->like->inputdim;
+/*     struct BayesRule * br = args; */
+/*     size_t dim = br->like->inputdim; */
 
-    double * grad = bayes_rule_log_gradient(x,args);
-    size_t ii;
-    for (ii=0; ii < dim; ii++){
-        grad[ii] *= -1.0;
-    }
-    return grad;
-}
+/*     double * grad = bayes_rule_log_gradient(x,args); */
+/*     size_t ii; */
+/*     for (ii=0; ii < dim; ii++){ */
+/*         grad[ii] *= -1.0; */
+/*     } */
+/*     return grad; */
+/* } */
 
 /***********************************************************//**
     Compute the hessian of the log posterior from bayes rule
@@ -1594,53 +1608,53 @@ double * bayes_rule_log_gradient_negative(double * x, void * args){
 
     \return out - hessian of log posterior
 ***************************************************************/
-double * bayes_rule_log_hessian(double * x, void * args){
+/* double * bayes_rule_log_hessian(double * x, void * args){ */
     
-    struct BayesRule * br = args;
-    size_t dim = br->like->inputdim;
+/*     struct BayesRule * br = args; */
+/*     size_t dim = br->like->inputdim; */
 
-    double * hessp = probability_density_log_hessian_eval(br->prior,x);
-
-
-    struct FT1DArray * hessl = function_train_hessian(br->like->like);
-    double * hessl_eval = ft1d_array_eval(hessl,x);
+/*     double * hessp = probability_density_log_hessian_eval(br->prior,x); */
 
 
-    double * out = calloc_double(dim*dim);
-    size_t ii,jj;
-    if (br->like->loglike == 0){
+/*     struct FT1DArray * hessl = function_train_hessian(br->like->like); */
+/*     double * hessl_eval = ft1d_array_eval(hessl,x); */
 
-        double likeval = function_train_eval(br->like->like,x);
-        double likeval_squared = pow(likeval,2);
 
-        struct FT1DArray * gradl = function_train_gradient(br->like->like);
-        double * gradl_eval = ft1d_array_eval(gradl,x);
-        for (ii = 0; ii < dim; ii++){
-            for (jj = 0; jj < dim; jj++){
-                out[ii*dim+jj] = 
-                    -1.0/likeval_squared * gradl_eval[ii] * gradl_eval[jj] +
-                     1.0/likeval * hessl_eval[ii*dim+jj] + hessp[ii*dim+jj];
-            }
-        }
+/*     double * out = calloc_double(dim*dim); */
+/*     size_t ii,jj; */
+/*     if (br->like->loglike == 0){ */
 
-        ft1d_array_free(gradl); gradl = NULL;
-        free(gradl_eval); gradl_eval = NULL;
-    }
-    else{
-        for (ii = 0; ii < dim; ii++){
-            for (jj = 0; jj < dim; jj++){
-                out[ii*dim+jj] = hessl_eval[ii*dim+jj] + hessp[ii*dim+jj];
-            }
-        }
-    }
+/*         double likeval = function_train_eval(br->like->like,x); */
+/*         double likeval_squared = pow(likeval,2); */
 
-    ft1d_array_free(hessl); hessl = NULL;
-    free(hessl_eval); hessl_eval = NULL;
+/*         struct FT1DArray * gradl = function_train_gradient(br->like->like); */
+/*         double * gradl_eval = ft1d_array_eval(gradl,x); */
+/*         for (ii = 0; ii < dim; ii++){ */
+/*             for (jj = 0; jj < dim; jj++){ */
+/*                 out[ii*dim+jj] =  */
+/*                     -1.0/likeval_squared * gradl_eval[ii] * gradl_eval[jj] + */
+/*                      1.0/likeval * hessl_eval[ii*dim+jj] + hessp[ii*dim+jj]; */
+/*             } */
+/*         } */
 
-    free(hessp); hessp = NULL;
+/*         ft1d_array_free(gradl); gradl = NULL; */
+/*         free(gradl_eval); gradl_eval = NULL; */
+/*     } */
+/*     else{ */
+/*         for (ii = 0; ii < dim; ii++){ */
+/*             for (jj = 0; jj < dim; jj++){ */
+/*                 out[ii*dim+jj] = hessl_eval[ii*dim+jj] + hessp[ii*dim+jj]; */
+/*             } */
+/*         } */
+/*     } */
 
-    return out;
-}
+/*     ft1d_array_free(hessl); hessl = NULL; */
+/*     free(hessl_eval); hessl_eval = NULL; */
+
+/*     free(hessp); hessp = NULL; */
+
+/*     return out; */
+/* } */
 
 /***********************************************************//**
     Compute the hessian of the negative log posterior from bayes rule
@@ -1650,20 +1664,20 @@ double * bayes_rule_log_hessian(double * x, void * args){
 
     \return out - hessian of negative log posterior
 ***************************************************************/
-double * bayes_rule_log_hessian_negative(double * x, void * args){
+/* double * bayes_rule_log_hessian_negative(double * x, void * args){ */
     
-    struct BayesRule * br = args;
-    size_t dim = br->like->inputdim;
+/*     struct BayesRule * br = args; */
+/*     size_t dim = br->like->inputdim; */
 
-    double * hess = bayes_rule_log_hessian(x,args);
-    size_t ii,jj;
-    for (ii=0; ii < dim; ii++){
-        for (jj=0; jj < dim; jj++){
-            hess[ii*dim+jj] *= -1.0;
-        }
-    }
-    return hess;
-}
+/*     double * hess = bayes_rule_log_hessian(x,args); */
+/*     size_t ii,jj; */
+/*     for (ii=0; ii < dim; ii++){ */
+/*         for (jj=0; jj < dim; jj++){ */
+/*             hess[ii*dim+jj] *= -1.0; */
+/*         } */
+/*     } */
+/*     return hess; */
+/* } */
 
 /***********************************************************//**
     Compute the Laplace approximation to Bayes rule
@@ -1672,19 +1686,19 @@ double * bayes_rule_log_hessian_negative(double * x, void * args){
 
     \return posterior - posterior distribution
 ***************************************************************/
-struct ProbabilityDensity * bayes_rule_laplace(struct BayesRule * br)
-{
-    double * start = probability_density_mean(br->prior);
-//    size_t dim = br->like->inputdim;
-    struct ProbabilityDensity * pdf = NULL;
-    /* struct ProbabilityDensity * pdf =  */
-    /*     probability_density_laplace(bayes_rule_log_gradient_negative, */
-    /*                                 bayes_rule_log_hessian_negative, */
-    /*                                 br, dim, start); */
+/* struct ProbabilityDensity * bayes_rule_laplace(struct BayesRule * br) */
+/* { */
+/*     double * start = probability_density_mean(br->prior); */
+/* //    size_t dim = br->like->inputdim; */
+/*     struct ProbabilityDensity * pdf = NULL; */
+/*     /\* struct ProbabilityDensity * pdf =  *\/ */
+/*     /\*     probability_density_laplace(bayes_rule_log_gradient_negative, *\/ */
+/*     /\*                                 bayes_rule_log_hessian_negative, *\/ */
+/*     /\*                                 br, dim, start); *\/ */
     
-    free(start); start = NULL;
-    return pdf;
-}
+/*     free(start); start = NULL; */
+/*     return pdf; */
+/* } */
 
 struct BrTrans
 {
@@ -1761,93 +1775,93 @@ double bayes_rule_log(double * x, void * arg)
 
     \return posterior - posterior distribution
 ***************************************************************/
-struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br)
-{
-    size_t dim = br->like->inputdim;
+/* struct ProbabilityDensity * bayes_rule_compute(struct BayesRule * br) */
+/* { */
+/*     size_t dim = br->like->inputdim; */
 
-    // laplace approximation
-    struct ProbabilityDensity * lap = bayes_rule_laplace(br);
+/*     // laplace approximation */
+/*     struct ProbabilityDensity * lap = bayes_rule_laplace(br); */
     
-    // Initialize transform with laplace approximation
-    struct ProbabilityDensity * posterior = probability_density_alloc();
-    posterior->type = GENERAL;
-    posterior->transform = 1;
-    posterior->lt = linear_transform_alloc(dim,dim,NULL,NULL,0.0);
+/*     // Initialize transform with laplace approximation */
+/*     struct ProbabilityDensity * posterior = probability_density_alloc(); */
+/*     posterior->type = GENERAL; */
+/*     posterior->transform = 1; */
+/*     posterior->lt = linear_transform_alloc(dim,dim,NULL,NULL,0.0); */
 
-    memmove(posterior->lt->b, lap->lt->b, sizeof(double) * dim);
-    memmove(posterior->lt->A, lap->lt->A, dim*dim*sizeof(double));
-    posterior->lt->mt = lap->lt->mt;
+/*     memmove(posterior->lt->b, lap->lt->b, sizeof(double) * dim); */
+/*     memmove(posterior->lt->A, lap->lt->A, dim*dim*sizeof(double)); */
+/*     posterior->lt->mt = lap->lt->mt; */
 
-    /* printf("mean = \n"); */
-    /* dprint(dim,posterior->lt->b); */
+/*     /\* printf("mean = \n"); *\/ */
+/*     /\* dprint(dim,posterior->lt->b); *\/ */
         
-    struct BrTrans brt;
-    brt.br = br;
-    brt.lt = posterior->lt;
-    brt.mult = 1.0;
+/*     struct BrTrans brt; */
+/*     brt.br = br; */
+/*     brt.lt = posterior->lt; */
+/*     brt.mult = 1.0; */
     
-    //double normalize;
-    double prior_val = log(probability_density_eval(br->prior,lap->lt->b));
-    double like_val = function_train_eval(br->like->like,lap->lt->b);
-    if (br->like->loglike == 0){
-        like_val = log(like_val);
-    }
-    /* printf("log prior at map = %G\n",prior_val); */
-    /* printf("log likelihood at map = %G\n",like_val); */
-    br->like->logextra = -(like_val+prior_val);
-    /* printf("log extra = %G\n",br->like->logextra); */
-    double val_at_map = bayes_rule_evaluate(lap->lt->b,&brt);
-    /* printf("the value at the map is %G\n",val_at_map); */
-    brt.mult = 0.5/val_at_map;
-    val_at_map = bayes_rule_evaluate(lap->lt->b,&brt);
-    /* printf("the value at the map 2 is %G\n",val_at_map); */
+/*     //double normalize; */
+/*     double prior_val = log(probability_density_eval(br->prior,lap->lt->b)); */
+/*     double like_val = function_train_eval(br->like->like,lap->lt->b); */
+/*     if (br->like->loglike == 0){ */
+/*         like_val = log(like_val); */
+/*     } */
+/*     /\* printf("log prior at map = %G\n",prior_val); *\/ */
+/*     /\* printf("log likelihood at map = %G\n",like_val); *\/ */
+/*     br->like->logextra = -(like_val+prior_val); */
+/*     /\* printf("log extra = %G\n",br->like->logextra); *\/ */
+/*     double val_at_map = bayes_rule_evaluate(lap->lt->b,&brt); */
+/*     /\* printf("the value at the map is %G\n",val_at_map); *\/ */
+/*     brt.mult = 0.5/val_at_map; */
+/*     val_at_map = bayes_rule_evaluate(lap->lt->b,&brt); */
+/*     /\* printf("the value at the map 2 is %G\n",val_at_map); *\/ */
     
-    /* printf("BAYESRUL IS BROKE!!!\n"); */
-    /* exit(1); */
-    //
-    struct BoundingBox * bds = bounding_box_init(dim,-6.0,6.0);
-    double hmin = 1e-2;
-    double delta = 1e-5;
-    size_t init_rank = 3;
-    double round_tol = 1e-3;
-    double cross_tol = 1e-8;
-    struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub);
-    c3approx_init_lin_elem(c3a);
-    c3approx_set_lin_elem_delta(c3a,delta);
-    c3approx_set_lin_elem_hmin(c3a,hmin);
-    c3approx_init_cross(c3a,init_rank,0);
-    c3approx_set_round_tol(c3a,round_tol);
-    c3approx_set_cross_tol(c3a,cross_tol);
+/*     /\* printf("BAYESRUL IS BROKE!!!\n"); *\/ */
+/*     /\* exit(1); *\/ */
+/*     // */
+/*     struct BoundingBox * bds = bounding_box_init(dim,-6.0,6.0); */
+/*     double hmin = 1e-2; */
+/*     double delta = 1e-5; */
+/*     size_t init_rank = 3; */
+/*     double round_tol = 1e-3; */
+/*     double cross_tol = 1e-8; */
+/*     struct C3Approx * c3a = c3approx_create(CROSS,dim,bds->lb,bds->ub); */
+/*     c3approx_init_lin_elem(c3a); */
+/*     c3approx_set_lin_elem_delta(c3a,delta); */
+/*     c3approx_set_lin_elem_hmin(c3a,hmin); */
+/*     c3approx_init_cross(c3a,init_rank,0); */
+/*     c3approx_set_round_tol(c3a,round_tol); */
+/*     c3approx_set_cross_tol(c3a,cross_tol); */
     
-    /* struct FunctionTrain * roughpdf = c3approx_do_cross(c3a,bayes_rule_log,&brt); */
+/*     /\* struct FunctionTrain * roughpdf = c3approx_do_cross(c3a,bayes_rule_log,&brt); *\/ */
     
-    /* double * temp = calloc_double(dim); */
-    /* double postval = function_train_eval(roughpdf,temp); */
-    /* double postval_check = bayes_rule_log(temp,&brt); */
-    /* free(temp); temp = NULL; */
-    /* printf("log post at map = %G, %G\n", 1.0/postval,1.0/postval_check); */
+/*     /\* double * temp = calloc_double(dim); *\/ */
+/*     /\* double postval = function_train_eval(roughpdf,temp); *\/ */
+/*     /\* double postval_check = bayes_rule_log(temp,&brt); *\/ */
+/*     /\* free(temp); temp = NULL; *\/ */
+/*     /\* printf("log post at map = %G, %G\n", 1.0/postval,1.0/postval_check); *\/ */
 
-    /* double normalize = function_train_integrate(roughpdf); */
-    /* printf("normalizing constant is %G \n", normalize); */
-    /* printf("integral of log %G \n", normalize); */
+/*     /\* double normalize = function_train_integrate(roughpdf); *\/ */
+/*     /\* printf("normalizing constant is %G \n", normalize); *\/ */
+/*     /\* printf("integral of log %G \n", normalize); *\/ */
 
-    /* brt.mult = fabs(1.0/normalize); */
-    /* function_train_free(roughpdf); roughpdf = NULL; */
+/*     /\* brt.mult = fabs(1.0/normalize); *\/ */
+/*     /\* function_train_free(roughpdf); roughpdf = NULL; *\/ */
 
-    /* exit(1); */
-    /* posterior->pdf =  */
-    /*     function_train_cross(bayes_rule_evaluate, &brt, bds, NULL,NULL,NULL); */
-    posterior->pdf = c3approx_do_cross(c3a,bayes_rule_evaluate,&brt);
+/*     /\* exit(1); *\/ */
+/*     /\* posterior->pdf =  *\/ */
+/*     /\*     function_train_cross(bayes_rule_evaluate, &brt, bds, NULL,NULL,NULL); *\/ */
+/*     posterior->pdf = c3approx_do_cross(c3a,bayes_rule_evaluate,&brt); */
 
-    double normalize = function_train_integrate(posterior->pdf);
-    /* printf("second normalizing constant is %G \n", normalize); */
-    function_train_scale(posterior->pdf,1.0/normalize);
+/*     double normalize = function_train_integrate(posterior->pdf); */
+/*     /\* printf("second normalizing constant is %G \n", normalize); *\/ */
+/*     function_train_scale(posterior->pdf,1.0/normalize); */
 
-//    exit(1);
+/* //    exit(1); */
 
-    bounding_box_free(bds); bds = NULL;
-    probability_density_free(lap); lap = NULL;
-    return posterior;
-}
+/*     bounding_box_free(bds); bds = NULL; */
+/*     probability_density_free(lap); lap = NULL; */
+/*     return posterior; */
+/* } */
 
 

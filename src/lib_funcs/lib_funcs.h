@@ -41,6 +41,7 @@
 #ifndef LIB_ONEDFUNCS_H
 #define LIB_ONEDFUNCS_H
 
+#include "fwrap.h"
 #include "functions.h"
 #include "space.h"
 #include "monitoring.h"

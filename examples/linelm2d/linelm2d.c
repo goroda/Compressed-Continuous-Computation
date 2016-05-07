@@ -29,19 +29,19 @@ void print_code_usage (FILE * stream, int exit_code)
     exit (exit_code);
 }
 
-double f0(double *x, void * args)
+double f0(const double *x, void * args)
 {
     assert(args == NULL);
     return x[0] + x[1];
 }
 
-double f1(double *x, void * args)
+double f1(const double *x, void * args)
 {
     assert(args == NULL);
     return x[0] * x[1];
 }
 
-double f2(double * x, void * args)
+double f2(const double * x, void * args)
 {
     assert (args == NULL);
     double out;
@@ -110,39 +110,40 @@ int main(int argc, char * argv[])
     size_t dim = 2;
     double lbv[2] = {lb, 2*lb};
     double ubv[2] = {ub, 3*ub};
-    struct BoundingBox * bds = bounding_box_vec(dim,lbv,ubv);
 
 
-    double * xnodes = linspace(lb,ub,n);
-    double * ynodes = linspace(2*lb,3*ub,n);
-    struct c3Vector c3vx = {n,xnodes};
-    struct c3Vector c3vy = {n,ynodes};
-    struct c3Vector ** c3v = malloc(2 * sizeof(struct c3Vector));
-    c3v[0] = &c3vx;
-    c3v[1] = &c3vy;
-    struct FiberOptArgs * fopt = fiber_opt_args_bf(dim,c3v);
-
+    double * xnodes = linspace(lbv[0],ubv[0],n);
+    double * ynodes = linspace(lbv[1],ubv[1],n);
     struct LinElemExpAopts * aoptsx=lin_elem_exp_aopts_alloc(n,xnodes);
     struct LinElemExpAopts * aoptsy=lin_elem_exp_aopts_alloc(n,ynodes);
-    struct LinElemExpAopts ** aopts = 
-        malloc(2*sizeof(struct LinElemExpAopts));
-    aopts[0] = aoptsx;
-    aopts[1] = aoptsy;
-    struct FtApproxArgs * fapp = ft_approx_args_create_le2(dim,aopts);
+    struct OneApproxOpts * qmoptsx = one_approx_opts_alloc(LINELM,aoptsx);
+    struct OneApproxOpts * qmoptsy = one_approx_opts_alloc(LINELM,aoptsy);
+    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    size_t init_rank = 3;
+    double ** start = malloc_dd(dim);
+    c3approx_set_approx_opts_dim(c3a,0,qmoptsx);
+    c3approx_set_approx_opts_dim(c3a,1,qmoptsy);
+    start[0] = calloc_double(init_rank);
+    start[0][0] = xnodes[0];
+    start[0][1] = xnodes[1];
+    start[0][2] = xnodes[2];
+    start[1] = calloc_double(init_rank);
+    start[1][0] = xnodes[0];
+    start[1][1] = xnodes[1];
+    start[1][2] = xnodes[2];
+    
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_adapt_kickrank(c3a,2);
+    c3approx_set_cross_maxiter(c3a,10);
+    c3approx_set_cross_tol(c3a,1e-7);
+    c3approx_set_round_tol(c3a,1e-10);
+    c3approx_set_adapt_maxrank_all(c3a,n);
+    c3approx_set_verbose(c3a,verbose);
 
 
-    size_t init_ranks = 3;
-    struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
-    ft_cross_args_set_verbose(fca,verbose);
-    ft_cross_args_set_kickrank(fca,2);
-    ft_cross_args_set_maxiter(fca,10);
-    ft_cross_args_set_cross_tol(fca,1e-7);
-    ft_cross_args_set_round_tol(fca,1e-10);
-    ft_cross_args_set_maxrank_all(fca,init_ranks+5*2); 
-    ft_cross_args_set_optargs(fca,fopt);
-   
     struct FunctionMonitor * fm = NULL;
-    double (*ff)(double *, void *);
+    double (*ff)(const double *, void *);
 
     if (function == 0){
         fm = function_monitor_initnd(f0,NULL,dim,1000*dim);
@@ -166,15 +167,11 @@ int main(int argc, char * argv[])
         printf("nodes are\n");
         dprint(n,xnodes);
     }
-    assert ( n > 4);
-    double startx[3] = {xnodes[0], xnodes[5], xnodes[n-1]};
-    double starty[3] = {ynodes[0], ynodes[4], ynodes[n-1]};
-    double * start[2];
-    start[0] = startx;
-    start[1] = starty;
-    struct FunctionTrain * ft = NULL;
-    ft = function_train_cross(function_monitor_eval,fm,
-                              bds,start,fca,fapp);
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,function_monitor_eval,fm);
+
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     size_t ntot = n*n;
@@ -235,15 +232,17 @@ int main(int argc, char * argv[])
 
     fclose(fp2);
     free(xtest); free(ytest);
-    lin_elem_exp_aopts_free(aoptsx);
-    lin_elem_exp_aopts_free(aoptsy);
-    free(aopts); aopts = NULL;
-    free(c3v); c3v = NULL;
-    ft_cross_args_free(fca);
     function_train_free(ft);
     function_monitor_free(fm);
-    ft_approx_args_free(fapp);
-    fiber_opt_args_free(fopt);
-    bounding_box_free(bds);
+
+    c3approx_destroy(c3a);
+    fwrap_destroy(fw);
+    free_dd(2,start);
+    one_approx_opts_free_deep(&qmoptsx);
+    one_approx_opts_free_deep(&qmoptsx);
+    free(xnodes);
+    free(ynodes);
+    
+
     return 0;
 }

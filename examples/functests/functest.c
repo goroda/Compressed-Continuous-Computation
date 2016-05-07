@@ -11,7 +11,7 @@
 #include "lib_probability.h"
 
 
-double doug(double * x, void * args)
+double doug(const double * x, void * args)
 {
 
     double out = 1.0;
@@ -24,21 +24,37 @@ double doug(double * x, void * args)
 int main()
 {
     size_t dx = 2;
-    double lb[2] = {-1.0, -1.0};
-    double ub[2] = {1.0, 1.0};
-    size_t start_rank =4;
+    size_t dim = dx;
+        
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,3);
+    ope_opts_set_coeffs_check(opts,3);
+    ope_opts_set_maxnum(opts,3);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+
     int verbose = 1;
-    struct C3Approx * c3a = c3approx_create(CROSS,dx,lb,ub);
-    c3approx_init_poly(c3a,LEGENDRE);
-    c3approx_init_cross(c3a,start_rank,verbose);
-    c3approx_set_poly_adapt_nstart(c3a,3);
-    c3approx_set_poly_adapt_ncheck(c3a,0);
-    c3approx_set_poly_adapt_nmax(c3a,3);
+    size_t init_rank = 4;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-4);
     c3approx_set_round_tol(c3a,1e-4);
-
+    
+    
     size_t counter = 0;
-    struct FunctionTrain * f = c3approx_do_cross(c3a,doug,&counter);
+    struct Fwrap * fw = fwrap_create(dx,"general");
+    fwrap_set_f(fw,doug,&counter);
+    
+    struct FunctionTrain * f = c3approx_do_cross(c3a,fw,1);
+    free_dd(dim,start);
+    one_approx_opts_free_deep(&qmopts);
+    c3approx_destroy(c3a);
+    fwrap_destroy(fw);
+
     printf("ranks are "); iprint_sz(3,f->ranks);
     printf("Number of evaluations is %zu\n",counter);
     

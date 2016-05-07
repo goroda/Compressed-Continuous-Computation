@@ -47,15 +47,15 @@
 /***********************************************************//**
     Initialize a function monitor of an n dimensional function
 
-    \param f [in] - function to wrap
-    \param args [in] - function arguments
-    \param dim [in] - dimension of function
-    \param tsize [in] - initial table size for storing evaluations
+    \param[in] f     - function to wrap
+    \param[in] args  - function arguments
+    \param[in] dim   - dimension of function
+    \param[in] tsize - initial table size for storing evaluations
 
-    \return fm [out] - function monitor
+    \return fm - function monitor
 ***************************************************************/
 struct FunctionMonitor *
-function_monitor_initnd( double (*f)(double *, void *), void * args, size_t dim,
+function_monitor_initnd( double (*f)(const double *, void *), void * args, size_t dim,
                         size_t tsize)
 {
     struct FunctionMonitor * fm = NULL;

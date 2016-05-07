@@ -8,7 +8,7 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
-double sinsum(double * x, void * args)
+double sinsum(const double * x, void * args)
 {
     size_t *dim = args;
 

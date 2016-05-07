@@ -196,7 +196,7 @@ double solveBlackBox(double * in, void * args)
     return out;
 }
 
-double solveBlackBoxUni(double * uni, void * args)
+double solveBlackBoxUni(const double * uni, void * args)
 {
     
     struct RunArgs * rargs = args;
@@ -379,39 +379,47 @@ int main(int argc, char *argv[])
     double approxtol[8] = {1e-0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7};
     //double approxtol[1] = {1e-6};
     //double approxtol[3] = {1e-1,1e-2,1e-3};
+
+    double lb=0.05;
+    double ub=0.95;
     for (iii = 0; iii < 8; iii++){
         for (jjj = 0; jjj < 8; jjj++){
             printf("done prcessing\n");
 
             size_t dim = rargs.dim;
-
-            enum poly_type ptype = LEGENDRE;
-            struct OpeAdaptOpts * ope = ope_adapt_opts_alloc();
-            ope_adapt_opts_set_start(ope,3);
-            ope_adapt_opts_set_coeffs_check(ope,1);
-            ope_adapt_opts_set_tol(ope,approxtol[jjj]);
-
-            struct FtApproxArgs * app = ft_approx_args_createpoly(rargs.dim, &ptype,ope);
-
-            size_t init_ranks = 5;
-            struct FtCrossArgs * fca = ft_cross_args_alloc(dim,init_ranks);
-            ft_cross_args_set_verbose(fca,2);
-            ft_cross_args_set_kickrank(fca,5);
-            ft_cross_args_set_maxiter(fca,3);
-            ft_cross_args_set_cross_tol(fca,roundtol[iii]);
-            ft_cross_args_set_round_tol(fca,roundtol[iii]);
-            ft_cross_args_set_maxrank_all(fca,init_ranks+3*5); // three times
-
-            struct BoundingBox * bds = bounding_box_init(rargs.dim,0.05,0.95);
             
             struct FunctionMonitor * fm = NULL;
             fm = function_monitor_initnd(solveBlackBoxUni,&rargs,dim,1000*dim);
+            struct Fwrap * fw = fwrap_create(dim,"general");
+            fwrap_set_f(fw,function_monitor_eval,fm);
+
+            struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+            ope_opts_set_start(opts,3);
+            ope_opts_set_coeffs_check(opts,1);
+            ope_opts_set_tol(opts,approxtol[jjj]);
+            ope_opts_set_lb(opts,lb);
+            ope_opts_set_ub(opts,ub);
+            struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+            struct C3Approx * c3a = c3approx_create(CROSS,dim);
+            int verbose = 0;
+            size_t init_rank = 5;
+            double ** start = malloc_dd(dim);
+            for (size_t ii = 0; ii < dim; ii++){
+                c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+                start[ii] = linspace(lb,ub,init_rank);
+            }
+            c3approx_init_cross(c3a,init_rank,verbose,start);
+            c3approx_set_verbose(c3a,2);
+            c3approx_set_adapt_kickrank(c3a,5);
+            c3approx_set_adapt_maxrank_all(c3a,init_rank + 3*5);
+            c3approx_set_cross_tol(c3a,roundtol[iii]);
+            c3approx_set_round_tol(c3a,roundtol[iii]);
+
+            // cross approximation with rounding
+            struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+            
 
             char ftsave[255] = "ftrain.ft";
-            struct FunctionTrain * ft = NULL;
-
-            //ft = function_train_cross(solveBlackBoxUni, &rargs,bds,NULL,&fca,app);
-            ft = function_train_cross(function_monitor_eval, fm,bds,NULL,fca,app);
             int success = function_train_save(ft,ftsave);
             assert (success == 1);
 
@@ -477,12 +485,14 @@ int main(int argc, char *argv[])
                 darray_save(rargs.dim+1,2,data,fff,1);
             }
             
-            ope_adapt_opts_free(ope); ope = NULL;
+
             function_monitor_free(fm); fm = NULL;
-            ft_approx_args_free(app); app = NULL;
             function_train_free(ft); ft = NULL;
-            ft_cross_args_free(fca); fca = NULL;
-            bounding_box_free(bds); bds = NULL;
+            c3approx_destroy(c3a);
+            fwrap_destroy(fw);
+            one_approx_opts_free_deep(&qmopts);
+
+
         }
     }
     free(rargs.sqrt_cov); rargs.sqrt_cov = NULL;

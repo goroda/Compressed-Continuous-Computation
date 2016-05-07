@@ -27,20 +27,20 @@ void print_code_usage (FILE * stream, int exit_code)
     exit (exit_code);
 }
 
-double f0(double *x, void * args)
+double f0(const double *x, void * args)
 {
     (void)(args);
     return x[0] + x[1]+2.0;
 //    return 1.0;
 }
 
-double f1(double *x, void * args)
+double f1(const double *x, void * args)
 {
     (void)(args);
     return x[0] * x[1];
 }
 
-double f2(double * x, void * args)
+double f2(const double * x, void * args)
 {
     (void)(args);
     double out;
@@ -50,7 +50,7 @@ double f2(double * x, void * args)
     return out;
 }
 
-double f3(double * x, void * args)
+double f3(const double * x, void * args)
 {
     (void)(args);
     double quad = 3.0*x[0]*x[0] + 0.5 * x[0]*x[1]  + 1.0*x[1]*x[1];
@@ -99,9 +99,8 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
     size_t dim = 2;
-    enum poly_type ptype = HERMITE;
     struct FunctionMonitor * fm = NULL;
-    double (*ff)(double *, void *);
+    double (*ff)(const double *, void *);
 
     if (function == 0){
         fm = function_monitor_initnd(f0,NULL,dim,1000*dim);
@@ -123,18 +122,38 @@ int main(int argc, char * argv[])
         printf("Function %zu not yet implemented\n",function);
         return 1;
     }
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,function_monitor_eval,fm);
 
-    struct OpeAdaptOpts * aopts = ope_adapt_opts_alloc();
-    ope_adapt_opts_set_start(aopts,5);
-    ope_adapt_opts_set_maxnum(aopts,20);
-    ope_adapt_opts_set_coeffs_check(aopts,1);
-    ope_adapt_opts_set_tol(aopts,1e-4);
-    struct FtApproxArgs * fapp = ft_approx_args_createpoly(dim,&ptype,aopts);
-    struct FunctionTrain * ft = NULL;
-    ft = function_train_cross_ub(function_monitor_eval,fm,
-                                 dim,NULL,NULL,fapp,NULL);
-    ope_adapt_opts_free(aopts); aopts = NULL;
-    ft_approx_args_free(fapp); fapp = NULL;
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    ope_opts_set_start(opts,5);
+    ope_opts_set_maxnum(opts,20);
+    ope_opts_set_coeffs_check(opts,1);
+    ope_opts_set_tol(opts,1e-4);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    // optimization stuff
+    size_t N = 100;
+    double * x = linspace(-10.0,10.0,N);
+    struct c3Vector * optnodes = c3vector_alloc(N,x);
+    free(x); x = NULL;
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        c3approx_set_opt_opts_dim(c3a,ii,optnodes);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+    fwrap_destroy(fw);
+    c3vector_free(optnodes);
+    c3approx_destroy(c3a);
+    free_dd(dim,start);
+    one_approx_opts_free_deep(&qmopts);
+    
 
     size_t nevals = nstored_hashtable_cp(fm->evals);
     if (verbose == 1){
