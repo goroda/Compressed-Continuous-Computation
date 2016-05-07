@@ -91,6 +91,8 @@ int main(int argc, char * argv[])
 
 //    enum function_class fc = POLYNOMIAL;
     enum poly_type ptype = LEGENDRE;
+    struct OpeOpts * opts = ope_opts_alloc(ptype);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
     if (benchmark == 0)
     {
         double delta = 1e-8;
@@ -112,6 +114,8 @@ int main(int argc, char * argv[])
             size_t dim = dimstart;
             size_t ii,jj;
             for (ii = 0; ii < ndims; ii++){
+                struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+                multi_approx_opts_set_all_same(fopts,qmopts);
                 struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
                 size_t * aranks = calloc_size_t(dim+1);
                 size_t * franks = calloc_size_t(dim+1);
@@ -134,14 +138,15 @@ int main(int argc, char * argv[])
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
-                                            delta/(double) dim,max_sweeps,epsilon,0);
+                                                                delta/(double) dim,max_sweeps,
+                                                                epsilon,0,fopts);
                     clock_t toc = clock();
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        maxrank = function_train_maxrank(sol);
+                        maxrank = function_train_get_maxrank(sol);
                         if (verbose > 0){
-                            struct FunctionTrain * exact = exact_diffusion(a,f);
+                            struct FunctionTrain * exact = exact_diffusion(a,f,fopts);
                             double diff = function_train_relnorm2diff(sol,exact);
                             printf("diff = %G\n",diff*diff);
                             function_train_free(exact); exact = NULL;
@@ -157,7 +162,7 @@ int main(int argc, char * argv[])
                 free(aranks); aranks = NULL;
                 free(franks); franks = NULL;
                 bounding_box_free(bds); bds = NULL;
-                
+                multi_approx_opts_free(fopts);
                 results[ii] = dim;
                 results[ndims+ii] = time;
                 results[2*ndims+ii] = maxrank;
@@ -180,7 +185,8 @@ int main(int argc, char * argv[])
 
             double * results = calloc_double(nranks*3);
             struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
-            
+            struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+            multi_approx_opts_set_all_same(fopts,qmopts);            
             double time=0.0;
             size_t arank = rankstart;
             size_t ii,jj;
@@ -207,17 +213,18 @@ int main(int argc, char * argv[])
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
-                                            delta/(double) dim,max_sweeps,epsilon,0);
+                                                                delta/(double) dim,max_sweeps,
+                                                                epsilon,0,fopts);
                     clock_t toc = clock();
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        maxrank = function_train_maxrank(sol);
-                        struct FunctionTrain * at = function_train_round(a,1e-17);
-                        aroundrank = function_train_avgrank(at);
+                        maxrank = function_train_get_maxrank(sol);
+                        struct FunctionTrain * at = function_train_round(a,1e-17,fopts);
+                        aroundrank = function_train_get_avgrank(at);
                         function_train_free(at); at = NULL;
                         if (verbose > 0){
-                            struct FunctionTrain * exact = exact_diffusion(a,f);
+                            struct FunctionTrain * exact = exact_diffusion(a,f,fopts);
                             double diff = function_train_relnorm2diff(sol,exact);
                             printf("diff = %G\n",diff*diff);
                             function_train_free(exact); exact = NULL;
@@ -239,7 +246,7 @@ int main(int argc, char * argv[])
 
                 arank = arank + rankstep;
             }
-
+            multi_approx_opts_free(fopts);
             bounding_box_free(bds); bds = NULL;
             darray_save(nranks,3,results,"time_vs_arank.dat",1);
             free(results); results = NULL;
@@ -256,6 +263,8 @@ int main(int argc, char * argv[])
 
             double * results = calloc_double(nPs*3);
             struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+            struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+            multi_approx_opts_set_all_same(fopts,qmopts);            
             
             double time = 0.0;
             size_t ii,jj;
@@ -282,14 +291,15 @@ int main(int argc, char * argv[])
                     
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
-                                            delta/(double) dim,max_sweeps,epsilon,0);
+                                                                delta/(double) dim,max_sweeps,
+                                                                epsilon,0,fopts);
                     clock_t toc = clock();
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
                     if (jj == 0){
-                        maxrank = function_train_maxrank(sol);
+                        maxrank = function_train_get_maxrank(sol);
                         if (verbose > 0){
-                            struct FunctionTrain * exact = exact_diffusion(a,f);
+                            struct FunctionTrain * exact = exact_diffusion(a,f,fopts);
                             double diff = function_train_relnorm2diff(sol,exact);
                             printf("diff = %G\n",diff*diff);
                             function_train_free(exact); exact = NULL;
@@ -311,12 +321,12 @@ int main(int argc, char * argv[])
 
                 maxorder = maxorder + pstep;
             }
-
+            multi_approx_opts_free(fopts); fopts = NULL;
             bounding_box_free(bds); bds = NULL;
             darray_save(nPs,3,results,"time_vs_order.dat",1);
             free(results); results = NULL;
         }
     }
-    
+    one_approx_opts_free_deep(&qmopts);
     return 0;
 }

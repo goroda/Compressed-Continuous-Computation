@@ -22,11 +22,16 @@ int main(int argc, char * argv[])
        return 0;
     }
 
-    enum function_class fc = POLYNOMIAL;
-    enum poly_type ptype = LEGENDRE;    
+
+    size_t dim = 4;
+    enum poly_type ptype = LEGENDRE;
+    struct OpeOpts * opts = ope_opts_alloc(ptype);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+    struct BoundingBox * bds = bounding_box_init_std(dim);
     if (strcmp(argv[1],"0") == 0){
-        size_t dim = 4;
-        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
+
         size_t ranks[5] = {1,4,4,4,1};
         size_t maxorder = 10;
 
@@ -55,12 +60,12 @@ int main(int argc, char * argv[])
                 struct FunctionTrain * a = NULL;
                 a = function_train_poly_randu(ptype,bds,ranks,maxorder);
                 struct FunctionTrain * start = NULL;
-                a = function_train_constant(fc,&ptype,dim,1.0,bds,NULL);
+                a = function_train_constant(1.0,fopts);
 
                 clock_t tic = clock();
                 struct FunctionTrain * at = function_train_product(a,a);
                 struct FunctionTrain * p = function_train_copy(at);
-                struct FunctionTrain * pr = function_train_round(p,1e-10);
+                struct FunctionTrain * pr = function_train_round(p,1e-10,fopts);
                 clock_t toc = clock();
                 time += (double)(toc - tic) / CLOCKS_PER_SEC;
 
@@ -69,7 +74,7 @@ int main(int argc, char * argv[])
                 mrank += pr->ranks[2];
 
                 tic = clock();
-                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
+                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0,fopts);
                 toc = clock();
                 time2 += (double)(toc - tic) / CLOCKS_PER_SEC;
 
@@ -96,33 +101,27 @@ int main(int argc, char * argv[])
 
         }
         darray_save(nranks,4,results,"time_vs_rank.dat",1);
-        bounding_box_free(bds); bds = NULL;
+
     }
     else{
-        size_t dim = 4;
-        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
         size_t ranks[5] = {1,15,15,15,1};
         size_t maxorder = 10;
 
 
         struct FunctionTrain * a = function_train_poly_randu(ptype,bds,ranks,
                                                              maxorder);
-        struct FunctionTrain * start = function_train_constant(fc,&ptype,dim,1.0,
-                                                               bds,NULL);
+        struct FunctionTrain * start = function_train_constant(1.0,fopts);
 
         clock_t tic = clock();
-        struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
+        struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0,fopts);
         clock_t toc = clock();
         printf("timing is %G\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
         function_train_free(a); a = NULL;
         function_train_free(start); start = NULL;
         function_train_free(finish); finish = NULL;
-        bounding_box_free(bds); bds = NULL;
     }
     if (strcmp(argv[1],"2") == 0){
-        size_t dim = 4;
-        struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
         size_t ranks[5] = {1,4,4,4,1};
         size_t maxorder = 10;
 
@@ -149,10 +148,10 @@ int main(int argc, char * argv[])
                 struct FunctionTrain * a = NULL;
                 a = function_train_poly_randu(ptype,bds,ranks,maxorder);
                 struct FunctionTrain * start = NULL;
-                start = function_train_constant(fc,&ptype,dim,1.0,bds,NULL);
+                start = function_train_constant(1.0,fopts);
 
                 clock_t tic = clock();
-                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0);
+                struct FunctionTrain * finish = dmrg_product(start,a,a,1e-5,10,1e-10,0,fopts);
                 clock_t toc = clock();
                 time2 += (double)(toc - tic) / CLOCKS_PER_SEC;
                 mrank += finish->ranks[2];
@@ -171,9 +170,11 @@ int main(int argc, char * argv[])
 
         }
         darray_save(nranks,3,results,"time_vs_rank_dmrg.dat",1);
-        bounding_box_free(bds); bds = NULL;
     }
 
 
+    bounding_box_free(bds); bds = NULL;
+    multi_approx_opts_free(fopts);
+    one_approx_opts_free_deep(&qmopts);
     return 0;
 }

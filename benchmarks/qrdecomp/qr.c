@@ -27,7 +27,10 @@ int main(int argc, char * argv[])
     size_t r2 = 25;
     size_t maxorder = 5;
     size_t nrepeats = 100;
-    
+
+    enum poly_type ptype = LEGENDRE;
+    struct OpeOpts * opts = ope_opts_alloc(ptype);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
     if (strcmp(argv[1],"0") == 0){
         size_t nOrders = 40;
         double * results = calloc_double(nOrders*2);
@@ -44,7 +47,7 @@ int main(int argc, char * argv[])
 
                 // method 1
                 clock_t tic = clock();
-                qmarray_qr(mat,&Q,&R);
+                qmarray_qr(mat,&Q,&R,qmopts);
                 //qmarray_householder_simple("QR",mat,R);
                 clock_t toc = clock();
                 
@@ -75,7 +78,7 @@ int main(int argc, char * argv[])
 
                 // method 1
                 clock_t tic = clock();
-                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R);
+                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R,qmopts);
                 clock_t toc = clock();
                 
                 results[nr1s+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
@@ -105,7 +108,7 @@ int main(int argc, char * argv[])
 
                 // method 1
                 clock_t tic = clock();
-                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R);
+                struct Qmarray * Q = qmarray_householder_simple("QR",mat,R,qmopts);
                 clock_t toc = clock();
                 
                 results[nr2s+ii] += (double)(toc - tic) / CLOCKS_PER_SEC;
@@ -120,5 +123,6 @@ int main(int argc, char * argv[])
         darray_save(nr2s,2,results,"time_vs_r2.dat",1);
         free(results); results = NULL;
     }
+    one_approx_opts_free_deep(&qmopts);
     return 0;
 }
