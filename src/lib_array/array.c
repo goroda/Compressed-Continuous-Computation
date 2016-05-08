@@ -103,11 +103,11 @@ void free_dd(size_t N, double ** arr){
 /*************************************************************//**
     Print a double array
 
-    \param N [in] - Number of elements in array
-    \param arr [in] - array to print
+    \param[in] N   - Number of elements in array
+    \param[in] arr - array to print
 ****************************************************************/
 void 
-dprint(const size_t N, double * arr){
+dprint(const size_t N, const double * arr){
     size_t ii = 0;
     for (ii = 0; ii < N; ii++) printf("%f ",arr[ii]);
     printf("\n");
@@ -116,9 +116,9 @@ dprint(const size_t N, double * arr){
 /*************************************************************//**
     Print a two dimensional double array stored as a double pointer in Row-Major (C) order
 
-    \param N [in] - number of rows
-    \param M [in] - number of cols
-    \param arr [in] - array to print
+    \param[in] N   - number of rows
+    \param[in] M   - number of cols
+    \param[in] arr - array to print
 ****************************************************************/
 void dprint2d(const size_t N, const size_t M, const double * arr){
     size_t ii, jj;
@@ -159,10 +159,10 @@ void dprint2dd(const size_t N, const size_t M, double ** arr){
 /*************************************************************//**
     Print an integer array
         
-    \param N [in] - Number of elements
-    \param arr [in] - array to print
+    \param[in] N   - Number of elements
+    \param[in] arr - array to print
 ****************************************************************/
-void iprint(const size_t N, int * arr){
+void iprint(size_t N, const int * arr){
     size_t ii = 0;
     for (ii = 0; ii < N; ii++) printf("%d ",arr[ii]);
     printf("\n");
@@ -171,10 +171,10 @@ void iprint(const size_t N, int * arr){
 /*************************************************************//**
     Print a size_t array
         
-    \param N [in] - Number of elements
-    \param arr [in] - array to print
+    \param[in] N   - Number of elements
+    \param[in] arr - array to print
 ****************************************************************/
-void iprint_sz(const size_t N, size_t * arr){
+void iprint_sz(size_t N, const size_t * arr){
     size_t ii = 0;
     for (ii = 0; ii < N; ii++) printf("%zu ",arr[ii]);
     printf("\n");
@@ -639,7 +639,7 @@ darray_load(char * filename, int type)
     return value;
 }
 
-struct c3Vector * c3vector_alloc(size_t d, double * x)
+struct c3Vector * c3vector_alloc(size_t d, const double * x)
 {
     struct c3Vector * c3v = malloc(sizeof(struct c3Vector));
     if (c3v == NULL){
@@ -652,6 +652,15 @@ struct c3Vector * c3vector_alloc(size_t d, double * x)
     return c3v;
 }
 
+struct c3Vector * c3vector_copy(const struct c3Vector * x)
+{
+    if (x == NULL){
+        return NULL;
+    }
+    struct c3Vector * new = c3vector_alloc(x->size, x->elem);
+    return new;
+}
+
 void c3vector_free(struct c3Vector * c3v)
 {
     if (c3v != NULL){
@@ -660,7 +669,7 @@ void c3vector_free(struct c3Vector * c3v)
     }
 }
 
-struct c3Vector ** c3vector_alloc_array(size_t N)
+struct c3Vector ** c3vector_array_alloc(size_t N)
 {
     struct c3Vector ** c3v;
     c3v = malloc(N*sizeof(struct c3Vector *));
@@ -674,7 +683,16 @@ struct c3Vector ** c3vector_alloc_array(size_t N)
     return c3v;
 }
 
-void c3vector_free_array(struct c3Vector ** c3v, size_t N)
+struct c3Vector ** c3vector_array_copy(size_t N, struct c3Vector ** c3v)
+{
+    struct c3Vector ** new = c3vector_array_alloc(N);
+    for (size_t ii = 0; ii < N; ii++){
+        new[ii] = c3vector_copy(c3v[ii]);
+    }
+    return new;
+}
+
+void c3vector_array_free(size_t N, struct c3Vector ** c3v)
 {
     if (c3v != NULL){
         for (size_t ii = 0; ii < N; ii++){
