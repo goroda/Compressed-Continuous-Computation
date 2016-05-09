@@ -56,12 +56,12 @@ double dprod(const size_t, const double*);
 int iprod(const size_t, const int*);
 size_t iprod_sz(const size_t, const size_t*);
 
-void dprint(const size_t, double *);
+void dprint(const size_t, const double *);
 void dprint2d(const size_t, const size_t, const double *);
 void dprint2dd(const size_t, const size_t,  double **);
 void dprint2d_col(const size_t, const size_t, const double *);
-void iprint(const size_t, int *);
-void iprint_sz(const size_t, size_t *);
+void iprint(const size_t, const int *);
+void iprint_sz(const size_t, const size_t *);
 
 double * linspace(const double,const double,const size_t);
 double * logspace(int, int, const size_t);
@@ -83,10 +83,13 @@ struct c3Vector
     double * elem;
 };
 
-struct c3Vector * c3vector_alloc(size_t, double *);
-struct c3Vector ** c3vector_alloc_array(size_t);
+struct c3Vector * c3vector_alloc(size_t, const double *);
+struct c3Vector * c3vector_copy(const struct c3Vector *);
 void c3vector_free(struct c3Vector *);
-void c3vector_free_array(struct c3Vector **, size_t);
+
+struct c3Vector ** c3vector_array_alloc(size_t);
+struct c3Vector ** c3vector_array_copy(size_t, struct c3Vector **);
+void c3vector_array_free(size_t,struct c3Vector **);
 
 //RANDOM NUMBERS
 double randu(void);
