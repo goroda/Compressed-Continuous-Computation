@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -436,8 +436,8 @@ char * lookup_key(struct HashtableCpair * ht , char * key)
 /***********************************************************//**
     Add a Cpair to the table
 
-    \param ht [in] - hashtable
-    \param cp [in] - cpair to insert
+    \param[in] ht - hashtable
+    \param[in] cp - cpair to insert
     
     \return
         0 if good, 1 if some err, 2 if exists
@@ -500,7 +500,6 @@ size_t nstored_hashtable_cp(struct HashtableCpair * ht)
 
     \param size [in] - hashtable size
     \param str [in] - string to hash
-    
 
     \return hashval
 
