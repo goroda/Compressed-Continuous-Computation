@@ -205,6 +205,8 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
         function_train_free(c3a->ftref); c3a->ftref = NULL;
     }
     c3a->ftref = function_train_constant(1.0,c3a->fapp);
+    /* exit(1); */
+     /* function_train_get_lb(c3a->ftref); */
 }
 
 /***********************************************************//**

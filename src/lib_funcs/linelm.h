@@ -91,6 +91,7 @@ serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
 unsigned char * deserialize_lin_elem_exp(unsigned char *, 
                                          struct LinElemExp **);
 double lin_elem_exp_eval(const struct LinElemExp *, double);
+double lin_elem_exp_get_nodal_val(const struct LinElemExp *, size_t);
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
 double lin_elem_exp_integrate(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);

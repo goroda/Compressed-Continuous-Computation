@@ -450,6 +450,21 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
 }
 
 /********************************************************//**
+*   Get the value of the expansion at a particular node
+*
+*   \param[in] f - function
+*   \param[in] node - location
+*
+*   \return value
+*************************************************************/
+double lin_elem_exp_get_nodal_val(const struct LinElemExp * f, size_t node)
+{
+    assert (f != NULL);
+    assert (node < f->num_nodes);
+    return f->coeff[node];
+}
+
+/********************************************************//**
 *   Take a derivative same nodes,
 *
 *   \param[in] f - function

@@ -444,6 +444,87 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
 }
 
 /***********************************************************//**
+    Evaluate a function train at particular indices which
+    should be valid for underlying univariate functions 
+    that are nodal basis functions
+
+    \param[in] ft  - function train
+    \param[in] ind - location at which to evaluate
+
+    \return val - value of the function train
+***************************************************************/
+double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
+{
+    
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t ii = 0;
+    size_t maxrank = function_train_get_maxrank(ft);
+    if (ft->evalspace1 == NULL){
+        ft->evalspace1 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace2 == NULL){
+        ft->evalspace2 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace3 == NULL){
+        ft->evalspace3 = calloc_double(maxrank*maxrank);
+    }
+
+    double * t1 = ft->evalspace1;
+    generic_function_1darray_eval2_ind(
+        ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+        ft->cores[ii]->funcs, ind[ii],t1);
+
+    double * t2 = ft->evalspace2;
+    double * t3 = ft->evalspace3;
+    int onsol = 1;
+    for (ii = 1; ii < dim; ii++){
+        generic_function_1darray_eval2_ind(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, ind[ii],t2);
+            
+        if (ii%2 == 1){
+            // previous times new core
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        t2, ft->ranks[ii],
+                        t1, 1, 0.0, t3, 1);
+            onsol = 2;
+
+        }
+        else {
+//            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
+//                ft->ranks[ii+1], ft->ranks[ii], 1.0, t3, 1, t2,
+//                ft->ranks[ii], 0.0, t1, 1)
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        t2, ft->ranks[ii],
+                        t3,1,0.0,t1,1);
+            onsol = 1;
+
+        }
+    }
+    
+    double out;// = 0.123456789;
+    if (onsol == 2){
+        out = t3[0];
+//        free(t3); t3 = NULL;
+    }
+    else if ( onsol == 1){
+        out = t1[0];
+//        free(t1); t1 = NULL;
+    }
+    else{
+        fprintf(stderr,"Weird error in function_train_val\n");
+        exit(1);
+    }
+    
+    return out;
+}
+
+/***********************************************************//**
     Evaluate a function train with perturbations
     in every coordinate
 
@@ -588,6 +669,167 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft,
 
             vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
                                     fprod[ii-1],1);
+            /* free(temp); temp = NULL; */
+        }
+
+    }
+
+    double out = fprod[dim-1][0];
+    /* printf("out = %G\n",out); */
+    /* printf("should equal = %G\n",bprod[0][0]); */
+    /* free_dd(dim,cores_center); */
+    /* free_dd(2*dim,cores_neigh); */
+    /* free_dd(dim,bprod); bprod = NULL; */
+    /* free_dd(dim,fprod); fprod = NULL; */
+
+    return out;
+}
+
+/***********************************************************//**
+    Evaluate a function train with perturbations
+    in every coordinate for nodal basis function
+
+    \param[in]     ft   - function train
+    \param[in]     x    - location at which to evaluate
+    \param[in]     pert - perturbed vals  (order of storage is )
+                          (dim 1) - +
+                          (dim 2) - +
+                          (dim 3) - +
+                          (dim 4) - +
+                          ... for a total of 2d values
+    \param[in,out] vals - values at perturbation points
+
+    \return val - value of the function train at x
+***************************************************************/
+double function_train_eval_co_perturb_ind(struct FunctionTrain * ft, 
+                                          const size_t * x, const size_t * pert, 
+                                          double * vals)
+{
+    
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t maxrank = function_train_get_maxrank(ft);
+    if (ft->evalspace1 == NULL){
+        ft->evalspace1 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace2 == NULL){
+        ft->evalspace2 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace3 == NULL){
+        ft->evalspace3 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evaldd1 == NULL){
+        ft->evaldd1 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd1[ii] = calloc_double(maxrank * maxrank);
+        }
+    }
+    if (ft->evaldd3 == NULL){
+        ft->evaldd3 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd3[ii] = calloc_double(maxrank);
+        }
+    }
+    if (ft->evaldd4 == NULL){
+        ft->evaldd4 = malloc_dd(dim);
+        for (size_t ii = 0; ii < dim; ii++){
+            ft->evaldd4[ii] = calloc_double(maxrank);
+        }
+    }
+    
+    // center cores
+//    double ** cores_center = malloc_dd(dim);
+
+    /* double ** cores_neigh = malloc_dd(2*dim); // cores for neighbors */
+    /* double ** bprod = malloc_dd(dim); */
+    /* double ** fprod = malloc_dd(dim); */
+
+    double ** cores_center = ft->evaldd1;
+    double ** bprod = ft->evaldd3;
+    double ** fprod = ft->evaldd4;
+    
+    // evaluate the cores for the center
+    for (size_t ii = 0; ii < dim; ii++){
+        /* fprod[ii] = calloc_double(ft->ranks[ii+1]); */
+        /* cores_center[ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
+        if (ii == 0){
+            generic_function_1darray_eval2_ind(
+                ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+                ft->cores[ii]->funcs, x[ii], fprod[ii]);
+            memmove(cores_center[ii],fprod[ii],ft->ranks[1]*sizeof(double));
+        }
+        else{
+            generic_function_1darray_eval2_ind(
+                ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+                ft->cores[ii]->funcs, x[ii], cores_center[ii]);
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        cores_center[ii], ft->ranks[ii],
+                        fprod[ii-1], 1, 0.0, fprod[ii], 1);
+        }
+
+        /* cores_neigh[2*ii] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
+        /* cores_neigh[2*ii+1] = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
+
+        /* generic_function_1darray_eval2( */
+        /*     ft->cores[ii]->nrows * ft->cores[ii]->ncols, */
+        /*     ft->cores[ii]->funcs, pert[2*ii], cores_neigh[2*ii]); */
+        /* generic_function_1darray_eval2( */
+        /*     ft->cores[ii]->nrows * ft->cores[ii]->ncols, */
+        /*     ft->cores[ii]->funcs, pert[2*ii+1], cores_neigh[2*ii+1]); */
+    }
+
+    for (int ii = dim-1; ii >= 0; ii--){
+        /* bprod[ii] = calloc_double(ft->ranks[ii]); */
+        if (ii == (int)dim-1){
+            generic_function_1darray_eval2_ind(
+                ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+                ft->cores[ii]->funcs, x[ii], bprod[ii]);
+        }
+        else{
+            cblas_dgemv(CblasColMajor,CblasNoTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        cores_center[ii], ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, bprod[ii], 1);
+        }
+    }
+
+    for (size_t ii = 0; ii < dim; ii++){
+
+        generic_function_1darray_eval2_ind(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, pert[2*ii], ft->evalspace1);
+        generic_function_1darray_eval2_ind(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, pert[2*ii+1], ft->evalspace2);
+        if (ii == 0){
+            vals[ii] = cblas_ddot(ft->ranks[1],ft->evalspace1,1,bprod[1],1);
+            vals[ii+1] = cblas_ddot(ft->ranks[1],ft->evalspace2,1,bprod[1],1);
+        }
+        else if (ii == dim-1){
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace1,1,
+                                    fprod[dim-2],1);
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace2,
+                                      1,fprod[dim-2],1);
+        }
+        else{
+            /* double * temp = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
+            cblas_dgemv(CblasColMajor,CblasNoTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        ft->evalspace1, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+                                    fprod[ii-1],1);
+
+            cblas_dgemv(CblasColMajor,CblasNoTrans,
+                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                        ft->evalspace2, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
+
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+                                      fprod[ii-1],1);
             /* free(temp); temp = NULL; */
         }
 
@@ -1732,6 +1974,9 @@ prepCore(size_t ii, size_t nrows, size_t ncols,
         for (size_t kk = 0; kk < nrows; kk++){
             nl = 0;
             left = cross_index_get_node_value(left_ind[ii],kk,&nl);
+            /* printf("left = "); dprint(nl,left); */
+            /* printf("right = "); dprint(nr,right); */
+            
             fwrap_add_fiber(fw,jj*nrows+kk,nl,left,nr,right);
         }
     }
@@ -1914,6 +2159,7 @@ ftapprox_cross(struct Fwrap * fw,
         qmarray_free(ft->cores[ii]); ft->cores[ii] = NULL;
         /* ft->cores[ii] = prepCore(ii,cargs->ranks[ii],f,args,bd, */
         /*                          left_ind,right_ind,cargs,apargs,1); */
+        o = multi_approx_opts_get_aopts(apargs,ii);
         ft->cores[ii] = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,
                                  left_ind,right_ind);
 
@@ -2060,6 +2306,7 @@ ftapprox_cross(struct Fwrap * fw,
         if (cargs->verbose > 1)
             printf(" ............. on right_left sweep (%zu/%zu)\n",ii,dim-1);
         /* ft->cores[ii] = prepCore(ii,1,f,args,bd,left_ind,right_ind,cargs,apargs,-1); */
+        o = multi_approx_opts_get_aopts(apargs,ii);
         ft->cores[ii] = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,left_ind,right_ind);
         if (cargs->verbose > 1)
             printf(" ............. done with right left sweep\n");

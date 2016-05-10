@@ -414,7 +414,7 @@ size_t iprod_sz(const size_t N, const size_t * in)
 /*************************************************************//**
     Serialize a double to string
             
-    \param x [in] - double to serialize
+    \param[in] x - double to serialize
 
     \return buffer - string of values
 ****************************************************************/
@@ -433,6 +433,7 @@ char * serialize_double_to_text(double x)
     //printf("res=%f,exp=%d\n",res,exp);
     int cx;
     cx = snprintf(buffer, N, "%0.20f:%d", res,exp);
+    /* cx = snprintf(buffer, N, "%10.20f:%d", res,exp); */
     //printf("after = %s\n",buffer);
     char * temp2 = NULL;
     if (cx > (int)N){

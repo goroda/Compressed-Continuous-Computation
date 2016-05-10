@@ -1180,6 +1180,25 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  }
 
  /********************************************************//**
+ *   Evaluate a generic function consisting of nodal
+ *   basis functions at some node
+ *
+ *   \param[in] f   - function
+ *   \param[in] ind - location at which to evaluate
+ *
+ *   \return evaluation
+ ************************************************************/
+ double generic_function_1d_eval_ind(const struct GenericFunction * f, size_t ind)
+ {
+     assert (f != NULL);
+     assert (f->fc == LINELM);
+     double out = 0.1234567890;
+     out = lin_elem_exp_get_nodal_val(f->f,ind);
+
+     return out;
+ }
+
+ /********************************************************//**
  *   Evaluate an array of generic functions
  *
  *   \param[in] n - number of functions
@@ -1549,6 +1568,27 @@ generic_function_1darray_eval2(size_t n,
 }
 
 /********************************************************//**
+*   Evaluate an array of generic functions which should be
+*   of nodal basis class at particular nodal locations
+*
+*   \param[in]     n   - number of functions
+*   \param[in]     f   - array of functions
+*   \param[in]     ind - location at which to evaluate
+*   \param[in,out] out - array of values
+************************************************************/
+void
+generic_function_1darray_eval2_ind(size_t n, 
+                                   struct GenericFunction ** f, 
+                                   size_t ind, double * out)
+{
+
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        out[ii] = generic_function_1d_eval_ind(f[ii],ind);
+    }
+}
+
+/********************************************************//**
 *   Compute a linear combination of generic functions
 *
 *   \param[in] n    - number of functions
@@ -1558,7 +1598,7 @@ generic_function_1darray_eval2(size_t n,
 *   \param[in] c    - scaling coefficients
 *
 *   \return function representing
-*   \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*   \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 ************************************************************/
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 

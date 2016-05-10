@@ -86,8 +86,12 @@ double function_train_get_avgrank(const struct FunctionTrain *);
 
 // evaluators
 double function_train_eval(struct FunctionTrain *, const double *);
+double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
                                       const double *, const double *, 
+                                      double *);
+double function_train_eval_co_perturb_ind(struct FunctionTrain *, 
+                                          const size_t *, const size_t *, 
                                           double *);
 
 // generators

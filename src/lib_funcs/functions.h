@@ -150,15 +150,18 @@ generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
 void generic_function_roundt(struct GenericFunction **, double);
 
 
-
-
 double generic_function_1d_eval(const struct GenericFunction *, double);
+double generic_function_1d_eval_ind(const struct GenericFunction *, size_t);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
                                        double);
 void generic_function_1darray_eval2(size_t, 
                                     struct GenericFunction **, 
                                     double,double *);
+void
+generic_function_1darray_eval2_ind(size_t, 
+                                   struct GenericFunction **, 
+                                   size_t, double *);
 
 
 struct GenericFunction *
