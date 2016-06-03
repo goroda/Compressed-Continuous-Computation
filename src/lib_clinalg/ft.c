@@ -2083,8 +2083,10 @@ ftapprox_cross(struct Fwrap * fw,
                 print_cross_index(right_ind[ii]);
             }
 
+            /* printf("prepCore\n"); */
             temp = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,
                             left_ind,right_ind);
+            /* printf("prepped\n"); */
 
             if (VFTCROSS == 2){
                 printf ("got it \n");

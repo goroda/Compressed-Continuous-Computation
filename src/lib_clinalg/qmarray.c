@@ -1781,7 +1781,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     //printf("in maxvolqmarray!\n");
 
     int info = 0;
-    double delta = 0.01;
+
     size_t r = A->ncols;
 
     struct Qmarray * L = qmarray_alloc(A->nrows, r);
@@ -1791,10 +1791,10 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     
     if (VQMAMAXVOL){
         printf("luqmarray \n");
-        size_t ll;
-        for (ll = 0; ll < A->nrows * A->ncols; ll++){
-            printf("%G\n", generic_function_norm(Acopy->funcs[ll]));
-        }
+        /* size_t ll; */
+        /* for (ll = 0; ll < A->nrows * A->ncols; ll++){ */
+        /*     printf("%G\n", generic_function_norm(Acopy->funcs[ll])); */
+        /* } */
     }
 
     //print_qmarray(Acopy,0,NULL);
@@ -1822,9 +1822,9 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
                     A->funcs[jj*A->nrows + pivi[ii]], pivx[ii]);
         }
     }
-    if (VQMAMAXVOL){
-        printf("built U\nn");
-    }
+    /* if (VQMAMAXVOL){ */
+    /*     printf("built U\nn"); */
+    /* } */
 
     int * ipiv2 = calloc(r, sizeof(int));
     size_t lwork = r*r;
@@ -1839,29 +1839,30 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     printf("info2b=%d\n",info2);
     */
         
-    if (VQMAMAXVOL){
-        printf("took pseudoinverse \nn");
-    }
+    /* if (VQMAMAXVOL){ */
+    /*     printf("took pseudoinverse \nn"); */
+    /* } */
     struct Qmarray * B = qmam(A,Asinv,r);
 
-    if (VQMAMAXVOL){
-        printf("did qmam \n");
-    }
+    /* if (VQMAMAXVOL){ */
+    /*     printf("did qmam \n"); */
+    /* } */
     size_t maxrow, maxcol;
     double maxx, maxval, maxval2;
     
     //printf("B size = (%zu,%zu)\n",B->nrows, B->ncols);
     // BLAH 2
 
-    if (VQMAMAXVOL){
-        printf("do absmax1d\n");
-    }
+    /* if (VQMAMAXVOL){ */
+    /*     printf("do absmax1d\n"); */
+    /* } */
     qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval,optargs);
     if (VQMAMAXVOL){
         printf("maxx=%G,maxrow=%zu maxcol=%zu maxval=%G\n",maxx,maxrow, maxcol, maxval);
     }
-    size_t maxiter = 10;
+    size_t maxiter = 30;
     size_t iter =0;
+    double delta = 0.01;
     while (maxval > (1.0 + delta)){
         pivi[maxcol] = maxrow;
         pivx[maxcol] = maxx;
@@ -1887,13 +1888,16 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         B = qmam(A,Asinv,r);
         qmarray_absmax1d(B, &maxx, &maxrow, &maxcol, &maxval2,optargs);
         if (VQMAMAXVOL){
-            printf("maxx=%G,maxrow=%zu maxcol=%zu maxval=%G\n",maxx,maxrow, maxcol, maxval);
+            printf("maxx=%G,maxrow=%zu maxcol=%zu maxval=%G\n",maxx,maxrow, maxcol, maxval2);
         }
         
-        if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){
-            break;
-        }
+        /* if (fabs(maxval2-maxval)/fabs(maxval) < 1e-2){ */
+        /*     break; */
+        /* } */
         if (iter > maxiter){
+            if (VQMAMAXVOL){
+                printf("maximum iterations (%zu) reached\n",maxiter);
+            }
             break;
         }
         maxval = maxval2;

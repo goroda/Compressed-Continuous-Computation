@@ -594,7 +594,11 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
         *newf = c3opt_eval(opt,newx,NULL);//f(newx,fargs);
         iter += 1;
         //printf("absxtol = %G\n",absxtol);
-
+        if (verbose > 2){
+            printf("\t LineSearch Iteration:%zu (fval) = (%G)\n",iter,*newf);
+            printf("\t\t");
+            dprint(d,newx);
+        }
         double diff = norm2diff(newx,x,d);
         if (diff < absxtol){
             break;
