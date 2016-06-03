@@ -432,7 +432,7 @@ char * serialize_double_to_text(double x)
                
     //printf("res=%f,exp=%d\n",res,exp);
     int cx;
-    cx = snprintf(buffer, N, "%0.20f:%d", res,exp);
+    cx = snprintf(buffer, N, "%0.10f:%d", res,exp);
     /* cx = snprintf(buffer, N, "%10.20f:%d", res,exp); */
     //printf("after = %s\n",buffer);
     char * temp2 = NULL;
