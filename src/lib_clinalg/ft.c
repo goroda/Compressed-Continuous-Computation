@@ -2139,7 +2139,7 @@ ftapprox_cross(struct Fwrap * fw,
             else{
                 left_ind[ii+1] = cross_index_alloc(1);
                 for (size_t zz = 0; zz < ft->ranks[1]; zz++){
-                    cross_index_add_index(left_ind[1],1,&(pivx[zz]));
+                    cross_index_add_index(left_ind[1],1,&(pivx[zz]),sizeof(double));
                 }
             }
             
@@ -2288,7 +2288,7 @@ ftapprox_cross(struct Fwrap * fw,
                 //printf("lets update the cross index ii=%zu\n",ii);
                 right_ind[ii-1] = cross_index_alloc(1);
                 for (size_t zz = 0; zz < ft->ranks[ii]; zz++){
-                    cross_index_add_index(right_ind[ii-1],1,&(pivx[zz]));
+                    cross_index_add_index(right_ind[ii-1],1,&(pivx[zz]),sizeof(double));
                 }
                 //printf("updated\n");
             }

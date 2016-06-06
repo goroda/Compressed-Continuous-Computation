@@ -589,8 +589,8 @@ void Test_ftapprox_cross(CuTest * tc)
 
     struct CrossIndex * isl[2];
     struct CrossIndex * isr[2];
-    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-    cross_index_array_initialize(dim,isr,0,1,rank,yr);
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL,sizeof(double));
+    cross_index_array_initialize(dim,isr,0,1,rank,(void **)yr,sizeof(double));
 
     struct FunctionTrain * ft = ftapprox_cross(fw2,fca,isl,isr,fopts,optim,ftref);
     
@@ -719,8 +719,8 @@ void Test_ftapprox_cross3(CuTest * tc)
     struct CrossIndex * isl[2];
     struct CrossIndex * isr[2];
     size_t * ranks = ft_cross_args_get_ranks(fca);
-    cross_index_array_initialize(dim,isl,1,0,NULL,NULL);
-    cross_index_array_initialize(dim,isr,0,1,ranks,yr);
+    cross_index_array_initialize(dim,isl,1,0,NULL,NULL,sizeof(double));
+    cross_index_array_initialize(dim,isr,0,1,ranks,(void**)yr,sizeof(double));
 
     struct PwPolyOpts * aopts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
     pw_poly_opts_set_maxorder(aopts,7);
@@ -1445,7 +1445,7 @@ void Test_CrossIndexing(CuTest * tc)
    size_t N = 10;
    double * pts = linspace(-2.0,2.0,N);
    for (size_t ii = 0; ii < N; ii++){
-       cross_index_add_index(ci,d,&(pts[ii]));
+       cross_index_add_index(ci,d,&(pts[ii]),sizeof(double));
    }
 
    CuAssertIntEquals(tc,N,ci->n);

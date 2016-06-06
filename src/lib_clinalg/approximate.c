@@ -199,8 +199,8 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
     ft_cross_args_set_round_tol(c3a->fca,1e-14);
     
     size_t * ranks = ft_cross_args_get_ranks(c3a->fca);
-    cross_index_array_initialize(c3a->dim,c3a->isr,0,1,ranks,start);
-    cross_index_array_initialize(c3a->dim,c3a->isl,0,0,ranks+1,start);
+    cross_index_array_initialize(c3a->dim,c3a->isr,0,1,ranks,(void**)start,sizeof(double));
+    cross_index_array_initialize(c3a->dim,c3a->isl,0,0,ranks+1,(void**)start,sizeof(double));
     if (c3a->ftref != NULL){
         function_train_free(c3a->ftref); c3a->ftref = NULL;
     }
@@ -304,11 +304,11 @@ c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw, int adapt)
     struct FunctionTrain * ft = NULL;
     if (adapt == 0){
         ft = ftapprox_cross(fw,c3a->fca,c3a->isl,c3a->isr,
-                        c3a->fapp,c3a->fopt,c3a->ftref);
+                            c3a->fapp,c3a->fopt,c3a->ftref);
     }
     else{
         ft = ftapprox_cross_rankadapt(fw,c3a->fca,c3a->isl,c3a->isr,
-                        c3a->fapp,c3a->fopt,c3a->ftref);
+                                      c3a->fapp,c3a->fopt,c3a->ftref);
     }
     return ft;
 }

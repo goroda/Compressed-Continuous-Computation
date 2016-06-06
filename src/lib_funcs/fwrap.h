@@ -44,6 +44,7 @@ struct Fwrap;
 struct Fwrap * fwrap_create(size_t, const char *);
 int fwrap_get_type(const struct Fwrap *);
 void fwrap_set_f(struct Fwrap *, double(*)(const double*,void*),void*);
+void fwrap_set_findex(struct Fwrap *,double(*)(const size_t*,void*),void*);
 void fwrap_set_fvec(struct Fwrap *, 
                     int (*)(size_t, const double*,double*,void*),void*);
 void fwrap_set_mofvec(struct Fwrap *, 
@@ -57,14 +58,20 @@ void fwrap_set_func_array(struct Fwrap *,size_t,
                           int (*)(size_t,const double*,double*,void *),
                           void *);
 void fwrap_destroy(struct Fwrap *);
-int fwrap_eval(size_t, const double *, double *, void *);
+/* int fwrap_eval(size_t, const double *, double *, void *); */
+int fwrap_eval(size_t, const void *, double *, void *);
 
 // fibers
 void fwrap_initialize_fiber_approx(struct Fwrap *, size_t, size_t);
+/* void fwrap_add_fiber(struct Fwrap *, size_t,  */
+/*                      size_t, const double *,  */
+/*                      size_t, const double *); */
 void fwrap_add_fiber(struct Fwrap *, size_t, 
-                     size_t, const double *, 
-                     size_t, const double *);
+                     size_t, const void *, 
+                     size_t, const void *);
 void fwrap_set_which_fiber(struct Fwrap *, size_t);
 void fwrap_clean_fiber_approx(struct Fwrap *);
-int fwrap_eval_fiber(size_t, const double *, double *, void *);
+/* int fwrap_eval_fiber(size_t, const double *, double *, void *); */
+int fwrap_eval_fiber(size_t, const void *, double *, void *);
+
 #endif

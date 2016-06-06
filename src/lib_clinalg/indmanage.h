@@ -45,19 +45,19 @@ struct CrossIndex
 
 struct CrossIndex * cross_index_alloc(size_t);
 void cross_index_free(struct CrossIndex *);
-void cross_index_add_index(struct CrossIndex *, size_t, double *);
+void cross_index_add_index(struct CrossIndex *, size_t, void *, size_t);
 void cross_index_add_nested(struct CrossIndex *, int, 
-                            size_t, double *, double);
-double * 
+                            size_t, void *, size_t, void *, size_t);
+void * 
 cross_index_get_node_value(struct CrossIndex *,size_t,size_t *);
 
 struct CrossIndex *
 cross_index_create_nested(int, int, size_t, size_t,
-                          double *, struct CrossIndex *);
+                          void *,  struct CrossIndex *);
 
 struct CrossIndex *
 cross_index_create_nested_ind(int, size_t, size_t *,
-                              double *, struct CrossIndex *);
+                              void *, struct CrossIndex *);
 double **
 cross_index_merge_wspace(struct CrossIndex *, struct CrossIndex *);
 
@@ -65,7 +65,7 @@ double **
 cross_index_merge(struct CrossIndex *, struct CrossIndex *);
 
 void cross_index_array_initialize(size_t, struct CrossIndex **,
-                                  int, int,size_t *, double **);
+                                  int, int,size_t *,void **,size_t);
 
 void cross_index_copylast(struct CrossIndex *, size_t);
 void print_cross_index(struct CrossIndex *);

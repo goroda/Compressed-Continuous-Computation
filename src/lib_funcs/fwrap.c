@@ -46,7 +46,7 @@
 #include "array.h"
 #include "fwrap.h"
 
-typedef enum {ND=0, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
+typedef enum {ND=0, INTND, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
 
 /** 
 \struct Fwrap
@@ -54,6 +54,7 @@ typedef enum {ND=0, VEC, MOVEC, ARRVEC, NUMFT} Ftype;
 \var Fwrap::d number of dimensions
 \var Fwrap::f function
 \var Fwrap::fvec vectorized function
+\var Fwrap::intf function taking size_t arguments
 \var Fwrap::fargs function arguments
 \var Fwrap::ftype function type
 \var Fwrap::mofvec vectorized multi output
@@ -65,6 +66,8 @@ struct Fwrap
 
     double (*f)(const double *,void *);
     int (*fvec)(size_t,const double*,double*,void*);
+
+    double (*intf)(const size_t *, void *);
 
     void * fargs;
 
@@ -84,7 +87,8 @@ struct Fwrap
     int fiber_approx;
     size_t fiber_dim;
     size_t nfibers;
-    double ** fiber_vals;
+    /* double ** fiber_vals; */
+    void ** fiber_vals;
     size_t onfiber;
 };
 
@@ -102,6 +106,9 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     fw->d = dim;
     if ( (strcmp(type,"general") == 0) || (type == NULL)){
         fw->ftype = ND;
+    }
+    else if ( (strcmp(type,"general-index") == 0) || (type == NULL)){
+        fw->ftype = INTND;
     }
     else if ( (strcmp(type,"general-vec") == 0)){
         fw->ftype = VEC;
@@ -145,6 +152,20 @@ void fwrap_set_f(struct Fwrap * fwrap, double(*f)(const double*,void*),void*arg)
         exit(1);
     }
     fwrap->f = f;
+    fwrap->fargs =arg;
+}
+
+/***********************************************************//**
+    Set the function
+***************************************************************/
+void fwrap_set_findex(struct Fwrap * fwrap, double(*f)(const size_t*,void*),void*arg)
+{
+    assert (fwrap != NULL);
+    if (fwrap->ftype != INTND){
+        fprintf(stderr,"Must set fwrap type to INTND before calling set_findex\n");
+        exit(1);
+    }
+    fwrap->intf = f;
     fwrap->fargs =arg;
 }
 
@@ -253,7 +274,7 @@ void fwrap_destroy(struct Fwrap * fw)
     \return 0 if everything is fine 
             1 if unrecognized function type
 ***************************************************************/
-int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
+int fwrap_eval(size_t nevals, const void * x, double * out, void * fwin)
 {
     struct Fwrap * fw = fwin;
     assert (fw->ftype < NUMFT);
@@ -263,8 +284,17 @@ int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
     }
     if (fw->ftype == ND){
         assert (fw->f != NULL);
+        const double * xin = x;
         for (size_t ii = 0; ii < nevals; ii++){
-            out[ii] = fw->f(x + ii*fw->d,fw->fargs);
+            out[ii] = fw->f(xin + ii*fw->d,fw->fargs);
+        }
+        return 0;
+    }
+    else if (fw->ftype == INTND){
+        assert (fw->intf != NULL);
+        const size_t * xin = x;
+        for (size_t ii = 0; ii < nevals; ii++){
+            out[ii] = fw->intf(xin + ii*fw->d,fw->fargs);
         }
         return 0;
     }
@@ -287,9 +317,18 @@ int fwrap_eval(size_t nevals, const double * x, double * out, void * fwin)
     }
 }
 
-
 ////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////                                 ///////////////
 //////////////// utilities for evaluating fibers ///////////////
+////////////////                                 ///////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 
 /***********************************************************//**
@@ -310,9 +349,20 @@ void fwrap_initialize_fiber_approx(struct Fwrap * fw, size_t ind, size_t nfibers
     fw->fiber_approx = 1;
     fw->fiber_dim = ind;
     fw->nfibers = nfibers;
-    fw->fiber_vals = malloc_dd(nfibers);
-    for (size_t ii = 0; ii < nfibers; ii++){
-        fw->fiber_vals[ii] = calloc_double(fw->d);
+
+    if (fw->ftype == INTND){
+        fw->fiber_vals = malloc(nfibers * sizeof(size_t *));
+        assert (fw->fiber_vals != NULL);
+        for (size_t ii = 0; ii < nfibers; ii++){
+            fw->fiber_vals[ii] = calloc_size_t(fw->d);
+        }
+    }
+    else{
+        fw->fiber_vals = malloc(nfibers * sizeof(double *));
+        assert (fw->fiber_vals != NULL);
+        for (size_t ii = 0; ii < nfibers; ii++){
+            fw->fiber_vals[ii] = calloc_double(fw->d);
+        }
     }
 }
 
@@ -327,8 +377,8 @@ void fwrap_initialize_fiber_approx(struct Fwrap * fw, size_t ind, size_t nfibers
     \param[in] right - fixed values on the right
 ***************************************************************/
 void fwrap_add_fiber(struct Fwrap * fw, size_t ind, 
-                     size_t nl, const double * left, 
-                     size_t nr, const double * right)
+                     size_t nl, const void * left, 
+                     size_t nr, const void * right)
 {
 
     assert (fw != NULL);
@@ -338,13 +388,26 @@ void fwrap_add_fiber(struct Fwrap * fw, size_t ind,
     assert (nl == fw->fiber_dim);
     assert (ind < fw->nfibers);
 
+    size_t size_elem;
+    if (fw->ftype == INTND){
+        size_elem = sizeof(size_t);
+        if (nl != 0){
+            memmove((size_t *)(fw->fiber_vals[ind]), left, nl * size_elem);     
+        }
+        if (nr != 0){
+            memmove((size_t *)(fw->fiber_vals[ind]) + nl + 1, right, nr * size_elem);
+        }
+    }
+    else{
+        size_elem = sizeof(double);
+        if (nl != 0){
+            memmove((double *)(fw->fiber_vals[ind]), left, nl * size_elem);     
+        }
+        if (nr != 0){
+            memmove((double *)(fw->fiber_vals[ind]) + nl + 1, right, nr * size_elem);
+        }
+    }
 
-    if (nl != 0){
-        memmove(fw->fiber_vals[ind], left, nl * sizeof(double));     
-    }
-    if (nr != 0){
-        memmove(fw->fiber_vals[ind] + nl + 1, right, nr * sizeof(double));
-    }
 }
 
 /***********************************************************//**
@@ -364,12 +427,19 @@ void fwrap_set_which_fiber(struct Fwrap * fw, size_t which)
 /***********************************************************//**
     Cleaned up fiber approximation
 
-    \param[in] fw - wrapped function to slice
+    \param[in,out] fw - wrapped function to slice
 ***************************************************************/
 void fwrap_clean_fiber_approx(struct Fwrap * fw)
 {
     fw->fiber_approx = 0;
-    free_dd(fw->nfibers,fw->fiber_vals);
+    if (fw->fiber_vals != NULL){
+        for (size_t ii = 0; ii < fw->nfibers; ii++){
+            free(fw->fiber_vals[ii]);
+            fw->fiber_vals[ii] = NULL;
+        }
+        free(fw->fiber_vals);
+        fw->fiber_vals = NULL;
+    }
     fw->fiber_vals = NULL;
     fw->nfibers = 0;
 }
@@ -380,42 +450,66 @@ void fwrap_clean_fiber_approx(struct Fwrap * fw)
     \return 0 if everything is fine 
             1 if unrecognized function type
 ***************************************************************/
-int fwrap_eval_fiber(size_t nevals, const double * x, double * out, void * fwin)
+int fwrap_eval_fiber(size_t nevals, const void * x, double * out, void * fwin)
 {
     struct Fwrap * fw = fwin;
-    double * xeval = calloc_double(nevals * fw->d);
-    for (size_t ii = 0; ii < nevals; ii++){
-        for (size_t jj = 0; jj < fw->d; jj++){
-            xeval[ii*fw->d+jj] = fw->fiber_vals[fw->onfiber][jj];
-        }
-        xeval[ii*fw->d + fw->fiber_dim] = x[ii];
-    }
 
     int ret = 0;
-    if (fw->ftype == ND){
-        assert (fw->f != NULL);
+    if (fw->ftype == INTND){
+        
+        assert (fw->intf != NULL);
+        const size_t * xin = x;
+        size_t * xeval = calloc_size_t(nevals * fw->d);
+        size_t * fiber_vals = fw->fiber_vals[fw->onfiber];
         for (size_t ii = 0; ii < nevals; ii++){
-            out[ii] = fw->f(xeval + ii*fw->d,fw->fargs);
+            for (size_t jj = 0; jj < fw->d; jj++){
+                xeval[ii*fw->d+jj] = fiber_vals[jj];
+            }
+            xeval[ii*fw->d + fw->fiber_dim] = xin[ii];
+        }
+
+        
+        for (size_t ii = 0; ii < nevals; ii++){
+            out[ii] = fw->intf(xeval + ii*fw->d,fw->fargs);
         }
     }
-    else if (fw->ftype == VEC){
-        assert (fw->fvec != NULL);
-        ret = fw->fvec(nevals,xeval,out,fw->fargs);
-    }
-    else if (fw->ftype == MOVEC){
-        assert (fw->mofvec != NULL);
-        ret = fw->mofvec(nevals,fw->evalfunc,xeval,out,fw->fargs);
-    }
-    else if (fw->ftype == ARRVEC){
-        assert (fw->arrfuncs != NULL);
-        ret = fw->arrfuncs[fw->evalfunc](nevals,xeval,out,
-                                          fw->farrargs[fw->evalfunc]);
-    }
     else{
-        fprintf(stderr,"Cannot evaluate function wrapper of type %d\n",fw->ftype);
-        ret = 1;
-    }
+        const double * xin = x;
+        double * xeval = calloc_double(nevals * fw->d);
+        double * fiber_vals = fw->fiber_vals[fw->onfiber];
+        for (size_t ii = 0; ii < nevals; ii++){
+            for (size_t jj = 0; jj < fw->d; jj++){
+                xeval[ii*fw->d+jj] = fiber_vals[jj];
+            }
+            xeval[ii*fw->d + fw->fiber_dim] = xin[ii];
+        }
 
-    free(xeval);
+        
+        if (fw->ftype == ND){
+            assert (fw->f != NULL);
+            for (size_t ii = 0; ii < nevals; ii++){
+                out[ii] = fw->f(xeval + ii*fw->d,fw->fargs);
+            }
+        }
+        else if (fw->ftype == VEC){
+            assert (fw->fvec != NULL);
+            ret = fw->fvec(nevals,xeval,out,fw->fargs);
+        }
+        else if (fw->ftype == MOVEC){
+            assert (fw->mofvec != NULL);
+            ret = fw->mofvec(nevals,fw->evalfunc,xeval,out,fw->fargs);
+        }
+        else if (fw->ftype == ARRVEC){
+            assert (fw->arrfuncs != NULL);
+            ret = fw->arrfuncs[fw->evalfunc](nevals,xeval,out,
+                                             fw->farrargs[fw->evalfunc]);
+        }
+        else{
+            fprintf(stderr,"Cannot evaluate function wrapper of type %d\n",fw->ftype);
+            ret = 1;
+        }
+
+        free(xeval);
+    }
     return ret;
 }
