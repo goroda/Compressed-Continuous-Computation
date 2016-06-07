@@ -42,7 +42,11 @@
 
 struct Pivot;
 size_t pivot_get_size(const struct Pivot *);
+size_t pivot_get_ind(const struct Pivot *);
 void * pivot_get_loc(const struct Pivot *);
 void pivot_set_ind(struct Pivot *, size_t);
+
+struct PivotSet;
+struct Pivot * pivot_set_get_pivot(struct PivotSet *, size_t);
 
 #endif

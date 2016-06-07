@@ -156,6 +156,8 @@ double generic_function_1d_eval_ind(const struct GenericFunction *, size_t);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
                                        double);
+double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
+                                         struct Pivot * piv);
 void generic_function_1darray_eval2(size_t, 
                                     struct GenericFunction **, 
                                     double,double *);
@@ -309,11 +311,11 @@ struct FiberCut *
 fiber_cut_init2d( double (*f)(double, double, void *), void *, size_t, double);
 
 struct FiberCut **
-fiber_cut_2darray(double (*f)(double, double, void *), void *, 
+fiber_cut_2darray(double (*f)(double, double, void *), void *,
                             size_t, size_t, const double *);
 
 struct FiberCut **
-fiber_cut_ndarray( double (*)(double *, void *), void *, 
+fiber_cut_ndarray( double (*)(double *, void *), void *,
                             size_t, size_t, size_t, double **);
 
 void fiber_cut_free(struct FiberCut *);

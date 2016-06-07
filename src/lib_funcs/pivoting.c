@@ -103,6 +103,15 @@ size_t pivot_get_size(const struct Pivot * piv)
 }
 
 /***********************************************************//**
+    Get index
+***************************************************************/
+size_t pivot_get_ind(const struct Pivot * piv)
+{
+    assert (piv != NULL);
+    return piv->ind;
+}
+
+/***********************************************************//**
     Get location
 ***************************************************************/
 void * pivot_get_loc(const struct Pivot * piv)
@@ -110,6 +119,7 @@ void * pivot_get_loc(const struct Pivot * piv)
     assert (piv != NULL);
     return piv->loc;
 }
+
 
 /***********************************************************//**
     Set index
@@ -169,3 +179,58 @@ void pivot_set_destroy(struct PivotSet * piv)
         free(piv); piv = NULL;
     }
 }
+
+/***********************************************************//**
+    Get a pivot
+***************************************************************/
+struct Pivot * pivot_set_get_pivot(struct PivotSet * piv, size_t ind)
+{
+    assert (piv != NULL);
+    return piv->pivots[ind];
+}
+
+
+/* void pivot_set_remove_duplicates(struct PivotSet * ps, double lb, double ub) */
+/* { */
+    
+/*     size_t ii,jj; */
+    
+/*     //printf("startindices\n"); */
+/*     //dprint(dim,xiv); */
+/*     int done = 0; */
+/*     while (done == 0){ */
+/*         done = 1; */
+/*         //printf("start again\n"); */
+/*         for (ii = 0; ii < dim; ii++){ */
+/*             for (jj = ii+1; jj < dim; jj++){ */
+/*                 if (ps->pivot[ii]->ind == ps->pivot[jj]->ind){ */
+/*                     double diff = fabs(xiv[ii] - xiv[jj]); */
+/*                     double difflb = fabs(xiv[jj] - lb); */
+/*                     //double diffub = fabs(xiv[jj] - ub); */
+        
+/*                     if (diff < ZEROTHRESH){ */
+/*                         //printf("difflb=%G\n",difflb); */
+/*                         if (difflb > ZEROTHRESH){ */
+/*                             xiv[jj] = (xiv[jj] + lb)/2.0; */
+/*                         } */
+/*                         else{ */
+/*                         //    printf("use upper bound=%G\n",ub); */
+/*                             xiv[jj] = (xiv[jj] + ub)/2.0; */
+/*                         } */
+/*                         done = 0; */
+/*                         //printf("\n ii=%zu, old xiv[%zu]=%G\n",ii,jj,xiv[jj]); */
+/*                         //xiv[jj] = 0.12345; */
+/*                         //printf("new xiv[%zu]=%G\n",jj,xiv[jj]); */
+/*                         break; */
+/*                     } */
+/*                 } */
+/*             } */
+/*             if (done == 0){ */
+/*                 break; */
+/*             } */
+/*         } */
+/*         //printf("indices\n"); */
+/*         //dprint(dim,xiv); */
+/*         //done = 1; */
+/*     } */
+/* } */

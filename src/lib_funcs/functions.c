@@ -1199,6 +1199,39 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  }
 
  /********************************************************//**
+ *   Evaluate a generic function consisting of nodal
+ *   basis functions at some node
+ *
+ *   \param[in] f    - function
+ *   \param[in] loc  - location at which to Evaluate
+ *   \param[in] size - byte size of location (sizeof(double) or (sizeof(size_t)))
+ *
+ *   \return evaluation
+ ************************************************************/
+double generic_function_1d_eval_gen(const struct GenericFunction * f, 
+                                    void * x, size_t size)
+{
+     assert (f != NULL);
+
+     size_t dsize = sizeof(double);
+     size_t stsize = sizeof(size_t);
+     double out;
+     if (size == dsize){
+         out = generic_function_1d_eval(f,*(double *)x);
+     }
+     else if (size == stsize){
+         out = generic_function_1d_eval_ind(f,*(size_t *)x);
+     }
+     else{
+         fprintf(stderr, "Cannot evaluate generic function at \n");
+         fprintf(stderr, "input of byte size %zu\n ", size);
+         exit(1);
+     }
+
+     return out;
+ }
+
+ /********************************************************//**
  *   Evaluate an array of generic functions
  *
  *   \param[in] n - number of functions
@@ -1207,16 +1240,29 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  *
  *   \return array of values
  ************************************************************/
- double * 
- generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
- {
-     double * out = calloc_double(n);
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         out[ii] = generic_function_1d_eval(f[ii],x);
-     }
-     return out;
- }
+double * 
+generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
+{
+    double * out = calloc_double(n);
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        out[ii] = generic_function_1d_eval(f[ii],x);
+    }
+    return out;
+}
+
+/********************************************************//**
+   Evaluate a generic function array at a given pivot
+************************************************************/
+double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
+                                         struct Pivot * piv)
+{
+    size_t size = pivot_get_size(piv);
+    size_t ind = pivot_get_ind(piv);
+    void * loc = pivot_get_loc(piv);
+    double out = generic_function_1d_eval_gen(f[ind],loc,size);
+    return out;
+}
 
  /********************************************************//**
  *   Multiply and add 3 functions \f$ z \leftarrow ax + by + cz \f$
