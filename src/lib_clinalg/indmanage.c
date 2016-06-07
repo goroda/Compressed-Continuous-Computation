@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -475,3 +475,4 @@ void print_cross_index(struct CrossIndex * cn)
         printf("Cross index is NULL\n");
     }
 }
+

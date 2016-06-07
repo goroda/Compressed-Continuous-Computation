@@ -1683,11 +1683,39 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 double generic_function_absmax(const struct GenericFunction * f, double * x, void * optargs)
 {
     double out = 0.123456789;
+    size_t dsize = sizeof(double);
     switch (f->fc){
     case CONSTANT:                                                     break;
     case PIECEWISE:  out = piecewise_poly_absmax(f->f,x,optargs);      break;
     case POLYNOMIAL: out = orth_poly_expansion_absmax(f->f,x,optargs); break;
-    case LINELM:     out = lin_elem_exp_absmax(f->f,x,optargs);        break;
+    case LINELM:     out = lin_elem_exp_absmax(f->f,x,dsize,optargs);  break;
+    case RATIONAL:                                                     break;
+    case KERNEL:                                                       break;
+    }
+    return out;
+}
+
+/********************************************************//**
+    Compute the (generic) location and value of the maximum, 
+    in absolute value, element of a generic function 
+
+    \param[in]     f       - function
+    \param[in,out] x       - location of maximum
+    \param[in]     size    - number of bytes of x
+    \param[in]     optargs - optimization arguments
+
+    \return absolute value of the maximum
+************************************************************/
+double generic_function_absmax_gen(const struct GenericFunction * f, 
+                                   void * x, size_t size, void * optargs)
+{
+    double out = 0.123456789;
+    size_t dsize = sizeof(double);
+    switch (f->fc){
+    case CONSTANT:                                                     break;
+    case PIECEWISE:  assert (size == dsize); out = piecewise_poly_absmax(f->f,x,optargs);      break;
+    case POLYNOMIAL: assert (size == dsize); out = orth_poly_expansion_absmax(f->f,x,optargs); break;
+    case LINELM:     out = lin_elem_exp_absmax(f->f,x,size,optargs);        break;
     case RATIONAL:                                                     break;
     case KERNEL:                                                       break;
     }
@@ -1726,6 +1754,62 @@ generic_function_array_absmax(size_t n, size_t lda,
             *x = tempx;
             *ind = ii;
         }
+    }
+    return maxval;
+}
+
+/********************************************************//**
+    Compute the index, location and value of the maximum, in absolute value, 
+    element of a generic function array (Pivot Based)
+
+    \param[in]     n   - number of functions
+    \param[in]     lda - stride
+    \param[in]     a   - array of functions
+    \param[in,out] piv - pivot
+
+    \return maxval - absolute value of the maximum
+************************************************************/
+double 
+generic_function_array_absmax_piv(size_t n, size_t lda, 
+                                  struct GenericFunction ** a, 
+                                  struct Pivot * piv,
+                                  void * optargs)
+{
+    size_t ii = 0;
+    pivot_set_ind(piv,ii);
+    //printf("do absmax\n");
+    //print_generic_function(a[ii],0,NULL);
+    size_t size = pivot_get_size(piv);
+    void * x = pivot_get_loc(piv);
+    double maxval = generic_function_absmax_gen(a[ii],x,size,optargs);
+    //printf("maxval=%G\n",maxval);
+    if (size == sizeof(double)){
+        double tempval, tempx;
+        for (ii = 1; ii < n; ii++){
+            tempval = generic_function_absmax_gen(a[ii*lda],&tempx,size,optargs);
+            if (tempval > maxval){
+                maxval = tempval;
+                *(double *)(x) = tempx;
+                pivot_set_ind(piv,ii);
+            }
+        }
+    }
+    else if (size == sizeof(size_t)){
+        double tempval;
+        size_t tempx;
+        for (ii = 1; ii < n; ii++){
+            tempval = generic_function_absmax_gen(a[ii*lda],&tempx,size,optargs);
+            if (tempval > maxval){
+                maxval = tempval;
+                *(size_t *)(x) = tempx;
+                pivot_set_ind(piv,ii);
+            }
+        }  
+    }
+    else{
+        fprintf(stderr, "Cannot perform generic_function_array_absmax_piv\n");
+        fprintf(stderr, "with the specified elements of size %zu\n",size);
+        exit(1);
     }
     return maxval;
 }

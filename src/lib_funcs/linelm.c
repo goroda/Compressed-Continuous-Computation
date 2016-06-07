@@ -989,34 +989,47 @@ double lin_elem_exp_min(const struct LinElemExp * f, double * x)
 
     \param[in]     f       - function
     \param[in,out] x       - location of absolute value max
+    \param[in]     size    - size of x variable (sizeof(double) or sizeof(size_t))
     \param[in]     optargs - optimization arguments
     
     \return value
 *************************************************************/
-double lin_elem_exp_absmax(const struct LinElemExp * f, double * x,
+double lin_elem_exp_absmax(const struct LinElemExp * f, void * x,
+                           size_t size,
                            void * optargs)
 {
     if (optargs == NULL){
-
+        size_t dsize = sizeof(double);
         double mval = fabs(f->coeff[0]);
-        *x = f->nodes[0];
+        if (size == dsize){
+            *(double *)(x) = f->nodes[0];
+        }
+        else{
+            *(size_t *)(x) = 0;
+        }
         for (size_t ii = 1; ii < f->num_nodes;ii++){
             if (fabs(f->coeff[ii]) > mval){
                 mval = fabs(f->coeff[ii]);
-                *x = f->nodes[ii];
+                if (size == dsize){
+                    *(double *)(x) = f->nodes[ii];
+                }
+                else{
+                    *(size_t *)(x) = ii;
+                }
             }
         }
         return mval;
     }
     else{
+        assert (size == sizeof(double));
         struct c3Vector * optnodes = optargs;
         double mval = fabs(lin_elem_exp_eval(f,optnodes->elem[0]));
-        *x = optnodes->elem[0];
+        *(double *)(x) = optnodes->elem[0];
         for (size_t ii = 0; ii < optnodes->size; ii++){
             double val = fabs(lin_elem_exp_eval(f,optnodes->elem[ii]));
             if (val > mval){
                 mval = val;
-                *x = optnodes->elem[ii];
+                *(double *)(x) = optnodes->elem[ii];
             }
         }
         return mval;

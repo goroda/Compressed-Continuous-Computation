@@ -101,7 +101,7 @@ lin_elem_exp_prod(const struct LinElemExp *,const struct LinElemExp *,void *);
 double lin_elem_exp_norm(const struct LinElemExp *);
 double lin_elem_exp_max(const struct LinElemExp *, double *);
 double lin_elem_exp_min(const struct LinElemExp *, double *);
-double lin_elem_exp_absmax(const struct LinElemExp *, double *,void *);
+double lin_elem_exp_absmax(const struct LinElemExp *,void *,size_t,void *);
 
 double lin_elem_exp_err_est(struct LinElemExp *, double *, short,short);
 

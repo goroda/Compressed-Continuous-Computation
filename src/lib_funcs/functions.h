@@ -47,6 +47,7 @@
 #include "hpoly.h"
 #include "linelm.h"
 #include "fwrap.h"
+#include "pivoting.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -233,9 +234,17 @@ struct GenericFunction * generic_function_lin_comb2(size_t, size_t,
                 struct GenericFunction **, size_t, const double *);
 
 double generic_function_absmax(const struct GenericFunction *, double *,void *);
+double generic_function_absmax_gen(const struct GenericFunction *, 
+                                   void *, size_t, void *);
 double generic_function_array_absmax(size_t, size_t, 
                                      struct GenericFunction **, 
                                      size_t *, double *, void *);
+double 
+generic_function_array_absmax_piv(size_t, size_t, 
+                                  struct GenericFunction **, 
+                                  struct Pivot *,
+                                  void *);
+
 void generic_function_scale(double, struct GenericFunction *);
 void generic_function_array_scale(double, struct GenericFunction **, size_t);
 void generic_function_kronh(int,
