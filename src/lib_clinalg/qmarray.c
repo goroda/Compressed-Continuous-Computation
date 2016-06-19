@@ -1551,7 +1551,6 @@ void create_any_L_linelm(struct GenericFunction ** L, size_t nrows,
     free(zeros); zeros = NULL;
 }
 
-
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix array of 1d functioins
 
