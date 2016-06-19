@@ -75,6 +75,7 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
+double c3opt_eval(struct c3Opt *, double *, double *);
 
 void
 newton(double **, size_t, double, double,

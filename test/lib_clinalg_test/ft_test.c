@@ -1144,6 +1144,72 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     fwrap_destroy(fw);
 }
 
+void Test_ftapprox_cross_linelm1_eval_fiber(CuTest * tc)
+{
+    printf("Testing Function: function_train_eval_fiber_ind for linelm \n");
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcnd2,NULL);
+    // set function monitor
+
+    size_t N = 20;
+    double * x = linspace(-1.0,1.0,N);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+
+
+    double pt[4];
+    double val;
+    size_t fixed_ind[4] = {3, 12, 14, 9};
+    double out[20];    
+    size_t ind[20];
+    for (size_t ii = 0; ii < N; ii++){
+        ind[ii] = ii;
+    }
+
+    for (size_t ll = 0; ll < dim; ll++){
+        size_t dim_vary = ll;    
+        function_train_eval_fiber_ind(ft,fixed_ind,N,ind,dim_vary,out);
+        /* printf("\n\n\n"); */
+
+        for (size_t ii = 0; ii < N; ii++){
+            pt[0] = x[fixed_ind[0]]; 
+            pt[1] = x[fixed_ind[1]]; 
+            pt[2] = x[fixed_ind[2]]; 
+            pt[3] = x[fixed_ind[3]]; 
+
+            pt[dim_vary] = x[ind[ii]];
+            /* pt[dim_vary] = x[ii]; */
+
+            val = function_train_eval(ft,pt);
+            /* funcnd2(1,pt,&val,NULL); */
+        
+            /* printf("ii = %zu\n",ii); */
+            /* printf("\t (val,should) = (%G,%G)\n",out[ii],val); */
+            double err = out[ii] - val;
+            CuAssertDblEquals(tc,0.0,err,1e-10);
+        }
+    }
+
+    function_train_free(ft);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts); 
+    free_dd(dim, start);
+    free(x);
+    fwrap_destroy(fw);
+}
+
 void Test_ftapprox_cross_linelm2(CuTest * tc)
 {
     printf("Testing Function: ftapprox_cross for linelm (2) \n");
@@ -1411,28 +1477,29 @@ void Test_sin1000dint(CuTest * tc)
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_function_train_initsum); 
-    SUITE_ADD_TEST(suite, Test_function_train_linear); 
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic); 
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic2); 
-    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round); 
-    SUITE_ADD_TEST(suite, Test_function_train_scale); 
-    SUITE_ADD_TEST(suite, Test_function_train_product); 
-    SUITE_ADD_TEST(suite, Test_function_train_integrate); 
-    SUITE_ADD_TEST(suite, Test_function_train_inner); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross2); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross3); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross4); 
-    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2); 
+    SUITE_ADD_TEST(suite, Test_function_train_initsum);
+    SUITE_ADD_TEST(suite, Test_function_train_linear);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
+    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
+    SUITE_ADD_TEST(suite, Test_function_train_scale);
+    SUITE_ADD_TEST(suite, Test_function_train_product);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate);
+    SUITE_ADD_TEST(suite, Test_function_train_inner);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3); 
-    SUITE_ADD_TEST(suite, Test_sin10dint); 
-    SUITE_ADD_TEST(suite, Test_sin100dint); 
-    SUITE_ADD_TEST(suite, Test_sin1000dint); 
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
+    SUITE_ADD_TEST(suite, Test_sin10dint);
+    SUITE_ADD_TEST(suite, Test_sin100dint);
+    SUITE_ADD_TEST(suite, Test_sin1000dint);
     return suite;
 }
 

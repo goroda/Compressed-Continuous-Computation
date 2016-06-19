@@ -93,6 +93,11 @@ double function_train_eval_co_perturb(struct FunctionTrain *,
 double function_train_eval_co_perturb_ind(struct FunctionTrain *, 
                                           const size_t *, const size_t *, 
                                           double *);
+void function_train_eval_fiber_ind(struct FunctionTrain *, 
+                                   const size_t *,
+                                   size_t, const size_t *,
+                                   size_t,
+                                   double *);
 
 // generators
 struct FunctionTrain *
