@@ -599,12 +599,16 @@ static void lin_elem_exp_inner_element(
     double * right)
 {
     double dx = (x2-x1);
-    double dx2 = pow(x2,2)-pow(x1,2);
-    double dx3 = (pow(x2,3)-pow(x1,3))/3.0;
+    double x2sq = x2*x2;
+    double x1sq = x1*x1;
+    double x2cu = x2sq * x2;
+    double x1cu = x1sq * x1;
+    double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2);
+    double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0;
           
-    *left = pow(x2,2)*dx - x2*dx2 + dx3;
+    *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3;
     *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3;
-    *right = dx3 - x1*dx2 + pow(x1,2)*dx;
+    *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx;
 }
 
 /********************************************************//**
@@ -692,7 +696,7 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     double value = 0.0;
     double left,mixed,right,dx2;
     for (size_t ii = 0; ii < N-1; ii++){
-        dx2 = pow(x[ii+1]-x[ii],2);
+        dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
         lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
         value += (f[ii] * g[ii]) / dx2 * left +
                  (f[ii] * g[ii+1]) / dx2 * mixed +
@@ -770,9 +774,10 @@ static int lin_elem_exp_axpy_same(double a, const struct LinElemExp * f,
                                   struct LinElemExp * g)
 {
 
-    for (size_t ii = 0; ii < g->num_nodes; ii++){
-        g->coeff[ii] += a*f->coeff[ii];
-    }
+    cblas_daxpy(g->num_nodes,a,f->coeff,1,g->coeff,1);
+    /* for (size_t ii = 0; ii < g->num_nodes; ii++){ */
+    /*     g->coeff[ii] += a*f->coeff[ii]; */
+    /* } */
     return 0;
 }
 
