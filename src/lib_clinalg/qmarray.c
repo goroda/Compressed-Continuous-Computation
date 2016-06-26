@@ -1750,8 +1750,7 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     \param[in]     A       - qmarray to decompose
     \param[in,out] L       - qmarray representing L factor
     \param[in,out] u       - allocated space for U factor
-    \param[in,out] piv     - row of pivots 
-    \param[in,out] px      - x values of pivots 
+    \param[in,out] ps      - pivot set
     \param[in]     app     - approximation arguments
     \param[in]     optargs - optimization arguments
 

@@ -542,7 +542,6 @@ double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
     \param[in]     dim_vary  - dimension that is varying
     \param[in,out] out       - output values
 
-    \return val - value of the function train
 ***************************************************************/
 void function_train_eval_fiber_ind(struct FunctionTrain * ft, 
                                    const size_t * fixed_ind,

@@ -1203,7 +1203,7 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  *   basis functions at some node
  *
  *   \param[in] f    - function
- *   \param[in] loc  - location at which to Evaluate
+ *   \param[in] x    - location at which to Evaluate
  *   \param[in] size - byte size of location (sizeof(double) or (sizeof(size_t)))
  *
  *   \return evaluation
