@@ -380,7 +380,7 @@ int main(int argc, char *argv[])
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
 
-    double approxtol[8] = {1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,
+    double approxtol[13] = {1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,
                            1e-4,5e-5,1e-5,5e-6,1e-6,5e-7,
                            1e-7};
     //double approxtol[1] = {1e-6};
@@ -403,6 +403,7 @@ int main(int argc, char *argv[])
             ope_opts_set_start(opts,3);
             ope_opts_set_coeffs_check(opts,1);
             ope_opts_set_tol(opts,approxtol[jjj]);
+            ope_opts_set_maxnum(opts,25);
             ope_opts_set_lb(opts,lb);
             ope_opts_set_ub(opts,ub);
             struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
