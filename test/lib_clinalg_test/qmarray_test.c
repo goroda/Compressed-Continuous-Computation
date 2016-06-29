@@ -1057,7 +1057,7 @@ void Test_qmarray_lu1d_hermite(CuTest * tc){
     
     struct Qmarray * Comb = qmam(L,U,3);
     double difff = qmarray_norm2diff(Comb,Acopy);
-    CuAssertDblEquals(tc,difff,0,1e-8);
+    CuAssertDblEquals(tc,difff,0,1e-5);
     
     fwrap_destroy(fw);
     ope_opts_free(opts);

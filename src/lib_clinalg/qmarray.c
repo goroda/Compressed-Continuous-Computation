@@ -1755,11 +1755,14 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     \param[in]     optargs - optimization arguments
 
     \return info = 0 full rank <0 low rank ( rank = A->n + info )
+    \note THIS FUNCTION IS NOT READY YET
 ***************************************************************/
 int qmarray_lu1d_piv(struct Qmarray * A, struct Qmarray * L, double * u,
                      struct PivotSet * ps, struct OneApproxOpts * app,
                      void * optargs)
 {
+    assert (app != NULL);
+    assert (1 == 0);
     int info = 0;
     
     size_t ii,kk;

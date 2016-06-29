@@ -196,15 +196,15 @@ int main(int argc, char * argv[])
         }
         if (type == 1){
 
-            size_t nrepeat = 1;
-            size_t nranks = 20; 
+            size_t nrepeat = 20;
+            size_t nranks = 30; 
             size_t rankstep = 2;
             size_t rankstart = 2;
             size_t dim = 5;
             size_t frank = 2;
-            size_t maxorder = 40;
-            epsilon= 1e10;
-            delta = 1e-4;
+            size_t maxorder = 3;
+            epsilon= 1e-5;
+            delta = 1e-8;
 
             double * results = calloc_double(nranks*4);
             struct BoundingBox * bds = bounding_box_init(dim,-1.0,1.0);
@@ -243,10 +243,11 @@ int main(int argc, char * argv[])
                     clock_t toc2 = clock();
                     time2 += (double)(toc2 - tic2) / CLOCKS_PER_SEC;
 
+                    double normval = function_train_norm2(rounded);
                     clock_t tic = clock();
                     struct FunctionTrain * sol = dmrg_diffusion(a,f,
                                                                 delta/(double) dim,max_sweeps,
-                                                                epsilon,1,fopts);
+                                                                epsilon*normval,0,fopts);
                     clock_t toc = clock();
                     time += (double)(toc - tic) / CLOCKS_PER_SEC;
                     
@@ -264,12 +265,12 @@ int main(int argc, char * argv[])
                         iprint_sz(dim+1,function_train_get_ranks(rounded));
                         printf("ALS ranks = ");
                         iprint_sz(dim+1,function_train_get_ranks(sol));
-                        double diff = function_train_relnorm2diff(sol,exact);
-                        printf("diff = %G\n",diff*diff);
+                        /* double diff = function_train_relnorm2diff(sol,exact); */
+                        /* printf("diff = %G\n",diff*diff); */
                         
                     }
-                    function_train_free(rounded); rounded = NULL;
-                    function_train_free(exact); exact = NULL;
+                    /* function_train_free(rounded); rounded = NULL; */
+                    /* function_train_free(exact); exact = NULL; */
                     function_train_free(a); a = NULL;
                     function_train_free(f); f = NULL;
                     function_train_free(sol); sol = NULL;

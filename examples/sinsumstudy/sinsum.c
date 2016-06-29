@@ -75,13 +75,15 @@ int main( void )
                 start[kk] = linspace(0.0,1.0,rank);
             }
             c3approx_init_cross(c3a,rank,verbose,start);
+            c3approx_set_cross_tol(c3a,1e-3);
+
             struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
             
             double intval = function_train_integrate(ft);
             double relerr = fabs(intval-shouldbe)/fabs(shouldbe);
             //printf("intval=%G\n",intval);
-            printf(".......... rel error is %G\n", relerr);
             size_t nvals = nstored_hashtable_cp(fm->evals);
+            printf(".......... rel error is %G, N = %zu\n", relerr,nvals);
 
             fprintf(fp, "%zu %3.15E %3.15E %zu %3.15E \n", 
                             dim,epsilons[jj],intval,nvals, relerr); 

@@ -75,21 +75,56 @@ double robotarm(const double * x, void * args)
     double u = 0.0;
     double v = 0.0;
     //size_t ii,jj;
+     
+    double theta1,theta2,theta3,theta4;
+    double L1,L2,L3,L4;
+    int natural_order = 0;
+    if (natural_order == 1){
+        theta1 = x[0];
+        theta2 = x[1];
+        theta3 = x[2];
+        theta4 = x[3];
+    
+        L1 = x[4];
+        L2 = x[5];
+        L3 = x[6];
+        L4 = x[7];
+    }
+    else{
+        // daniele's optimal ordering
+        theta1 = x[0];
+        theta2 = x[4];
+        theta3 = x[5];
+        theta4 = x[3];
+        L1 = x[2];
+        L2 = x[1];
+        L3 = x[6];
+        L4 = x[7];
 
-    double t1 = x[0] * M_PI + M_PI;
-    double t2 = t1 + (x[1]*M_PI + M_PI);
-    double t3 = t2 + (x[2]*M_PI + M_PI);
-    double t4 = t3 + (x[3]*M_PI + M_PI);
+        /* theta1 = x[0]; */
+        /* L2 = x[1]; */
+        /* L1 = x[2]; */
+        /* theta3 = x[3]; */
+        /* theta4 = x[5]; */
+        /* theta2 = x[4]; */
+        /* L3 = x[6]; */
+        /* L4 = x[7]; */
+    }
 
-    u = (x[4]*0.5+0.5) * cos(t1) + 
-        (x[5]*0.5+0.5) * cos(t2) + 
-        (x[6]*0.5+0.5) * cos(t3) + 
-        (x[7]*0.5+0.5) * cos(t4);
+    double t1 = theta1 * M_PI + M_PI;
+    double t2 = t1 + (theta2*M_PI + M_PI);
+    double t3 = t2 + (theta3*M_PI + M_PI);
+    double t4 = t3 + (theta4*M_PI + M_PI);
 
-    v = (x[4]*0.5+0.5) * sin(t1) + 
-        (x[5]*0.5+0.5) * sin(t2) + 
-        (x[6]*0.5+0.5) * sin(t3) + 
-        (x[7]*0.5+0.5) * sin(t4);
+    u = (L1*0.5+0.5) * cos(t1) + 
+        (L2*0.5+0.5) * cos(t2) + 
+        (L3*0.5+0.5) * cos(t3) + 
+        (L4*0.5+0.5) * cos(t4);
+
+    v = (L1*0.5+0.5) * sin(t1) + 
+        (L2*0.5+0.5) * sin(t2) + 
+        (L3*0.5+0.5) * sin(t3) + 
+        (L4*0.5+0.5) * sin(t4);
     
     double f = sqrt ( u*u + v*v);
     return f;
@@ -268,7 +303,7 @@ int main( int argc, char *argv[])
     ope_opts_set_start(opts,7);
     ope_opts_set_coeffs_check(opts,2);
     ope_opts_set_tol(opts,1e-7);
-//    ope_opts_set_maxnum(opts,15);
+    ope_opts_set_maxnum(opts,15);
     ope_opts_set_lb(opts,lb);
     ope_opts_set_ub(opts,ub);
     
@@ -282,9 +317,10 @@ int main( int argc, char *argv[])
         start[ii] = linspace(lb,ub,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    c3approx_set_verbose(c3a,2);
-    c3approx_set_cross_tol(c3a,1e-8);
-    c3approx_set_round_tol(c3a,1e-8);
+    c3approx_set_verbose(c3a,1);
+    c3approx_set_cross_tol(c3a,1e-3);
+    c3approx_set_cross_maxiter(c3a,5); // extra
+    c3approx_set_round_tol(c3a,1e-5);
 
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 

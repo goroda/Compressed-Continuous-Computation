@@ -2373,11 +2373,11 @@ ftapprox_cross(struct Fwrap * fw,
         //printf("norm ft = %G\n",function_train_norm2(ft));
         diff = function_train_relnorm2diff(ft,fti);
         //printf("diff = %G\n",diff);
-        //den = function_train_norm2(ft);
-        //diff = function_train_norm2diff(ft,fti);
-        //if (den > ZEROTHRESH){
-        //    diff /= den;
-       // }
+        den = function_train_norm2(ft);
+       /*  diff = function_train_norm2diff(ft,fti); */
+       /*  if (den > ZEROTHRESH){ */
+       /*     diff /= den; */
+       /* } */
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
@@ -2385,13 +2385,13 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error L/R Sweep = %E\n",diff);
         }
         
-        /* if (diff < cargs->epsilon){ */
-        /*     done = 1; */
-        /*     break; */
-        /* } */
+        if (diff < cargs->epsilon){
+            done = 1;
+            break;
+        }
         
-        /* function_train_free(fti); fti=NULL; */
-        /* fti = function_train_copy(ft); */
+        function_train_free(fti); fti=NULL;
+        fti = function_train_copy(ft);
         
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
@@ -2525,8 +2525,8 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){
-        /* if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){ */
+        /* if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){ */
+        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
         /* if ( diff < cargs->epsilon){ */
             done = 1;
             break;

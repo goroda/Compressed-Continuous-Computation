@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -263,10 +263,12 @@ dmrg_sweep_lr(struct FunctionTrain * z,
     if (phil[0] == NULL){
         struct Qmarray * temp0 = NULL;
         f('L',0,1,NULL,&temp0,args);
+        /* printf("temp0 size(%zu,%zu) \n",temp0->nrows,temp0->ncols); */
         o = multi_approx_opts_get_aopts(opts,0);
         phil[0] = qr_reduced(temp0,1,o);
         qmarray_free(temp0); temp0 = NULL;
     }
+    /* exit(1); */
     
     size_t nrows = phil[0]->mr;
     size_t nmult = phil[0]->mc;
@@ -279,13 +281,17 @@ dmrg_sweep_lr(struct FunctionTrain * z,
     double * u = NULL;
     double * vt = NULL;
     double * s = NULL;
-    //printf("(nrows,ncols)=(%zu,%zu)\n",nrows,ncols);
+    /* printf("Left-Right sweep\n"); */
+    /* printf("(nrows,ncols)=(%zu,%zu), epsilon=%G\n",nrows,ncols,epsilon); */
     size_t rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+    /* printf("rank=%zu\n",rank); */
     na->ranks[1] = rank;
     na->cores[0] = qmam(phil[0]->Q,u,rank);
     
+
     size_t ii;
     for (ii = 1; ii < dim-1; ii++){
+        /* printf("ii = %zu\n",ii); */
         double * newphi = calloc_double(rank * phil[ii-1]->mc);
         cblas_dgemm(CblasColMajor,CblasTrans,CblasNoTrans,rank,nmult,
                     nrows,1.0,u,nrows,phil[ii-1]->mat,nrows,0.0,newphi,rank);
@@ -313,11 +319,15 @@ dmrg_sweep_lr(struct FunctionTrain * z,
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,nrows,ncols,
                     nmult,1.0,phil[ii]->mat,nrows,psir[ii]->mat,nmult,0.0,RL,nrows);
 
+        /* printf("(nrows,ncols)=(%zu,%zu), epsilon=%G\n",nrows,ncols,epsilon); */
         rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+        /* dprint(nrows,s); */
+        /* printf("rank=%zu\n",rank); */
         na->ranks[ii+1] = rank;
         na->cores[ii] = qmam(phil[ii]->Q,u,rank);
     }
     
+    /* exit(1); */
     size_t kk,jj;
     for (kk = 0; kk < ncols; kk++){
         for (jj = 0; jj < rank; jj++){
@@ -381,10 +391,14 @@ dmrg_sweep_rl(struct FunctionTrain * z,
     double * u = NULL;
     double * vt = NULL;
     double * s = NULL;
+    /* printf("Right-Left sweep\n"); */
+    /* printf("(nrows,ncols)=(%zu,%zu), epsilon=%G\n",nrows,ncols,epsilon); */
     size_t rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+    /* printf("rank=%zu\n",rank); */
     na->ranks[dim-1] = rank;
     na->cores[dim-1] = mqma(vt,psir[dim-2]->Q,rank); 
     
+
     int ii;
     for (ii = dim-3; ii > -1; ii--){
         double * newpsi = calloc_double( psir[ii+1]->mr * rank);
@@ -413,10 +427,13 @@ dmrg_sweep_rl(struct FunctionTrain * z,
         ncols = psir[ii]->mc;
 
         RL = calloc_double(nrows * ncols);
+
         cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,nrows,ncols,
                     nmult,1.0,phil[ii]->mat,nrows,psir[ii]->mat,nmult,0.0,RL,nrows);
 
+        /* printf("(nrows,ncols)=(%zu,%zu), epsilon=%G\n",nrows,ncols,epsilon); */
         rank = truncated_svd(nrows,ncols,nrows,RL,&u,&s,&vt,epsilon);
+        /* printf("rank=%zu\n",rank); */
         na->ranks[ii+1] = rank;
         na->cores[ii+1] = mqma(vt,psir[ii]->Q,rank); 
     }
@@ -429,6 +446,8 @@ dmrg_sweep_rl(struct FunctionTrain * z,
     }
     
     na->cores[0] = qmam(phil[0]->Q,u,rank);
+
+    /* exit(1); */
 
     free(RL); RL = NULL;
     free(u); u = NULL;
@@ -489,7 +508,10 @@ dmrg_approx(struct FunctionTrain * z,
 
     struct QR ** psir = dmrg_super_r_all(f,args,na,opts);
     struct QR ** phil = qr_array_alloc(dim-1);
-    
+
+    /* printf("starting ranks\n"); */
+    /* iprint_sz(dim+1,function_train_get_ranks(na)); */
+
     size_t ii;
     double diff;
     for (ii = 0; ii < max_sweeps; ii++){

@@ -303,17 +303,21 @@ size_t truncated_svd(size_t m, size_t n, size_t lda, double *a,
     size_t ii;
     double sum = 0.0;
     size_t rank = numberOfSingularValues;
-    //printf("sing before ");
-    //dprint(numberOfSingularValues,s_temp);
+    /* printf("sing before "); */
+    /* dprint(numberOfSingularValues,s_temp); */
     //for (ii = numberOfSingularValues-1; ii >= 0; ii--){
     for (ii = 0; ii < numberOfSingularValues; ii++){
+        /* printf("ii = %zu\n",ii); */
         sum+=pow(s_temp[numberOfSingularValues - ii- 1],2);
-        if (sum >= delta) break;
+        if (sum >= delta){
+            /* printf("sum=%G delta=%G\n",sum,delta); */
+            break;
+        } 
         if (rank == 1) break;
         rank -= 1;
     }
 
-    //printf("num keep = %zu\n ",rank);
+    /* printf("num keep = %zu\n ",rank); */
 
     *u = calloc_double(m*rank);
     memmove((*u), u_temp, rank * m * sizeof(double));

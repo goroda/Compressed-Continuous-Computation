@@ -1811,9 +1811,9 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts, struct Fwrap * fw
         coeffs_too_big = 0;
 	
         free(poly->coeff); poly->coeff = NULL;
-        //N = N * 2 - 1; // for nested cc
-        //N = N * 2 + 1; // 
-        N = N + 5;
+        /* N = N * 2 - 1; // for nested cc */
+        N = N * 2 + 1; //
+        /* N = N + 5; */
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
         poly->coeff = calloc_double(poly->nalloc);
@@ -1824,7 +1824,7 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts, struct Fwrap * fw
             sum_coeff_squared += pow(poly->coeff[ii],2); 
         }
         sum_coeff_squared = fmax(sum_coeff_squared,ZEROTHRESH);
-        //sum_coeff_squared = 1.0;
+        /* sum_coeff_squared = 1.0; */
         for (ii = 0; ii < aopts->coeffs_check; ii++){
             /* printf("aopts->tol=%3.15G last coefficients %3.15G\n", */
             /*        aopts->tol * sum_coeff_squared, */
