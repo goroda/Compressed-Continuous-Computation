@@ -2255,6 +2255,7 @@ ftapprox_cross(struct Fwrap * fw,
             pivx = calloc_double(ft->ranks[ii+1]);
             
             if (VFTCROSS){
+                printf("=======================================\n\n\n\n");
                 printf( "prepCore \n");
                 printf( "left index set = \n");
                 print_cross_index(left_ind[ii]);
