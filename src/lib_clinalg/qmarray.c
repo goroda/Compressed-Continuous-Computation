@@ -360,40 +360,95 @@ qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj,kk;
-    for (ii = 0; ii < ncols; ii++){
+    /* size_t ii, jj; //,kk; */
+    for (size_t ii = 0; ii < ncols; ii++){
         funcs[ii] = NULL;
     }
-    
-    generic_function_array_orth(ncols, funcs, opts->fc, opts->aopts);
-    
+
     struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
-    
-    size_t onnon = 0;
-    size_t onorder = 0;
-    for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
-        for (kk = 0; kk < onnon; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+    generic_function_array_orth(ncols,funcs,opts->fc,opts->aopts);
+    /* if (nrows >= ncols){ */
+    /*     generic_function_array_orth(1,funcs,opts->fc,opts->aopts); */
+    /*     for (size_t col = 0; col < ncols; col++){ */
+    /*         for (size_t row = 0; row < nrows; row++){ */
+    /*             if (row != col){ */
+    /*                 qm->funcs[col*nrows+row] = generic_function_copy(zero); */
+    /*             } */
+    /*             else{ */
+    /*                 qm->funcs[col*nrows+row] = generic_function_copy(funcs[0]); */
+    /*             } */
+                
+    /*         } */
+    /*     } */
+    /* } */
+    /* else{ */
+
+    /*     size_t ngen = ncols / nrows + 1; */
+    /*     generic_function_array_orth(ngen+1,funcs,opts->fc,opts->aopts); */
+    /*     size_t oncol = 0; */
+    /*     /\* int minnum = 0; *\/ */
+    /*     size_t maxnum = 0; */
+    /*     int converged = 0; */
+    /*     printf("nrows=%zu,ncols=%zu,ngen=%zu\n",nrows,ncols,ngen); */
+    /*     while (converged == 0){ */
+    /*         size_t count = 0; */
+    /*         printf("maxnum = %zu\n",maxnum); */
+    /*         /\* print_generic_function(funcs[maxnum],3,NULL); *\/ */
+    /*         for (size_t col = oncol; col < oncol+nrows; col++){ */
+    /*             printf("col = %zu/%zu\n",col,ncols); */
+    /*             if (col == ncols){ */
+    /*                 printf("conveged!\n"); */
+    /*                 converged = 1; */
+    /*                 break; */
+    /*             } */
+    /*             for (size_t row = 0; row < nrows; row++){ */
+    /*                 printf("row=%zu/%zu\n",row,nrows); */
+    /*                 if (row != count){ */
+    /*                     qm->funcs[col*nrows+row] = generic_function_copy(zero); */
+    /*                 } */
+    /*                 else{ */
+    /*                     qm->funcs[col*nrows+row] = generic_function_copy(funcs[maxnum]); */
+    /*                 } */
+    /*             } */
+    /*             count++; */
+    /*         } */
+    /*         maxnum += 1; */
+    /*         oncol += nrows; */
+    /*         if (maxnum > ngen){ */
+    /*             fprintf(stderr,"Cannot generate enough orthonormal polynomials\n"); */
+    /*             assert (1 == 0); */
+    /*         } */
+    /*     } */
+    /*     printf("we are out\n"); */
+    /* }         */
+        size_t onnon = 0;
+        size_t onorder = 0;
+        for (size_t jj = 0; jj < ncols; jj++){
+            qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+            for (size_t kk = 0; kk < onnon; kk++){
+                qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+            }
+            for (size_t kk = onnon+1; kk < nrows; kk++){
+                qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+            }
+            onnon = onnon+1;
+            if (onnon == nrows){
+                onorder = onorder+1;
+                onnon = 0;
+            }
         }
-        for (kk = onnon+1; kk < nrows; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        onnon = onnon+1;
-        if (onnon == nrows){
-            onorder = onorder+1;
-            onnon = 0;
-        }
-    }
+
     //printf("max order rows = %zu\n",onorder);
     
-    for (ii = 0; ii < ncols;ii++){
-        generic_function_free(funcs[ii]);
-        funcs[ii] = NULL;
+    for (size_t ii = 0; ii < ncols; ii++){
+        if (funcs[ii] != NULL){
+            generic_function_free(funcs[ii]);
+            funcs[ii] = NULL;
+        }
     }
     free(funcs); funcs=NULL;
     generic_function_free(zero); zero = NULL;
-
+    /* printf("returned\n"); */
     /* return qm; */
     /* struct Qmarray * qm = qmarray_alloc(nrows,ncols); */
     /* struct Qmarray * qmtemp = qmarray_alloc(ncols,1); */
@@ -1913,7 +1968,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     struct Qmarray * Acopy = qmarray_copy(A);
     
     if (VQMAMAXVOL){
-        printf("luqmarray \n");
+        printf("==*=== \n\n\n\n In MAXVOL \n");
         /* size_t ll; */
         /* for (ll = 0; ll < A->nrows * A->ncols; ll++){ */
         /*     printf("%G\n", generic_function_norm(Acopy->funcs[ll])); */
@@ -1985,7 +2040,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
     size_t maxiter = 30;
     size_t iter =0;
-    double delta = 0.01;
+    double delta = 1e-2;
     while (maxval > (1.0 + delta)){
         pivi[maxcol] = maxrow;
         pivx[maxcol] = maxx;
@@ -2028,6 +2083,11 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         iter++;
     }
 
+    if (iter > 0){
+        pivi[maxcol] = maxrow;
+        pivx[maxcol] = maxx;
+    }
+    
     if (VQMAMAXVOL){
         printf("qmarray_maxvol indices and pivots before removing duplicates\n");
         iprint_sz(r,pivi);

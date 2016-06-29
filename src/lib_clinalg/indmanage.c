@@ -206,7 +206,6 @@ cross_index_create_nested(int method, int left,
     size_t dold = old->d;
     struct CrossIndex * ci = cross_index_alloc(dold+1);
 
-    
     if (method == 1){ // add new options before reusing nodes from old
         struct CrossNode * oc = old->nodes;
 
