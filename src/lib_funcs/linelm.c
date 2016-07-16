@@ -1318,9 +1318,15 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         memmove(lexp->nodes,opts->nodes,N*sizeof(double));
 
         // evaluate the function
+        /* printf("evaluate points\n"); */
+        /* dprint(N,lexp->nodes); */
         fwrap_eval(N,lexp->nodes,lexp->coeff,f);
+
+        assert (fabs(lexp->nodes[0]-opts->nodes[0])<1e-15);
+        /* printf("cannot evaluate them"); */
     }
     else{
+        /* printf("not here!\n"); */
         // adapt
         struct LinElemXY * xy = NULL;
         if (opts->nodes == NULL){ // no nodes yet specified

@@ -751,7 +751,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     int ret = C3OPT_SUCCESS;;
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
     if (verbose > 0){
-        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
     }
 
     if ( (eta*eta/2.0) < gtol){

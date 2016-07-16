@@ -2153,8 +2153,10 @@ prepCore(size_t ii, size_t nrows, size_t ncols,
         for (size_t kk = 0; kk < nrows; kk++){
             nl = 0;
             left = cross_index_get_node_value(left_ind[ii],kk,&nl);
-            /* printf("left = "); dprint(nl,left); */
-            /* printf("right = "); dprint(nr,right); */
+            if (VPREPCORE){
+                printf("left = "); dprint(nl,left);
+                printf("right = "); dprint(nr,right);
+            }
             
             fwrap_add_fiber(fw,jj*nrows+kk,nl,left,nr,right);
         }
@@ -2372,27 +2374,34 @@ ftapprox_cross(struct Fwrap * fw,
         //printf("compute difference \n");
         //printf("norm fti = %G\n",function_train_norm2(fti));
         //printf("norm ft = %G\n",function_train_norm2(ft));
-        diff = function_train_relnorm2diff(ft,fti);
+
         //printf("diff = %G\n",diff);
-        den = function_train_norm2(ft);
+
        /*  diff = function_train_norm2diff(ft,fti); */
        /*  if (den > ZEROTHRESH){ */
        /*     diff /= den; */
        /* } */
 
-        if (cargs->verbose > 0){
-            den = function_train_norm2(ft);
-            printf("...... New FT norm L/R Sweep = %E\n",den);
-            printf("...... Error L/R Sweep = %E\n",diff);
-        }
+        // uncomment below to have error checking after a L/R sweep
+        /* diff = function_train_relnorm2diff(ft,fti); */
+        /* den = function_train_norm2(ft); */
+        /* if (cargs->verbose > 0){ */
+        /*     den = function_train_norm2(ft); */
+        /*     printf("...... New FT norm L/R Sweep = %E\n",den); */
+        /*     printf("...... Error L/R Sweep = %E\n",diff); */
+        /* } */
         
-        if (diff < cargs->epsilon){
-            done = 1;
-            break;
-        }
+        /* if (diff < cargs->epsilon){ */
+        /*     done = 1; */
+        /*     break; */
+        /* } */
         
-        function_train_free(fti); fti=NULL;
-        fti = function_train_copy(ft);
+        /* function_train_free(fti); fti=NULL; */
+        /* fti = function_train_copy(ft); */
+
+        //Up to here
+        ////
+
         
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
