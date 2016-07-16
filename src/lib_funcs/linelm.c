@@ -272,6 +272,7 @@ struct LinElemExp * lin_elem_exp_alloc()
     p->num_nodes = 0;
     p->nodes = NULL;
     p->coeff = NULL;
+    p->diff = NULL;
     p->inner = NULL;
     return p;
 }
@@ -312,9 +313,27 @@ void lin_elem_exp_free(struct LinElemExp * exp)
     if (exp != NULL){
         free(exp->nodes); exp->nodes = NULL;
         free(exp->coeff); exp->coeff = NULL;
+        free(exp->diff); exp->diff = NULL;
         free(exp); exp = NULL;
     }
 }
+
+/* static void compute_inner_helper(struct LinElemExp * exp) */
+/* { */
+/*     if (exp != NULL){ */
+/*         if (exp->coeff != NULL){ */
+/*             if (exp->diff != NULL){ */
+/*                 free(exp->diff); exp->diff = NULL; */
+/*             } */
+
+/*             //left  */
+/*             exp->diff = calloc_double(exp->num_nodes); */
+/*             for (size_t ii = 0; ii < exp->num_nodes-1; ii++){ */
+/*                 exp->diff[ii] = exp->coeff[ii+1]-exp->coeff[ii]; */
+/*             } */
+/*         } */
+/*     } */
+/* } */
 
 /********************************************************//**
     Initialize a linear element expansion
@@ -338,7 +357,7 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
     lexp->coeff = calloc_double(num_nodes);
     memmove(lexp->nodes,nodes,num_nodes*sizeof(double));
     memmove(lexp->coeff,coeff,num_nodes*sizeof(double));
-
+    /* compute_diff(lexp); */
     return lexp;
 }
     
@@ -697,6 +716,7 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     double left,mixed,right,dx2;
     for (size_t ii = 0; ii < N-1; ii++){
         dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
+        /* dx2 = f->diff[ii] * f->diff[ii];//(x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
         lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
         value += (f[ii] * g[ii]) / dx2 * left +
                  (f[ii] * g[ii+1]) / dx2 * mixed +
@@ -722,6 +742,12 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
     int samedisc = lin_elem_sdiscp(f,g);
     if (samedisc == 1){
 //        printf("here?!\n");
+        /* if (f->diff == NULL){ */
+        /*     compute_diff(f); */
+        /* } */
+        /* if (g->diff == NULL){ */
+        /*     compute_diff(g); */
+        /* } */
         value = lin_elem_exp_inner_same(f->num_nodes,f->nodes,
                                         f->coeff, g->coeff);
     }

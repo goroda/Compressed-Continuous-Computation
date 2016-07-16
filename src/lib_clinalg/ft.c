@@ -1588,7 +1588,7 @@ double function_train_norm2(const struct FunctionTrain * a)
     if (out < -ZEROTHRESH){
         if (out * out >  ZEROTHRESH){
             fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
-            exit(1);
+            /* exit(1); */
         }
     }
     return sqrt(fabs(out));
@@ -2369,16 +2369,9 @@ ftapprox_cross(struct Fwrap * fw,
             printf("\n\n\n");
         }
         
-        //printf("compute difference \n");
-        //printf("norm fti = %G\n",function_train_norm2(fti));
-        //printf("norm ft = %G\n",function_train_norm2(ft));
-        diff = function_train_relnorm2diff(ft,fti);
-        //printf("diff = %G\n",diff);
+
+        diff = function_train_norm2diff(ft,fti);
         den = function_train_norm2(ft);
-       /*  diff = function_train_norm2diff(ft,fti); */
-       /*  if (den > ZEROTHRESH){ */
-       /*     diff /= den; */
-       /* } */
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
@@ -2386,6 +2379,9 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error L/R Sweep = %E\n",diff);
         }
         
+        if (den > 1e0){
+            diff = diff / den;
+        }
         if (diff < cargs->epsilon){
             done = 1;
             break;

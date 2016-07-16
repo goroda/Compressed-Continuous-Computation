@@ -2916,6 +2916,16 @@ standard_poly_real_roots(struct StandardPoly * p, size_t * nkeep)
     return real_roots;
 }
 
+static int dblcompare(const void * a, const void * b)
+{
+    const double * aa = a;
+    const double * bb = b;
+    if ( *aa < *bb){
+        return -1;
+    }
+    return 1;
+}
+
 /********************************************************//**
 *   Obtain the real roots of a legendre polynomial expansion
 *
@@ -3068,6 +3078,10 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         free(img); img = NULL;
         free(nscompanion); nscompanion = NULL;
         free(scale); scale = NULL;
+    }
+
+    if (*nkeep > 1){
+        qsort(real_roots, *nkeep, sizeof(double), dblcompare);
     }
     return real_roots;
 }

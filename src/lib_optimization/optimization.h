@@ -52,6 +52,7 @@ struct c3Opt;
 struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);
+int c3opt_is_bruteforce(struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);
 void c3opt_add_ub(struct c3Opt *, double *);
 void c3opt_add_objective(struct c3Opt *,

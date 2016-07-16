@@ -71,6 +71,8 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
  * nodes of basis functions
  * \var LinElemExp::coeff
  * coefficients of basis functions
+ * \var LinElemExp::diff
+ * difference between nodes
  * \var LinElemExp::inner
  * inner products of basis functions
  */
@@ -79,6 +81,7 @@ struct LinElemExp{
     size_t num_nodes;
     double * nodes;
     double * coeff;
+    double * diff;
     double * inner;
 };
 
