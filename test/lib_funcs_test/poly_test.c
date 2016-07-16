@@ -1223,13 +1223,13 @@ void Test_orth_poly_expansion_to_standard_poly_ab(CuTest * tc){
             CuAssertDblEquals(tc, 5.0, p->coeff[ii], 1e-10);
         }
         else if (ii == 5){
-            CuAssertDblEquals(tc, 2.0, p->coeff[ii], 1e-10);
+            CuAssertDblEquals(tc, 2.0, p->coeff[ii], 1e-8);
         }
         else if (ii == 6){
-            CuAssertDblEquals(tc, 1.5, p->coeff[ii], 1e-10);
+            CuAssertDblEquals(tc, 1.5, p->coeff[ii], 1e-8);
         }
         else{
-            CuAssertDblEquals(tc, 0.0, p->coeff[ii], 1e-10);
+            CuAssertDblEquals(tc, 0.0, p->coeff[ii], 1e-8);
         }
     }
     
@@ -1270,8 +1270,8 @@ void Test_orth_poly_expansion_real_roots(CuTest * tc){
     size_t nroots;
     double * roots = orth_poly_expansion_real_roots(pl, &nroots);
     
-   // printf("roots are: ");
-   // dprint(nroots, roots);
+   /* printf("roots are: "); */
+   /* dprint(nroots, roots); */
 
     CuAssertIntEquals(tc, 5, nroots);
     CuAssertDblEquals(tc, -3.0, roots[0], 1e-9);

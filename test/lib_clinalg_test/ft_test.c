@@ -931,7 +931,6 @@ void Test_ftapprox_cross_hermite1(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-
     N = 10;
     double * xtest = linspace(-2.0,2.0,N);
     double err = 0.0;
@@ -1002,13 +1001,13 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
     double ** start = malloc_dd(dim);
     // optimization stuff
     size_t N = 100;
-    double * x = linspace(-10.0,10.0,N);
+    double * x = linspace(-7.0,7.0,N);
     struct c3Vector * optnodes = c3vector_alloc(N,x);
     free(x); x = NULL;
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
         c3approx_set_opt_opts_dim(c3a,ii,optnodes);
-        start[ii] = linspace(-5.0,5.0,init_rank);
+        start[ii] = linspace(-10.0,10.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
