@@ -1814,13 +1814,16 @@ struct LinElemExp * lin_elem_exp_loadtxt(FILE * stream)//, size_t prec)
 {
     size_t num_nodes;
 
-    fscanf(stream,"%zu ",&num_nodes);
+    int num = fscanf(stream,"%zu ",&num_nodes);
+    assert (num == 1);
     /* printf("number of nodes read = %zu\n",num_nodes); */
     double * nodes = calloc_double(num_nodes);
     double * coeff = calloc_double(num_nodes);
     for (size_t ii = 0; ii < num_nodes; ii++){
-        fscanf(stream,"%lG",nodes+ii);
-        fscanf(stream,"%lG",coeff+ii);
+        num = fscanf(stream,"%lG",nodes+ii);
+        assert (num == 1);
+        num = fscanf(stream,"%lG",coeff+ii);
+        assert (num == 1);
     };
     struct LinElemExp * lexp = lin_elem_exp_init(num_nodes,nodes,coeff);
     free(nodes); nodes = NULL;

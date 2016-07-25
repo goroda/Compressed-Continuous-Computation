@@ -219,6 +219,60 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 }
 
 /***********************************************************//**
+    Save a function train to text file for portability
+
+    \param[in]     ft     - function train
+    \param[in,out] stream - stream to write to
+    \param[in]     prrec  - precision with which to save
+
+***************************************************************/
+void function_train_savetxt(struct FunctionTrain * ft, FILE * stream,
+                            size_t prec)
+{
+
+    // dim -> nranks -> core1 -> core2 -> ... -> cored
+
+    size_t ii;
+    //dim + ranks
+    
+    fprintf(stream,"%zu ",ft->dim);
+    for (ii = 0; ii < ft->dim+1; ii++){
+        fprintf(stream,"%zu ",ft->ranks[ii]);
+    }
+
+    for (ii = 0; ii < ft->dim; ii++){
+        qmarray_savetxt(ft->cores[ii],stream,prec);
+    }
+}
+
+/***********************************************************//**
+    Load a function train stored as a text file
+
+    \param[in,out] fp - stream from which to load
+
+    \return function train
+***************************************************************/
+struct FunctionTrain * function_train_loadtxt(FILE * fp)
+{
+    size_t dim;
+    int num = fscanf(fp,"%zu ",&dim);
+    assert (num == 1);
+
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    
+    size_t ii;
+    for (ii = 0; ii < dim+1; ii++){
+        num = fscanf(fp,"%zu ",ft->ranks + ii);
+        assert (num == 1);
+    }
+    for (ii = 0; ii < dim; ii++){
+        ft->cores[ii] = qmarray_loadtxt(fp);
+    }
+    
+    return ft;
+}
+
+/***********************************************************//**
     Save a function train to file
     
     \param[in] ft       - function train to save

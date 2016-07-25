@@ -2527,14 +2527,16 @@ struct PiecewisePoly * piecewise_poly_loadtxt(FILE * stream)
     
     struct PiecewisePoly * poly = piecewise_poly_alloc();
     int leaf;
-    fscanf(stream,"%d ",&leaf);
+    int num = fscanf(stream,"%d ",&leaf);
+    assert (num == 1);
     if (leaf == 1){
         poly->leaf = 1;
         poly->ope = orth_poly_expansion_loadtxt(stream);
     }
     else{
         poly->leaf = 0;
-        fscanf(stream,"%zu ",&(poly->nbranches));
+        num = fscanf(stream,"%zu ",&(poly->nbranches));
+        assert (num == 1);
         poly->branches = piecewise_poly_array_alloc(poly->nbranches);
         size_t ii;
         for (ii = 0; ii < poly->nbranches; ii++){

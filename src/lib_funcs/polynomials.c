@@ -1260,16 +1260,23 @@ orth_poly_expansion_loadtxt(FILE * stream)//l, size_t prec)
     double upper_bound = 0;
     size_t num_poly;
 
-    fscanf(stream,"%d ",&ptype);
-    fscanf(stream,"%lG ",&lower_bound);
-    fscanf(stream,"%lG ",&upper_bound);
-    fscanf(stream,"%zu ",&num_poly);
+    int ptypeint;
+    int num = fscanf(stream,"%d ",&ptypeint);
+    ptype = (enum poly_type)ptypeint;
+    assert (num == 1);
+    num = fscanf(stream,"%lG ",&lower_bound);
+    assert (num == 1);
+    num = fscanf(stream,"%lG ",&upper_bound);
+    assert (num == 1);
+    num = fscanf(stream,"%zu ",&num_poly);
+    assert (num == 1);
 
     struct OrthPolyExpansion * ope = 
         orth_poly_expansion_init(ptype,num_poly,lower_bound,upper_bound);
 
     for (size_t ii = 0; ii < ope->num_poly; ii++){
-        fscanf(stream, "%lG ",ope->coeff+ii);
+        num = fscanf(stream, "%lG ",ope->coeff+ii);
+        assert (num == 1);
     }
 
     return ope;

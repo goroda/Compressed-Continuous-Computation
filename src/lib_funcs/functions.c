@@ -2221,9 +2221,13 @@ struct GenericFunction *
 generic_function_loadtxt(FILE * stream)
 {
     size_t dim;
-    fscanf(stream,"%zu ",&dim);
+    int num = fscanf(stream,"%zu ",&dim);
+    assert (num == 1);
     struct GenericFunction * gf = generic_function_alloc_base(dim);
-    fscanf(stream,"%d ",&(gf->fc));
+    int fcint;
+    num = fscanf(stream,"%d ",&fcint);
+    gf->fc = (enum function_class)fcint;
+    assert (num = 1);
     switch (gf->fc){
     case CONSTANT:                                                break;
     case PIECEWISE:  gf->f = piecewise_poly_loadtxt(stream);      break; 

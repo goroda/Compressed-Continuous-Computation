@@ -239,6 +239,48 @@ void Test_qmarray_serialize(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_qmarray_savetxt(CuTest * tc){
+
+    printf("Testing function: qmarray_savetxt and _loadtxt\n");
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct Qmarray * A = qmarray_approx1d(3,2,qmopts,fw);
+
+    FILE * fp = fopen("qmarraytest.txt","w+");
+    size_t prec = 21;
+    qmarray_savetxt(A,fp,prec);
+    
+    struct Qmarray * B = NULL;
+    rewind(fp);
+    B = qmarray_loadtxt(fp);
+    fclose(fp);
+
+    size_t nrows = qmarray_get_nrows(B);
+    size_t ncols = qmarray_get_ncols(B);
+
+    CuAssertIntEquals(tc,3,nrows);
+    CuAssertIntEquals(tc,2,ncols);
+
+    qmarray_test_equality2(tc,A,B,1e-15);
+
+    qmarray_free(A);
+    qmarray_free(B);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+    fwrap_destroy(fw);
+}
+
 void Test_qmarray_orth1d_columns(CuTest * tc)
 {
     printf("Testing function: qmarray_orth1d_columns\n");
@@ -1806,6 +1848,7 @@ CuSuite * CLinalgQmarrayGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_qmarray_serialize);
+    SUITE_ADD_TEST(suite, Test_qmarray_savetxt);
     
     // a bunch of QR tests
     SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns);

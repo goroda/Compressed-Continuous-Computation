@@ -195,6 +195,51 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 }
 
 /***********************************************************//**
+    Save a qmarray in text format
+
+    \param[in]     qma     - quasimatrix array
+    \param[in,out] stream  - stream to which to write
+    \param[in]     prec    - precision with which to print
+
+***************************************************************/
+void qmarray_savetxt(const struct Qmarray * qma, FILE * fp, size_t prec)
+{
+
+    // nrows -> ncols -> func -> func-> ... -> func
+    
+    assert (qma != NULL);
+    fprintf(fp,"%zu ",qma->nrows);
+    fprintf(fp,"%zu ",qma->ncols);
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_savetxt(qma->funcs[ii],fp,prec);
+    }
+}
+
+/***********************************************************//**
+    Load a qmarray saved in text format
+
+    \param[in,out] stream - stream of text
+
+    \return qmarray
+***************************************************************/
+struct Qmarray * qmarray_loadtxt(FILE * fp)
+{
+    size_t nrows, ncols;
+    int num = fscanf(fp,"%zu ",&nrows);
+    assert (num == 1);
+    num =fscanf(fp,"%zu ",&ncols);
+    assert(num == 1);
+    struct Qmarray * qma = qmarray_alloc(nrows, ncols);
+
+    size_t ii;
+    for (ii = 0; ii < nrows * ncols; ii++){
+        qma->funcs[ii] = generic_function_loadtxt(fp);
+    }
+    
+    return qma;
+}
+
+/***********************************************************//**
     Create a qmarray by approximating 1d functions
 
     \param[in] nrows - number of rows of quasimatrix

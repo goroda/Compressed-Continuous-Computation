@@ -1394,6 +1394,57 @@ void Test_sin10dint(CuTest * tc)
     fwrap_destroy(fw);
 }
 
+void Test_sin10dint_savetxt(CuTest * tc)
+{
+    printf("Testing Function: integration of sin10d AND _savetxt _loadtxt\n");
+    size_t dim = 10;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,sin10d,NULL);
+    // set function monitor
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,0.0);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(0.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-5);
+    c3approx_set_cross_maxiter(c3a,10);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+       
+    
+    FILE * fp = fopen("fttest.txt","w+");
+    size_t prec = 21;
+    function_train_savetxt(ft,fp,prec);
+
+    struct FunctionTrain * ftd = NULL;
+    rewind(fp);
+    ftd = function_train_loadtxt(fp);
+
+    double intval = function_train_integrate(ftd);
+    
+    double should = -0.62993525905472629935874873250680615583558172687;
+
+    double relerr = fabs(intval-should)/fabs(should);
+    //printf("Relative error of integrating 10 dimensional sin = %G\n",relerr);
+    CuAssertDblEquals(tc,0.0,relerr,1e-12);
+
+    fclose(fp);
+    function_train_free(ft);
+    function_train_free(ftd);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    fwrap_destroy(fw);
+}
+
 void Test_sin100dint(CuTest * tc)
 {
     printf("Testing Function: integration of sin100d\n");
@@ -1497,6 +1548,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
     SUITE_ADD_TEST(suite, Test_sin10dint);
+    SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
     SUITE_ADD_TEST(suite, Test_sin100dint);
     SUITE_ADD_TEST(suite, Test_sin1000dint);
     return suite;
