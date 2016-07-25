@@ -1756,6 +1756,14 @@ lin_elem_exp_onezero(size_t nzeros, double * zero_locs,
     }
 }
 
+/********************************************************//**
+    Print a linear element function
+
+    \param[in] f      - linear element function
+    \param[in] args   - extra arguments (not used I think)
+    \param[in] prec   - precision with which to save it
+    \param[in] stream - stream to print to
+************************************************************/
 void print_lin_elem_exp(const struct LinElemExp * f, size_t prec, 
                         void * args, FILE * stream)
 {
@@ -1773,5 +1781,50 @@ void print_lin_elem_exp(const struct LinElemExp * f, size_t prec,
         }
         fprintf(stream,"\n");
     }
+}
+
+/********************************************************//**
+    Save a linear element expansion in text format
+
+    \param[in] f      - function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+************************************************************/
+void lin_elem_exp_savetxt(const struct LinElemExp * f,
+                          FILE * stream, size_t prec)
+{
+    assert (f != NULL);
+    fprintf(stream,"%zu ",f->num_nodes);
+    for (size_t ii = 0; ii < f->num_nodes; ii++){
+        if (prec < 100){
+            fprintf(stream, "%3.*G ",(int)prec,f->nodes[ii]);
+            fprintf(stream, "%3.*G ",(int)prec,f->coeff[ii]);
+        }
+    }
+}
+
+/********************************************************//**
+    Load a linear element expansion in text format
+
+    \param[in] stream - stream to save it to
+
+    \return Linear Element Expansion
+************************************************************/
+struct LinElemExp * lin_elem_exp_loadtxt(FILE * stream)//, size_t prec)
+{
+    size_t num_nodes;
+
+    fscanf(stream,"%zu ",&num_nodes);
+    /* printf("number of nodes read = %zu\n",num_nodes); */
+    double * nodes = calloc_double(num_nodes);
+    double * coeff = calloc_double(num_nodes);
+    for (size_t ii = 0; ii < num_nodes; ii++){
+        fscanf(stream,"%lG",nodes+ii);
+        fscanf(stream,"%lG",coeff+ii);
+    };
+    struct LinElemExp * lexp = lin_elem_exp_init(num_nodes,nodes,coeff);
+    free(nodes); nodes = NULL;
+    free(coeff); coeff = NULL;
+    return lexp;
 }
 

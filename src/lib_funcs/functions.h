@@ -328,4 +328,6 @@ double fiber_cut_eval(double, void *);
 // Utilities
 
 void print_generic_function(const struct GenericFunction *, size_t,void *);
+void generic_function_savetxt(const struct GenericFunction *, FILE *,size_t);
+struct GenericFunction * generic_function_loadtxt(FILE *);
 #endif

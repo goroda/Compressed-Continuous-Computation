@@ -1400,6 +1400,49 @@ void Test_serialize_orth_poly_expansion(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_orth_poly_expansion_savetxt(CuTest * tc){
+    
+    printf("Testing functions: orth_poly_expansion_savetxt and _loadtxt \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,maxminpoly,NULL);
+
+    // approximation
+    double lb = -1.0, ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-15);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    opoly_t pl = orth_poly_expansion_approx_adapt(opts,fw);
+
+
+    FILE * fp = fopen("testorthpoly.txt","w+");
+    size_t prec = 21;
+    orth_poly_expansion_savetxt(pl,fp,prec);
+
+    opoly_t pt = NULL;
+    rewind(fp);
+    pt = orth_poly_expansion_loadtxt(fp);
+
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(POLY_EVAL(pl,xtest[ii]) - POLY_EVAL(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    free(xtest);
+
+    fclose(fp);
+    POLY_FREE(pl);
+    POLY_FREE(pt);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+}
+
 void Test_serialize_generic_function(CuTest * tc){
     
     printf("Testing functions: (de)serializing generic_function \n");
@@ -1447,12 +1490,60 @@ void Test_serialize_generic_function(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_generic_function_savetxt(CuTest * tc){
+    
+    printf("Testing functions: generic_function_savetxt and _loadtxt \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,maxminpoly,NULL);
+
+    // approximation
+    double lb = -1.0, ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-15);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    
+    struct GenericFunction * pl =
+        generic_function_approximate1d(POLYNOMIAL,opts,fw);
+    
+    FILE * fp = fopen("genfunctest.txt","w+");
+    size_t prec = 21;
+    generic_function_savetxt(pl,fp,prec);
+
+    struct GenericFunction * pt = NULL;
+    rewind(fp);
+    pt = generic_function_loadtxt(fp);
+
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(pl,xtest[ii]) -
+                   generic_function_1d_eval(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    free(xtest);
+
+
+    fclose(fp);
+    ope_opts_free(opts);
+    generic_function_free(pl);
+    generic_function_free(pt);
+    fwrap_destroy(fw);
+}
+
 CuSuite * PolySerializationGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_serialize_orth_poly);
     SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion);
+    SUITE_ADD_TEST(suite, Test_orth_poly_expansion_savetxt);
     SUITE_ADD_TEST(suite, Test_serialize_generic_function);
+    SUITE_ADD_TEST(suite, Test_generic_function_savetxt);
 
     return suite;
 }

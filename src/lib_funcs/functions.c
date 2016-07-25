@@ -2186,6 +2186,56 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     }
 }
 
+/********************************************************//**
+    Save a generic function in text format
+
+    \param[in] gf     - generic function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+
+************************************************************/
+void generic_function_savetxt(const struct GenericFunction * gf,
+                              FILE * stream, size_t prec)
+{
+    assert (gf != NULL);
+    fprintf(stream,"%zu ",gf->dim);
+    fprintf(stream,"%d ",(int)(gf->fc));
+    switch (gf->fc){
+    case CONSTANT:                                                   break;
+    case PIECEWISE:  piecewise_poly_savetxt(gf->f,stream,prec);      break; 
+    case POLYNOMIAL: orth_poly_expansion_savetxt(gf->f,stream,prec); break; 
+    case LINELM:     lin_elem_exp_savetxt(gf->f,stream,prec);        break;
+    case RATIONAL:                                                   break;
+    case KERNEL:                                                     break;
+    }
+}
+
+/********************************************************//**
+    Load a generic function in text format
+
+    \param[in] stream - stream to save it to
+
+    \return Generic function
+************************************************************/
+struct GenericFunction *
+generic_function_loadtxt(FILE * stream)
+{
+    size_t dim;
+    fscanf(stream,"%zu ",&dim);
+    struct GenericFunction * gf = generic_function_alloc_base(dim);
+    fscanf(stream,"%d ",&(gf->fc));
+    switch (gf->fc){
+    case CONSTANT:                                                break;
+    case PIECEWISE:  gf->f = piecewise_poly_loadtxt(stream);      break; 
+    case POLYNOMIAL: gf->f = orth_poly_expansion_loadtxt(stream); break;
+    case LINELM:     gf->f = lin_elem_exp_loadtxt(stream);        break;
+    case RATIONAL:                                                break;
+    case KERNEL:                                                  break;
+    }
+
+    return gf;
+}
+
 
 /********************************************************//**
     Create a generic function by approximating a one dimensional function

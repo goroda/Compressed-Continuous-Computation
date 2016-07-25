@@ -45,6 +45,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "fwrap.h"
 
@@ -217,6 +218,12 @@ serialize_orth_poly_expansion(unsigned char *,
 unsigned char *
 deserialize_orth_poly_expansion(unsigned char *, 
             struct OrthPolyExpansion ** );
+
+void orth_poly_expansion_savetxt(const struct OrthPolyExpansion *,
+                                 FILE *, size_t);
+struct OrthPolyExpansion *
+orth_poly_expansion_loadtxt(FILE *);
+
 
 struct StandardPoly * 
 orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion *);

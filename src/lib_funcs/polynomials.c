@@ -1141,7 +1141,7 @@ serialize_orth_poly_expansion(unsigned char * ser,
 unsigned char * 
 deserialize_orth_poly_expansion(
     unsigned char * ser, 
-        struct OrthPolyExpansion ** poly)
+    struct OrthPolyExpansion ** poly)
 {
     
     size_t num_poly = 0;
@@ -1166,7 +1166,7 @@ deserialize_orth_poly_expansion(
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
-    (*poly)->nalloc = num_poly+OPECALLOC;
+    (*poly)->nalloc = num_poly;//+OPECALLOC;
     (*poly)->p = p;
     
     return ptr;
@@ -1222,6 +1222,58 @@ deserialize_orth_poly_expansion(
     */
 }
 
+/********************************************************//**
+    Save an orthonormal polynomial expansion in text format
+
+    \param[in] f      - function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+************************************************************/
+void orth_poly_expansion_savetxt(const struct OrthPolyExpansion * f,
+                                 FILE * stream, size_t prec)
+{
+    assert (f != NULL);
+    fprintf(stream,"%d ",f->p->ptype);
+    fprintf(stream,"%3.*G ",(int)prec,f->lower_bound);
+    fprintf(stream,"%3.*G ",(int)prec,f->upper_bound);
+    fprintf(stream,"%zu ",f->num_poly);
+    for (size_t ii = 0; ii < f->num_poly; ii++){
+        if (prec < 100){
+            fprintf(stream, "%3.*G ",(int)prec,f->coeff[ii]);
+        }
+    }
+}
+
+/********************************************************//**
+    Load an orthonormal polynomial expansion in text format
+
+    \param[in] stream - stream to save it to
+
+    \return Orthonormal polynomial expansion
+************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_loadtxt(FILE * stream)//l, size_t prec)
+{
+
+    enum poly_type ptype;
+    double lower_bound = 0;
+    double upper_bound = 0;
+    size_t num_poly;
+
+    fscanf(stream,"%d ",&ptype);
+    fscanf(stream,"%lG ",&lower_bound);
+    fscanf(stream,"%lG ",&upper_bound);
+    fscanf(stream,"%zu ",&num_poly);
+
+    struct OrthPolyExpansion * ope = 
+        orth_poly_expansion_init(ptype,num_poly,lower_bound,upper_bound);
+
+    for (size_t ii = 0; ii < ope->num_poly; ii++){
+        fscanf(stream, "%lG ",ope->coeff+ii);
+    }
+
+    return ope;
+}
 
 /********************************************************//**
 *   Convert an orthogonal polynomial expansion to a standard_polynomial

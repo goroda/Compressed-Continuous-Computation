@@ -1860,9 +1860,9 @@ int qmarray_lu1d_piv(struct Qmarray * A, struct Qmarray * L, double * u,
                 /*              kk,piv,px,app,optargs); */
             }
 
-            if (VQMALU){
-                printf("done creating any L\n");
-            }
+            /* if (VQMALU){ */
+            /*     printf("done creating any L\n"); */
+            /* } */
         }
         else{
             generic_function_array_daxpby2(A->nrows,1.0/val, 1, 

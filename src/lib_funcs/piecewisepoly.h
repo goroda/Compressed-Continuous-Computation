@@ -193,6 +193,11 @@ deserialize_piecewise_poly(unsigned char *, struct PiecewisePoly ** );
 
 void print_piecewise_poly(struct PiecewisePoly * pw, size_t, void *);
 
+void
+piecewise_poly_savetxt(const struct PiecewisePoly *, FILE *,
+                       size_t);
+struct PiecewisePoly * piecewise_poly_loadtxt(FILE *);
+
 #endif
 
 

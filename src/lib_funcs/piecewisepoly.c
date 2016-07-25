@@ -2486,3 +2486,61 @@ void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args)
     /*     print_piecewise_poly(pw->left,prec,args); */
     /* } */
 }
+
+
+/********************************************************//**
+*   Save a generic function in text format
+*   
+*   \param[in]     p       - function to save
+*   \param[in]     stream  - stream to save it to
+*   \param[in,out] prec    - precision with which to save
+*************************************************************/
+void
+piecewise_poly_savetxt(const struct PiecewisePoly * p, FILE * stream,
+                       size_t prec)
+{
+    assert (p != NULL);
+    if (p->leaf == 1){
+        fprintf(stream,"%d ",p->leaf);
+        orth_poly_expansion_savetxt(p->ope,stream,prec);
+    }
+    else{
+        fprintf(stream,"%d ",p->leaf);
+        fprintf(stream,"%zu ",p->nbranches);
+        size_t ii;
+        for (ii = 0; ii < p->nbranches; ii++){
+            piecewise_poly_savetxt(p->branches[ii],stream,prec);
+        }
+    }
+}
+
+
+/********************************************************//**
+*   Load a piecewise polynomial that is saved as a text file
+*
+*   \param[in] stream - stream to read
+*
+*   \return piecwise polynomial
+*************************************************************/
+struct PiecewisePoly * piecewise_poly_loadtxt(FILE * stream)
+{
+    
+    struct PiecewisePoly * poly = piecewise_poly_alloc();
+    int leaf;
+    fscanf(stream,"%d ",&leaf);
+    if (leaf == 1){
+        poly->leaf = 1;
+        poly->ope = orth_poly_expansion_loadtxt(stream);
+    }
+    else{
+        poly->leaf = 0;
+        fscanf(stream,"%zu ",&(poly->nbranches));
+        poly->branches = piecewise_poly_array_alloc(poly->nbranches);
+        size_t ii;
+        for (ii = 0; ii < poly->nbranches; ii++){
+            poly->branches[ii] = piecewise_poly_loadtxt(stream);
+        }
+    }
+    
+    return poly;
+}

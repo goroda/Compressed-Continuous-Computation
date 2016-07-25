@@ -138,4 +138,7 @@ lin_elem_exp_onezero(size_t, double *,
 
 void print_lin_elem_exp(const struct LinElemExp *, size_t, void *, FILE *);
 
+void lin_elem_exp_savetxt(const struct LinElemExp *,FILE *, size_t);
+struct LinElemExp * lin_elem_exp_loadtxt(FILE *);//, size_t);
+
 #endif
