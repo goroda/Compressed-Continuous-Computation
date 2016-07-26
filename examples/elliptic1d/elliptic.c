@@ -369,21 +369,29 @@ int main(int argc, char *argv[])
     proc_inputs(argc, argv,&rargs);
     
     size_t iii,jjj;
-    double roundtol[8] = {1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8};
+    size_t nround = 12;
+    size_t napprox = 13;
+    double roundtol[12] = {5e-3,1e-3,5e-4,1e-4,5e-5,
+                           1e-5,5e-6,1e-6,5e-7,1e-7,
+                           5e-8,1e-8};
     //double roundtol[1] = {1e-7};
     //double roundtol[2] = {1e-9,1e-10};
     //double roundtol[2] = {1e-4,1e-6};
     //double approxtol[1] = {1e0};
     //double roundtol[3] = {1e-2,1e-5,1e-8};
     //double approxtol[3] = {1e-1,1e-3,1e-5};
-    double approxtol[8] = {1e-0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7};
+
+    double approxtol[13] = {1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,
+                           1e-4,5e-5,1e-5,5e-6,1e-6,5e-7,
+                           1e-7};
+
     //double approxtol[1] = {1e-6};
     //double approxtol[3] = {1e-1,1e-2,1e-3};
 
     double lb=0.05;
     double ub=0.95;
-    for (iii = 0; iii < 8; iii++){
-        for (jjj = 0; jjj < 8; jjj++){
+    for (iii = 0; iii < nround; iii++){
+        for (jjj = 0; jjj < napprox; jjj++){
             printf("done prcessing\n");
 
             size_t dim = rargs.dim;
@@ -397,6 +405,7 @@ int main(int argc, char *argv[])
             ope_opts_set_start(opts,3);
             ope_opts_set_coeffs_check(opts,1);
             ope_opts_set_tol(opts,approxtol[jjj]);
+            ope_opts_set_maxnum(opts,25);
             ope_opts_set_lb(opts,lb);
             ope_opts_set_ub(opts,ub);
             struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    

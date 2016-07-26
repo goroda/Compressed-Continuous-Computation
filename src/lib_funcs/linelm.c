@@ -272,6 +272,7 @@ struct LinElemExp * lin_elem_exp_alloc()
     p->num_nodes = 0;
     p->nodes = NULL;
     p->coeff = NULL;
+    p->diff = NULL;
     p->inner = NULL;
     return p;
 }
@@ -312,9 +313,27 @@ void lin_elem_exp_free(struct LinElemExp * exp)
     if (exp != NULL){
         free(exp->nodes); exp->nodes = NULL;
         free(exp->coeff); exp->coeff = NULL;
+        free(exp->diff); exp->diff = NULL;
         free(exp); exp = NULL;
     }
 }
+
+/* static void compute_inner_helper(struct LinElemExp * exp) */
+/* { */
+/*     if (exp != NULL){ */
+/*         if (exp->coeff != NULL){ */
+/*             if (exp->diff != NULL){ */
+/*                 free(exp->diff); exp->diff = NULL; */
+/*             } */
+
+/*             //left  */
+/*             exp->diff = calloc_double(exp->num_nodes); */
+/*             for (size_t ii = 0; ii < exp->num_nodes-1; ii++){ */
+/*                 exp->diff[ii] = exp->coeff[ii+1]-exp->coeff[ii]; */
+/*             } */
+/*         } */
+/*     } */
+/* } */
 
 /********************************************************//**
     Initialize a linear element expansion
@@ -338,7 +357,7 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
     lexp->coeff = calloc_double(num_nodes);
     memmove(lexp->nodes,nodes,num_nodes*sizeof(double));
     memmove(lexp->coeff,coeff,num_nodes*sizeof(double));
-
+    /* compute_diff(lexp); */
     return lexp;
 }
     
@@ -599,12 +618,16 @@ static void lin_elem_exp_inner_element(
     double * right)
 {
     double dx = (x2-x1);
-    double dx2 = pow(x2,2)-pow(x1,2);
-    double dx3 = (pow(x2,3)-pow(x1,3))/3.0;
+    double x2sq = x2*x2;
+    double x1sq = x1*x1;
+    double x2cu = x2sq * x2;
+    double x1cu = x1sq * x1;
+    double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2);
+    double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0;
           
-    *left = pow(x2,2)*dx - x2*dx2 + dx3;
+    *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3;
     *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3;
-    *right = dx3 - x1*dx2 + pow(x1,2)*dx;
+    *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx;
 }
 
 /********************************************************//**
@@ -692,7 +715,8 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     double value = 0.0;
     double left,mixed,right,dx2;
     for (size_t ii = 0; ii < N-1; ii++){
-        dx2 = pow(x[ii+1]-x[ii],2);
+        dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
+        /* dx2 = f->diff[ii] * f->diff[ii];//(x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
         lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
         value += (f[ii] * g[ii]) / dx2 * left +
                  (f[ii] * g[ii+1]) / dx2 * mixed +
@@ -718,6 +742,12 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
     int samedisc = lin_elem_sdiscp(f,g);
     if (samedisc == 1){
 //        printf("here?!\n");
+        /* if (f->diff == NULL){ */
+        /*     compute_diff(f); */
+        /* } */
+        /* if (g->diff == NULL){ */
+        /*     compute_diff(g); */
+        /* } */
         value = lin_elem_exp_inner_same(f->num_nodes,f->nodes,
                                         f->coeff, g->coeff);
     }
@@ -770,9 +800,10 @@ static int lin_elem_exp_axpy_same(double a, const struct LinElemExp * f,
                                   struct LinElemExp * g)
 {
 
-    for (size_t ii = 0; ii < g->num_nodes; ii++){
-        g->coeff[ii] += a*f->coeff[ii];
-    }
+    cblas_daxpy(g->num_nodes,a,f->coeff,1,g->coeff,1);
+    /* for (size_t ii = 0; ii < g->num_nodes; ii++){ */
+    /*     g->coeff[ii] += a*f->coeff[ii]; */
+    /* } */
     return 0;
 }
 
@@ -989,34 +1020,47 @@ double lin_elem_exp_min(const struct LinElemExp * f, double * x)
 
     \param[in]     f       - function
     \param[in,out] x       - location of absolute value max
+    \param[in]     size    - size of x variable (sizeof(double) or sizeof(size_t))
     \param[in]     optargs - optimization arguments
     
     \return value
 *************************************************************/
-double lin_elem_exp_absmax(const struct LinElemExp * f, double * x,
+double lin_elem_exp_absmax(const struct LinElemExp * f, void * x,
+                           size_t size,
                            void * optargs)
 {
     if (optargs == NULL){
-
+        size_t dsize = sizeof(double);
         double mval = fabs(f->coeff[0]);
-        *x = f->nodes[0];
+        if (size == dsize){
+            *(double *)(x) = f->nodes[0];
+        }
+        else{
+            *(size_t *)(x) = 0;
+        }
         for (size_t ii = 1; ii < f->num_nodes;ii++){
             if (fabs(f->coeff[ii]) > mval){
                 mval = fabs(f->coeff[ii]);
-                *x = f->nodes[ii];
+                if (size == dsize){
+                    *(double *)(x) = f->nodes[ii];
+                }
+                else{
+                    *(size_t *)(x) = ii;
+                }
             }
         }
         return mval;
     }
     else{
+        assert (size == sizeof(double));
         struct c3Vector * optnodes = optargs;
         double mval = fabs(lin_elem_exp_eval(f,optnodes->elem[0]));
-        *x = optnodes->elem[0];
+        *(double *)(x) = optnodes->elem[0];
         for (size_t ii = 0; ii < optnodes->size; ii++){
             double val = fabs(lin_elem_exp_eval(f,optnodes->elem[ii]));
             if (val > mval){
                 mval = val;
-                *x = optnodes->elem[ii];
+                *(double *)(x) = optnodes->elem[ii];
             }
         }
         return mval;
@@ -1300,9 +1344,15 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         memmove(lexp->nodes,opts->nodes,N*sizeof(double));
 
         // evaluate the function
+        /* printf("evaluate points\n"); */
+        /* dprint(N,lexp->nodes); */
         fwrap_eval(N,lexp->nodes,lexp->coeff,f);
+
+        assert (fabs(lexp->nodes[0]-opts->nodes[0])<1e-15);
+        /* printf("cannot evaluate them"); */
     }
     else{
+        /* printf("not here!\n"); */
         // adapt
         struct LinElemXY * xy = NULL;
         if (opts->nodes == NULL){ // no nodes yet specified
@@ -1706,6 +1756,14 @@ lin_elem_exp_onezero(size_t nzeros, double * zero_locs,
     }
 }
 
+/********************************************************//**
+    Print a linear element function
+
+    \param[in] f      - linear element function
+    \param[in] args   - extra arguments (not used I think)
+    \param[in] prec   - precision with which to save it
+    \param[in] stream - stream to print to
+************************************************************/
 void print_lin_elem_exp(const struct LinElemExp * f, size_t prec, 
                         void * args, FILE * stream)
 {
@@ -1723,5 +1781,53 @@ void print_lin_elem_exp(const struct LinElemExp * f, size_t prec,
         }
         fprintf(stream,"\n");
     }
+}
+
+/********************************************************//**
+    Save a linear element expansion in text format
+
+    \param[in] f      - function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+************************************************************/
+void lin_elem_exp_savetxt(const struct LinElemExp * f,
+                          FILE * stream, size_t prec)
+{
+    assert (f != NULL);
+    fprintf(stream,"%zu ",f->num_nodes);
+    for (size_t ii = 0; ii < f->num_nodes; ii++){
+        if (prec < 100){
+            fprintf(stream, "%3.*G ",(int)prec,f->nodes[ii]);
+            fprintf(stream, "%3.*G ",(int)prec,f->coeff[ii]);
+        }
+    }
+}
+
+/********************************************************//**
+    Load a linear element expansion in text format
+
+    \param[in] stream - stream to save it to
+
+    \return Linear Element Expansion
+************************************************************/
+struct LinElemExp * lin_elem_exp_loadtxt(FILE * stream)//, size_t prec)
+{
+    size_t num_nodes;
+
+    int num = fscanf(stream,"%zu ",&num_nodes);
+    assert (num == 1);
+    /* printf("number of nodes read = %zu\n",num_nodes); */
+    double * nodes = calloc_double(num_nodes);
+    double * coeff = calloc_double(num_nodes);
+    for (size_t ii = 0; ii < num_nodes; ii++){
+        num = fscanf(stream,"%lG",nodes+ii);
+        assert (num == 1);
+        num = fscanf(stream,"%lG",coeff+ii);
+        assert (num == 1);
+    };
+    struct LinElemExp * lexp = lin_elem_exp_init(num_nodes,nodes,coeff);
+    free(nodes); nodes = NULL;
+    free(coeff); coeff = NULL;
+    return lexp;
 }
 

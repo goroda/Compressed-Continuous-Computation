@@ -219,6 +219,60 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 }
 
 /***********************************************************//**
+    Save a function train to text file for portability
+
+    \param[in]     ft     - function train
+    \param[in,out] stream - stream to write to
+    \param[in]     prrec  - precision with which to save
+
+***************************************************************/
+void function_train_savetxt(struct FunctionTrain * ft, FILE * stream,
+                            size_t prec)
+{
+
+    // dim -> nranks -> core1 -> core2 -> ... -> cored
+
+    size_t ii;
+    //dim + ranks
+    
+    fprintf(stream,"%zu ",ft->dim);
+    for (ii = 0; ii < ft->dim+1; ii++){
+        fprintf(stream,"%zu ",ft->ranks[ii]);
+    }
+
+    for (ii = 0; ii < ft->dim; ii++){
+        qmarray_savetxt(ft->cores[ii],stream,prec);
+    }
+}
+
+/***********************************************************//**
+    Load a function train stored as a text file
+
+    \param[in,out] fp - stream from which to load
+
+    \return function train
+***************************************************************/
+struct FunctionTrain * function_train_loadtxt(FILE * fp)
+{
+    size_t dim;
+    int num = fscanf(fp,"%zu ",&dim);
+    assert (num == 1);
+
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    
+    size_t ii;
+    for (ii = 0; ii < dim+1; ii++){
+        num = fscanf(fp,"%zu ",ft->ranks + ii);
+        assert (num == 1);
+    }
+    for (ii = 0; ii < dim; ii++){
+        ft->cores[ii] = qmarray_loadtxt(fp);
+    }
+    
+    return ft;
+}
+
+/***********************************************************//**
     Save a function train to file
     
     \param[in] ft       - function train to save
@@ -395,6 +449,8 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
     generic_function_1darray_eval2(
         ft->cores[ii]->nrows * ft->cores[ii]->ncols,
         ft->cores[ii]->funcs, x[ii],t1);
+    /* printf("ft first core is \n \t"); */
+    /* dprint(ft->cores[ii]->ncols,t1); */
 
     double * t2 = ft->evalspace2;
     double * t3 = ft->evalspace3;
@@ -404,6 +460,8 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
             ft->cores[ii]->funcs, x[ii],t2);
             
+        /* printf("\t\t t2 = \n"); */
+        /* dprint2d_col(ft->cores[ii]->nrows,ft->cores[ii]->ncols,t2); */
         if (ii%2 == 1){
             // previous times new core
             cblas_dgemv(CblasColMajor,CblasTrans,
@@ -411,19 +469,24 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
                         t2, ft->ranks[ii],
                         t1, 1, 0.0, t3, 1);
             onsol = 2;
-
+            /* printf("\t next is t3 \n \t"); */
+            /* dprint(ft->ranks[ii+1],t3); */
         }
         else {
-//            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
-//                ft->ranks[ii+1], ft->ranks[ii], 1.0, t3, 1, t2,
-//                ft->ranks[ii], 0.0, t1, 1)
             cblas_dgemv(CblasColMajor,CblasTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0,
                         t2, ft->ranks[ii],
                         t3,1,0.0,t1,1);
             onsol = 1;
+            /* printf("\t next is t1 \n \t"); */
+            /* dprint(ft->ranks[ii+1],t1); */
 
         }
+
+        /* if (ii == dim-2){ */
+        /*     printf("in ft eval t1 before multiplying by matrix is \n \t"); */
+        /*     dprint(ft->ranks[dim-1],t1); */
+        /* } */
     }
     
     double out;// = 0.123456789;
@@ -492,7 +555,6 @@ double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
                         t2, ft->ranks[ii],
                         t1, 1, 0.0, t3, 1);
             onsol = 2;
-
         }
         else {
 //            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
@@ -503,7 +565,6 @@ double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
                         t2, ft->ranks[ii],
                         t3,1,0.0,t1,1);
             onsol = 1;
-
         }
     }
     
@@ -522,6 +583,178 @@ double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
     }
     
     return out;
+}
+
+/***********************************************************//**
+    Evaluate a fiber of the function-train at particular indices
+    when each fiber is represented in a (fixed) nodal basis
+
+    \param[in]     ft        - function train
+    \param[in]     fixed_ind - indices of fixed_values
+    \param[in]     N         - number of evaluations
+    \param[in]     ind       - locations of evaluations
+    \param[in]     dim_vary  - dimension that is varying
+    \param[in,out] out       - output values
+
+***************************************************************/
+void function_train_eval_fiber_ind(struct FunctionTrain * ft, 
+                                   const size_t * fixed_ind,
+                                   size_t N, const size_t * ind,
+                                   size_t dim_vary,
+                                   double * out)
+{
+    
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t maxrank = function_train_get_maxrank(ft);
+    if (ft->evalspace1 == NULL){
+        ft->evalspace1 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace2 == NULL){
+        ft->evalspace2 = calloc_double(maxrank*maxrank);
+    }
+    if (ft->evalspace3 == NULL){
+        ft->evalspace3 = calloc_double(maxrank*maxrank);
+    }
+
+    double * t1 = ft->evalspace1;
+    double * t2 = ft->evalspace2;
+    double * t3 = ft->evalspace3;
+    double * temp_tensor = NULL;
+    double * temp_mat = NULL;
+
+    size_t nrows, ncols;
+
+    struct GenericFunction ** arr = ft->cores[dim_vary]->funcs;
+    nrows = ft->cores[dim_vary]->nrows;
+    ncols = ft->cores[dim_vary]->ncols;
+    temp_tensor = calloc_double(nrows * ncols * N);
+    temp_mat    = calloc_double(ncols * N);
+    for (size_t jj = 0; jj < N; jj++){
+        generic_function_1darray_eval2_ind(nrows * ncols,arr,ind[jj],
+                                           temp_tensor + jj * nrows * ncols);
+    }
+
+    if (dim_vary == 0){
+        assert (nrows == 1);
+        memmove(temp_mat, temp_tensor, ncols * N * sizeof(double));
+    }
+    else{ // (dim_vary != 0){
+        arr = ft->cores[0]->funcs;
+        nrows = ft->cores[0]->nrows;
+        ncols = ft->cores[0]->ncols;
+        generic_function_1darray_eval2_ind(nrows*ncols,arr,fixed_ind[0],t1);
+        
+        /* printf("first core is \n \t"); */
+        /* dprint(ncols,t1); */
+        int onsol = 1;    
+        for (size_t ii = 1; ii < dim_vary; ii++){
+            nrows = ft->cores[ii]->nrows;
+            ncols = ft->cores[ii]->ncols;
+            arr = ft->cores[ii]->funcs;
+
+            generic_function_1darray_eval2_ind(nrows * ncols, arr,fixed_ind[ii],t2);
+            /* printf("\t\t t2 = \n"); */
+            /* dprint2d_col(nrows,ncols,t2); */
+            if (onsol == 1){
+                // previous times new core
+                /* cblas_dgemv(CblasColMajor,CblasTrans, */
+                /*             nrows, ncols, 1.0, t2, nrows, */
+                /*             t1, 1, 0.0, t3, 1); */
+                cblas_dgemv(CblasColMajor,CblasTrans,
+                            ft->ranks[ii], ft->ranks[ii+1], 1.0,
+                            t2, ft->ranks[ii],
+                            t1, 1, 0.0, t3, 1);
+
+                onsol = 2;
+                /* printf("\t next is t3 \n \t"); */
+                /* dprint(ncols,t3); */
+            }
+            else {
+                cblas_dgemv(CblasColMajor,CblasTrans, 
+                            nrows, ncols, 1.0,
+                            t2, nrows,
+                            t3,1,0.0,t1,1);
+                onsol = 1;
+                /* printf("\t next is t1  \n \t"); */
+                /* dprint(ncols,t1); */
+            }
+        }
+        
+        nrows = ft->cores[dim_vary]->nrows;
+        ncols = ft->cores[dim_vary]->ncols;
+        if (onsol == 1){
+            /* printf("t1 before multiplying by matrix is \n \t"); */
+            /* dprint(nrows,t1); */
+            /* dprint2d_col(nrows,ncols,temp_tensor); */
+            for (size_t jj = 0; jj < N; jj++){
+                cblas_dgemv(CblasColMajor,CblasTrans,
+                            nrows, ncols, 1.0, temp_tensor + jj*nrows*ncols, 
+                            nrows, t1, 1, 0.0, temp_mat + jj*ncols, 1);
+            }
+        }
+        else{
+            for (size_t jj = 0; jj < N; jj++){
+                cblas_dgemv(CblasColMajor,CblasTrans,
+                            nrows, ncols, 1.0, temp_tensor + jj*nrows*ncols, 
+                            nrows, t3, 1, 0.0, temp_mat + jj*ncols, 1);
+            }
+        }
+    }
+
+    // got everything before and including and stored in temp_mat
+    if (dim_vary == dim-1){ // done b/c ncols = 1
+        /* printf("we are here\n"); */
+        memmove(out,temp_mat, N * sizeof(double));
+        /* printf("out = "); dprint(N,out); */
+    }
+    else{ // come from the back
+
+        nrows = ft->cores[dim-1]->nrows;
+        ncols = ft->cores[dim-1]->ncols;
+        arr = ft->cores[dim-1]->funcs;
+        generic_function_1darray_eval2_ind(nrows * ncols,arr,fixed_ind[dim-1],t1);
+        int onsol = 1;
+        for (size_t ii = dim-2; ii > dim_vary; ii--){
+            nrows = ft->cores[ii]->nrows;
+            ncols = ft->cores[ii]->ncols;
+            arr = ft->cores[ii]->funcs;
+            generic_function_1darray_eval2_ind(nrows*ncols,arr,fixed_ind[ii],t2);
+            if (onsol == 1){
+                // previous times new core
+                cblas_dgemv(CblasColMajor,CblasNoTrans,
+                            nrows, ncols, 1.0, t2, nrows,
+                            t1, 1, 0.0, t3, 1);
+                onsol = 2;
+            }
+            else {
+                cblas_dgemv(CblasColMajor,CblasNoTrans, 
+                            nrows, ncols, 1.0,
+                            t2, nrows,
+                            t3,1,0.0,t1,1);
+                onsol = 1;
+            }
+        }
+
+        // now combine
+        ncols = ft->cores[dim_vary]->ncols;
+        if (onsol == 1){
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ncols, N, 1.0, temp_mat,
+                        ncols, t1, 1, 0.0, out, 1);
+        }
+        else{
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ncols, N, 1.0, temp_mat,
+                        ncols, t3, 1, 0.0, out, 1);
+        }
+
+    }
+
+    free(temp_mat); temp_mat = NULL;
+    free(temp_tensor); temp_tensor = NULL;
 }
 
 /***********************************************************//**
@@ -1408,8 +1641,8 @@ double function_train_norm2(const struct FunctionTrain * a)
     double out = function_train_inner(a,a);
     if (out < -ZEROTHRESH){
         if (out * out >  ZEROTHRESH){
-            fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
-            exit(1);
+            /* fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out); */
+            /* exit(1); */
         }
     }
     return sqrt(fabs(out));
@@ -1974,8 +2207,10 @@ prepCore(size_t ii, size_t nrows, size_t ncols,
         for (size_t kk = 0; kk < nrows; kk++){
             nl = 0;
             left = cross_index_get_node_value(left_ind[ii],kk,&nl);
-            /* printf("left = "); dprint(nl,left); */
-            /* printf("right = "); dprint(nr,right); */
+            if (VPREPCORE){
+                printf("left = "); dprint(nl,left);
+                printf("right = "); dprint(nr,right);
+            }
             
             fwrap_add_fiber(fw,jj*nrows+kk,nl,left,nr,right);
         }
@@ -2076,6 +2311,7 @@ ftapprox_cross(struct Fwrap * fw,
             pivx = calloc_double(ft->ranks[ii+1]);
             
             if (VFTCROSS){
+                printf("=======================================\n\n\n\n");
                 printf( "prepCore \n");
                 printf( "left index set = \n");
                 print_cross_index(left_ind[ii]);
@@ -2189,30 +2425,54 @@ ftapprox_cross(struct Fwrap * fw,
             printf("\n\n\n");
         }
         
+
         //printf("compute difference \n");
         //printf("norm fti = %G\n",function_train_norm2(fti));
         //printf("norm ft = %G\n",function_train_norm2(ft));
-        diff = function_train_relnorm2diff(ft,fti);
-        //printf("diff = %G\n",diff);
-        //den = function_train_norm2(ft);
-        //diff = function_train_norm2diff(ft,fti);
-        //if (den > ZEROTHRESH){
-        //    diff /= den;
-       // }
 
+        //printf("diff = %G\n",diff);
+
+       /*  diff = function_train_norm2diff(ft,fti); */
+       /*  if (den > ZEROTHRESH){ */
+       /*     diff /= den; */
+       /* } */
+
+
+        diff = function_train_norm2diff(ft,fti);
+        den = function_train_norm2(ft);
+
+        if (den > 1e0){
+            diff = diff / den;
+        }
+
+        // uncomment below to have error checking after a L/R sweep
+        /* diff = function_train_relnorm2diff(ft,fti); */
+        /* den = function_train_norm2(ft); */
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
             printf("...... New FT norm L/R Sweep = %E\n",den);
             printf("...... Error L/R Sweep = %E\n",diff);
         }
         
+
+        /* if (diff < cargs->epsilon){ */
+        /*     done = 1; */
+        /*     break; */
+        /* } */
+
+
         if (diff < cargs->epsilon){
             done = 1;
             break;
         }
+
         
         /* function_train_free(fti); fti=NULL; */
         /* fti = function_train_copy(ft); */
+
+        //Up to here
+        ////
+
         
         //printf("copied \n");
         //printf("copy diff= %G\n", function_train_norm2diff(ft,fti));
@@ -2346,7 +2606,9 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
+        /* if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){ */
         if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+        /* if ( diff < cargs->epsilon){ */
             done = 1;
             break;
         }

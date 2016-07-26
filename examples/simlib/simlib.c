@@ -75,21 +75,57 @@ double robotarm(const double * x, void * args)
     double u = 0.0;
     double v = 0.0;
     //size_t ii,jj;
+     
+    double theta1,theta2,theta3,theta4;
+    double L1,L2,L3,L4;
+    int natural_order = 0;
+    if (natural_order == 1){
+        theta1 = x[0];
+        theta2 = x[1];
+        theta3 = x[2];
+        theta4 = x[3];
+    
+        L1 = x[4];
+        L2 = x[5];
+        L3 = x[6];
+        L4 = x[7];
+    }
+    else{
+        // daniele's optimal ordering
+        /* theta1 = x[0]; */
+        /* theta2 = x[4]; */
+        /* theta3 = x[5]; */
+        /* theta4 = x[3]; */
+        /* L1 = x[2]; */
+        /* L2 = x[1]; */
+        /* L3 = x[6]; */
+        /* L4 = x[7]; */
 
-    double t1 = x[0] * M_PI + M_PI;
-    double t2 = t1 + (x[1]*M_PI + M_PI);
-    double t3 = t2 + (x[2]*M_PI + M_PI);
-    double t4 = t3 + (x[3]*M_PI + M_PI);
+        theta1 = x[0];
+        theta2 = x[1];
+        L1 = x[2];
+        L2 = x[3];
+        L3 = x[4];
+        L4 = x[5];
+        theta3 = x[6];
+        theta4 = x[7];
 
-    u = (x[4]*0.5+0.5) * cos(t1) + 
-        (x[5]*0.5+0.5) * cos(t2) + 
-        (x[6]*0.5+0.5) * cos(t3) + 
-        (x[7]*0.5+0.5) * cos(t4);
+    }
 
-    v = (x[4]*0.5+0.5) * sin(t1) + 
-        (x[5]*0.5+0.5) * sin(t2) + 
-        (x[6]*0.5+0.5) * sin(t3) + 
-        (x[7]*0.5+0.5) * sin(t4);
+    double t1 = theta1 * M_PI + M_PI;
+    double t2 = t1 + (theta2*M_PI + M_PI);
+    double t3 = t2 + (theta3*M_PI + M_PI);
+    double t4 = t3 + (theta4*M_PI + M_PI);
+
+    u = (L1*0.5+0.5) * cos(t1) + 
+        (L2*0.5+0.5) * cos(t2) + 
+        (L3*0.5+0.5) * cos(t3) + 
+        (L4*0.5+0.5) * cos(t4);
+
+    v = (L1*0.5+0.5) * sin(t1) + 
+        (L2*0.5+0.5) * sin(t2) + 
+        (L3*0.5+0.5) * sin(t3) + 
+        (L4*0.5+0.5) * sin(t4);
     
     double f = sqrt ( u*u + v*v);
     return f;
@@ -200,56 +236,67 @@ int main( int argc, char *argv[])
     }
 
     struct FunctionMonitor * fm = NULL;
+    double (*f)(const double * ,void *);
     size_t dim;
     if (strcmp(argv[1], "otl") == 0){
         printf("Running OTL circuit function \n");
         dim = 6;
+        f = otlcircuit;
         fm = function_monitor_initnd(otlcircuit,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "borehole") == 0){
         printf("Running Borehole function \n");
         dim = 8;
+        f = borehole;
         fm = function_monitor_initnd(borehole,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "piston") == 0){
         printf("Running Piston function \n");
         dim = 7;
+        f = piston;
         fm = function_monitor_initnd(piston,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "robotarm") == 0){
         printf("Running Piston function \n");
         dim = 8;
+        f = robotarm;
         fm = function_monitor_initnd(robotarm,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "wingweight") == 0){
         printf("Running Wing Weight function \n");
         dim = 10;
+        f = wingweight;
         fm = function_monitor_initnd(wingweight,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "friedman") == 0){
         printf("Running Friedman function \n");
         dim = 5;
+        f = friedman;
         fm = function_monitor_initnd(friedman,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "gramlee09") == 0){
         printf("Running Gramacy & Lee 2009 function \n");
         dim = 6;
+        f = gramlee09;
         fm = function_monitor_initnd(gramlee09,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "detpep10") == 0){
         printf("Running Dette & Peplyshev 2010 8 dimension function \n");
         dim = 8;
+        f = detpep10;
         fm = function_monitor_initnd(detpep10,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "detpep10exp") == 0){
         printf("Running Dette & Peplyshev 2010 3 dimension exponential function \n");
         dim = 3;
+        f = detpep10exp;
         fm = function_monitor_initnd(detpep10exp,NULL,dim,1000*dim);
     }
 
     else if (strcmp(argv[1], "xy") == 0){
         printf("Running XY function \n");
         dim = 2;
+        f = xy;
         fm = function_monitor_initnd(xy,NULL,dim,1000*dim);
     }
     else{
@@ -263,30 +310,39 @@ int main( int argc, char *argv[])
         
     struct Fwrap * fw = fwrap_create(dim,"general");
     fwrap_set_f(fw,function_monitor_eval,fm);
+    /* fwrap_set_f(fw,f,NULL); */
+    
 
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_start(opts,7);
     ope_opts_set_coeffs_check(opts,2);
     ope_opts_set_tol(opts,1e-7);
-//    ope_opts_set_maxnum(opts,15);
+    ope_opts_set_maxnum(opts,25);
     ope_opts_set_lb(opts,lb);
     ope_opts_set_ub(opts,ub);
     
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
-    int verbose = 0;
+    int verbose = 1;
     size_t init_rank = 5;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
         start[ii] = linspace(lb,ub,init_rank);
+        /* for (size_t jj = 0; jj < init_rank; jj++){ */
+        /*     start[ii][jj] = randu()*(ub-lb) + lb; */
+        /* } */
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    c3approx_set_verbose(c3a,2);
-    c3approx_set_cross_tol(c3a,1e-8);
-    c3approx_set_round_tol(c3a,1e-8);
+    c3approx_set_verbose(c3a,verbose);
+    c3approx_set_cross_tol(c3a,1e-3);
+    c3approx_set_cross_maxiter(c3a,4); // extra
+    c3approx_set_round_tol(c3a,1e-5);
+    /* c3approx_set_adapt_maxrank_all(c3a,5); */
+    /* c3approx_set_ */
 
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+    int adapt = 1;
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,adapt);
 
     size_t nvals = nstored_hashtable_cp(fm->evals);
     printf("number of evaluations = %zu \n", nvals);
@@ -302,7 +358,8 @@ int main( int argc, char *argv[])
         for (jj = 0; jj < dim; jj++){
             testpt[jj] = randu()*2.0-1.0;
         }
-        double valtrue = function_monitor_eval(testpt,fm);
+        double valtrue;
+        fwrap_eval(1,testpt,&valtrue,fw);/* = function_monitor_eval(testpt,fm); */
         double val = function_train_eval(ft, testpt);
         double diff = valtrue - val;
         //printf("\n");

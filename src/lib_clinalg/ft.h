@@ -75,6 +75,11 @@ function_train_serialize(unsigned char *, struct FunctionTrain *,
                              size_t *);
 unsigned char *
 function_train_deserialize(unsigned char *, struct FunctionTrain **);
+
+void function_train_savetxt(struct FunctionTrain *, FILE *,
+                            size_t);
+struct FunctionTrain * function_train_loadtxt(FILE *);
+
 int function_train_save(struct FunctionTrain *, char *);
 struct FunctionTrain * function_train_load(char *);
 
@@ -93,6 +98,11 @@ double function_train_eval_co_perturb(struct FunctionTrain *,
 double function_train_eval_co_perturb_ind(struct FunctionTrain *, 
                                           const size_t *, const size_t *, 
                                           double *);
+void function_train_eval_fiber_ind(struct FunctionTrain *, 
+                                   const size_t *,
+                                   size_t, const size_t *,
+                                   size_t,
+                                   double *);
 
 // generators
 struct FunctionTrain *

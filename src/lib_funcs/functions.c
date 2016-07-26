@@ -1199,6 +1199,39 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  }
 
  /********************************************************//**
+ *   Evaluate a generic function consisting of nodal
+ *   basis functions at some node
+ *
+ *   \param[in] f    - function
+ *   \param[in] x    - location at which to Evaluate
+ *   \param[in] size - byte size of location (sizeof(double) or (sizeof(size_t)))
+ *
+ *   \return evaluation
+ ************************************************************/
+double generic_function_1d_eval_gen(const struct GenericFunction * f, 
+                                    void * x, size_t size)
+{
+     assert (f != NULL);
+
+     size_t dsize = sizeof(double);
+     size_t stsize = sizeof(size_t);
+     double out;
+     if (size == dsize){
+         out = generic_function_1d_eval(f,*(double *)x);
+     }
+     else if (size == stsize){
+         out = generic_function_1d_eval_ind(f,*(size_t *)x);
+     }
+     else{
+         fprintf(stderr, "Cannot evaluate generic function at \n");
+         fprintf(stderr, "input of byte size %zu\n ", size);
+         exit(1);
+     }
+
+     return out;
+ }
+
+ /********************************************************//**
  *   Evaluate an array of generic functions
  *
  *   \param[in] n - number of functions
@@ -1207,16 +1240,29 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  *
  *   \return array of values
  ************************************************************/
- double * 
- generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
- {
-     double * out = calloc_double(n);
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         out[ii] = generic_function_1d_eval(f[ii],x);
-     }
-     return out;
- }
+double * 
+generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
+{
+    double * out = calloc_double(n);
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        out[ii] = generic_function_1d_eval(f[ii],x);
+    }
+    return out;
+}
+
+/********************************************************//**
+   Evaluate a generic function array at a given pivot
+************************************************************/
+double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
+                                         struct Pivot * piv)
+{
+    size_t size = pivot_get_size(piv);
+    size_t ind = pivot_get_ind(piv);
+    void * loc = pivot_get_loc(piv);
+    double out = generic_function_1d_eval_gen(f[ind],loc,size);
+    return out;
+}
 
  /********************************************************//**
  *   Multiply and add 3 functions \f$ z \leftarrow ax + by + cz \f$
@@ -1683,11 +1729,39 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 double generic_function_absmax(const struct GenericFunction * f, double * x, void * optargs)
 {
     double out = 0.123456789;
+    size_t dsize = sizeof(double);
     switch (f->fc){
     case CONSTANT:                                                     break;
     case PIECEWISE:  out = piecewise_poly_absmax(f->f,x,optargs);      break;
     case POLYNOMIAL: out = orth_poly_expansion_absmax(f->f,x,optargs); break;
-    case LINELM:     out = lin_elem_exp_absmax(f->f,x,optargs);        break;
+    case LINELM:     out = lin_elem_exp_absmax(f->f,x,dsize,optargs);  break;
+    case RATIONAL:                                                     break;
+    case KERNEL:                                                       break;
+    }
+    return out;
+}
+
+/********************************************************//**
+    Compute the (generic) location and value of the maximum, 
+    in absolute value, element of a generic function 
+
+    \param[in]     f       - function
+    \param[in,out] x       - location of maximum
+    \param[in]     size    - number of bytes of x
+    \param[in]     optargs - optimization arguments
+
+    \return absolute value of the maximum
+************************************************************/
+double generic_function_absmax_gen(const struct GenericFunction * f, 
+                                   void * x, size_t size, void * optargs)
+{
+    double out = 0.123456789;
+    size_t dsize = sizeof(double);
+    switch (f->fc){
+    case CONSTANT:                                                     break;
+    case PIECEWISE:  assert (size == dsize); out = piecewise_poly_absmax(f->f,x,optargs);      break;
+    case POLYNOMIAL: assert (size == dsize); out = orth_poly_expansion_absmax(f->f,x,optargs); break;
+    case LINELM:     out = lin_elem_exp_absmax(f->f,x,size,optargs);        break;
     case RATIONAL:                                                     break;
     case KERNEL:                                                       break;
     }
@@ -1726,6 +1800,62 @@ generic_function_array_absmax(size_t n, size_t lda,
             *x = tempx;
             *ind = ii;
         }
+    }
+    return maxval;
+}
+
+/********************************************************//**
+    Compute the index, location and value of the maximum, in absolute value, 
+    element of a generic function array (Pivot Based)
+
+    \param[in]     n   - number of functions
+    \param[in]     lda - stride
+    \param[in]     a   - array of functions
+    \param[in,out] piv - pivot
+
+    \return maxval - absolute value of the maximum
+************************************************************/
+double 
+generic_function_array_absmax_piv(size_t n, size_t lda, 
+                                  struct GenericFunction ** a, 
+                                  struct Pivot * piv,
+                                  void * optargs)
+{
+    size_t ii = 0;
+    pivot_set_ind(piv,ii);
+    //printf("do absmax\n");
+    //print_generic_function(a[ii],0,NULL);
+    size_t size = pivot_get_size(piv);
+    void * x = pivot_get_loc(piv);
+    double maxval = generic_function_absmax_gen(a[ii],x,size,optargs);
+    //printf("maxval=%G\n",maxval);
+    if (size == sizeof(double)){
+        double tempval, tempx;
+        for (ii = 1; ii < n; ii++){
+            tempval = generic_function_absmax_gen(a[ii*lda],&tempx,size,optargs);
+            if (tempval > maxval){
+                maxval = tempval;
+                *(double *)(x) = tempx;
+                pivot_set_ind(piv,ii);
+            }
+        }
+    }
+    else if (size == sizeof(size_t)){
+        double tempval;
+        size_t tempx;
+        for (ii = 1; ii < n; ii++){
+            tempval = generic_function_absmax_gen(a[ii*lda],&tempx,size,optargs);
+            if (tempval > maxval){
+                maxval = tempval;
+                *(size_t *)(x) = tempx;
+                pivot_set_ind(piv,ii);
+            }
+        }  
+    }
+    else{
+        fprintf(stderr, "Cannot perform generic_function_array_absmax_piv\n");
+        fprintf(stderr, "with the specified elements of size %zu\n",size);
+        exit(1);
     }
     return maxval;
 }
@@ -2054,6 +2184,60 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     case RATIONAL:                                               break;
     case KERNEL:                                                 break;
     }
+}
+
+/********************************************************//**
+    Save a generic function in text format
+
+    \param[in] gf     - generic function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+
+************************************************************/
+void generic_function_savetxt(const struct GenericFunction * gf,
+                              FILE * stream, size_t prec)
+{
+    assert (gf != NULL);
+    fprintf(stream,"%zu ",gf->dim);
+    fprintf(stream,"%d ",(int)(gf->fc));
+    switch (gf->fc){
+    case CONSTANT:                                                   break;
+    case PIECEWISE:  piecewise_poly_savetxt(gf->f,stream,prec);      break; 
+    case POLYNOMIAL: orth_poly_expansion_savetxt(gf->f,stream,prec); break; 
+    case LINELM:     lin_elem_exp_savetxt(gf->f,stream,prec);        break;
+    case RATIONAL:                                                   break;
+    case KERNEL:                                                     break;
+    }
+}
+
+/********************************************************//**
+    Load a generic function in text format
+
+    \param[in] stream - stream to save it to
+
+    \return Generic function
+************************************************************/
+struct GenericFunction *
+generic_function_loadtxt(FILE * stream)
+{
+    size_t dim;
+    int num = fscanf(stream,"%zu ",&dim);
+    assert (num == 1);
+    struct GenericFunction * gf = generic_function_alloc_base(dim);
+    int fcint;
+    num = fscanf(stream,"%d ",&fcint);
+    gf->fc = (enum function_class)fcint;
+    assert (num = 1);
+    switch (gf->fc){
+    case CONSTANT:                                                break;
+    case PIECEWISE:  gf->f = piecewise_poly_loadtxt(stream);      break; 
+    case POLYNOMIAL: gf->f = orth_poly_expansion_loadtxt(stream); break;
+    case LINELM:     gf->f = lin_elem_exp_loadtxt(stream);        break;
+    case RATIONAL:                                                break;
+    case KERNEL:                                                  break;
+    }
+
+    return gf;
 }
 
 

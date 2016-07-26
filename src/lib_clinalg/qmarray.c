@@ -195,6 +195,51 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 }
 
 /***********************************************************//**
+    Save a qmarray in text format
+
+    \param[in]     qma     - quasimatrix array
+    \param[in,out] stream  - stream to which to write
+    \param[in]     prec    - precision with which to print
+
+***************************************************************/
+void qmarray_savetxt(const struct Qmarray * qma, FILE * fp, size_t prec)
+{
+
+    // nrows -> ncols -> func -> func-> ... -> func
+    
+    assert (qma != NULL);
+    fprintf(fp,"%zu ",qma->nrows);
+    fprintf(fp,"%zu ",qma->ncols);
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_savetxt(qma->funcs[ii],fp,prec);
+    }
+}
+
+/***********************************************************//**
+    Load a qmarray saved in text format
+
+    \param[in,out] stream - stream of text
+
+    \return qmarray
+***************************************************************/
+struct Qmarray * qmarray_loadtxt(FILE * fp)
+{
+    size_t nrows, ncols;
+    int num = fscanf(fp,"%zu ",&nrows);
+    assert (num == 1);
+    num =fscanf(fp,"%zu ",&ncols);
+    assert(num == 1);
+    struct Qmarray * qma = qmarray_alloc(nrows, ncols);
+
+    size_t ii;
+    for (ii = 0; ii < nrows * ncols; ii++){
+        qma->funcs[ii] = generic_function_loadtxt(fp);
+    }
+    
+    return qma;
+}
+
+/***********************************************************//**
     Create a qmarray by approximating 1d functions
 
     \param[in] nrows - number of rows of quasimatrix
@@ -360,40 +405,95 @@ qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
         fprintf(stderr, "failed to allocate memory for quasimatrix.\n");
         exit(1);
     }
-    size_t ii, jj,kk;
-    for (ii = 0; ii < ncols; ii++){
+    /* size_t ii, jj; //,kk; */
+    for (size_t ii = 0; ii < ncols; ii++){
         funcs[ii] = NULL;
     }
-    
-    generic_function_array_orth(ncols, funcs, opts->fc, opts->aopts);
-    
+
     struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
-    
-    size_t onnon = 0;
-    size_t onorder = 0;
-    for (jj = 0; jj < ncols; jj++){
-        qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
-        for (kk = 0; kk < onnon; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+    generic_function_array_orth(ncols,funcs,opts->fc,opts->aopts);
+    /* if (nrows >= ncols){ */
+    /*     generic_function_array_orth(1,funcs,opts->fc,opts->aopts); */
+    /*     for (size_t col = 0; col < ncols; col++){ */
+    /*         for (size_t row = 0; row < nrows; row++){ */
+    /*             if (row != col){ */
+    /*                 qm->funcs[col*nrows+row] = generic_function_copy(zero); */
+    /*             } */
+    /*             else{ */
+    /*                 qm->funcs[col*nrows+row] = generic_function_copy(funcs[0]); */
+    /*             } */
+                
+    /*         } */
+    /*     } */
+    /* } */
+    /* else{ */
+
+    /*     size_t ngen = ncols / nrows + 1; */
+    /*     generic_function_array_orth(ngen+1,funcs,opts->fc,opts->aopts); */
+    /*     size_t oncol = 0; */
+    /*     /\* int minnum = 0; *\/ */
+    /*     size_t maxnum = 0; */
+    /*     int converged = 0; */
+    /*     printf("nrows=%zu,ncols=%zu,ngen=%zu\n",nrows,ncols,ngen); */
+    /*     while (converged == 0){ */
+    /*         size_t count = 0; */
+    /*         printf("maxnum = %zu\n",maxnum); */
+    /*         /\* print_generic_function(funcs[maxnum],3,NULL); *\/ */
+    /*         for (size_t col = oncol; col < oncol+nrows; col++){ */
+    /*             printf("col = %zu/%zu\n",col,ncols); */
+    /*             if (col == ncols){ */
+    /*                 printf("conveged!\n"); */
+    /*                 converged = 1; */
+    /*                 break; */
+    /*             } */
+    /*             for (size_t row = 0; row < nrows; row++){ */
+    /*                 printf("row=%zu/%zu\n",row,nrows); */
+    /*                 if (row != count){ */
+    /*                     qm->funcs[col*nrows+row] = generic_function_copy(zero); */
+    /*                 } */
+    /*                 else{ */
+    /*                     qm->funcs[col*nrows+row] = generic_function_copy(funcs[maxnum]); */
+    /*                 } */
+    /*             } */
+    /*             count++; */
+    /*         } */
+    /*         maxnum += 1; */
+    /*         oncol += nrows; */
+    /*         if (maxnum > ngen){ */
+    /*             fprintf(stderr,"Cannot generate enough orthonormal polynomials\n"); */
+    /*             assert (1 == 0); */
+    /*         } */
+    /*     } */
+    /*     printf("we are out\n"); */
+    /* }         */
+        size_t onnon = 0;
+        size_t onorder = 0;
+        for (size_t jj = 0; jj < ncols; jj++){
+            qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+            for (size_t kk = 0; kk < onnon; kk++){
+                qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+            }
+            for (size_t kk = onnon+1; kk < nrows; kk++){
+                qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
+            }
+            onnon = onnon+1;
+            if (onnon == nrows){
+                onorder = onorder+1;
+                onnon = 0;
+            }
         }
-        for (kk = onnon+1; kk < nrows; kk++){
-            qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
-        }
-        onnon = onnon+1;
-        if (onnon == nrows){
-            onorder = onorder+1;
-            onnon = 0;
-        }
-    }
+
     //printf("max order rows = %zu\n",onorder);
     
-    for (ii = 0; ii < ncols;ii++){
-        generic_function_free(funcs[ii]);
-        funcs[ii] = NULL;
+    for (size_t ii = 0; ii < ncols; ii++){
+        if (funcs[ii] != NULL){
+            generic_function_free(funcs[ii]);
+            funcs[ii] = NULL;
+        }
     }
     free(funcs); funcs=NULL;
     generic_function_free(zero); zero = NULL;
-
+    /* printf("returned\n"); */
     /* return qm; */
     /* struct Qmarray * qm = qmarray_alloc(nrows,ncols); */
     /* struct Qmarray * qmtemp = qmarray_alloc(ncols,1); */
@@ -1575,8 +1675,6 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
     size_t amind;
     struct GenericFunction ** temp = NULL;
     
-    /* double lb = generic_function_get_lower_bound(A->funcs[0]); */
-    /* double ub = generic_function_get_upper_bound(A->funcs[0]); */
     for (kk = 0; kk < A->ncols; kk++){
 
         if (VQMALU){
@@ -1584,11 +1682,7 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
             printf("lu kk=%zu out of %zu \n",kk,A->ncols-1);
             printf("norm=%G\n",generic_function_norm(A->funcs[kk*A->nrows]));
         }
-        //printf("A->nrows=%zu\n",A->nrows);
-        //print_generic_function(A->funcs[kk*A->nrows],0,NULL);
-        //print_qmarray(A,3,NULL);
-        //printf("before absmax\n");
-        //this line is critical!!
+    
         val = generic_function_array_absmax(A->nrows, 1, A->funcs + kk*A->nrows, 
                                             &amind, &amloc,optargs);
         //printf("after absmax\n");
@@ -1604,14 +1698,9 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
             struct GenericFunction ** At = A->funcs+kk*L->nrows;
             double eval2 = generic_function_1d_eval(At[amind],amloc);
             printf("eval of thing %G\n",eval2);
-
             //print_generic_function(A->funcs[kk*A->nrows+amind],0,NULL);
         }
-        //printf("val = %G\n", val);
-        //assert(fabs(val) > ZEROTHRESH); // dont deal with zero functions yet
         if (fabs(val) <= ZEROTHRESH) {
-            // THIS IS STILL INCORRECT BECAUSE A CONSTANT L DOES NOT SATISFY THE REQUIRED CONDITIONS
-            // printf("here val=%G\n",val);
             if (VQMALU){
                 printf("creating any L\n");
             }
@@ -1754,6 +1843,140 @@ void remove_duplicates(size_t dim, size_t ** pivi, double ** pivx, double lb, do
     }
 }
 
+/***********************************************************//**
+    Compute the LU decomposition of a quasimatrix array of 1d functioins
+
+    \param[in]     A       - qmarray to decompose
+    \param[in,out] L       - qmarray representing L factor
+    \param[in,out] u       - allocated space for U factor
+    \param[in,out] ps      - pivot set
+    \param[in]     app     - approximation arguments
+    \param[in]     optargs - optimization arguments
+
+    \return info = 0 full rank <0 low rank ( rank = A->n + info )
+    \note THIS FUNCTION IS NOT READY YET
+***************************************************************/
+int qmarray_lu1d_piv(struct Qmarray * A, struct Qmarray * L, double * u,
+                     struct PivotSet * ps, struct OneApproxOpts * app,
+                     void * optargs)
+{
+    assert (app != NULL);
+    assert (1 == 0);
+    int info = 0;
+    
+    size_t ii,kk;
+    double val;
+    struct GenericFunction ** temp = NULL;
+    
+    for (kk = 0; kk < A->ncols; kk++){
+
+        struct Pivot * piv = pivot_set_get_pivot(ps,kk);
+        if (VQMALU){
+            printf("\n\n\n\n\n");
+            printf("lu kk=%zu out of %zu \n",kk,A->ncols-1);
+            printf("norm=%G\n",generic_function_norm(A->funcs[kk*A->nrows]));
+        }
+    
+        val = generic_function_array_absmax_piv(A->nrows,1,A->funcs + kk*A->nrows,
+                                                piv,optargs);
+        
+        val = generic_function_1darray_eval_piv(A->funcs + kk*A->nrows,piv);
+        if (VQMALU){
+            printf("val of max =%3.15G\n",val);
+            printf("eval of thing %G\n",val);
+        }
+        if (fabs(val) <= ZEROTHRESH) {
+            if (VQMALU){
+                printf("creating any L\n");
+            }
+
+            if (A->funcs[kk*A->nrows]->fc == LINELM){
+                assert (1 == 0);
+                /* generic_function_array_onezero( */
+                /*     L->funcs+kk*L->nrows, */
+                /*     L->nrows,  */
+                /*     app->fc, */
+                /*     kk,piv,px,app->aopts); */
+            }
+            else{
+                assert (1 == 0);
+                /* create_any_L(L->funcs+kk*L->nrows,L->nrows, */
+                /*              kk,piv,px,app,optargs); */
+            }
+
+            /* if (VQMALU){ */
+            /*     printf("done creating any L\n"); */
+            /* } */
+        }
+        else{
+            generic_function_array_daxpby2(A->nrows,1.0/val, 1, 
+                                           A->funcs + kk*A->nrows, 
+                                           0.0, 1, NULL, 1, 
+                                           L->funcs + kk * L->nrows);
+        }
+
+        if (VQMALU){
+            // printf("got new val = %G\n", val);
+            printf("Values of new array at indices\n ");
+            struct GenericFunction ** Lt = L->funcs+kk*L->nrows;
+
+            for (size_t zz = 0; zz < kk; zz++){
+                struct Pivot * pp = pivot_set_get_pivot(ps,zz);
+                double eval = generic_function_1darray_eval_piv(Lt,pp);
+                size_t ind = pivot_get_ind(pp);
+                //printf("\t ind=%zu x=%G val=%G\n",piv[zz],px[zz],eval);
+                printf("\t ind=%zu val=%G\n",ind,eval);
+            }
+            printf("-----------------------------------\n");
+        }
+
+        //printf("k start here\n");
+        for (ii = 0; ii < A->ncols; ii++){
+            if (VQMALU){
+                printf("In lu qmarray ii=%zu/%zu \n",ii,A->ncols);
+            }
+            if (ii == kk){
+                u[ii*A->ncols+kk] = val;
+            }
+            else{
+                u[ii*A->ncols+kk] = 
+                    generic_function_1darray_eval_piv(A->funcs + ii*A->nrows,
+                                                      piv);
+            }
+            if (VQMALU){
+                printf("u=%3.15G\n",u[ii*A->ncols+kk]);
+            }
+            /*
+            print_generic_function(A->funcs[ii*A->nrows],3,NULL);
+            print_generic_function(L->funcs[kk*L->nrows],3,NULL);
+            */
+            //printf("compute temp\n");
+            temp = generic_function_array_daxpby(A->nrows, 1.0, 1,
+                            A->funcs + ii*A->nrows, 
+                            -u[ii*A->ncols+kk], 1, L->funcs+ kk*L->nrows);
+            if (VQMALU){
+                //print_generic_function(A->funcs[ii*A->nrows],0,NULL);
+                //printf("norm pre=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
+            }
+            //printf("got this daxpby\n");
+            qmarray_set_column_gf(A,ii,temp);
+            if (VQMALU){
+                //printf("norm post=%G\n",generic_function_norm(A->funcs[ii*A->nrows]));
+            }
+            generic_function_array_free(temp,A->nrows);
+        }
+    }
+    //printf("done?\n");
+    // check if matrix is full rank
+    for (kk = 0; kk < A->ncols; kk++){
+        if (fabs(u[kk*A->ncols + kk]) < ZEROTHRESH){
+            info --;
+        }
+    }
+    
+    return info;
+}
+
 
 /***********************************************************//**
     Perform a greedy maximum volume procedure to find the 
@@ -1789,7 +2012,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     struct Qmarray * Acopy = qmarray_copy(A);
     
     if (VQMAMAXVOL){
-        printf("luqmarray \n");
+        printf("==*=== \n\n\n\n In MAXVOL \n");
         /* size_t ll; */
         /* for (ll = 0; ll < A->nrows * A->ncols; ll++){ */
         /*     printf("%G\n", generic_function_norm(Acopy->funcs[ll])); */
@@ -1861,7 +2084,7 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     }
     size_t maxiter = 30;
     size_t iter =0;
-    double delta = 0.01;
+    double delta = 1e-2;
     while (maxval > (1.0 + delta)){
         pivi[maxcol] = maxrow;
         pivx[maxcol] = maxx;
@@ -1904,6 +2127,11 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
         iter++;
     }
 
+    if (iter > 0){
+        pivi[maxcol] = maxrow;
+        pivx[maxcol] = maxx;
+    }
+    
     if (VQMAMAXVOL){
         printf("qmarray_maxvol indices and pivots before removing duplicates\n");
         iprint_sz(r,pivi);

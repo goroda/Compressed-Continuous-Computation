@@ -47,6 +47,7 @@
 #include "hpoly.h"
 #include "linelm.h"
 #include "fwrap.h"
+#include "pivoting.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -155,6 +156,8 @@ double generic_function_1d_eval_ind(const struct GenericFunction *, size_t);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
                                        double);
+double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
+                                         struct Pivot * piv);
 void generic_function_1darray_eval2(size_t, 
                                     struct GenericFunction **, 
                                     double,double *);
@@ -233,9 +236,17 @@ struct GenericFunction * generic_function_lin_comb2(size_t, size_t,
                 struct GenericFunction **, size_t, const double *);
 
 double generic_function_absmax(const struct GenericFunction *, double *,void *);
+double generic_function_absmax_gen(const struct GenericFunction *, 
+                                   void *, size_t, void *);
 double generic_function_array_absmax(size_t, size_t, 
                                      struct GenericFunction **, 
                                      size_t *, double *, void *);
+double 
+generic_function_array_absmax_piv(size_t, size_t, 
+                                  struct GenericFunction **, 
+                                  struct Pivot *,
+                                  void *);
+
 void generic_function_scale(double, struct GenericFunction *);
 void generic_function_array_scale(double, struct GenericFunction **, size_t);
 void generic_function_kronh(int,
@@ -300,11 +311,11 @@ struct FiberCut *
 fiber_cut_init2d( double (*f)(double, double, void *), void *, size_t, double);
 
 struct FiberCut **
-fiber_cut_2darray(double (*f)(double, double, void *), void *, 
+fiber_cut_2darray(double (*f)(double, double, void *), void *,
                             size_t, size_t, const double *);
 
 struct FiberCut **
-fiber_cut_ndarray( double (*)(double *, void *), void *, 
+fiber_cut_ndarray( double (*)(double *, void *), void *,
                             size_t, size_t, size_t, double **);
 
 void fiber_cut_free(struct FiberCut *);
@@ -317,4 +328,6 @@ double fiber_cut_eval(double, void *);
 // Utilities
 
 void print_generic_function(const struct GenericFunction *, size_t,void *);
+void generic_function_savetxt(const struct GenericFunction *, FILE *,size_t);
+struct GenericFunction * generic_function_loadtxt(FILE *);
 #endif

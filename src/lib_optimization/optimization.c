@@ -260,6 +260,18 @@ void c3opt_free(struct c3Opt * opt)
 }
 
 /***********************************************************//**
+    1 if bruteforce, 0 otherwise
+***************************************************************/
+int c3opt_is_bruteforce(struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    if (opt->alg == BRUTEFORCE){
+        return 1;
+    }
+    return 0;
+}
+
+/***********************************************************//**
     Add lower bound
 ***************************************************************/
 void c3opt_add_lb(struct c3Opt * opt, double * lb)
@@ -751,7 +763,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     int ret = C3OPT_SUCCESS;;
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
     if (verbose > 0){
-        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta);
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
     }
 
     if ( (eta*eta/2.0) < gtol){
@@ -1164,7 +1176,7 @@ newton(double ** start, size_t dim, double step_size, double tol,
         //diffrel = 0.0;
         den = 0.0;
         for (ii = 0; ii < dim; ii++){
-            printf("sol[%zu]=%G\n",ii,grad[ii]);
+            /* printf("sol[%zu]=%G\n",ii,grad[ii]); */
             den += pow((*start)[ii],2);
             (*start)[ii] = (*start)[ii] - step_size*grad[ii];
             diff += pow(step_size*grad[ii],2);

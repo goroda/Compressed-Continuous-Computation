@@ -730,6 +730,55 @@ void Test_pw_serialize(CuTest * tc){
 
 }
 
+void Test_pw_savetxt(CuTest * tc){
+   
+    printf("Testing functions: piecewise_poly_savetxt and _loadtxt \n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,pw_disc2,NULL);
+
+    // approximation
+    double lb=-2.0, ub = 0.7;
+    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub);
+    pw_poly_opts_set_minsize(opts,1e-5);
+    opoly_t pw = piecewise_poly_approx1_adapt(opts,fw);
+
+    //printf("approximated \n");
+    FILE * fp = fopen("testpw.txt","w+");
+    size_t prec = 21;
+    piecewise_poly_savetxt(pw,fp,prec);
+
+    struct PiecewisePoly * pw2 = NULL;
+    rewind(fp);
+    pw2 = piecewise_poly_loadtxt(fp);
+
+    size_t N = 100;
+    double * xtest = linspace(lb,ub,N);
+    double err = 0.0;
+    double terr;
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        terr = fabs(piecewise_poly_eval(pw2,xtest[ii]) -
+                     piecewise_poly_eval(pw,xtest[ii]));
+        err+= terr;
+    }
+
+    CuAssertDblEquals(tc, 0.0, err, 1e-12);
+
+    free(xtest);
+    xtest = NULL;
+    fclose(fp);
+    piecewise_poly_free(pw);
+    piecewise_poly_free(pw2);
+    pw = NULL;
+    pw2 = NULL;
+    fwrap_destroy(fw);
+    pw_poly_opts_free(opts);
+
+}
+
+
 /* void Test_poly_match(CuTest * tc){ */
 
 /*     printf("Testing functions: piecewise_poly_match \n"); */
@@ -825,6 +874,7 @@ CuSuite * PiecewisePolyGetSuite(){
     SUITE_ADD_TEST(suite, Test_pw_real_roots);
     SUITE_ADD_TEST(suite, Test_maxmin_pw);
     SUITE_ADD_TEST(suite, Test_pw_serialize);
+    SUITE_ADD_TEST(suite, Test_pw_savetxt);
 
 
     // these below don't work yet

@@ -931,7 +931,6 @@ void Test_ftapprox_cross_hermite1(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-
     N = 10;
     double * xtest = linspace(-2.0,2.0,N);
     double err = 0.0;
@@ -1002,13 +1001,13 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
     double ** start = malloc_dd(dim);
     // optimization stuff
     size_t N = 100;
-    double * x = linspace(-10.0,10.0,N);
+    double * x = linspace(-7.0,7.0,N);
     struct c3Vector * optnodes = c3vector_alloc(N,x);
     free(x); x = NULL;
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
         c3approx_set_opt_opts_dim(c3a,ii,optnodes);
-        start[ii] = linspace(-5.0,5.0,init_rank);
+        start[ii] = linspace(-10.0,10.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
@@ -1135,6 +1134,72 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     
     function_train_free(ftd); ftd = NULL;
     free(text); text = NULL;
+
+    function_train_free(ft);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts); 
+    free_dd(dim, start);
+    free(x);
+    fwrap_destroy(fw);
+}
+
+void Test_ftapprox_cross_linelm1_eval_fiber(CuTest * tc)
+{
+    printf("Testing Function: function_train_eval_fiber_ind for linelm \n");
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcnd2,NULL);
+    // set function monitor
+
+    size_t N = 20;
+    double * x = linspace(-1.0,1.0,N);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+
+
+    double pt[4];
+    double val;
+    size_t fixed_ind[4] = {3, 12, 14, 9};
+    double out[20];    
+    size_t ind[20];
+    for (size_t ii = 0; ii < N; ii++){
+        ind[ii] = ii;
+    }
+
+    for (size_t ll = 0; ll < dim; ll++){
+        size_t dim_vary = ll;    
+        function_train_eval_fiber_ind(ft,fixed_ind,N,ind,dim_vary,out);
+        /* printf("\n\n\n"); */
+
+        for (size_t ii = 0; ii < N; ii++){
+            pt[0] = x[fixed_ind[0]]; 
+            pt[1] = x[fixed_ind[1]]; 
+            pt[2] = x[fixed_ind[2]]; 
+            pt[3] = x[fixed_ind[3]]; 
+
+            pt[dim_vary] = x[ind[ii]];
+            /* pt[dim_vary] = x[ii]; */
+
+            val = function_train_eval(ft,pt);
+            /* funcnd2(1,pt,&val,NULL); */
+        
+            /* printf("ii = %zu\n",ii); */
+            /* printf("\t (val,should) = (%G,%G)\n",out[ii],val); */
+            double err = out[ii] - val;
+            CuAssertDblEquals(tc,0.0,err,1e-10);
+        }
+    }
 
     function_train_free(ft);
     c3approx_destroy(c3a);
@@ -1329,6 +1394,57 @@ void Test_sin10dint(CuTest * tc)
     fwrap_destroy(fw);
 }
 
+void Test_sin10dint_savetxt(CuTest * tc)
+{
+    printf("Testing Function: integration of sin10d AND _savetxt _loadtxt\n");
+    size_t dim = 10;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,sin10d,NULL);
+    // set function monitor
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,0.0);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(0.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-5);
+    c3approx_set_cross_maxiter(c3a,10);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+       
+    
+    FILE * fp = fopen("fttest.txt","w+");
+    size_t prec = 21;
+    function_train_savetxt(ft,fp,prec);
+
+    struct FunctionTrain * ftd = NULL;
+    rewind(fp);
+    ftd = function_train_loadtxt(fp);
+
+    double intval = function_train_integrate(ftd);
+    
+    double should = -0.62993525905472629935874873250680615583558172687;
+
+    double relerr = fabs(intval-should)/fabs(should);
+    //printf("Relative error of integrating 10 dimensional sin = %G\n",relerr);
+    CuAssertDblEquals(tc,0.0,relerr,1e-12);
+
+    fclose(fp);
+    function_train_free(ft);
+    function_train_free(ftd);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    fwrap_destroy(fw);
+}
+
 void Test_sin100dint(CuTest * tc)
 {
     printf("Testing Function: integration of sin100d\n");
@@ -1411,28 +1527,30 @@ void Test_sin1000dint(CuTest * tc)
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_function_train_initsum); 
-    SUITE_ADD_TEST(suite, Test_function_train_linear); 
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic); 
-    SUITE_ADD_TEST(suite, Test_function_train_quadratic2); 
-    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round); 
-    SUITE_ADD_TEST(suite, Test_function_train_scale); 
-    SUITE_ADD_TEST(suite, Test_function_train_product); 
-    SUITE_ADD_TEST(suite, Test_function_train_integrate); 
-    SUITE_ADD_TEST(suite, Test_function_train_inner); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross2); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross3); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross4); 
-    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2); 
+    SUITE_ADD_TEST(suite, Test_function_train_initsum);
+    SUITE_ADD_TEST(suite, Test_function_train_linear);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
+    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
+    SUITE_ADD_TEST(suite, Test_function_train_scale);
+    SUITE_ADD_TEST(suite, Test_function_train_product);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate);
+    SUITE_ADD_TEST(suite, Test_function_train_inner);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2); 
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3); 
-    SUITE_ADD_TEST(suite, Test_sin10dint); 
-    SUITE_ADD_TEST(suite, Test_sin100dint); 
-    SUITE_ADD_TEST(suite, Test_sin1000dint); 
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
+    SUITE_ADD_TEST(suite, Test_sin10dint);
+    SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
+    SUITE_ADD_TEST(suite, Test_sin100dint);
+    SUITE_ADD_TEST(suite, Test_sin1000dint);
     return suite;
 }
 

@@ -68,6 +68,9 @@ qmarray_serialize(unsigned char *,const struct Qmarray *, size_t *);
 unsigned char * 
 qmarray_deserialize(unsigned char *, struct Qmarray **);
 
+void qmarray_savetxt(const struct Qmarray *, FILE *, size_t);
+struct Qmarray *  qmarray_loadtxt(FILE *);
+
 struct Qmarray * 
 qmarray_approx1d(size_t, size_t, struct OneApproxOpts *,
                  struct Fwrap *);

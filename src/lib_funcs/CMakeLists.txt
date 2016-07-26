@@ -9,7 +9,8 @@ file(GLOB SRC_FILES
     functions.c
     monitoring.c
     space.c
-    fwrap.c)
+    fwrap.c
+    pivoting.c)
 
 if ( ${static_libs} )
     add_library(funcs ${SRC_FILES})

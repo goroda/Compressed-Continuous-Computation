@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -64,7 +64,6 @@ void dmrg_diffusion_midleft(struct Qmarray * dA, struct Qmarray * A,
     generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,dF->funcs,gfa2);
     generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,ddF->funcs,gfa3);
     generic_function_kronh(1,r,A->nrows,F->nrows,F->ncols,mat+offset,F->funcs,gfa4);
-
 
     generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,A->funcs,gfa1,out->funcs);
     generic_function_kronh2(1,r,F->ncols,A->nrows,A->ncols,dA->funcs,gfa2,temp1);
@@ -277,6 +276,8 @@ void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
             struct Qmarray * t2 = qmarray_kron(dd->dA[0],dd->dF[0]);
             struct Qmarray * t3 = qmarray_kron(dd->A->cores[0],dd->ddF[0]);
             qmarray_axpy(1.0,t3,t2);
+            /* printf("size A->cores[0] = (%zu,%zu)\n",dd->A->cores[0]->nrows,dd->A->cores[0]->ncols); */
+            /* printf("size t2 = (%zu,%zu)\n",t2->nrows,t2->ncols); */
             *out = qmarray_stackh(t2,t1);
             qmarray_free(t1); t1 = NULL;
             qmarray_free(t2); t2 = NULL;

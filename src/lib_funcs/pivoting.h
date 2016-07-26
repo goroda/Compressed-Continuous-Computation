@@ -33,57 +33,20 @@
 
 //Code
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
+/** \file pivoting.h
+ * Provides header files and structure definitions for functions in pivoting.c 
+ */
 
-#include "CuTest.h"
-#include "clinalgtest.h"
-#include "testfunctions.h"
+#ifndef PIVOT_H
+#define PIVOT_H
 
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_clinalg\n");
-    srand(time(NULL));
+struct Pivot;
+size_t pivot_get_size(const struct Pivot *);
+size_t pivot_get_ind(const struct Pivot *);
+void * pivot_get_loc(const struct Pivot *);
+void pivot_set_ind(struct Pivot *, size_t);
 
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * clin = QuasimatrixGetSuite();
-    CuSuite * qma = CLinalgQmarrayGetSuite();
-    CuSuite * ftr = CLinalgFuncTrainGetSuite();
-    CuSuite * cind = CLinalgCrossIndGetSuite();
-    CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
-    CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuite * diff = CLinalgDiffusionGetSuite();
-    
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
-    
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(clin);
-    CuSuiteDelete(qma);
-    CuSuiteDelete(ftr);
-    CuSuiteDelete(cind);
-    CuSuiteDelete(fta);
-    CuSuiteDelete(dmrg);
-    CuSuiteDelete(diff);
-    
-    CuStringDelete(output);
-    free(suite);
-}
+struct PivotSet;
+struct Pivot * pivot_set_get_pivot(struct PivotSet *, size_t);
 
-int main(void) {
-    RunAllTests();
-}
+#endif

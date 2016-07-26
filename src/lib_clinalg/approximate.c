@@ -229,7 +229,7 @@ void c3approx_set_round_tol(struct C3Approx * c3a, double epsround)
 {
     assert (c3a != NULL);
     if (c3a->fca == NULL){
-        fprintf(stderr,"Must cal c3approx_init_cross before setting epsround\n");
+        fprintf(stderr,"Must call c3approx_init_cross before setting epsround\n");
         exit(1);
     }
     ft_cross_args_set_round_tol(c3a->fca,epsround);

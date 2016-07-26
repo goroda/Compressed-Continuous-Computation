@@ -671,6 +671,50 @@ void Test_lin_elem_exp_serialize(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_lin_elem_exp_savetxt(CuTest * tc){
+    
+    printf("Testing functions: lin_elem_exp_savetxt and _loadtxt \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,TwoPowX3,NULL);
+    
+    double lb = -1.0;
+    double ub = 2.0;
+    size_t N1 = 10;
+    double * x1 = linspace(lb,ub,N1);
+    double f1[1000];
+    fwrap_eval(N1,x1,f1,fw);
+
+    le_t pl = lin_elem_exp_init(N1,x1,f1);
+    free(x1); x1 = NULL;
+
+      
+    FILE * fp = fopen("testlesave.txt","w+");
+    size_t prec = 21;
+    lin_elem_exp_savetxt(pl,fp,prec);
+    rewind(fp);
+
+    le_t pt = NULL;
+    pt = lin_elem_exp_loadtxt(fp);
+
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(LINELEM_EVAL(pl,xtest[ii]) -
+                   LINELEM_EVAL(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+
+    
+    free(xtest);
+    fclose(fp);
+    LINELEM_FREE(pl);
+    LINELEM_FREE(pt);
+    fwrap_destroy(fw);
+}
+
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -691,5 +735,6 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt);
     return suite;
 }

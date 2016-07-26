@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -206,7 +206,6 @@ cross_index_create_nested(int method, int left,
     size_t dold = old->d;
     struct CrossIndex * ci = cross_index_alloc(dold+1);
 
-    
     if (method == 1){ // add new options before reusing nodes from old
         struct CrossNode * oc = old->nodes;
 
@@ -475,3 +474,4 @@ void print_cross_index(struct CrossIndex * cn)
         printf("Cross index is NULL\n");
     }
 }
+

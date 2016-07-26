@@ -71,6 +71,8 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
  * nodes of basis functions
  * \var LinElemExp::coeff
  * coefficients of basis functions
+ * \var LinElemExp::diff
+ * difference between nodes
  * \var LinElemExp::inner
  * inner products of basis functions
  */
@@ -79,6 +81,7 @@ struct LinElemExp{
     size_t num_nodes;
     double * nodes;
     double * coeff;
+    double * diff;
     double * inner;
 };
 
@@ -101,7 +104,7 @@ lin_elem_exp_prod(const struct LinElemExp *,const struct LinElemExp *,void *);
 double lin_elem_exp_norm(const struct LinElemExp *);
 double lin_elem_exp_max(const struct LinElemExp *, double *);
 double lin_elem_exp_min(const struct LinElemExp *, double *);
-double lin_elem_exp_absmax(const struct LinElemExp *, double *,void *);
+double lin_elem_exp_absmax(const struct LinElemExp *,void *,size_t,void *);
 
 double lin_elem_exp_err_est(struct LinElemExp *, double *, short,short);
 
@@ -134,5 +137,8 @@ lin_elem_exp_onezero(size_t, double *,
                      struct LinElemExpAopts *);
 
 void print_lin_elem_exp(const struct LinElemExp *, size_t, void *, FILE *);
+
+void lin_elem_exp_savetxt(const struct LinElemExp *,FILE *, size_t);
+struct LinElemExp * lin_elem_exp_loadtxt(FILE *);//, size_t);
 
 #endif
