@@ -1532,58 +1532,56 @@ piecewise_poly_matched_prod(const struct PiecewisePoly * a,
     return c;
 }
 
-/********************************************************//**
+/********************************************************
 *   Match the discretizations of two pw polys
 *
 *   \param a [inout] - poly1 to match
 *   \param b [inout] - poly2 to match
 *
 *************************************************************/
-/*
-void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b)
-{
-    fprintf(stderr, "piecewise_poly_match1 implementation not complete\n");
-    exit(1);
-    double lba = piecewise_poly_lb(a);
-    double lbb = piecewise_poly_lb(b);
-    assert(fabs(lba-lbb) == 0);
-    double uba = piecewise_poly_ub(a);
-    double ubb = piecewise_poly_ub(b);
-    assert(fabs(uba-ubb) == 0);
+/* void piecewise_poly_match1(struct PiecewisePoly * a,struct PiecewisePoly * b) */
+/* { */
+/*     fprintf(stderr, "piecewise_poly_match1 implementation not complete\n"); */
+/*     exit(1); */
+/*     double lba = piecewise_poly_lb(a); */
+/*     double lbb = piecewise_poly_lb(b); */
+/*     assert(fabs(lba-lbb) == 0); */
+/*     double uba = piecewise_poly_ub(a); */
+/*     double ubb = piecewise_poly_ub(b); */
+/*     assert(fabs(uba-ubb) == 0); */
 
-    if ( (a->leaf == 1) && (b->leaf == 0) )
-    {
-        double * bounds = NULL;
-        size_t nbounds;
-        piecewise_poly_boundaries(b,&nbounds,&bounds,NULL);
-        piecewise_poly_splitn(a,nbounds,bounds);
-        free(bounds); bounds = NULL;
-    }
-    else if ( (a->leaf == 0) && (b->leaf == 1) )
-    {
-        double * bounds = NULL;
-        size_t nbounds;
-        piecewise_poly_boundaries(a,&nbounds,&bounds,NULL);
-        piecewise_poly_splitn(b,nbounds,bounds);
-        free(bounds); bounds = NULL;
-    }
-    else if ( (a->leaf == 0) && (b->leaf == 0)) {
+/*     if ( (a->leaf == 1) && (b->leaf == 0) ) */
+/*     { */
+/*         double * bounds = NULL; */
+/*         size_t nbounds; */
+/*         piecewise_poly_boundaries(b,&nbounds,&bounds,NULL); */
+/*         piecewise_poly_splitn(a,nbounds,bounds); */
+/*         free(bounds); bounds = NULL; */
+/*     } */
+/*     else if ( (a->leaf == 0) && (b->leaf == 1) ) */
+/*     { */
+/*         double * bounds = NULL; */
+/*         size_t nbounds; */
+/*         piecewise_poly_boundaries(a,&nbounds,&bounds,NULL); */
+/*         piecewise_poly_splitn(b,nbounds,bounds); */
+/*         free(bounds); bounds = NULL; */
+/*     } */
+/*     else if ( (a->leaf == 0) && (b->leaf == 0)) { */
         
-        size_t onbrancha = 0;
-        size_t onbranchb = 0;
+/*         size_t onbrancha = 0; */
+/*         size_t onbranchb = 0; */
 
-    }
-}
-*/
+/*     } */
+/* } */
 
 /********************************************************//**
 *   Convert two piecewise polynomials to ones with matching
 *   splits / hierarchy
 *
-*   \param ain [in] - first pw polynomial
-*   \param aout [inout] - new matched pw polynomial 1 (unallocated)
-*   \param bin [in] - second pw polynomial
-*   \param bout [inout] - new matched pw polynomial 2 (unallocated)
+*   \param[in]     ain  - first pw polynomial
+*   \param[in,out] aout - new matched pw polynomial 1 (unallocated)
+*   \param[in]     bin  - second pw polynomial
+*   \param[in,out] bout - new matched pw polynomial 2 (unallocated)
 *
 *   \note
 *       New lower bound is highest lower bound, and new upper bound is lowest upper bound
@@ -1661,7 +1659,7 @@ piecewise_poly_match(struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
     free(nodes); nodes = NULL;
 }
 
-/********************************************************//**
+/********************************************************
 *   Remove left-most piece of pw Poly
 *
 *   \param a [inout] - pw polynomial to trim
@@ -1718,7 +1716,7 @@ piecewise_poly_trim_left(struct PiecewisePoly ** a)
 }
 */
 
-/********************************************************//**
+/********************************************************
 *   Check if discontinuity exists between two neighboring
 *   piecewise polynomials (upper bound of left == lower bound of right)
 *  
@@ -2082,7 +2080,7 @@ void locate_jumps(double (*f)(double, void *), void * args,
     }
 }
 
-/********************************************************//**
+/********************************************************
 *   Create Approximation by polynomial annihilation-based splitting
 *   
 *   \param f [in] - function to approximate

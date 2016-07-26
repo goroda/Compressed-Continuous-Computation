@@ -76,8 +76,6 @@ struct Interval
  * dimension of the function
  * \var GenericFunction::fc
  * type of function
- * \var GenericFunction::sub_type
- * sub type of function
  * \var GenericFunction::f
  * function
  * \var GenericFunction::fargs

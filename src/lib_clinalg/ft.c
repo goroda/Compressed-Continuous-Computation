@@ -223,7 +223,7 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 
     \param[in]     ft     - function train
     \param[in,out] stream - stream to write to
-    \param[in]     prrec  - precision with which to save
+    \param[in]     prec   - precision with which to save
 
 ***************************************************************/
 void function_train_savetxt(struct FunctionTrain * ft, FILE * stream,
@@ -3134,7 +3134,7 @@ void ft1d_array_eval2(const struct FT1DArray * fta, const double * x, double * o
 }
 
 
-/********************************************************//**
+/********************************************************
     Multiply together and sum the elements of two function train arrays
     \f[
         out(x) = \sum_{i=1}^{N} coeff[i] f_i(x)  g_i(x)
@@ -3216,10 +3216,10 @@ void ft1d_array_eval2(const struct FT1DArray * fta, const double * x, double * o
         y \leftarrow \texttt{round}(a x + y, epsilon)
     \f]
 
-    \param a [in] - scaling factor
-    \param x [in] - first function train
-    \param y [inout] - second function train
-    \param epsilon - rounding accuracy (0 for exact)
+    \param[in]     a       - scaling factor
+    \param[in]     x       - first function train
+    \param[in,out] y       - second function train
+    \param[in]     epsilon - rounding accuracy (0 for exact)
 
     \note
     putting NULL it to round will cause an error

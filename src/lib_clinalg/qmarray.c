@@ -197,9 +197,9 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
 /***********************************************************//**
     Save a qmarray in text format
 
-    \param[in]     qma     - quasimatrix array
-    \param[in,out] stream  - stream to which to write
-    \param[in]     prec    - precision with which to print
+    \param[in]     qma  - quasimatrix array
+    \param[in,out] fp   - stream to which to write
+    \param[in]     prec - precision with which to print
 
 ***************************************************************/
 void qmarray_savetxt(const struct Qmarray * qma, FILE * fp, size_t prec)
@@ -218,7 +218,7 @@ void qmarray_savetxt(const struct Qmarray * qma, FILE * fp, size_t prec)
 /***********************************************************//**
     Load a qmarray saved in text format
 
-    \param[in,out] stream - stream of text
+    \param[in,out] fp - stream to save to
 
     \return qmarray
 ***************************************************************/
@@ -267,7 +267,7 @@ qmarray_approx1d(size_t nrows, size_t ncols, struct OneApproxOpts * fapp,
     return qm;
 }
 
-/***********************************************************//**
+/***********************************************************
     Create a qmarray from a fiber_cuts array
 
     \param[in] nrows    - number of rows of qmarray
@@ -614,9 +614,8 @@ qmarray_extract_row(const struct Qmarray * qma, size_t row)
     \param[in]     col - column to set
     \param[in]     qm  - quasimatrix to copy
 **************************************************************/
-void
-qmarray_set_column(struct Qmarray * qma, size_t col, 
-                   const struct Quasimatrix * qm)
+void qmarray_set_column(struct Qmarray * qma, size_t col, 
+                        const struct Quasimatrix * qm)
 {
     size_t ii;
     for (ii = 0; ii < qma->nrows; ii++){
@@ -2724,7 +2723,7 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
     return Q;
 }
 
-/***********************************************************//**
+/***********************************************************
     Compute the householder triangularization of a 
     qmarray. for nodal basis (grid) functions of a fixed
     grid

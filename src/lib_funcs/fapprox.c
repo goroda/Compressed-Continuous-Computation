@@ -225,6 +225,8 @@ void multi_approx_opts_free_deep(struct MultiApproxOpts ** fargs)
 /***********************************************************//**
     Set approximation options for a particular dimension
     \param[in,out] fargs - function train approximation arguments
+    \param[in]     ind   - set approximation arguments for this dimension
+    \param[in]     opts  - approximation arguments
 ***************************************************************/
 void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
                                size_t ind,
@@ -236,8 +238,10 @@ void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
 }
 
 /***********************************************************//**
-    Set approximation options for a particular dimension
+    Set (by reference) approximation options for a particular dimension
     \param[in,out] fargs - function train approximation arguments
+    \param[in]     ind   - set approximation arguments for this dimension
+    \param[in]     opts  - approximation arguments
 ***************************************************************/
 void multi_approx_opts_set_dim_ref(struct MultiApproxOpts * fargs,
                                    size_t ind,

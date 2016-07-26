@@ -218,7 +218,7 @@ quasimatrix_approx1d(size_t n, struct Fwrap * fw,
     return qm;
 }
 
-/*********************************************************//**
+/*********************************************************
     Create a quasimatrix from a fiber_cuts array
 
     \param[in] n        - number of columns of quasimatrix

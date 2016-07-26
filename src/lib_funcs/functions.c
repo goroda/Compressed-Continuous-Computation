@@ -1644,7 +1644,7 @@ generic_function_1darray_eval2_ind(size_t n,
 *   \param[in] c    - scaling coefficients
 *
 *   \return function representing
-*   \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
+*   \f$ \sum_{i=1}^n coeff[ldc[i]] * gfa[ldgf[i]] \f$
 ************************************************************/
 struct GenericFunction *
 generic_function_lin_comb2(size_t n, size_t ldgf, 
@@ -1772,11 +1772,12 @@ double generic_function_absmax_gen(const struct GenericFunction * f,
     Compute the index, location and value of the maximum, in absolute value, 
     element of a generic function array
 
-    \param[in]     n   - number of functions
-    \param[in]     lda - stride
-    \param[in]     a   - array of functions
-    \param[in,out] ind - index of maximum
-    \param[in,out] x   - location of maximum
+    \param[in]     n       - number of functions
+    \param[in]     lda     - stride
+    \param[in]     a       - array of functions
+    \param[in,out] ind     - index of maximum
+    \param[in,out] x       - location of maximum
+    \param[in]     optargs - optimization arguments
 
     \return maxval - absolute value of the maximum
 ************************************************************/
@@ -1808,10 +1809,11 @@ generic_function_array_absmax(size_t n, size_t lda,
     Compute the index, location and value of the maximum, in absolute value, 
     element of a generic function array (Pivot Based)
 
-    \param[in]     n   - number of functions
-    \param[in]     lda - stride
-    \param[in]     a   - array of functions
-    \param[in,out] piv - pivot
+    \param[in]     n       - number of functions
+    \param[in]     lda     - stride
+    \param[in]     a       - array of functions
+    \param[in,out] piv     - pivot
+    \param[in]     optargs - optimization arguments
 
     \return maxval - absolute value of the maximum
 ************************************************************/
@@ -2268,7 +2270,7 @@ generic_function_approximate1d(enum function_class fc, void * aopts,
     return gf;
 }
 
-/***********************************************************//**
+/***********************************************************
     Generate a set of orthonormal arrays of functions for helping
     generate an orthonormal qmarray 
 

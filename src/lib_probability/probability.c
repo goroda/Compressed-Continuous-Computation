@@ -606,9 +606,11 @@ double * probability_density_sample(struct ProbabilityDensity * pdf)
 /***********************************************************//**
     Construct a laplace approximation
     
-    \param[in] args        - arguments to grad and hess functions
-    \param[in] dim         - number of dimensions
-    \param[in] start       - start of optimization
+    \param[in] f           - log posterior
+    \param[in] hessLogPost - hessian of the log posterior
+    \param[in] args        - arguments to f and hessLogPost
+    \param[in] dim         - dimension of state space
+    \param[in] start       - guess for optimization
 
     \return gaussian pdf 
 ***************************************************************/
@@ -1250,7 +1252,7 @@ double like_poisson_helper(double x, size_t dim, void * args)
 /*     return like; */
 /* } */
 
-/***********************************************************//**
+/***********************************************************
     Allocate and initialize a Gaussian likelihood
 
     \param[in] noise_type - type of noise
@@ -1357,20 +1359,6 @@ double like_poisson_helper(double x, size_t dim, void * args)
 /*     return like; */
 /* } */
 
-/***********************************************************//**
-    Gaussian Likelihood for Linear Regression to infer parameters a_i in
-
-    \f$ f(x) = a_0 + \sum_{i=1}^d a_i x_i \f$
-
-    \param[in] dim        - dimension of *x*
-    \param[in] N          - number of data points
-    \param[in] data       - array of one dimensional data points
-    \param[in] covariates - (dim * N) array of *x* locations
-    \param[in] noise      - standard deviation of noise
-    \param[in] bds        - boundaries for inference of coefficients *a_i*
-
-    \return like - likelihood function
-***************************************************************/
 /* struct Likelihood * likelihood_linear_regression(size_t dim, size_t N,  */
 /*     double * data, double * covariates, double noise, struct BoundingBox * bds) */
 /* { */
@@ -1399,7 +1387,7 @@ double like_poisson_helper(double x, size_t dim, void * args)
 /***********************************************************//**
     Free memory allocated to a likelihood function
 
-    \param like [inout] - likelihood function
+    \param[in,out] like - likelihood function
 ***************************************************************/
 void likelihood_free(struct Likelihood * like)
 {

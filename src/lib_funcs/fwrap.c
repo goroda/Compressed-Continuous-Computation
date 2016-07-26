@@ -51,14 +51,22 @@ typedef enum {ND=0, INTND, VEC, MOVEC, ARRVEC, NUMFT} Ftype;
 /** 
 \struct Fwrap
 \brief Interface to function pointers
-\var Fwrap::d number of dimensions
-\var Fwrap::f function
-\var Fwrap::fvec vectorized function
-\var Fwrap::intf function taking size_t arguments
-\var Fwrap::fargs function arguments
-\var Fwrap::ftype function type
-\var Fwrap::mofvec vectorized multi output
-\var Fwrap::evalfunc indicator for which multioutput function to evaluate
+\var Fwrap::d 
+number of dimensions
+\var Fwrap::f 
+function
+\var Fwrap::fvec 
+vectorized function
+\var Fwrap::intf 
+function taking size_t arguments
+\var Fwrap::fargs 
+function arguments
+\var Fwrap::ftype 
+function type
+\var Fwrap::mofvec 
+vectorized multi output
+\var Fwrap::evalfunc 
+indicator for which multioutput function to evaluate
 */
 struct Fwrap
 {

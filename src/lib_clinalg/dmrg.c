@@ -49,6 +49,7 @@
 
     \param[in] a    - qmarray to decompose
     \param[in] type - 1 then QR, 0 then LQ
+    \param[in] o    - approximation options
 
     \return qr - QR structure
 

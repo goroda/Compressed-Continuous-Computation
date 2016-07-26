@@ -50,25 +50,24 @@
 
 /** \struct LinElemExpAopts
  * \brief Approximation options of LinElemExp
- * \var LinElemExp::num_nodes
+ * \var LinElemExpAopts::num_nodes
  * number of basis functions or nodes
- * \var LinElemExp::node_alloc
+ * \var LinElemExpAopts::node_alloc
  * indicator whether nodes were self allocated
- * \var LinElemExp::nodes
+ * \var LinElemExpAopts::nodes
  * nodes
- * \var LinElemExp::adapt
+ * \var LinElemExpAopts::adapt
  * whether or not to adapt (0 or 1)
- * \var LinElemExp::lb
+ * \var LinElemExpAopts::lb
  * lower bound
- * \var LinElemExp::ub
+ * \var LinElemExpAopts::ub
  * upper bound
- * \var LinElemExp::delta
+ * \var LinElemExpAopts::delta
  * adaptation function value tolerance
- * \var LinElemExp::hmin
+ * \var LinElemExpAopts::hmin
  * adaptation node spacing tolerance
  */
-struct LinElemExpAopts
-{
+struct LinElemExpAopts{
 
     size_t num_nodes;
     int node_alloc;
@@ -1503,9 +1502,10 @@ void lin_elem_exp_flip_sign(struct LinElemExp * f)
 /********************************************************//**
     Generate an orthonormal basis
     
-    \param[in]     n - number of basis function
-    \param[in,out] f - linear element expansions with allocated nodes
-                       and coefficients set to zero
+    \param[in]     n    - number of basis function
+    \param[in,out] f    - linear element expansions with allocated nodes
+                          and coefficients set to zero
+    \param[in]     opts - approximation options
 
     \note
     Uses modified gram schmidt to determine function coefficients
