@@ -1641,7 +1641,7 @@ double function_train_norm2(const struct FunctionTrain * a)
     double out = function_train_inner(a,a);
     if (out < -ZEROTHRESH){
         if (out * out >  ZEROTHRESH){
-            fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out);
+            /* fprintf(stderr, "inner product of FT with itself should not be neg %G \n",out); */
             /* exit(1); */
         }
     }
