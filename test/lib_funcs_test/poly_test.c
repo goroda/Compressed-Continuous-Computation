@@ -238,6 +238,7 @@ void Test_cheb_inner(CuTest * tc){
     fwrap_set_fvec(fw2,TwoPowX3,NULL);
 
     double lb = -2.0, ub = 3.0;
+    /* double lb = -1.0, ub = 1.0; */
     struct OpeOpts * opts = ope_opts_alloc(CHEBYSHEV);
     ope_opts_set_start(opts,10);
     ope_opts_set_coeffs_check(opts,4);
@@ -286,6 +287,99 @@ void Test_cheb_norm(CuTest * tc){
     fwrap_destroy(fw1);
 }
 
+/* void Test_cheb_product(CuTest * tc){ */
+
+/*     printf("Testing function: orth_poly_expansion_product with chebyshev poly \n"); */
+    
+/*     // function */
+/*     struct Fwrap * fw1 = fwrap_create(1,"general-vec"); */
+/*     fwrap_set_fvec(fw1,powX2,NULL); */
+
+/*     struct Fwrap * fw2 = fwrap_create(1,"general-vec"); */
+/*     fwrap_set_fvec(fw2,TwoPowX3,NULL); */
+
+/*     // approximation */
+/*     double lb = -3.0, ub = 2.0; */
+/*     struct OpeOpts * opts = ope_opts_alloc(CHEBYSHEV); */
+/*     ope_opts_set_start(opts,10); */
+/*     ope_opts_set_coeffs_check(opts,4); */
+/*     ope_opts_set_tol(opts,1e-10); */
+/*     ope_opts_set_lb(opts,lb); */
+/*     ope_opts_set_ub(opts,ub); */
+    
+/*     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw1); */
+/*     opoly_t cpoly2 = orth_poly_expansion_approx_adapt(opts,fw2); */
+/*     opoly_t cpoly3 = orth_poly_expansion_prod(cpoly,cpoly2); */
+
+/*     size_t N = 100; */
+/*     double * pts = linspace(lb,ub,N); */
+/*     size_t ii; */
+/*     for (ii = 0; ii < N; ii++){ */
+/*         double eval1 = POLY_EVAL(cpoly3,pts[ii]); */
+/*         double eval2 = POLY_EVAL(cpoly,pts[ii]) * */
+/*                         POLY_EVAL(cpoly2,pts[ii]); */
+/*         double diff= fabs(eval1-eval2); */
+/*         CuAssertDblEquals(tc, 0.0, diff, 1e-10); */
+/*     } */
+/*     free(pts); pts = NULL; */
+    
+/*     POLY_FREE(cpoly); */
+/*     POLY_FREE(cpoly2); */
+/*     POLY_FREE(cpoly3); */
+/*     ope_opts_free(opts); */
+/*     fwrap_destroy(fw1); */
+/*     fwrap_destroy(fw2); */
+/* } */
+
+/* void Test_legendre_axpy(CuTest * tc){ */
+
+/*     printf("Testing function: orth_poly_expansion_axpy with legendre poly \n"); */
+
+/*     // function */
+/*     struct Fwrap * fw1 = fwrap_create(1,"general-vec"); */
+/*     fwrap_set_fvec(fw1,powX2,NULL); */
+
+/*     struct Fwrap * fw2 = fwrap_create(1,"general-vec"); */
+/*     fwrap_set_fvec(fw2,TwoPowX3,NULL); */
+
+/*     // approximation */
+/*     double lb = -3.0, ub = 2.0; */
+/*     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE); */
+/*     ope_opts_set_start(opts,10); */
+/*     ope_opts_set_coeffs_check(opts,4); */
+/*     ope_opts_set_tol(opts,1e-10); */
+/*     ope_opts_set_lb(opts,lb); */
+/*     ope_opts_set_ub(opts,ub); */
+    
+/*     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw1); */
+/*     opoly_t cpoly2 = orth_poly_expansion_approx_adapt(opts,fw2); */
+        
+    
+/*     int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly); */
+/*     CuAssertIntEquals(tc,0,success); */
+    
+/*     size_t N = 100; */
+/*     double * pts = linspace(lb,ub,N); */
+/*     size_t ii; */
+/*     for (ii = 0; ii < N; ii++){ */
+/*         double eval1 = POLY_EVAL(cpoly,pts[ii]); */
+/*         double eval2a,eval2b; */
+/*         TwoPowX3(1,pts+ii,&eval2a,NULL); */
+/*         powX2(1,pts+ii,&eval2b,NULL); */
+/*         double eval2 = 2.0 * eval2a + eval2b; */
+/*         double diff= fabs(eval1-eval2); */
+/*         CuAssertDblEquals(tc, 0.0, diff, 1e-10); */
+/*     } */
+/*     free(pts); pts = NULL; */
+    
+/*     POLY_FREE(cpoly); */
+/*     POLY_FREE(cpoly2); */
+/*     ope_opts_free(opts); */
+/*     fwrap_destroy(fw1); */
+/*     fwrap_destroy(fw2); */
+/* } */
+
+
 CuSuite * ChebGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -296,6 +390,7 @@ CuSuite * ChebGetSuite(){
     SUITE_ADD_TEST(suite, Test_cheb_integrate); 
     SUITE_ADD_TEST(suite, Test_cheb_inner);
     SUITE_ADD_TEST(suite, Test_cheb_norm); 
+    /* SUITE_ADD_TEST(suite, Test_cheb_product);  */
 
     return suite;
 }

@@ -1451,6 +1451,35 @@ int legendre_poly_expansion_arr_eval(size_t n,
     return 0;
 }
 
+/********************************************************//**
+*   Evaluate a Chebyshev polynomial expansion using clenshaw algorithm
+*
+*   \param[in] poly - polynomial expansion
+*   \param[in] x    - location at which to evaluate
+*
+*   \return out - polynomial value
+*************************************************************/
+double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
+{
+
+    double p[2] = {0.0, 0.0};
+    double pnew;
+    
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
+    double off = poly->p->upper - m * poly->upper_bound;
+    double x_norm =  m * x + off;
+    
+    size_t n = poly->num_poly-1;
+    while (n > 0){
+        pnew = poly->coeff[n] + 2.0 * x_norm * p[0] - p[1];
+        p[1] = p[0];
+        p[0] = pnew;
+        n--;
+    }
+    double out = poly->coeff[0] + x_norm * p[0] - p[1];
+    return out;
+}
 
 /********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
@@ -1469,6 +1498,9 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     }
     else if (poly->p->ptype == HERMITE){
         out = hermite_poly_expansion_eval(poly,x);
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        out = chebyshev_poly_expansion_eval(poly,x);
     }
     else{
         size_t iter = 0;
@@ -2017,7 +2049,8 @@ legendre_integrate(struct OrthPolyExpansion * poly)
 *   \return c - polynomial expansion
 *
 *   \note 
-*        Computes c(x) = a(x)b(x) where c is same form as a
+*   Computes c(x) = a(x)b(x) where c is same form as a
+*   Lower and upper bounds of both polynomials must be the same
 *************************************************************/
 struct OrthPolyExpansion *
 orth_poly_expansion_prod(struct OrthPolyExpansion * a,
@@ -2027,6 +2060,7 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     struct OrthPolyExpansion * c = NULL;
     double lb = a->lower_bound;
     double ub = a->upper_bound;
+
 
     enum poly_type p = a->p->ptype;
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
@@ -2064,6 +2098,10 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
         orth_poly_expansion_round(&c);
         free(allprods); allprods=NULL;
     }
+    /* else if (p == CHEBYSHEV){ */
+    /*     c = orth_poly_expansion_init(p,a->num_poly+b->num_poly+1,lb,ub); */
+    /*     for (size_t ii = 0; ii) */
+    /* } */
     else{
 //        printf("OrthPolyExpansion product greater than order 100 is slow\n");
         struct OrthPolyExpansion * comb[2];
@@ -2341,54 +2379,80 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
     if ((a->p->ptype == HERMITE) && (b->p->ptype == HERMITE)){
         return orth_poly_expansion_inner_w(a,b);
     }
-    int c1 = 0;
-    int c2 = 0;
-    if (a->p->ptype == CHEBYSHEV){
-        t1 = orth_poly_expansion_init(LEGENDRE, a->num_poly,
-                                      a->lower_bound, a->upper_bound);
-        orth_poly_expansion_approx(&orth_poly_expansion_eval2, a, t1);
-        orth_poly_expansion_round(&t1);
-        c1 = 1;
-    }
-    else if (a->p->ptype == LEGENDRE){
-        t1 = a;
+    else if ((a->p->ptype == CHEBYSHEV) && (b->p->ptype == CHEBYSHEV)){
+        // can possibly make this more efficient
+        double out = 0.0;
+        size_t N = a->num_poly < b->num_poly ? a->num_poly : b->num_poly;
+        for (size_t ii = 0; ii < N; ii++){
+            for (size_t jj = 0; jj < ii; jj++){
+                if ( ((ii+jj) % 2) == 0){
+                    out += (a->coeff[ii]*b->coeff[jj] * 
+                             (1.0 / (1.0 - (double) (ii-jj)*(ii-jj))
+                              + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj))));
+                }
+            }
+            for (size_t jj = ii; jj < N; jj++){
+                if ( ((ii+jj) % 2) == 0){
+                    out += (a->coeff[ii]*b->coeff[jj] * 
+                             (1.0 / (1.0 - (double) (jj-ii)*(jj-ii))
+                              + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj))));
+                }
+            }
+        }
+        double m = (a->upper_bound - a->lower_bound) / (a->p->upper - a->p->lower);
+        out *=  m;
+        return out;
     }
     else{
-        fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
-        fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
-        exit(1);
-    }
+        int c1 = 0;
+        int c2 = 0;
+        if (a->p->ptype == CHEBYSHEV){
+            t1 = orth_poly_expansion_init(LEGENDRE, a->num_poly,
+                                          a->lower_bound, a->upper_bound);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval2, a, t1);
+            orth_poly_expansion_round(&t1);
+            c1 = 1;
+        }
+        else if (a->p->ptype == LEGENDRE){
+            t1 = a;
+        }
+        else{
+            fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
+            fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
+            exit(1);
+        }
 
-    if (b->p->ptype == CHEBYSHEV){
-        t2 = orth_poly_expansion_init(LEGENDRE, b->num_poly,
-                    b->lower_bound, b->upper_bound);
-        orth_poly_expansion_approx(&orth_poly_expansion_eval2, b, t2);
-        orth_poly_expansion_round(&t2);
-        c2 = 1;
-    }
-    else if (b->p->ptype == LEGENDRE){
-        t2 = b;
-    }
-    else{
-        fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
-        fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
-        exit(1);
-    }
+        if (b->p->ptype == CHEBYSHEV){
+            t2 = orth_poly_expansion_init(LEGENDRE, b->num_poly,
+                                          b->lower_bound, b->upper_bound);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval2, b, t2);
+            orth_poly_expansion_round(&t2);
+            c2 = 1;
+        }
+        else if (b->p->ptype == LEGENDRE){
+            t2 = b;
+        }
+        else{
+            fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
+            fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
+            exit(1);
+        }
     
-    /*
-    printf("first poly=\n");
-    print_orth_poly_expansion(t1,0,NULL);
-    printf("second poly=\n");
-    print_orth_poly_expansion(t2,0,NULL);
-    */
-    double out = orth_poly_expansion_inner_w(t1,t2) * 2.0;
-    if (c1 == 1){
-        orth_poly_expansion_free(t1);
+        /*
+          printf("first poly=\n");
+          print_orth_poly_expansion(t1,0,NULL);
+          printf("second poly=\n");
+          print_orth_poly_expansion(t2,0,NULL);
+        */
+        double out = orth_poly_expansion_inner_w(t1,t2) * 2.0;
+        if (c1 == 1){
+            orth_poly_expansion_free(t1);
+        }
+        if (c2 == 1){
+            orth_poly_expansion_free(t2);
+        }
+        return out;
     }
-    if (c2 == 1){
-        orth_poly_expansion_free(t2);
-    }
-    return out;
 }
 
 /********************************************************//**
@@ -2433,7 +2497,6 @@ double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
 double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
 
     double out = 0.0;
-    struct OrthPolyExpansion * temp;
     switch (p->p->ptype){
         case LEGENDRE:
             out = orth_poly_expansion_norm_w(p) * sqrt(2.0);
@@ -2442,11 +2505,7 @@ double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
             out = orth_poly_expansion_norm_w(p);
             break;
         case CHEBYSHEV:
-            temp = orth_poly_expansion_init(LEGENDRE, p->num_poly,
-                    p->lower_bound, p->upper_bound);
-            orth_poly_expansion_approx(&orth_poly_expansion_eval2, p, temp);
-            out = orth_poly_expansion_norm_w(temp) * sqrt(2.0);
-            orth_poly_expansion_free(temp);
+            out = sqrt(fabs(orth_poly_expansion_inner(p,p)));
             break;
         case STANDARD:
             fprintf(stderr, "Cannot take norm of STANDARD type\n");
