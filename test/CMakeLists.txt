@@ -14,6 +14,7 @@ add_subdirectory(lib_stringmanip_test)
 add_subdirectory(lib_array_test)
 
 add_subdirectory(lib_linalg_test)
+add_subdirectory(lib_fft_test)
 
 add_subdirectory(lib_quadrature_test)
 add_subdirectory(lib_funcs_test)

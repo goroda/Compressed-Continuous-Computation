@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 add_subdirectory(lib_stringmanip)
 add_subdirectory(lib_array)
 add_subdirectory(lib_linalg)
+add_subdirectory(lib_fft)
 add_subdirectory(lib_quadrature)
 add_subdirectory(lib_funcs)
 
