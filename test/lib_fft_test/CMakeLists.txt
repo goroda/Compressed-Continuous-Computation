@@ -7,6 +7,7 @@ add_executable(fft_test ${SRC_FILES})
 target_link_libraries(fft_test
     -g 
     fft
+    array
     cutest 
     ${blas_lapack} 
     -lm)

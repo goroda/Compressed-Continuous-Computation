@@ -46,8 +46,6 @@
 #include "array.h"
 #include "fft.h"
 
-
-
 void Test_fft_slow(CuTest * tc){
 
     printf("Testing function: fft_slow\n");
@@ -81,9 +79,13 @@ void Test_fft_slow(CuTest * tc){
     CuAssertDblEquals(tc,1.0,creal(X[7]),1e-15);
     CuAssertDblEquals(tc,2.414214,cimag(X[7]),1e-4);
 
-    /* for (size_t ii = 0; ii < N; ii++){ */
-    /*     printf("%G,%G\n",creal(X[ii]),cimag(X[ii])); */
-    /* } */
+    complex double xi[8];
+    res = ifft_slow(N,X,1,xi,1);
+    CuAssertIntEquals(tc,0,res);
+    for (size_t ii = 0; ii < N; ii++){
+        CuAssertDblEquals(tc,x[ii],creal(xi[ii]),1e-14);
+        CuAssertDblEquals(tc,0.0,cimag(xi[ii]),1e-15);
+    }
 }
 
 void Test_fft_base(CuTest * tc){
@@ -119,9 +121,84 @@ void Test_fft_base(CuTest * tc){
     CuAssertDblEquals(tc,1.0,creal(X[7]),1e-15);
     CuAssertDblEquals(tc,2.414214,cimag(X[7]),1e-4);
 
+    complex double xi[8];
+    res = ifft_base(N,X,1,xi,1);
+    CuAssertIntEquals(tc,0,res);
+    for (size_t ii = 0; ii < N; ii++){
+        CuAssertDblEquals(tc,x[ii],creal(xi[ii]),1e-14);
+        CuAssertDblEquals(tc,0.0,cimag(xi[ii]),1e-15);
+    }
+}
+
+void Test_fft(CuTest * tc){
+
+    printf("Testing function: fft (1)\n");
+    complex double x[] = {1, 1, 1, 1, 0, 0, 0, 0, 0.0};
+    complex double X[9];
+    size_t N = 9;
+    int res = fft(N,x,1,X,1);
+    CuAssertIntEquals(tc,0,res);
+
     /* for (size_t ii = 0; ii < N; ii++){ */
-    /*     printf("%G,%G\n",creal(X[ii]),cimag(X[ii])); */
+    /*     printf("x[%zu] = (%G,%G)\n",ii,creal(X[ii]),cimag(X[ii])); */
     /* } */
+
+    CuAssertDblEquals(tc,4.0,creal(X[0]),1e-15);
+    CuAssertDblEquals(tc,0.0,cimag(X[0]),1e-15);
+    
+    CuAssertDblEquals(tc,1.0,creal(X[1]),1e-15);
+    CuAssertDblEquals(tc,-2.414142,cimag(X[1]),1e-4);
+
+    CuAssertDblEquals(tc,0.0,creal(X[2]),1e-15);
+    CuAssertDblEquals(tc,0.0,cimag(X[2]),1e-15);
+
+    CuAssertDblEquals(tc,1.0,creal(X[3]),1e-15);
+    CuAssertDblEquals(tc,-0.414214,cimag(X[3]),1e-4);
+
+    CuAssertDblEquals(tc,0.0,creal(X[4]),1e-15);
+    CuAssertDblEquals(tc,0.0,cimag(X[4]),1e-15);
+
+    CuAssertDblEquals(tc,1.0,creal(X[5]),1e-15);
+    CuAssertDblEquals(tc,0.414214,cimag(X[5]),1e-4);
+
+    CuAssertDblEquals(tc,0.0,creal(X[6]),1e-15);
+    CuAssertDblEquals(tc,0.0,cimag(X[6]),1e-15);
+
+    CuAssertDblEquals(tc,1.0,creal(X[7]),1e-15);
+    CuAssertDblEquals(tc,2.414214,cimag(X[7]),1e-4);
+
+    complex double xi[9];
+    res = ifft(N,X,1,xi,1);
+    /* for (size_t ii = 0; ii < N; ii++){ */
+    /*     printf("x[%zu] = %G\n",ii,creal(xi[ii])); */
+    /* } */
+    CuAssertIntEquals(tc,0,res);
+    for (size_t ii = 0; ii < N; ii++){
+        CuAssertDblEquals(tc,x[ii],creal(xi[ii]),1e-14);
+        CuAssertDblEquals(tc,0.0,cimag(xi[ii]),1e-15);
+    }
+}
+
+void Test_fft2(CuTest * tc){
+
+    printf("Testing function: fft (2)\n");
+    complex double x[] = {1, 1, 1, 1, 0, 0, 
+                          0, 0, 0, 2, 3, 4};
+    complex double X[12];
+    size_t N = 12;
+    int res = fft(N,x,1,X,1);
+    CuAssertIntEquals(tc,0,res);
+
+    complex double xi[12];
+    res = ifft(N,X,1,xi,1);
+    /* for (size_t ii = 0; ii < N; ii++){ */
+    /*     printf("x[%zu] = %G\n",ii,creal(xi[ii])); */
+    /* } */
+    CuAssertIntEquals(tc,0,res);
+    for (size_t ii = 0; ii < N; ii++){
+        CuAssertDblEquals(tc,x[ii],creal(xi[ii]),1e-14);
+        CuAssertDblEquals(tc,0.0,cimag(xi[ii]),1e-14);
+    }
 }
 
 void Test_fft_base_big(CuTest * tc){
@@ -159,9 +236,11 @@ void Test_fft_base_big(CuTest * tc){
 CuSuite * FFTGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_fft_slow); */
-    /* SUITE_ADD_TEST(suite, Test_fft_base); */
-    SUITE_ADD_TEST(suite, Test_fft_base_big);
+    SUITE_ADD_TEST(suite, Test_fft_slow);
+    SUITE_ADD_TEST(suite, Test_fft_base);
+    SUITE_ADD_TEST(suite, Test_fft);
+    SUITE_ADD_TEST(suite, Test_fft2);
+    /* SUITE_ADD_TEST(suite, Test_fft_base_big); */
  
     return suite;
 }
