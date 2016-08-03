@@ -40,7 +40,7 @@
 #include <assert.h>
 #include <complex.h>
 
-#define BASESIZE 32
+#define BASESIZE 8
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -71,7 +71,7 @@ int ifft_slow(size_t N, const double complex * xin, size_t sx,
         for (size_t jj = 0; jj < N; jj++){
             xout[ii*sX] += cexp( 2 * M_PI * I * ii * jj / N) * xin[jj*sx];
         }
-        xout[ii*sX] /= N;
+        xout[ii*sX] /= (double)N;
     }
     return 0;
 }
@@ -84,18 +84,32 @@ int fft_base(size_t N, const double complex * x, size_t sx,
 {
     // assumes N is a power of 2
     if (N < BASESIZE){
-        return fft_slow(N,x,sx,X,sX);
+        int res = fft_slow(N,x,sx,X,sX);
+        return res;
     }
     else{
         fft_base(N/2,x,2*sx,X,2*sX);
         fft_base(N/2,x+sx,2*sx,X+sX,2*sX);
 
+        complex double * e = malloc(N/2 * sizeof(complex double));
+        complex double * o = malloc(N/2 * sizeof(complex double));
+
+        for (size_t ii = 0; ii < N/2; ii++){
+            e[ii] = X[ii*2*sX];
+            o[ii] = X[ii*2*sX+sX];
+        }
+
         for (size_t ii = 0; ii < N/2; ii ++){
             double complex twiddle = cexp(- 2 * M_PI * I * ii  / N);
-            double complex t = X[ii*sX];
-            X[ii*sX] = t + twiddle * X[ii*sX + N/2*sX];
-            X[ii*sX+N/2] = t - twiddle * X[ii*sX + N/2*sX];
+            /* printf("ii=%zu, twiddle = (%G,%G)\n",ii,creal(twiddle),cimag(twiddle)); */
+            
+            /* printf("\t ind = %zu, %zu\n",ii*2*sX, ii*2*sX+sX); */
+            /* printf("\te = (%G,%G), o = (%G,%G)\n", creal(e),cimag(e), creal(o),cimag(o)); */
+            X[ii*sX] = e[ii] + twiddle * o[ii];
+            X[ii*sX + N/2*sX] = e[ii] - twiddle * o[ii];
         }
+        free(e); e = NULL;
+        free(o); o = NULL;
 
         return 0;
     }
@@ -105,41 +119,32 @@ int fft_base(size_t N, const double complex * x, size_t sx,
 /***********************************************************//**
    IFFT                                                            
 ***************************************************************/
-int ifft_base(size_t N, const double complex * x, size_t sx, 
-              double complex * X, size_t sX)
+int ifft_base(size_t N, double complex * x, size_t sx, 
+             double complex * X, size_t sX)
 {
-    // assumes N is a power of 2
-    if (N < BASESIZE){
-        return ifft_slow(N,x,sx,X,sX);
+    for (size_t ii = 0; ii < N; ii++){
+        x[ii] = conj(x[ii*sX]);
     }
-    else{
-        ifft_base(N/2,x,2*sx,X,2*sX);
-        ifft_base(N/2,x+sx,2*sx,X+sX,2*sX);
-
-        for (size_t ii = 0; ii < N/2; ii ++){
-            double complex twiddle = cexp( 2 * M_PI * I * ii  / N);
-            double complex t = X[ii*sX];
-            X[ii*sX] = t + twiddle * X[ii*sX + N/2*sX];
-            X[ii*sX+N/2] = t - twiddle * X[ii*sX + N/2*sX];
-            X[ii*sX] /= N;
-            X[ii*sX+N/2] /= N;
-        }
-
-        return 0;
+    int res = fft_base(N,x,sx,X,sX);
+    for (size_t ii = 0; ii < N; ii++){
+        x[ii*sX] = conj(x[ii*sX]);
+        X[ii*sX] = conj(X[ii*sX]);
+        X[ii*sX] /= (double)N;
     }
-    
+    return res;
 }
+
 
 int fft(size_t N, const double complex * x, size_t sx, 
         double complex * X, size_t sX)
 {
+    assert (sx == 1);
+    assert (sX == 1);
     /* size_t Nopts[] = {2,4,8,16,32,64,128,256,512,1024, // 10 options */
     /*                   2048, 4096, 8192, 16384, 32768, 65536}; */
 
     size_t Nin = N;
     if (Nin % 2 != 0){
-        assert (sx == 1);
-        assert (sX == 1);
         size_t nopt = 2;
         while (Nin > nopt){
             nopt *= 2;
@@ -171,22 +176,21 @@ int fft(size_t N, const double complex * x, size_t sx,
         }
     }
     
-    /* printf("inside\n"); */
-    /* for (size_t ii = 0; ii < Nin; ii++){ */
-    /*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); */
-    /* } */
+    printf("inside\n");
+    for (size_t ii = 0; ii < Nin; ii++){
+        printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii]));
+    }
         
     free(xin); xin = NULL;
     free(xout); xout = NULL;
     return res;
 }
 
-int ifft(size_t N, const double complex * x, size_t sx, 
+int ifft(size_t N, double complex * x, size_t sx, 
         double complex * X, size_t sX)
 {
-    /* size_t Nopts[] = {2,4,8,16,32,64,128,256,512,1024, // 10 options */
-    /*                   2048, 4096, 8192, 16384, 32768, 65536}; */
-
+    assert (sx == 1);
+    assert (sX == 1);
     size_t Nin = N;
     if (Nin % 2 != 0){
         assert (sx == 1);
@@ -211,7 +215,6 @@ int ifft(size_t N, const double complex * x, size_t sx,
     }
 
     int res = ifft_base(Nin,xin,sx,xout,sX);
-
     if (Nin == N){
         for (size_t ii = 0; ii < N; ii++){
             X[ii] = xout[ii];
@@ -219,15 +222,14 @@ int ifft(size_t N, const double complex * x, size_t sx,
     }
     else{
         for (size_t ii = 0; ii < N; ii++){
-            X[ii] = xout[2*ii]*2;
+            X[ii] = xout[2*ii];
         }
     }
-
-    /* printf("inside\n"); */
-    /* for (size_t ii = 0; ii < Nin; ii++){ */
-    /*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); */
-    /* } */
-
+    
+    printf("inside\n");
+    for (size_t ii = 0; ii < Nin; ii++){
+        printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii]));
+    }
         
     free(xin); xin = NULL;
     free(xout); xout = NULL;
