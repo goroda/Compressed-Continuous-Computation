@@ -40,7 +40,7 @@
 #include <assert.h>
 #include <complex.h>
 
-#define BASESIZE 8
+#define BASESIZE 2
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -134,6 +134,12 @@ int ifft_base(size_t N, double complex * x, size_t sx,
     return res;
 }
 
+int is2(size_t x)
+{
+    while (((x % 2) == 0) && x > 1) 
+        x /= 2;
+    return (x == 1);
+}
 
 int fft(size_t N, const double complex * x, size_t sx, 
         double complex * X, size_t sX)
@@ -144,45 +150,49 @@ int fft(size_t N, const double complex * x, size_t sx,
     /*                   2048, 4096, 8192, 16384, 32768, 65536}; */
 
     size_t Nin = N;
-    if (Nin % 2 != 0){
-        size_t nopt = 2;
-        while (Nin > nopt){
-            nopt *= 2;
-        }
-        Nin = nopt;
+    /* printf("is2=%d\n",is2(Nin)); */
+    if (is2(Nin) == 0){
+        fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n");
+        return 1;
+        /* size_t nopt = 2; */
+        /* while (Nin > nopt){ */
+        /*     nopt *= 2; */
+        /* } */
+        /* Nin = nopt; */
     }
-    double complex * xin = malloc(Nin * sizeof(complex double));
-    double complex * xout = malloc(Nin * sizeof(complex double));
-    assert (xin != NULL);
-    assert (xout != NULL);
-    for (size_t ii = 0; ii < N; ii++){
-        xin[ii] = x[ii];
-        /* xout[ii] = 0.0; */
-    }
-    for (size_t ii = N; ii < Nin; ii++){
-        xin[ii] = 0.0;
-        /* xout[ii] = 0.0; */
-    }
+    int res = fft_base(Nin,x,sx,X,sX);
+    /* double complex * xin = malloc(Nin * sizeof(complex double)); */
+    /* double complex * xout = malloc(Nin * sizeof(complex double)); */
+    /* assert (xin != NULL); */
+    /* assert (xout != NULL); */
+    /* for (size_t ii = 0; ii < N; ii++){ */
+    /*     xin[ii] = x[ii]; */
+    /*     /\* xout[ii] = 0.0; *\/ */
+    /* } */
+    /* for (size_t ii = N; ii < Nin; ii++){ */
+    /*     xin[ii] = 0.0; */
+    /*     /\* xout[ii] = 0.0; *\/ */
+    /* } */
 
-    int res = fft_base(Nin,xin,sx,xout,sX);
-    if (Nin == N){
-        for (size_t ii = 0; ii < N; ii++){
-            X[ii] = xout[ii];
-        }
-    }
-    else{
-        for (size_t ii = 0; ii < N; ii++){
-            X[ii] = xout[2*ii];
-        }
-    }
+    /* int res = fft_base(Nin,xin,sx,xout,sX); */
+    /* if (Nin == N){ */
+    /*     for (size_t ii = 0; ii < N; ii++){ */
+    /*         X[ii] = xout[ii]; */
+    /*     } */
+    /* } */
+    /* else{ */
+    /*     for (size_t ii = 0; ii < N; ii++){ */
+    /*         X[ii] = xout[2*ii]; */
+    /*     } */
+    /* } */
     
-    printf("inside\n");
-    for (size_t ii = 0; ii < Nin; ii++){
-        printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii]));
-    }
+    /* /\* printf("inside\n"); *\/ */
+    /* /\* for (size_t ii = 0; ii < Nin; ii++){ *\/ */
+    /* /\*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); *\/ */
+    /* /\* } *\/ */
         
-    free(xin); xin = NULL;
-    free(xout); xout = NULL;
+    /* free(xin); xin = NULL; */
+    /* free(xout); xout = NULL; */
     return res;
 }
 
@@ -192,46 +202,49 @@ int ifft(size_t N, double complex * x, size_t sx,
     assert (sx == 1);
     assert (sX == 1);
     size_t Nin = N;
-    if (Nin % 2 != 0){
-        assert (sx == 1);
-        assert (sX == 1);
-        size_t nopt = 2;
-        while (Nin > nopt){
-            nopt *= 2;
-        }
-        Nin = nopt;
+    if (is2(Nin) == 0){
+        fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n");
+        return 1;
+        /* assert (sx == 1); */
+        /* assert (sX == 1); */
+        /* size_t nopt = 2; */
+        /* while (Nin > nopt){ */
+        /*     nopt *= 2; */
+        /* } */
+        /* Nin = nopt; */
     }
-    double complex * xin = malloc(Nin * sizeof(complex double));
-    double complex * xout = malloc(Nin * sizeof(complex double));
-    assert (xin != NULL);
-    assert (xout != NULL);
-    for (size_t ii = 0; ii < N; ii++){
-        xin[ii] = x[ii];
-        /* xout[ii] = 0.0; */
-    }
-    for (size_t ii = N; ii < Nin; ii++){
-        xin[ii] = 0.0;
-        /* xout[ii] = 0.0; */
-    }
+    int res = ifft_base(Nin,x,sx,X,sX);
+    /* double complex * xin = malloc(Nin * sizeof(complex double)); */
+    /* double complex * xout = malloc(Nin * sizeof(complex double)); */
+    /* assert (xin != NULL); */
+    /* assert (xout != NULL); */
+    /* for (size_t ii = 0; ii < N; ii++){ */
+    /*     xin[ii] = x[ii]; */
+    /*     xout[ii] = 0.0; */
+    /* } */
+    /* for (size_t ii = N; ii < Nin; ii++){ */
+    /*     xin[ii] = 0.0; */
+    /*     xout[ii] = 0.0; */
+    /* } */
 
-    int res = ifft_base(Nin,xin,sx,xout,sX);
-    if (Nin == N){
-        for (size_t ii = 0; ii < N; ii++){
-            X[ii] = xout[ii];
-        }
-    }
-    else{
-        for (size_t ii = 0; ii < N; ii++){
-            X[ii] = xout[2*ii];
-        }
-    }
+    /* int res = ifft_base(Nin,xin,sx,xout,sX); */
+    /* if (Nin == N){ */
+    /*     for (size_t ii = 0; ii < N; ii++){ */
+    /*         X[ii] = xout[ii]; */
+    /*     } */
+    /* } */
+    /* else{ */
+    /*     for (size_t ii = 0; ii < N; ii++){ */
+    /*         X[ii] = xout[2*ii]; */
+    /*     } */
+    /* } */
     
-    printf("inside\n");
-    for (size_t ii = 0; ii < Nin; ii++){
-        printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii]));
-    }
+    /* /\* printf("inside\n"); *\/ */
+    /* /\* for (size_t ii = 0; ii < Nin; ii++){ *\/ */
+    /* /\*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); *\/ */
+    /* /\* } *\/ */
         
-    free(xin); xin = NULL;
-    free(xout); xout = NULL;
+    /* free(xin); xin = NULL; */
+    /* free(xout); xout = NULL; */
     return res;
 }
