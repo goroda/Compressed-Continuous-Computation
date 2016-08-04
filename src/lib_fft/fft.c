@@ -248,3 +248,20 @@ int ifft(size_t N, double complex * x, size_t sx,
     /* free(xout); xout = NULL; */
     return res;
 }
+
+
+/* int cheb_coeff_to_vals(size_t ncoeff, const double * coeff, double * vals) */
+/* { */
+    
+
+/*     size_t Nin = ncoeff-1; */
+/*     if (is2(Nin) == 0){ */
+/*         fprintf(stderr,"Non-power of 2 cheb_coeff_to_vals is not yet implemented\n"); */
+/*         return 1; */
+/*     } */
+/*     double complex * xin = malloc(2*Nin * sizeof(complex double)); */
+/*     int res = ifft_base(Nin,x,sx,X,sX); */
+
+/*     /\* double complex * xout = malloc(Nin * sizeof(complex double)); *\/ */
+    
+/* } */

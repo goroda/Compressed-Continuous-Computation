@@ -213,7 +213,7 @@ CuSuite * FFTGetSuite(){
     SUITE_ADD_TEST(suite, Test_fft_base);
     SUITE_ADD_TEST(suite, Test_fft);
     SUITE_ADD_TEST(suite, Test_fft2);
-    SUITE_ADD_TEST(suite, Test_fft_base_big);
+    /* SUITE_ADD_TEST(suite, Test_fft_base_big); */
  
     return suite;
 }
