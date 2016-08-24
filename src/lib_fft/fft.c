@@ -161,38 +161,6 @@ int fft(size_t N, const double complex * x, size_t sx,
         /* Nin = nopt; */
     }
     int res = fft_base(Nin,x,sx,X,sX);
-    /* double complex * xin = malloc(Nin * sizeof(complex double)); */
-    /* double complex * xout = malloc(Nin * sizeof(complex double)); */
-    /* assert (xin != NULL); */
-    /* assert (xout != NULL); */
-    /* for (size_t ii = 0; ii < N; ii++){ */
-    /*     xin[ii] = x[ii]; */
-    /*     /\* xout[ii] = 0.0; *\/ */
-    /* } */
-    /* for (size_t ii = N; ii < Nin; ii++){ */
-    /*     xin[ii] = 0.0; */
-    /*     /\* xout[ii] = 0.0; *\/ */
-    /* } */
-
-    /* int res = fft_base(Nin,xin,sx,xout,sX); */
-    /* if (Nin == N){ */
-    /*     for (size_t ii = 0; ii < N; ii++){ */
-    /*         X[ii] = xout[ii]; */
-    /*     } */
-    /* } */
-    /* else{ */
-    /*     for (size_t ii = 0; ii < N; ii++){ */
-    /*         X[ii] = xout[2*ii]; */
-    /*     } */
-    /* } */
-    
-    /* /\* printf("inside\n"); *\/ */
-    /* /\* for (size_t ii = 0; ii < Nin; ii++){ *\/ */
-    /* /\*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); *\/ */
-    /* /\* } *\/ */
-        
-    /* free(xin); xin = NULL; */
-    /* free(xout); xout = NULL; */
     return res;
 }
 
@@ -214,54 +182,47 @@ int ifft(size_t N, double complex * x, size_t sx,
         /* Nin = nopt; */
     }
     int res = ifft_base(Nin,x,sx,X,sX);
-    /* double complex * xin = malloc(Nin * sizeof(complex double)); */
-    /* double complex * xout = malloc(Nin * sizeof(complex double)); */
-    /* assert (xin != NULL); */
-    /* assert (xout != NULL); */
-    /* for (size_t ii = 0; ii < N; ii++){ */
-    /*     xin[ii] = x[ii]; */
-    /*     xout[ii] = 0.0; */
-    /* } */
-    /* for (size_t ii = N; ii < Nin; ii++){ */
-    /*     xin[ii] = 0.0; */
-    /*     xout[ii] = 0.0; */
-    /* } */
-
-    /* int res = ifft_base(Nin,xin,sx,xout,sX); */
-    /* if (Nin == N){ */
-    /*     for (size_t ii = 0; ii < N; ii++){ */
-    /*         X[ii] = xout[ii]; */
-    /*     } */
-    /* } */
-    /* else{ */
-    /*     for (size_t ii = 0; ii < N; ii++){ */
-    /*         X[ii] = xout[2*ii]; */
-    /*     } */
-    /* } */
-    
-    /* /\* printf("inside\n"); *\/ */
-    /* /\* for (size_t ii = 0; ii < Nin; ii++){ *\/ */
-    /* /\*     printf("X[%zu] = (%G,%G)\n",ii,creal(xout[ii]),cimag(xout[ii])); *\/ */
-    /* /\* } *\/ */
-        
-    /* free(xin); xin = NULL; */
-    /* free(xout); xout = NULL; */
     return res;
 }
 
 
-/* int cheb_coeff_to_vals(size_t ncoeff, const double * coeff, double * vals) */
-/* { */
+int cheb_vals_to_coeff(size_t nvals, const double * vals, double * coeff)
+{
     
+    size_t Nin = nvals-1;
+    if (is2(Nin) == 0){
+        fprintf(stderr,"Non-power of 2 cheb_coeff_to_vals is not yet implemented\n");
+        return 1;
+    }
+    double complex * xin = malloc(2*Nin * sizeof(complex double));
+    double complex * xout = malloc(2*Nin * sizeof(complex double));
+    xin[0] = vals[0];
+    xout[0] = 0.0;
+    xout[Nin] = 0.0;
+    for (size_t ii = 1; ii < Nin; ii++){
+        /* printf("ii=%zu 2*Nin-ii=%zu\n",ii,2*Nin-ii); */
+        xin[ii] = vals[ii];
+        xin[2*Nin-ii] = vals[ii];
 
-/*     size_t Nin = ncoeff-1; */
-/*     if (is2(Nin) == 0){ */
-/*         fprintf(stderr,"Non-power of 2 cheb_coeff_to_vals is not yet implemented\n"); */
-/*         return 1; */
-/*     } */
-/*     double complex * xin = malloc(2*Nin * sizeof(complex double)); */
-/*     int res = ifft_base(Nin,x,sx,X,sX); */
-
-/*     /\* double complex * xout = malloc(Nin * sizeof(complex double)); *\/ */
+        xout[ii] = 0.0;
+        xout[ii+Nin] = 0.0;
+    }
+    xin[nvals-1] = vals[nvals-1];
     
-/* } */
+    int res = fft_base(2*Nin,xin,1,xout,1);
+    
+    for (size_t ii = 0; ii < 2*Nin; ii++){
+        printf("X[%zu]=%G \n",ii,creal(xout[ii]));
+    }
+    for (size_t ii = 0; ii < nvals; ii++){
+        coeff[ii] = creal(xout[nvals-1-ii]) / (double) Nin;
+        
+    }
+    coeff[0] /= 2.0;
+    coeff[nvals-1] /= 2.0;
+
+    free(xin); xin = NULL;
+    free(xout); xout = NULL;
+
+    return res;
+}

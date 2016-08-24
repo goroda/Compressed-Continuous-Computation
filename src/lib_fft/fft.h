@@ -23,4 +23,6 @@ int fft(size_t N, const double complex * x, size_t sx,
 int ifft(size_t N, const double complex * x, size_t sx, 
          double complex * X, size_t sX);
 
+int cheb_vals_to_coeff(size_t nvals, const double * vals, double * coeff);
+
 #endif

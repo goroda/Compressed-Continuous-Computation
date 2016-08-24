@@ -206,14 +206,31 @@ void Test_fft_base_big(CuTest * tc){
     fclose(fp);
 }
 
+void Test_cheb_vals_to_coeff(CuTest * tc){
+
+    printf("Testing function: vaks_to_coeff \n");
+
+    double vals[3] = {6.0, 2.0, 2.0};
+    size_t nvals = 3;
+    double coeff[3];
+    
+    int res = cheb_vals_to_coeff(nvals,vals,coeff);
+    CuAssertIntEquals(tc,0,res);
+    
+    dprint(nvals,coeff);
+
+}
+
 CuSuite * FFTGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_fft_slow);
-    SUITE_ADD_TEST(suite, Test_fft_base);
-    SUITE_ADD_TEST(suite, Test_fft);
-    SUITE_ADD_TEST(suite, Test_fft2);
+    /* SUITE_ADD_TEST(suite, Test_fft_slow); */
+    /* SUITE_ADD_TEST(suite, Test_fft_base); */
+    /* SUITE_ADD_TEST(suite, Test_fft); */
+    /* SUITE_ADD_TEST(suite, Test_fft2); */
     /* SUITE_ADD_TEST(suite, Test_fft_base_big); */
  
+    SUITE_ADD_TEST(suite, Test_cheb_vals_to_coeff);
+
     return suite;
 }
