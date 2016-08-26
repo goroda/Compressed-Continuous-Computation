@@ -346,6 +346,80 @@ double ff8(size_t dim, double * x, double * grad, void * arg)
 double f8start[3] = {0.4, 1.0, 0.0};
 double f8sol[4] = {0.0,0.0,0.0,1.12793e-8};// confused
 
+
+// Meyer function
+double ff9(size_t dim, double * x, double * grad, void * arg)
+{
+    (void)(dim);
+    (void)(arg);
+
+    double y[16] = { 34780.0, 28610.0, 23650.0, 19630.0, 16370.0,
+                     13720.0, 11540.0,  9744.0,  8261.0,  7030.0,
+                      6005.0,  5147.0,  4427.0,  3820.0,  3307.0,
+                      2872.0};
+    double f[16];
+    double t[16];
+    double out = 0.0;
+    for (size_t ii = 0; ii < 16; ii++){
+        t[ii] = 45.0 + 5.0 * ii;
+        f[ii] = x[0] * exp( x[1] / (t[ii] + x[2])) - y[ii];
+        out += f[ii] * f[ii];
+    }
+
+    if (grad != NULL){
+        grad[0] = 0.0;
+        grad[1] = 0.0;
+        grad[2] = 0.0;
+        for (size_t ii = 0; ii < 16; ii++){
+            grad[0] += 2*f[ii]*exp( x[1] / (t[ii] + x[2]));
+            grad[1] += 2*f[ii]*x[0] * exp( x[1] / (t[ii] + x[2])) * 
+                          1.0/(t[ii] + x[2]);
+            grad[2] += 2*f[ii]*x[0] * exp( x[1] / (t[ii] + x[2])) * 
+                -x[1]/pow(t[ii]+x[2],2);
+        }
+    }
+
+    
+    return out;
+}
+double f9start[3] = {0.02, 4000.0, 250.0};
+double f9sol[4]   = {0.0,0.0,0.0,87.9458};// confused
+
+/* // Gulf research and development function */
+/* double ff10(size_t dim, double * x, double * grad, void * arg) */
+/* { */
+/*     (void)(dim); */
+/*     (void)(arg); */
+
+/*     double f[100]; */
+/*     double t[100]; */
+/*     double y[100]; */
+/*     double m = 100.0; */
+/*     double out = 0.0; */
+/*     for (size_t ii = 0; ii < 100; ii++){ */
+/*         t[ii] = (double)(ii+1)/100.0; */
+/*         y[ii] = 25.0 + pow(-50.0 * log(t[ii]),2.0/3.0); */
+/*         f[ii] = exp(-1.0/x[0] * pow( fabs(y[ii]*m*(double)(ii+1)*x[2]),x[2])); */
+/*         out += f[ii] * f[ii]; */
+/*     } */
+
+/*     if (grad != NULL){ */
+/*         grad[0] = 0.0; */
+/*         grad[1] = 0.0; */
+/*         grad[2] = 0.0; */
+/*         for (size_t ii = 0; ii < 100; ii++){ */
+/*             grad[0] += exp(-1.0/x[0] * pow( fabs(y[ii]*m*(double)(ii+1)*x[2]),x[2])) * -1.0/pow(x[0],2) * pow( fabs(y[ii]*m*(double)(ii+1)*x[2]),x[2]); */
+/*             grad[1] += exp(-1.0/x[0] * pow( fabs(y[ii]*m*(double)(ii+1)*x[2]),x[2])) * (-1.0/x[0]) *  */
+/*         } */
+/*     } */
+
+    
+/*     return out; */
+/* } */
+/* double f10start[3] = {5.0, 2.5, 0.15}; */
+/* double f10sol[4]   = {50.0,25.0,1.50,0.0}; */
+
+
 ///////////////////////////////////////////////////////////////////////////
 //assign problems
 
@@ -394,6 +468,11 @@ void create_unc_probs(){
     tprobs[8].eval  = ff8;
     tprobs[8].start = f8start;
     tprobs[8].sol   = f8sol;
+
+    tprobs[9].dim   = 3;
+    tprobs[9].eval  = ff9;
+    tprobs[9].start = f9start;
+    tprobs[9].sol   = f9sol;
 }
 
 

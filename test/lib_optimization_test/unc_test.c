@@ -515,6 +515,63 @@ void Test_unc9(CuTest * tc)
 
     c3opt_free(opt); opt = NULL;
 }
+
+void Test_unc10(CuTest * tc)
+{
+    printf("////////////////////////////////////////////\n");
+    printf("\t Unconstrained Test: 10\n");
+
+
+    size_t f1 = 9;
+    struct UncTestProblem p = tprobs[f1];
+    size_t dim = unc_test_problem_get_dim(&p);
+    CuAssertIntEquals(tc,3,dim);
+
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    c3opt_add_objective(opt,unc_test_problem_eval,&p);
+    c3opt_set_verbose(opt,0);
+    /* c3opt_set_gtol(opt,1e-20); */
+    /* c3opt_set_absxtol(opt,1e-20); */
+    /* c3opt_set_relxtol(opt,1e-20); */
+    /* c3opt_set_relftol(opt,1e-15); */
+    c3opt_set_maxiter(opt,1000);
+    c3opt_ls_set_maxiter(opt,1000);
+
+    double * start = unc_test_problem_get_start(&p);
+    double gerr = c3opt_check_deriv(opt,start,1e-8);
+    CuAssertDblEquals(tc,0.0,gerr,1e-5);
+    /* printf("gerr = %G\n",gerr); */
+    
+    double val;
+    int res = c3opt_minimize(opt,start,&val);
+    /* printf("res = %d\n",res); */
+    CuAssertIntEquals(tc,1,res>=0);
+
+    double * soll = unc_test_problem_get_sol(&p);
+
+    //minimum
+    double err = fabs(soll[dim]-val);
+    if (fabs(soll[dim]) > 1){
+        err /= fabs(soll[dim]);
+    }
+    CuAssertDblEquals(tc,0.0,err,1e-4);
+    
+    //minimizer //not sure for this problem]
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     CuAssertDblEquals(tc,soll[ii],start[ii],1e-2); */
+    /* } */
+
+    printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
+    printf("\t\t Minimum Found:                : %3.6E\n\n",val);
+
+    printf("\t\t Number of Function Evaluations: %zu\n",c3opt_get_nevals(opt));
+    printf("\t\t Number of Gradient Evaluations: %zu\n",c3opt_get_ngvals(opt));
+    printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
+    printf("////////////////////////////////////////////\n");
+
+    c3opt_free(opt); opt = NULL;
+}
+
 CuSuite * UnGetSuite(){
     //printf("----------------------------\n");
 
@@ -528,5 +585,6 @@ CuSuite * UnGetSuite(){
     SUITE_ADD_TEST(suite, Test_unc7);
     SUITE_ADD_TEST(suite, Test_unc8);
     SUITE_ADD_TEST(suite, Test_unc9);
+    SUITE_ADD_TEST(suite, Test_unc10);
     return suite;
 }
