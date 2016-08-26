@@ -20,11 +20,12 @@ add_subdirectory(lib_quadrature_test)
 add_subdirectory(lib_funcs_test)
 
 add_subdirectory(lib_clinalg_test)
+add_subdirectory(lib_optimization_test)
+
 # add_subdirectory(lib_clinalg_test2)
 
 # add_subdirectory(lib_tensor_test)
 # add_subdirectory(lib_tensdecomp_test)
 
-# add_subdirectory(lib_optimization_test)
 # add_subdirectory(lib_probability_test)
 

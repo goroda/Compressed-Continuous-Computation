@@ -161,6 +161,12 @@ struct c3Opt
 
     double * workspace;
     int verbose;
+
+    // statistics
+    size_t nevals; // number of function evaluations
+    size_t ngvals; // number of gradient evaluations
+    size_t niters; // number of iterations
+
 };
 
 /***********************************************************//**
@@ -207,6 +213,10 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
         opt->workspace = NULL;        
     }
     
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 0;
+
     return opt;
 }
 
@@ -241,7 +251,11 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
         opt->workspace = calloc_double(opt->nlocs * opt->d);
         memmove(opt->workspace,old->workspace,opt->nlocs*opt->d*sizeof(double));
     }
-    
+
+    opt->nevals = old->nevals;
+    opt->ngvals = old->ngvals;
+    opt->niters = old->niters;
+
     return opt;
 }
 
@@ -338,6 +352,21 @@ void c3opt_set_absxtol(struct c3Opt * opt, double absxtol)
 {
     assert (opt != NULL);
     opt->absxtol = absxtol;
+}
+
+size_t c3opt_get_niters(struct c3Opt * opt){
+    assert (opt != NULL);
+    return opt->niters;
+}
+
+size_t c3opt_get_nevals(struct c3Opt * opt){
+    assert (opt != NULL);
+    return opt->nevals;
+}
+
+size_t c3opt_get_ngvals(struct c3Opt * opt){
+    assert (opt != NULL);
+    return opt->ngvals;
 }
 
 double c3opt_get_absxtol(struct c3Opt * opt)
@@ -448,8 +477,61 @@ void c3opt_add_objective(struct c3Opt * opt,
 ***************************************************************/
 double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
 {
+    assert (opt != NULL);
+    assert (opt->f != NULL);
     double out = opt->f(opt->d,x,grad,opt->farg);
+    opt->nevals+=1;
+    if (grad != NULL){
+        opt->ngvals += 1;
+    }
     return out;
+}
+
+/***********************************************************//**
+    Compares the numerical and analytic derivatives 
+
+    \param[in] opt - optimization structure (objective assigned)
+    \param[in] x   - evaluation location
+    \param[in] eps - difference for central difference
+
+    \return ||deriv num - deriv nalytic||/ || deriv_num ||
+***************************************************************/
+double c3opt_check_deriv(struct c3Opt * opt, double * x, double eps)
+{
+    assert (opt != NULL);
+
+    size_t dim = opt->d;
+    double * x1 = calloc_double(dim);
+    double * x2 = calloc_double(dim);
+    double * grad = calloc_double(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] = x[ii];
+        x2[ii] = x[ii];
+    }
+    
+    c3opt_eval(opt,x,grad);
+
+    double diff = 0.0;
+    double v1,v2;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] += eps;
+        x2[ii] -= eps;
+        v1 = c3opt_eval(opt,x1,NULL);
+        v2 = c3opt_eval(opt,x2,NULL);
+        diff += pow( (v1-v2)/2.0/eps - grad[ii], 2 );
+        norm += pow( (v1-v2)/2.0/eps,2);
+        
+        x1[ii] -= eps;
+        x2[ii] += eps;
+    }
+    if (norm > 1){
+        diff /= norm;
+    }
+    free(x1); x1 = NULL;
+    free(x2); x2 = NULL;
+    free(grad); grad = NULL;
+    return sqrt(diff);
 }
 
 double c3opt_ls_box2(struct c3Opt * opt, const double * x, double fx,
@@ -591,6 +673,8 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
             t = beta * t;            
         }
 
+        /* printf("\t\t dir = "); dprint(d,grad); */
+
         memmove(newx,x,d*sizeof(double));
         checkval = fx + alpha*t*dg;        
         cblas_daxpy(d,t,dir,1,newx,1);
@@ -603,13 +687,15 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
                 newx[ii] = ub[ii];
             }
         }
+        
         *newf = c3opt_eval(opt,newx,NULL);//f(newx,fargs);
         iter += 1;
         //printf("absxtol = %G\n",absxtol);
         if (verbose > 2){
             printf("\t LineSearch Iteration:%zu (fval) = (%G)\n",iter,*newf);
-            printf("\t\t");
-            dprint(d,newx);
+            printf("\t\t newx = "); dprint(d,newx);
+            /* printf("\t\t oldx = "); dprint(d,x); */
+            
         }
         double diff = norm2diff(newx,x,d);
         if (diff < absxtol){
@@ -747,11 +833,14 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     double relftol = c3opt_get_relftol(opt);
     double absxtol = c3opt_get_absxtol(opt);
     
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 1;    
+
     *fval = c3opt_eval(opt,x,grad);
     
     cblas_dsymv(CblasColMajor,CblasUpper,
                 d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
-
 
     /* printf("grad ="); */
     /* dprint(2,grad); */
@@ -762,8 +851,12 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
 
     int ret = C3OPT_SUCCESS;;
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
+
     if (verbose > 0){
         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
+        if (verbose > 1){
+            printf("\t x = "); dprint(d,x);
+        }
     }
 
     if ( (eta*eta/2.0) < gtol){
@@ -798,6 +891,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         /* if (res != 0){ */
         /*     return res; */
         /* } */
+        opt->niters++;
         iter += 1;
         if (iter > maxiter){
             //printf("iter = %zu,verbose=%d\n",iter,verbose);
@@ -1728,3 +1822,6 @@ double backtrack_line_search_bc(size_t d, double * lb,
     
     return t*alpha;
 }
+
+
+

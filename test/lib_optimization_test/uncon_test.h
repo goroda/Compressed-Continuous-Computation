@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -33,42 +33,24 @@
 
 //Code
 
-
-#include <stdio.h>
 #include <stdlib.h>
-#include "CuTest.h"
-#include "uncon_test.h"
 
-CuSuite * OptGetSuite();
-CuSuite * UnGetSuite();
+#ifndef UNCON_TEST_H
+#define UNCON_TEST_H
 
-void RunAllTests(void) {
-    
-    printf("Running test suite for: lib_optimization\n");
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * opt = OptGetSuite();
-    CuSuite * unc = UnGetSuite();
+struct UncTestProblem {
+    size_t dim;
+    double (*eval)(size_t,double *,double *, void *);
+    double * start;
+    double * sol;
+};
 
-    CuSuiteAddSuite(suite, opt);
+size_t unc_test_problem_get_dim(void * arg);
+double * unc_test_problem_get_start(void * arg);
+double * unc_test_problem_get_sol(void * arg);
+double unc_test_problem_eval(size_t dim,double * x,double * grad,void *arg);
 
-    create_unc_probs();
-    CuSuiteAddSuite(suite, unc);
+struct UncTestProblem tprobs[34];
+void create_unc_probs();
 
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(opt);
-    CuSuiteDelete(unc);
-    
-    CuStringDelete(output);
-    free(suite);
-   
-}
-
-int main(void) {
-    RunAllTests();
-}
+#endif

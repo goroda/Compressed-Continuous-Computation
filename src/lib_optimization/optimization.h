@@ -61,6 +61,11 @@ void c3opt_add_objective(struct c3Opt *,
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
 void c3opt_set_absxtol(struct c3Opt *, double);
+
+size_t c3opt_get_niters(struct c3Opt *);
+size_t c3opt_get_nevals(struct c3Opt *);
+size_t c3opt_get_ngvals(struct c3Opt *);
+
 void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
 void c3opt_ls_set_alpha(struct c3Opt *,double);
@@ -77,7 +82,7 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
 double c3opt_eval(struct c3Opt *, double *, double *);
-
+double c3opt_check_deriv(struct c3Opt *, double *, double);
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),

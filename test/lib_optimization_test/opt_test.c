@@ -489,6 +489,8 @@ void Test_c3opt_bfgs2(CuTest * tc)
         CuAssertDblEquals(tc,0.0,start[ii],1e-7);
     }
     CuAssertDblEquals(tc,0.0,val,1e-7);
+
+    c3opt_free(opt);
 }
 
 double sum_diff_powers(size_t dim, double * x, double * grad, void * arg)
@@ -553,7 +555,10 @@ void Test_c3opt_bfgs3(CuTest * tc)
         CuAssertDblEquals(tc,0.0,start[ii],1e-2);
     }
     CuAssertDblEquals(tc,0.0,val,1e-7);
+
+    c3opt_free(opt);
 }
+/////////////////////////////////////////////////////////////////////////////////////////
 
 CuSuite * OptGetSuite(){
     //printf("----------------------------\n");
