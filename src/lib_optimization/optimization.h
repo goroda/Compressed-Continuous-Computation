@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -36,7 +36,9 @@
 #define OPTIMIZATION_H
 
 
-enum c3opt_alg {NEWTON, BFGS, BRUTEFORCE};
+enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE};
+
+enum c3opt_alg {BFGS, BATCHGRAD, BRUTEFORCE};
 enum c3opt_return {
     C3OPT_LS_PARAM_INVALID=-4,
     C3OPT_LS_MAXITER_REACHED=-3,
@@ -68,12 +70,23 @@ size_t c3opt_get_ngvals(struct c3Opt *);
 
 void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
-void c3opt_ls_set_alpha(struct c3Opt *,double);
+
+int c3opt_ls_get_initial(const struct c3Opt *);
+enum c3opt_ls_alg c3opt_ls_get_alg(const struct c3Opt *);
+
+void   c3opt_ls_set_alpha(struct c3Opt *,double);
 double c3opt_ls_get_alpha(struct c3Opt *);
-void c3opt_ls_set_beta(struct c3Opt *,double);
+
+void   c3opt_ls_set_beta(struct c3Opt *,double);
 double c3opt_ls_get_beta(struct c3Opt *);
-void c3opt_ls_set_maxiter(struct c3Opt *,size_t);
+
+void   c3opt_ls_set_maxiter(struct c3Opt *,size_t);
 size_t c3opt_ls_get_maxiter(struct c3Opt *);
+
+double c3opt_ls_strong_wolfe(struct c3Opt *, double *, double,
+                             double *, double *,
+                             double *, double *, int *);
+
 
 void c3opt_set_brute_force_vals(struct c3Opt *, size_t, double *);
 
@@ -82,7 +95,8 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
 double c3opt_eval(struct c3Opt *, double *, double *);
-double c3opt_check_deriv(struct c3Opt *, double *, double);
+double c3opt_check_deriv(struct c3Opt *, const double *, double);
+double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),

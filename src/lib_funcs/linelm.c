@@ -179,6 +179,16 @@ void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts ** aopts)
 }
 
 /********************************************************//**
+    Get number of nodes
+*************************************************************/
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->num_nodes;
+}
+
+
+/********************************************************//**
     Sets new nodes (by reference) for approximation options.
     frees old ones if
     previously allocated

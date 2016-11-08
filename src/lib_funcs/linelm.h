@@ -55,6 +55,7 @@ struct LinElemExpAopts *
 lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts **);
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
 void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
                                   size_t, double *);
 void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);

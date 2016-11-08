@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
+//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -804,6 +805,27 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
 }
 
 /********************************************************//**
+*   Initialize an expanion of a certain orthogonal polynomial family
+*            
+*   \param[in] opts    - approximation options
+*   \param[in] nparams - number of polynomials
+*   \param[in] param   - parameters
+*
+*   \return p - orthogonal polynomial expansion
+*************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_create_with_params(struct OpeOpts * opts, size_t nparams, double * param)
+{
+
+    struct OrthPolyExpansion * poly = NULL;
+    poly = orth_poly_expansion_init(aopts->ptype, nparams, aopts->lb,aopts->ub);
+    for (size_t ii = 0; ii < nparams; ii++){
+        poly->coeff[ii] = param[ii];
+    }
+    return p;
+}
+
+/********************************************************//**
 *   Copy an orthogonal polynomial expansion
 *            
 *   \param[in] pin - polynomial to copy
@@ -1384,6 +1406,7 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     return out;
 }
 
+
 /********************************************************//**
 *   Evaluate each orthonormal polynomial expansion that is in an 
 *   array of generic functions 
@@ -1452,6 +1475,50 @@ int legendre_poly_expansion_arr_eval(size_t n,
 }
 
 /********************************************************//**
+*   Gradients with respect to parameters of an orthonormal polynomial
+*   expansion
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradients
+*   \param[in]     inc  - increment of gradient
+*
+*   \return 0=success
+*************************************************************/
+int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+{
+    double out = 0.0;
+    double p [2];
+    double pnew;
+    
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
+    double off = poly->p->upper - m * poly->upper_bound;
+    double x_norm =  m * x + off;
+    
+    size_t iter = 0;
+    
+    p[0] = 1.0;
+    grad[0*inc] = p[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = x_norm;
+        grad[iter*inc] = p[1];
+        iter++;
+    }   
+    for (iter = 2; iter < poly->num_poly; iter++){
+        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
+        pnew /= (double) iter;
+        grad[iter*inc] = pnew;
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    return 0;
+}
+
+
+
+/********************************************************//**
 *   Evaluate a Chebyshev polynomial expansion using clenshaw algorithm
 *
 *   \param[in] poly - polynomial expansion
@@ -1480,6 +1547,49 @@ double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     double out = poly->coeff[0] + x_norm * p[0] - p[1];
     return out;
 }
+
+/********************************************************//**
+*   Gradients with respect to parameters of an orthonormal polynomial
+*   expansion
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradients
+*   \param[in]     inc  - increment of gradient
+*
+*   \return 0=success
+*************************************************************/
+double chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+{
+
+    double out = 0.0;
+    double p [2];
+    double pnew;
+    
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
+    double off = poly->p->upper - m * poly->upper_bound;
+    double x_norm =  m * x + off;
+    
+    size_t iter = 0;
+    
+    p[0] = 1.0;
+    grad[0*inc] = p[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = x_norm;
+        grad[iter*inc] = p[1];
+        iter++;
+    }   
+    for (iter = 2; iter < poly->num_poly; iter++){
+        pnew = 2.0 * x_norm * p[1] - p[0];
+        grad[iter*inc] = pnew;
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    return 0;
+}
+
 
 /********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
@@ -1526,6 +1636,42 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
             p[0] = p[1];
             p[1] = pnew;
         }
+    }
+    return out;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   with respect to the parameters
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     nx   - number of x points
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return out - polynomial value
+*************************************************************/
+int orth_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
+{
+    double out = 0.0;
+    size_t N = poly->num_poly;
+    if (poly->p->ptype == LEGENDRE){
+        for (size_t ii = 0; ii < nx; ii++){
+            out = legendre_poly_expansion_param_grad_eval(poly,x,grad+N,1);
+        }
+    }
+    else if (poly->p->ptype == HERMITE){
+        out = hermite_poly_expansion_eval(poly,x);
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        for (size_t ii = 0; ii < nx; ii++){
+            out = chebyshev_poly_expansion_param_grad_eval(poly,x,grad+N,1);
+        }
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
     }
     return out;
 }

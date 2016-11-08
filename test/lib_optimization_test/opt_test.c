@@ -391,7 +391,6 @@ void Test_c3opt_bfgs(CuTest * tc)
     c3opt_add_objective(opt,c3opt_f,NULL);
     c3opt_set_verbose(opt,0);
 
-
     res = c3opt_minimize(opt,start,&val);
     
     CuAssertIntEquals(tc,1,res>-1);
@@ -408,7 +407,6 @@ void Test_c3opt_bfgs(CuTest * tc)
     c3opt_ls_set_beta(opt,0.2);
     
     res = c3opt_minimize(opt,start,&val);
-
     CuAssertIntEquals(tc,1,res>-1);
     CuAssertDblEquals(tc,1.0,start[0],1e-3);
     CuAssertDblEquals(tc,1.0,start[1],1e-3);
@@ -558,19 +556,66 @@ void Test_c3opt_bfgs3(CuTest * tc)
 
     c3opt_free(opt);
 }
-/////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+
+double c3opt_ls(size_t dx, double * x,double * grad, void * args)
+{
+    (void)(args);
+    (void)(dx);
+    double out =  pow(x[0]+2.0,2);
+    if (grad != NULL){
+        grad[0] = 2.0 * (x[0]+2.0);
+    }
+    return out;
+}
+
+
+void Test_c3opt_ls_wolfe(CuTest * tc)
+{
+    printf("Testing Function: strong wolfe line search\n");
+    
+    size_t dim = 1;
+    double start[1] = {2.0};
+    
+    
+    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    c3opt_set_verbose(opt,0);
+    c3opt_ls_set_maxiter(opt,10);
+    c3opt_ls_set_alpha(opt,1e-4);
+    c3opt_ls_set_beta(opt,0.001);
+    c3opt_add_objective(opt,c3opt_ls,NULL);
+
+
+    double grad[1];
+    double fx = c3opt_ls(dim,start,grad,NULL);
+    double dir[1] = {-grad[0]};
+    double newx[1];
+    double newf;
+    int info;
+
+    c3opt_ls_strong_wolfe(opt,start,fx,grad,dir,newx,&newf,&info);
+
+    /* printf("newf=%G\n",newf); */
+    CuAssertDblEquals(tc,-2.0,newx[0],1e-3);
+    CuAssertDblEquals(tc,0.0,newf,1e-3);
+    CuAssertIntEquals(tc,0,info);    
+}
+
+
 
 CuSuite * OptGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_newton);
-    SUITE_ADD_TEST(suite, Test_pg_newton);
-    SUITE_ADD_TEST(suite, Test_pg_bfgs);
-    SUITE_ADD_TEST(suite, Test_grad_descent);
-    SUITE_ADD_TEST(suite, Test_box_grad_descent);
-    SUITE_ADD_TEST(suite, Test_c3opt_bfgs);
-    SUITE_ADD_TEST(suite, Test_c3opt_bfgs2);
-    SUITE_ADD_TEST(suite, Test_c3opt_bfgs3);
+    /* SUITE_ADD_TEST(suite, Test_newton); */
+    /* SUITE_ADD_TEST(suite, Test_pg_newton); */
+    /* SUITE_ADD_TEST(suite, Test_pg_bfgs); */
+    /* SUITE_ADD_TEST(suite, Test_grad_descent); */
+    /* SUITE_ADD_TEST(suite, Test_box_grad_descent); */
+    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs); */
+    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs2); */
+    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs3); */
+    SUITE_ADD_TEST(suite, Test_c3opt_ls_wolfe);
     return suite;
 }

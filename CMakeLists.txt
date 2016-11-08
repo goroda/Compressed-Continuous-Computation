@@ -8,7 +8,6 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 
-# set(tool_dest "bin")
 # set(include_dest "include/c3-${C3_VERSION}")
 # set(main_lib_dest "lib/c3-${C3_VERSION}")
 # set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
@@ -66,8 +65,6 @@ include_directories(src/lib_funcdecomp)
 include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 include_directories(include)
-
-
 
 add_subdirectory(src)
 add_subdirectory(test)

@@ -189,6 +189,9 @@ struct OrthPolyExpansion *
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
 
 struct OrthPolyExpansion * 
+orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, double *);
+    
+struct OrthPolyExpansion * 
 orth_poly_expansion_copy(struct OrthPolyExpansion *);
 
 enum poly_type 
@@ -233,10 +236,16 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
 int legendre_poly_expansion_arr_eval(size_t,
                                      struct OrthPolyExpansion **, 
                                      double, double *);
-
+int legendre_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
+    
 double chebyshev_poly_expansion_eval(struct OrthPolyExpansion *, double);
+double chebyshev_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
 
 double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);
+int orth_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, size_t, const double *, double *);
 
 void orth_poly_expansion_round(struct OrthPolyExpansion **);
 void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);

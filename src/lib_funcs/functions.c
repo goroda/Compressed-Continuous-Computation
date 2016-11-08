@@ -51,6 +51,7 @@
 #include "piecewisepoly.h"
 #include "linelm.h"
 
+#include "optimization.h"
 
 /********************************************************//**
     Allocate memory for a generic function without specifying class or sub_type
@@ -2266,7 +2267,6 @@ generic_function_approximate1d(enum function_class fc, void * aopts,
     case KERNEL:                                                         break;
     }
 
-    //print_generic_function(gf,0,NULL);
     return gf;
 }
 
@@ -2435,3 +2435,272 @@ generic_function_array_orth(size_t n,
     }
 
 }
+
+
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+/////               Regression          //////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+
+/** \struct Regress1DOpts
+ * \brief One dimensional regression options
+ * \var Regress1DOpts:atype
+ * approximation type
+ * \var Regress1DOpts:rtype
+ * regression problem
+ * \var Regress1DOpts:N
+ * number of training sampples
+ * \var Regress1DOpts:x
+ * location of training samples
+ * \var Regress1DOpts:y
+ * value of training samples
+ * \var Regress1DOpts:fc
+ * function class of the approximation
+ * \var Regress1DOpts:aopts
+ * approximation options for function class
+ * \var Regress1DOpts:eval
+ * Storage locations for evaluation of current guess
+ * \var Regress1DOpts:grad
+ * Storage location for gradient
+ * \var Regress1DOpts:resid
+ * Storage location for residual
+ */
+struct Regress1DOpts
+{
+    enum approx_type  atype;
+    enum regress_type rtype;
+
+    size_t N;
+    const double * x;
+    const double * y;
+
+    enum function_class fc;
+    void * aopts; // approximation options
+    size_t nparam; // for parametric
+
+    // stuff to speed up storage
+    double * eval;
+    double * grad;
+    double * resid;
+};
+
+
+/********************************************************//**
+    Create a regression options
+
+    \param[in] atype - approximation type
+    \param[in] rtype - regression problem type
+    \param[in] N     - number of training samples
+    \param[in] x     - location of training samples
+    \param[in] y     - values at training samples
+
+    \return opts     - regression options
+************************************************************/
+struct Regress1DOpts *
+regress_1d_opts_create(enum approx_type atype, enum regress_type rtype,
+                       size_t N, const double * x, const double * y)
+{
+    struct Regress1DOpts * opts = malloc(sizeof(struct Regress1DOpts));
+    if (opts == NULL){
+        fprintf(stderr, "Error allocating regression options\n");
+        exit(1);
+    }
+    opts->atype = atype;
+    opts->rtype = rtype;
+    opts->N = N;
+    opts->x = x;
+    opts->y = y;
+    
+    opts->aopts = NULL;
+    opts->eval  = calloc_double(N);
+    opts->grad  = NULL;
+    opts->resid = calloc_double(N);
+
+    return opts;
+}
+
+/********************************************************//**
+    Destroy regression options
+************************************************************/
+void regress_1d_opts_destroy(struct Regress1DOpts * opts)
+{
+    if (opts != NULL){
+        free(opts->eval);  opts->eval  = NULL;
+        free(opts->grad);  opts->grad  = NULL;
+        free(opts->resid); opts->resid = NULL;
+        free(opts);        opts        = NULL;
+    }
+}
+
+/********************************************************//**
+    Add a parametric form to learn
+
+    \param[in] opts  - regression options structure
+    \param[in] fc    - regression problem type
+    \param[in] aopts - parametric approximation options
+************************************************************/
+void regress_1d_opts_add_parametric_form(
+    struct Regress1DOpts * opts, enum function_class fc, void * aopts)
+{
+    assert(opts != NULL);
+    assert(aopts != NULL);
+
+    opts->fc = fc;
+    opts->aopts = aopts;
+    
+    switch (fc){
+    case CONSTANT:                                                            break;
+    case PIECEWISE:                                                           break;
+    case POLYNOMIAL: opts->nparam = ope_opts_get_maxnum(aopts);               break;
+    case LINELM:     opts->nparam = lin_elem_exp_aopts_get_num_nodes(aopts);  break;
+    case RATIONAL:                                                            break;
+    case KERNEL:                                                              break;
+    }   
+        
+    opts->grad = calloc_double(opts->nparam);
+}
+
+/********************************************************//**
+    Create a generic function with particular parameters
+
+    \param[in] fc    - function class
+    \param[in] aopts - approximation options
+    \param[in] dim   - number of parameters
+    \param[in] param - parameter values to set
+
+    \return generic function
+************************************************************/
+struct GenericFunction *
+generic_function_create_with_params(enum function_class fc, void * aopts, size_t dim, double * param)
+{
+
+    struct GenericFunction * gf = generic_function_alloc(1,fc);
+
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL: gf->f = orth_poly_expansion_create_with_params(aopts,dim,param);  break;
+    case LINELM:     gf->f = lin_elem_exp_create_with_params(aopts,dim,param);         break;
+    case RATIONAL:                                                                     break;
+    case KERNEL:                                                                       break;
+    }
+
+    //print_generic_function(gf,0,NULL);
+    return gf;
+}
+
+
+/********************************************************//**
+    Take a gradient with respect to function parameters
+
+    \param[in]     gf   - generic function
+    \param[in]     nx   - number of x values
+    \param[in]      x   - x values
+    \param[in,out] grad - gradient (N,nx)
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int generic_function_param_grad_eval(const struct GenericFunction * gf,
+                                     size_t nx, const double * x,
+                                     double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:                                                                       break;
+    case PIECEWISE:                                                                      break;
+    case POLYNOMIAL: res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);   break;
+    case LINELM:     res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);           break;
+    case RATIONAL:                                                                       break;
+    case KERNEL:                                                                         break;
+    }
+    return res;
+}
+
+    
+    
+/********************************************************//**
+    Create a generic function through regression of data
+
+
+    \return gf - generic function
+************************************************************/
+struct GenericFunction *
+generic_function_param_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer)
+{
+
+    struct GenericFunction * func = NULL;
+    // perform linear regression to generate the starting point
+
+    // Initialize generic function to this linear function
+
+    if (opts->atype == PARAM){
+        if (opts->rtype == LS) {
+            
+        }
+        else if (opts->rtype == RLS2){
+            printf("Parameteric regression with L2 regularization not yet implemented\n");
+            return NULL;
+        }
+        else if (opts->rtype == RLS1){
+            printf("Parameteric regression with L1 regularization not yet implemented\n");
+            return NULL;
+        }
+        else{
+            printf("Parameteric regression type %d is not recognized\n",opts->rtype);
+            return NULL;
+        }
+    }
+    else if (opts->atype == NONPARAM){
+        printf("Non-parametric regression is not yet implemented\n");
+        return NULL;
+    }
+    else{
+        printf("Regression of type %d is not recognized\n",opts->atype);
+        return NULL;
+    }
+
+    return func;
+}
+
+
+double param_l2regress_cost(size_t dim, double * param, double * grad, void * arg)
+{
+    struct Regress1DOpts * opts = arg;
+
+    struct GenericFunction * gf =
+        generic_function_create_with_params(opts->fc,opts->aopts,dim,param);
+
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->eval[ii] = generic_function_1d_eval(gf,opts->x[ii]);
+    }
+
+    double out = 0.0;
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->resid[ii] = opts->y[ii]-opts->eval[ii];
+        out += opts->resid[ii] * opts->resid[ii];
+    }
+        
+    if (grad != NULL){
+
+        for (size_t ii = 0; ii < dim; ii++){
+            grad[ii] = 0.0;
+        }
+        for (size_t jj = 0; jj < opts->N; jj++){
+            int res = generic_function_param_grad_eval(gf,1,opts->x+jj,
+                                                       opts->grad);
+            assert (res == 0);
+            for (size_t ii = 0; ii < dim; ii++){
+                grad[ii] += 2.0 * opts->resid[jj] * (-1.0)*opts->grad[ii];
+            }
+        }
+    }
+
+    return out;
+}
+
+

@@ -273,8 +273,40 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
                                              size_t,size_t,
                                              struct c3Vector *);
 
+
+
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+// Regression functions
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+enum approx_type {PARAM, NONPARAM};
+enum regress_type {LS, RLS2, RLS1};
+struct Regress1DOpts;
+struct Regress1DOpts *
+regress_1d_opts_create(enum approx_type, enum regress_type,
+                       size_t, const double *, const double *);
+void regress_1d_opts_destroy(struct Regress1DOpts *);
+void regress_1d_opts_add_parametric_form(
+    struct Regress1DOpts *, enum function_class, void *);
+
+void regress_1d_opts_add_parametric_form(struct Regress1DOpts *, enum function_class, void *);
+
+struct GenericFunction * generic_function_create_with_params(enum function_class,void *,size_t,double*);
+int generic_function_param_grad_eval(const struct GenericFunction *, size_t,
+                                     const double *, double *);
+
+
+
 ////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 // High dimensional helper functions
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 
 /** \struct FiberCut
  *  \brief Interface to convert a multidimensional function to a one dimensional function
