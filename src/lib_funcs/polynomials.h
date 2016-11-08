@@ -240,7 +240,7 @@ int legendre_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion *, double, double *, size_t);
     
 double chebyshev_poly_expansion_eval(struct OrthPolyExpansion *, double);
-double chebyshev_poly_expansion_param_grad_eval(
+int chebyshev_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion *, double, double *, size_t);
 
 double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);

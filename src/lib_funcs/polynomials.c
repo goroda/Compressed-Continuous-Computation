@@ -818,11 +818,11 @@ orth_poly_expansion_create_with_params(struct OpeOpts * opts, size_t nparams, do
 {
 
     struct OrthPolyExpansion * poly = NULL;
-    poly = orth_poly_expansion_init(aopts->ptype, nparams, aopts->lb,aopts->ub);
+    poly = orth_poly_expansion_init(opts->ptype,nparams,opts->lb,opts->ub);
     for (size_t ii = 0; ii < nparams; ii++){
         poly->coeff[ii] = param[ii];
     }
-    return p;
+    return poly;
 }
 
 /********************************************************//**
@@ -1487,7 +1487,6 @@ int legendre_poly_expansion_arr_eval(size_t n,
 *************************************************************/
 int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
 {
-    double out = 0.0;
     double p [2];
     double pnew;
     
@@ -1559,10 +1558,9 @@ double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *
 *   \return 0=success
 *************************************************************/
-double chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+int chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
 {
 
-    double out = 0.0;
     double p [2];
     double pnew;
     
@@ -1654,26 +1652,28 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 int orth_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
-    double out = 0.0;
+    int res = 1;
     size_t N = poly->num_poly;
     if (poly->p->ptype == LEGENDRE){
         for (size_t ii = 0; ii < nx; ii++){
-            out = legendre_poly_expansion_param_grad_eval(poly,x,grad+N,1);
+            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
         }
     }
     else if (poly->p->ptype == HERMITE){
-        out = hermite_poly_expansion_eval(poly,x);
+        for (size_t ii = 0; ii < nx; ii++){
+            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
+        }
     }
     else if (poly->p->ptype == CHEBYSHEV){
         for (size_t ii = 0; ii < nx; ii++){
-            out = chebyshev_poly_expansion_param_grad_eval(poly,x,grad+N,1);
+            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
         }
     }
     else{
         fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
         exit(1);
     }
-    return out;
+    return res;
 }
 
 /********************************************************//**
