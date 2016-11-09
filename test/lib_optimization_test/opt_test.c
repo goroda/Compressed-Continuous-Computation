@@ -343,7 +343,7 @@ void Test_box_grad_descent(CuTest * tc)
     CuAssertIntEquals(tc,0,res);
 }
 
-double c3opt_f(size_t dx, double * x,double * grad, void * args)
+double c3opt_f(size_t dx, const double * x,double * grad, void * args)
 {
     (void)(args);
     (void)(dx);
@@ -356,7 +356,7 @@ double c3opt_f(size_t dx, double * x,double * grad, void * args)
 }
 
 
-double c3opt_rosen2d(size_t d, double * x, double * grad, void * args)
+double c3opt_rosen2d(size_t d, const double * x, double * grad, void * args)
 {
     (void)(args);
     (void)(d);
@@ -432,7 +432,7 @@ void Test_c3opt_bfgs(CuTest * tc)
 
 }
 
-double sum_squares(size_t dim, double * x, double * grad, void * arg)
+double sum_squares(size_t dim, const double * x, double * grad, void * arg)
 {
 
     (void)(arg);
@@ -491,7 +491,7 @@ void Test_c3opt_bfgs2(CuTest * tc)
     c3opt_free(opt);
 }
 
-double sum_diff_powers(size_t dim, double * x, double * grad, void * arg)
+double sum_diff_powers(size_t dim, const double * x, double * grad, void * arg)
 {
 
     (void)(arg);
@@ -559,7 +559,7 @@ void Test_c3opt_bfgs3(CuTest * tc)
 //////////////////////////////////////////////////////////////////////////////
 
 
-double c3opt_ls(size_t dx, double * x,double * grad, void * args)
+double c3opt_ls(size_t dx, const double * x,double * grad, void * args)
 {
     (void)(args);
     (void)(dx);
@@ -608,14 +608,14 @@ CuSuite * OptGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_newton); */
-    /* SUITE_ADD_TEST(suite, Test_pg_newton); */
-    /* SUITE_ADD_TEST(suite, Test_pg_bfgs); */
-    /* SUITE_ADD_TEST(suite, Test_grad_descent); */
-    /* SUITE_ADD_TEST(suite, Test_box_grad_descent); */
-    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs); */
-    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs2); */
-    /* SUITE_ADD_TEST(suite, Test_c3opt_bfgs3); */
+    SUITE_ADD_TEST(suite, Test_newton);
+    SUITE_ADD_TEST(suite, Test_pg_newton);
+    SUITE_ADD_TEST(suite, Test_pg_bfgs);
+    SUITE_ADD_TEST(suite, Test_grad_descent);
+    SUITE_ADD_TEST(suite, Test_box_grad_descent);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs2);
+    SUITE_ADD_TEST(suite, Test_c3opt_bfgs3);
     SUITE_ADD_TEST(suite, Test_c3opt_ls_wolfe);
     return suite;
 }

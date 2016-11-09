@@ -369,6 +369,55 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
     /* compute_diff(lexp); */
     return lexp;
 }
+
+/********************************************************//**
+    Initialize a linear element expansion with particular parameters
+
+    \param[in] opts  - options
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+  
+    \return linear element expansion
+    
+    \note
+    makes a copy of nodes and coefficients
+*************************************************************/
+struct LinElemExp *
+lin_elem_exp_create_with_params(struct LinElemExpAopts * opts,
+                               size_t dim, const double * param)
+{
+    assert (opts != NULL);
+    assert (opts->num_nodes == dim);
+    assert (opts->nodes != NULL);
+    struct LinElemExp * lexp = lin_elem_exp_alloc();
+    
+    lexp->num_nodes = dim;;
+    lexp->nodes = calloc_double(dim);
+    lexp->coeff = calloc_double(dim);
+
+    memmove(lexp->nodes,opts->nodes,dim*sizeof(double));
+    memmove(lexp->coeff,param,dim*sizeof(double));
+    
+    return lexp;
+}
+
+/********************************************************//**
+    Update the parameters (coefficients) for a linear element expansion
+
+    \param[in] lexp  - expansion
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+*************************************************************/
+void
+lin_elem_exp_update_params(struct LinElemExp * lexp,
+                           size_t dim, const double * param)
+{
+    assert (lexp != NULL);
+    assert (lexp->num_nodes == dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        lexp->coeff[ii] = param[ii];
+    }
+}
     
 /********************************************************//**
 *   Serialize a LinElemExp
@@ -477,6 +526,8 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
     return value;
 }
 
+
+
 /********************************************************//**
 *   Get the value of the expansion at a particular node
 *
@@ -557,6 +608,32 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
     }
 
     return le;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   with respect to the coefficients of each basis
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     nx   - number of x points
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return out - polynomial value
+*************************************************************/
+int lin_elem_exp_param_grad_eval(
+    struct LinElemExp * lexp, size_t nx, const double * x, double * grad)
+{
+    (void)(lexp);
+    (void)(x);
+    (void)(grad);
+    (void)(nx);
+    /* for (size_t ii = 0; ii < nx; ii++){ */
+        fprintf(stderr,"Lin_elem_exp_param_grad_eval IS NOT YET IMPLEMENTED\n");
+        exit(1);
+    /* } */
+
+    /* return 0; */
 }
 
 /********************************************************//**

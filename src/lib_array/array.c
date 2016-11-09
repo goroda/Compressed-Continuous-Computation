@@ -477,12 +477,12 @@ double deserialize_double_from_text(char * num)
 /*************************************************************//**
     Serialize a double array
  
-    \param N [in] - number of elements in the array
-    \param array [in] - array to serialize
+    \param[in] N      - number of elements in the array
+    \param[in] array  - array to serialize
  
     \return buffer - string of values
 ****************************************************************/
-char * serialize_darray_to_text(size_t N, double * array)
+char * serialize_darray_to_text(size_t N, const double * array)
 {
     
     char * buffer = NULL;

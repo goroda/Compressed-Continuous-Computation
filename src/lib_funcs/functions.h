@@ -49,6 +49,8 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
+#include "lib_optimization.h"
+
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
  * only POLYNOMIAL is implemented!!!
@@ -282,23 +284,29 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
-enum approx_type {PARAM, NONPARAM};
+enum approx_type {PARAMETRIC, NONPARAMETRIC};
 enum regress_type {LS, RLS2, RLS1};
 struct Regress1DOpts;
 struct Regress1DOpts *
 regress_1d_opts_create(enum approx_type, enum regress_type,
                        size_t, const double *, const double *);
 void regress_1d_opts_destroy(struct Regress1DOpts *);
-void regress_1d_opts_add_parametric_form(
-    struct Regress1DOpts *, enum function_class, void *);
+void regress_1d_opts_set_parametric_form(struct Regress1DOpts *, enum function_class, void *);
+void regress_1d_opts_set_initial_parameters(struct Regress1DOpts *, const double *);
 
-void regress_1d_opts_add_parametric_form(struct Regress1DOpts *, enum function_class, void *);
 
-struct GenericFunction * generic_function_create_with_params(enum function_class,void *,size_t,double*);
+struct GenericFunction *
+generic_function_create_with_params(enum function_class,void *,size_t,const double*);
+void
+generic_function_update_params(struct GenericFunction *, size_t,const double *);
+
 int generic_function_param_grad_eval(const struct GenericFunction *, size_t,
                                      const double *, double *);
+void regress_1d_opts_set_regularization_penalty(struct Regress1DOpts *, double);
 
 
+struct GenericFunction *
+generic_function_regress1d(struct Regress1DOpts *, struct c3Opt *, int *);
 
 ////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////

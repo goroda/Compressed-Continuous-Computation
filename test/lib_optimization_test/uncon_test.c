@@ -52,7 +52,7 @@
 //Collection of test problems from More, Garbow and Hillstrom 1981
 ////////////////////////////////////////////////
 // Rosenbrock function
-double rosen_brock_func(size_t dim, double * x, double * grad, void * arg)
+double rosen_brock_func(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -73,7 +73,7 @@ static double rosen_brock_start[2] = {-1.2, 1.0};
 static double rosen_brock_sol[3] = {1.0, 1.0, 0.0};
 
 // Freudenstein and Roth
-double f1(size_t dim, double * x, double * grad, void * arg)
+double f1(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -97,7 +97,7 @@ static double f1sol[3] = {11.41, -0.8968, 48.9842};
 /* double f1sol[3] = {5.0, 4.0, 0.0}; */
 
 // Powell badly scaled
-double f2(size_t dim, double * x, double * grad, void * arg)
+double f2(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -118,7 +118,7 @@ static double f2start[2] = {0.0,1.0};
 static double f2sol[3] = {1.098e-5, 9.106,0.0};
 
 // Brown badly scaled
-double ff3(size_t dim, double * x, double * grad, void * arg)
+double ff3(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -139,7 +139,7 @@ static double f3start[2] = {1.0,1.0};
 static double f3sol[3] = {1e6, 2e-6, 0.0};
 
 // Beale function
-double ff4(size_t dim, double * x, double * grad, void * arg)
+double ff4(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -165,7 +165,7 @@ static double f4start[2] = {1.0,1.0};
 static double f4sol[3] = {3.0, 0.5, 0.0};
 
 // Jennrich and Sampson function
-double ff5(size_t dim, double * x, double * grad, void * arg)
+double ff5(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -207,7 +207,7 @@ static double f5start[2] = {0.3,0.4};
 static double f5sol[3] = {0.2578, 0.2578, 124.362};
 
 // Helical valley function
-double ff6(size_t dim, double * x, double * grad, void * arg)
+double ff6(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -253,7 +253,7 @@ static double f6start[3] = {-1.0,0.0,0.0};
 static double f6sol[4] = {1.0,0.0,0.0,0.0};
 
 // Bard function
-double ff7(size_t dim, double * x, double * grad, void * arg)
+double ff7(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -296,7 +296,7 @@ static double f7start[3] = {1.0,1.0,1.0};
 static double f7sol[4] = {0.0,0.0,0.0,8.21487e-3};// confused
 
 // Gaussian Function
-double ff8(size_t dim, double * x, double * grad, void * arg)
+double ff8(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -348,7 +348,7 @@ static double f8sol[4] = {0.0,0.0,0.0,1.12793e-8};// confused
 
 
 // Meyer function
-double ff9(size_t dim, double * x, double * grad, void * arg)
+double ff9(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -386,7 +386,7 @@ static double f9start[3] = {0.02, 4000.0, 250.0};
 static double f9sol[4]   = {0.0,0.0,0.0,87.9458};// confused
 
 // Gulf research and development function
-double ff10(size_t dim, double * x, double * grad, void * arg)
+double ff10(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -424,7 +424,7 @@ static double f10start[3] = {5.0, 2.5, 0.15};
 static double f10sol[4]   = {50.0,25.0,1.50,0.0};
 
 // Box three-dimensional 
-double ff11(size_t dim, double * x, double * grad, void * arg)
+double ff11(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -456,7 +456,7 @@ static double f11start[3] = {0.0, 10.0, 20.0};
 static double f11sol[4]   = {1.0,10.0,1.0,0.0}; // multiple minimum exist
 
 // Powell singular function 
-double ff12(size_t dim, double * x, double * grad, void * arg)
+double ff12(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -483,7 +483,7 @@ static double f12start[4] = {3.0,-1.0,0.0,1.0};
 static double f12sol[5]   = {0.0, 0.0, 0.0, 0.0, 0.0};
 
 // Wood function
-double ff13(size_t dim, double * x, double * grad, void * arg)
+double ff13(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -514,7 +514,7 @@ static double f13start[4] = {-3.0,-1.0,-3.0,-1.0};
 static double f13sol[5]   = {1.0, 1.0, 1.0, 1.0, 0.0};
 
 // Kowalic and Osborne function
-double ff14(size_t dim, double * x, double * grad, void * arg)
+double ff14(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -551,7 +551,7 @@ static double f14start[4] = {0.25,0.39,0.415,0.39};
 static double f14sol[5]   = {0.0,0.0,0.0,0.0,3.07505e-4}; // unknown minimizer
 
 // Brown and Dennis
-double ff15(size_t dim, double * x, double * grad, void * arg)
+double ff15(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -588,7 +588,7 @@ static double f15start[4] = {25.0,5.0,-5.0,-1.0};
 static double f15sol[5]   = {0.0,0.0,0.0,0.0,85822.2}; // unknown minimizer
 
 // Osborne 1
-double ff16(size_t dim, double * x, double * grad, void * arg)
+double ff16(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -631,7 +631,7 @@ static double f16start[5] = {0.5,1.5,-1.0,0.01,0.02};
 static double f16sol[6]   = {0.0,0.0,0.0,0.0,0.0,5.46489e-5}; // unknown minimizer
 
 // Biggs EXP6
-double ff17(size_t dim, double * x, double * grad, void * arg)
+double ff17(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -675,7 +675,7 @@ static double f17start[6] = {1.0,2.0,1.0,1.0,1.0,1.0};
 static double f17sol[7]   = {0.0,0.0,0.0,0.0,0.0,0.0,5.65565e-3};
 
 // Osborne 2 function
-double ff18(size_t dim, double * x, double * grad, void * arg)
+double ff18(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -730,7 +730,7 @@ static double f18start[11] = {1.3,0.65,0.65,0.7,0.6,3.0,5.0,7.0,2.0,4.5,5.5};
 static double f18sol[12]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4.01377e-2};
 
 // Watson function
-double ff19(size_t dim, double * x, double * grad, void * arg)
+double ff19(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -789,7 +789,7 @@ static double f19sol[10]   = {0.0,0.0,0.0,
                               0.0,0.0,0.0,0.0,0.0,0.0,1.39976e-6}; // minimizer unknown
 
 // Extended Rosenbrock function
-double ff20(size_t dim, double * x, double * grad, void * arg)
+double ff20(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -822,7 +822,7 @@ static double f20start[30];
 static double f20sol[31];
 
 // Extended Powell singular function
-double ff21(size_t dim, double * x, double * grad, void * arg)
+double ff21(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -863,7 +863,7 @@ static double f21start[400];
 static double f21sol[401];
 
 // Penalty I
-double ff22(size_t dim, double * x, double * grad, void * arg)
+double ff22(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -901,7 +901,7 @@ static double f22start[4] = {1.0,2.0,3.0,4.0};
 static double f22sol[5]   = {0.0,0.0,0.0,0.0,2.24997e-5};
 
 // Penalty II (DOESNT WORK)
-double ff23(size_t dim, double * x, double * grad, void * arg)
+double ff23(size_t dim, const double * x, double * grad, void * arg)
 {
     (void)(dim);
     (void)(arg);
@@ -1129,7 +1129,7 @@ double * unc_test_problem_get_sol(void * arg)
     return p->sol;
 }
 
-double unc_test_problem_eval(size_t dim, double * x,double * grad,void *arg)
+double unc_test_problem_eval(size_t dim, const double * x,double * grad,void *arg)
 {
     struct UncTestProblem * p = arg;
     

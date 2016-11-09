@@ -172,7 +172,7 @@ struct c3Opt
     enum c3opt_alg alg;
     size_t d;
 
-    double (*f)(size_t, double *, double *, void *);
+    double (*f)(size_t, const double *, double *, void *);
     void * farg;
     
     double * lb;
@@ -238,8 +238,8 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     if (alg == BFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*d);
-        /* opt->ls = c3ls_alloc(BACKTRACK,0); */
-        opt->ls = c3ls_alloc(STRONGWOLFE,0);
+        opt->ls = c3ls_alloc(BACKTRACK,0);
+        /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
     }
     else if (alg==BATCHGRAD){
         opt->grad = 1;
@@ -516,7 +516,7 @@ void c3opt_set_brute_force_vals(struct c3Opt * opt, size_t nvals, double * loc)
     Add objective function
 ***************************************************************/
 void c3opt_add_objective(struct c3Opt * opt,
-                         double(*f)(size_t,double *,double *,void *),
+                         double(*f)(size_t,const double *,double *,void *),
                          void * farg)
 {
     assert (opt != NULL);
@@ -526,8 +526,14 @@ void c3opt_add_objective(struct c3Opt * opt,
 
 /***********************************************************//**
     Evaluate the objective function
+    
+    \param[in]     opt  - optimization structure
+    \param[in]     x    - location at which to evaluate
+    \param[in,out] grad - gradient of evaluation (evaluates if not NULL)
+
+    \return  Evaluation
 ***************************************************************/
-double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
+double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
 {
     assert (opt != NULL);
     assert (opt->f != NULL);
@@ -561,7 +567,7 @@ double c3opt_check_deriv(struct c3Opt * opt, const double * x, double eps)
         x2[ii] = x[ii];
     }
     
-    c3opt_eval(opt,(double *)x,grad);
+    c3opt_eval(opt,x,grad);
 
     double diff = 0.0;
     double v1,v2;
@@ -610,7 +616,7 @@ double c3opt_check_deriv_each(struct c3Opt * opt, const double * x, double eps, 
         x2[ii] = x[ii];
     }
     
-    c3opt_eval(opt,(double *)x,grad);
+    c3opt_eval(opt,x,grad);
 
     double diff = 0.0;
     double v1,v2;

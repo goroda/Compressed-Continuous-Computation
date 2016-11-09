@@ -814,7 +814,8 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
 struct OrthPolyExpansion * 
-orth_poly_expansion_create_with_params(struct OpeOpts * opts, size_t nparams, double * param)
+orth_poly_expansion_create_with_params(struct OpeOpts * opts,
+                                       size_t nparams, const double * param)
 {
 
     struct OrthPolyExpansion * poly = NULL;
@@ -823,6 +824,46 @@ orth_poly_expansion_create_with_params(struct OpeOpts * opts, size_t nparams, do
         poly->coeff[ii] = param[ii];
     }
     return poly;
+}
+
+/********************************************************//**
+*   Update an expansion's parameters
+*            
+*   \param[in] ope     - expansion to update
+*   \param[in] nparams - number of polynomials
+*   \param[in] param   - parameters
+*************************************************************/
+void
+orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
+                                  size_t nparams, const double * param)
+{
+
+    size_t nold = ope->num_poly;
+    if (nold >= nparams){
+        ope->num_poly = nparams;
+        for (size_t ii = 0; ii < nparams; ii++){
+            ope->coeff[ii] = param[ii];
+        }
+        for (size_t ii = nparams; ii < nold; ii++){
+            ope->coeff[ii] = 0.0;
+        }
+    }
+    else{
+        if (nparams <= ope->nalloc){
+            for (size_t ii = 0; ii < nparams; ii++){
+                ope->coeff[ii] = param[ii];
+            }
+        }
+        else{
+            free(ope->coeff); ope->coeff = NULL;
+            ope->nalloc = nparams;
+            ope->num_poly = nparams;
+            ope->coeff = calloc_double(ope->nalloc);
+            for (size_t ii = 0; ii < nparams; ii++){
+                ope->coeff[ii] = param[ii];
+            }
+        }
+    }
 }
 
 /********************************************************//**
@@ -1512,6 +1553,7 @@ int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, dou
         p[0] = p[1];
         p[1] = pnew;
     }
+    /* printf("iter=%zu grad here = ",iter); dprint(iter+1,grad); */
     return 0;
 }
 
@@ -1653,21 +1695,75 @@ int orth_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
     int res = 1;
-    size_t N = poly->num_poly;
     if (poly->p->ptype == LEGENDRE){
         for (size_t ii = 0; ii < nx; ii++){
-            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
+            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
         }
     }
     else if (poly->p->ptype == HERMITE){
         for (size_t ii = 0; ii < nx; ii++){
-            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
+            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
         }
     }
     else if (poly->p->ptype == CHEBYSHEV){
         for (size_t ii = 0; ii < nx; ii++){
-            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+N,1);
+            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
         }
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return res;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly  - polynomial
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
+                                            double scale, double * grad)
+{
+    int res = 1;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            grad[ii] += scale * poly->coeff[ii];
+        }
+        res = 0;
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (n1 % 2 == 0){
+                    grad[ii] += scale*temp[n1/2];
+                }
+                if (n2 % 2 == 0){
+                    grad[ii] += scale*temp[n2/2];
+                }
+            }
+        }
+        free(temp); temp = NULL;
+        res = 0;
     }
     else{
         fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);

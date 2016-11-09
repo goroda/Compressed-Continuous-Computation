@@ -2451,16 +2451,24 @@ generic_function_array_orth(size_t n,
  * approximation type
  * \var Regress1DOpts:rtype
  * regression problem
+ * \var Regress1DOpts:fc
+ * function class of the approximation
+ * \var Regress1DOpts:lambda
+ * regularization parameter
  * \var Regress1DOpts:N
  * number of training sampples
  * \var Regress1DOpts:x
  * location of training samples
  * \var Regress1DOpts:y
  * value of training samples
- * \var Regress1DOpts:fc
- * function class of the approximation
  * \var Regress1DOpts:aopts
  * approximation options for function class
+ * \var Regress1DOpts:nparam
+ * number of parameters for parametric regression
+ * \var Regress1DOpts:init_param
+ * initial parameters
+ * \var Regress1DOpts:gf
+ * Generic function currently being worked with
  * \var Regress1DOpts:eval
  * Storage locations for evaluation of current guess
  * \var Regress1DOpts:grad
@@ -2472,21 +2480,29 @@ struct Regress1DOpts
 {
     enum approx_type  atype;
     enum regress_type rtype;
+    enum function_class fc;
+
+    // Regularization options
+    double lambda; // reg parameter
 
     size_t N;
     const double * x;
     const double * y;
 
-    enum function_class fc;
     void * aopts; // approximation options
+
+    // parameteric stuff
     size_t nparam; // for parametric
+    const double * init_param;
+
+    // store current generic funciton
+    struct GenericFunction * gf;
 
     // stuff to speed up storage
     double * eval;
     double * grad;
     double * resid;
 };
-
 
 /********************************************************//**
     Create a regression options
@@ -2515,10 +2531,18 @@ regress_1d_opts_create(enum approx_type atype, enum regress_type rtype,
     opts->y = y;
     
     opts->aopts = NULL;
+
+    opts->nparam = 0;
+    opts->init_param = NULL;
+
+    opts->gf = NULL;
+    
     opts->eval  = calloc_double(N);
     opts->grad  = NULL;
     opts->resid = calloc_double(N);
 
+
+    
     return opts;
 }
 
@@ -2528,10 +2552,11 @@ regress_1d_opts_create(enum approx_type atype, enum regress_type rtype,
 void regress_1d_opts_destroy(struct Regress1DOpts * opts)
 {
     if (opts != NULL){
-        free(opts->eval);  opts->eval  = NULL;
-        free(opts->grad);  opts->grad  = NULL;
-        free(opts->resid); opts->resid = NULL;
-        free(opts);        opts        = NULL;
+        generic_function_free(opts->gf); opts->gf    = NULL;
+        free(opts->eval);                opts->eval  = NULL;
+        free(opts->grad);                opts->grad  = NULL;
+        free(opts->resid);               opts->resid = NULL; 
+        free(opts);                      opts        = NULL;
     }
 }
 
@@ -2542,7 +2567,7 @@ void regress_1d_opts_destroy(struct Regress1DOpts * opts)
     \param[in] fc    - regression problem type
     \param[in] aopts - parametric approximation options
 ************************************************************/
-void regress_1d_opts_add_parametric_form(
+void regress_1d_opts_set_parametric_form(
     struct Regress1DOpts * opts, enum function_class fc, void * aopts)
 {
     assert(opts != NULL);
@@ -2564,6 +2589,28 @@ void regress_1d_opts_add_parametric_form(
 }
 
 /********************************************************//**
+    Add starting parameters for optimization   
+************************************************************/
+void regress_1d_opts_set_initial_parameters(
+    struct Regress1DOpts * opts, const double * param)
+{
+    assert (opts != NULL);
+    opts->init_param = param;
+}
+
+/********************************************************//**
+    Set regularization penalty
+************************************************************/
+void regress_1d_opts_set_regularization_penalty(
+    struct Regress1DOpts * opts, double lambda)
+{
+    assert (opts != NULL);
+    opts->lambda = lambda;
+}
+
+
+
+/********************************************************//**
     Create a generic function with particular parameters
 
     \param[in] fc    - function class
@@ -2574,7 +2621,8 @@ void regress_1d_opts_add_parametric_form(
     \return generic function
 ************************************************************/
 struct GenericFunction *
-generic_function_create_with_params(enum function_class fc, void * aopts, size_t dim, double * param)
+generic_function_create_with_params(enum function_class fc, void * aopts, size_t dim,
+                                    const double * param)
 {
 
     struct GenericFunction * gf = generic_function_alloc(1,fc);
@@ -2590,6 +2638,29 @@ generic_function_create_with_params(enum function_class fc, void * aopts, size_t
 
     //print_generic_function(gf,0,NULL);
     return gf;
+}
+
+/********************************************************//**
+    Update a generic function with particular parameters
+
+    \param[in] f     - function to update
+    \param[in] dim   - number of parameters
+    \param[in] param - parameter values to set
+************************************************************/
+void
+generic_function_update_params(struct GenericFunction * f, size_t dim,
+                               const double * param)
+{
+
+
+    switch (f->fc){
+    case CONSTANT:                                                       break;
+    case PIECEWISE:                                                      break;
+    case POLYNOMIAL: orth_poly_expansion_update_params(f->f,dim,param);  break;
+    case LINELM:     lin_elem_exp_update_params(f->f,dim,param);         break;
+    case RATIONAL:                                                       break;
+    case KERNEL:                                                         break;
+    }
 }
 
 
@@ -2613,24 +2684,118 @@ int generic_function_param_grad_eval(const struct GenericFunction * gf,
     switch (fc){
     case CONSTANT:                                                                       break;
     case PIECEWISE:                                                                      break;
-    case POLYNOMIAL: res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);   break;
-    case LINELM:     res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);           break;
+    case POLYNOMIAL: res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);         break;
+    case LINELM:     res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);                break;
     case RATIONAL:                                                                       break;
     case KERNEL:                                                                         break;
     }
     return res;
 }
 
+/********************************************************//**
+    Take a gradient of the squared norm of a generic function
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     gf    - generic function
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+generic_function_squared_norm_param_grad(const struct GenericFunction * gf,
+                                         double scale, double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:                                                                         break;
+    case PIECEWISE:                                                                        break;
+    case POLYNOMIAL: res = orth_poly_expansion_squared_norm_param_grad(gf->f,scale,grad);  break;
+    case LINELM:     fprintf(stderr,"No deriv of squared norm for linelm yet\n");        exit(1);
+    case RATIONAL:                                                                         break;
+    case KERNEL:                                                                           break;
+    }
+
+    return res;
+}
+
+
+/********************************************************//**
+    LS regression objective function
+************************************************************/
+double param_LSregress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+
+    // update function
+    generic_function_update_params(opts->gf,dim,param);
+
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->eval[ii] = generic_function_1d_eval(opts->gf,opts->x[ii]);
+    }
+
+    double out = 0.0;
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->resid[ii] = opts->y[ii]-opts->eval[ii];
+        out += opts->resid[ii] * opts->resid[ii];
+    }
+    out *= 0.5;
     
+    if (grad != NULL){
+
+        for (size_t ii = 0; ii < dim; ii++){
+            grad[ii] = 0.0;
+        }
+        for (size_t jj = 0; jj < opts->N; jj++){
+            int res = generic_function_param_grad_eval(opts->gf,1,opts->x+jj,
+                                                       opts->grad);
+            assert (res == 0);
+            for (size_t ii = 0; ii < dim; ii++){
+                grad[ii] += opts->resid[jj] * (-1.0)*opts->grad[ii];
+            }
+        }
+    }
+
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression
+************************************************************/
+double param_RLS2regress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this funciton updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    double regularization  = generic_function_inner(opts->gf,opts->gf);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_squared_norm_param_grad(opts->gf,opts->lambda,grad);
+        assert (res == 0);
+    }
+
+    return out;
+}
+
+
     
 /********************************************************//**
     Create a generic function through regression of data
 
-
     \return gf - generic function
 ************************************************************/
 struct GenericFunction *
-generic_function_param_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer)
+generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer, int *info)
 {
 
     struct GenericFunction * func = NULL;
@@ -2638,24 +2803,35 @@ generic_function_param_regress1d(struct Regress1DOpts * opts, struct c3Opt * opt
 
     // Initialize generic function to this linear function
 
-    if (opts->atype == PARAM){
+    double val;
+    if (opts->atype == PARAMETRIC){
+        double * start = calloc_double(opts->nparam);
+        memmove(start,opts->init_param,opts->nparam*sizeof(double));
         if (opts->rtype == LS) {
-            
+            c3opt_add_objective(optimizer,param_LSregress_cost,opts);
         }
         else if (opts->rtype == RLS2){
-            printf("Parameteric regression with L2 regularization not yet implemented\n");
-            return NULL;
+            c3opt_add_objective(optimizer,param_RLS2regress_cost,opts);
         }
         else if (opts->rtype == RLS1){
             printf("Parameteric regression with L1 regularization not yet implemented\n");
+            free(start); start = NULL;
             return NULL;
         }
         else{
             printf("Parameteric regression type %d is not recognized\n",opts->rtype);
+            free(start); start = NULL;
             return NULL;
         }
+        
+        opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
+        *info = c3opt_minimize(optimizer,start,&val);
+        if (*info > -1){
+            func = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
+        }
+        free(start); start = NULL;
     }
-    else if (opts->atype == NONPARAM){
+    else if (opts->atype == NONPARAMETRIC){
         printf("Non-parametric regression is not yet implemented\n");
         return NULL;
     }
@@ -2667,40 +2843,5 @@ generic_function_param_regress1d(struct Regress1DOpts * opts, struct c3Opt * opt
     return func;
 }
 
-
-double param_l2regress_cost(size_t dim, double * param, double * grad, void * arg)
-{
-    struct Regress1DOpts * opts = arg;
-
-    struct GenericFunction * gf =
-        generic_function_create_with_params(opts->fc,opts->aopts,dim,param);
-
-    for (size_t ii = 0; ii < opts->N; ii++){
-        opts->eval[ii] = generic_function_1d_eval(gf,opts->x[ii]);
-    }
-
-    double out = 0.0;
-    for (size_t ii = 0; ii < opts->N; ii++){
-        opts->resid[ii] = opts->y[ii]-opts->eval[ii];
-        out += opts->resid[ii] * opts->resid[ii];
-    }
-        
-    if (grad != NULL){
-
-        for (size_t ii = 0; ii < dim; ii++){
-            grad[ii] = 0.0;
-        }
-        for (size_t jj = 0; jj < opts->N; jj++){
-            int res = generic_function_param_grad_eval(gf,1,opts->x+jj,
-                                                       opts->grad);
-            assert (res == 0);
-            for (size_t ii = 0; ii < dim; ii++){
-                grad[ii] += 2.0 * opts->resid[jj] * (-1.0)*opts->grad[ii];
-            }
-        }
-    }
-
-    return out;
-}
 
 

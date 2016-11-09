@@ -58,7 +58,7 @@ int c3opt_is_bruteforce(struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);
 void c3opt_add_ub(struct c3Opt *, double *);
 void c3opt_add_objective(struct c3Opt *,
-                         double (*)(size_t, double *, double *,void *),
+                         double (*)(size_t, const double *, double *,void *),
                          void *);
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
@@ -94,7 +94,7 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
-double c3opt_eval(struct c3Opt *, double *, double *);
+double c3opt_eval(struct c3Opt *, const double *, double *);
 double c3opt_check_deriv(struct c3Opt *, const double *, double);
 double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
 void

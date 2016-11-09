@@ -88,7 +88,7 @@ struct ProbabilityDensity *
 /* probability_density_laplace(double *(*)(double *, void *),  */
 /*                             double *(*)(double *, void *), */
 /*                             void *, size_t, double *); */
-probability_density_laplace(double (*)(size_t,double *,double*,void *),
+probability_density_laplace(double (*)(size_t,const double *,double*,void *),
                             double *(*)(double *, void *),
                             void *,size_t, double *);
 
