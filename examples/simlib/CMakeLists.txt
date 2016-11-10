@@ -5,6 +5,7 @@ add_executable(simlib simlib.c)
 target_link_libraries(simlib -g
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

@@ -13,7 +13,8 @@ file(GLOB SRC_FILES
 add_executable(clinalg_test ${SRC_FILES})
 target_link_libraries(clinalg_test 
     clinalg 
-    funcs 
+    funcs
+    opt 
     quadrature 
     linalg 
     array 

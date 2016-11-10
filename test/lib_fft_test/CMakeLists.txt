@@ -8,6 +8,7 @@ target_link_libraries(fft_test
     -g 
     fft
     array
+    stringmanip
     cutest 
     ${blas_lapack} 
     -lm)

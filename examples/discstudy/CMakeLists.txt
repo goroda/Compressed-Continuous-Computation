@@ -4,7 +4,8 @@ cmake_minimum_required (VERSION 2.6)
 add_executable(genznd genznd.c)
 target_link_libraries(genznd -g
     clinalg 
-    funcs 
+    funcs  
+    opt
     quadrature 
     linalg 
     array 

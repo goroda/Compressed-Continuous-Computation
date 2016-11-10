@@ -5,7 +5,8 @@ add_executable(cantilever cantilever.c)
 target_link_libraries(cantilever -g
   prob
   clinalg 
-  funcs 
+  funcs
+  opt 
   quadrature 
   linalg 
   array 
