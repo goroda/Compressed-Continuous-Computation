@@ -210,7 +210,7 @@ void Test_bgrad4(CuTest * tc)
     struct c3Opt * opt = c3opt_alloc(BATCHGRAD,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_ls_set_maxiter(opt,100000);
-    /* c3opt_set_verbose(opt,4); */
+    c3opt_set_verbose(opt,3);
     /* c3opt_set_gtol(opt,1e-20); */
     /* c3opt_set_absxtol(opt,1e-20); */
     /* c3opt_set_relftol(opt,1e-14); */
@@ -1371,7 +1371,7 @@ CuSuite * BGradGetSuite(){
     /* SUITE_ADD_TEST(suite, Test_bgrad17); */
     /* SUITE_ADD_TEST(suite, Test_bgrad18); */
     SUITE_ADD_TEST(suite, Test_bgrad19);
-    SUITE_ADD_TEST(suite, Test_bgrad20);
+    /* SUITE_ADD_TEST(suite, Test_bgrad20); */
     SUITE_ADD_TEST(suite, Test_bgrad21);
     SUITE_ADD_TEST(suite, Test_bgrad22);
     SUITE_ADD_TEST(suite, Test_bgrad23);

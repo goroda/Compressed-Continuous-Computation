@@ -79,6 +79,10 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
     }
     else if (alg == STRONGWOLFE){
         ls->alpha = 0.1;
+        ls->beta = 0.4;
+    }
+    else if (alg == WEAKWOLFE){
+        ls->alpha = 0.1;
         ls->beta = 0.9;
     }
     else{
@@ -121,6 +125,12 @@ int c3ls_get_initial(const struct c3LS * ls)
 {
     assert (ls != NULL);
     return ls->set_initial;
+}
+
+void c3ls_set_alg(struct c3LS * ls, enum c3opt_ls_alg alg)
+{
+    assert (ls != NULL);
+    ls->alg = alg;
 }
 
 enum c3opt_ls_alg c3ls_get_alg(const struct c3LS * ls)
@@ -201,6 +211,15 @@ struct c3Opt
     // for different algorithmic details
     double prev_eval;
 
+    // storing traces
+    int store_grad;
+    int store_func;
+    int store_x;
+    double * stored_grad;
+    double * stored_func;
+    double * stored_x;
+    
+
 };
 
 /***********************************************************//**
@@ -238,13 +257,15 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     if (alg == BFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*d);
-        opt->ls = c3ls_alloc(BACKTRACK,0);
+        /* opt->ls = c3ls_alloc(BACKTRACK,0); */
         /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
     else if (alg==BATCHGRAD){
         opt->grad = 1;
         opt->workspace = calloc_double(2*d);
-        opt->ls = c3ls_alloc(BACKTRACK,1);
+        /* opt->ls = c3ls_alloc(BACKTRACK,1); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
     else{
         opt->nlocs = 0;
@@ -257,6 +278,13 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->ngvals = 0;
     opt->niters = 0;
 
+    opt->store_grad = 0;
+    opt->store_func = 0;
+    opt->store_x = 0;
+    opt->stored_grad = NULL;
+    opt->stored_func = NULL;
+    opt->stored_x = NULL;
+    
     return opt;
 }
 
@@ -296,6 +324,24 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->ngvals = old->ngvals;
     opt->niters = old->niters;
 
+    opt->prev_eval = old->prev_eval;
+
+    opt->store_grad  = old->store_grad;
+    opt->store_func = old->store_func;
+    opt->store_x     = old->store_x;
+    if (opt->store_grad == 1){
+        opt->stored_grad = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+        memmove(opt->stored_grad,old->stored_grad,opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_x == 1){
+        opt->stored_x = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+        memmove(opt->stored_x,old->stored_x,opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_func == 1){
+        opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
+        memmove(opt->stored_func,old->stored_func,sizeof(double)*opt->maxiter);
+    }
+
     return opt;
 }
 
@@ -309,6 +355,10 @@ void c3opt_free(struct c3Opt * opt)
         free(opt->ub); opt->ub = NULL;
         free(opt->workspace); opt->workspace = NULL;
         c3ls_free(opt->ls); opt->ls = NULL;
+
+        free(opt->stored_grad); opt->stored_grad = NULL;
+        free(opt->stored_func); opt->stored_func = NULL;
+        free(opt->stored_x);    opt->stored_x    = NULL;
         free(opt); opt = NULL;
     }
 }
@@ -445,6 +495,65 @@ double * c3opt_get_workspace(struct c3Opt * opt)
     return opt->workspace;
 }
 
+
+void c3opt_set_storage_options(struct c3Opt * opt, int store_func, int store_grad, int store_x)
+{
+    assert (opt != NULL);
+    opt->store_func = store_func;
+    opt->store_grad = store_grad;
+    opt->store_x = store_x;
+
+    if (opt->store_grad == 1){
+        opt->stored_grad = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_x == 1){
+        opt->stored_x = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_func == 1){
+        opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
+    }
+}
+
+void c3opt_print_stored_values(struct c3Opt * opt, FILE * fp, int width, int prec)
+{
+    assert (opt != NULL);
+
+    fprintf(fp,"# iter ");
+    if (opt->store_func == 1){
+        fprintf(fp, "F ");
+    }
+    if (opt->store_grad == 1){
+        for (size_t jj = 0; jj < opt->d; jj++){
+            fprintf(fp, "G%zu ",jj);
+        }
+    }
+    if (opt->store_x == 1){
+        for (size_t jj = 0; jj < opt->d; jj++){
+            fprintf(fp, "x%zu ",jj);
+        }
+    }
+    fprintf(fp,"\n");
+        
+    for (size_t ii = 0; ii < opt->niters; ii++){
+        fprintf(fp,"%zu ",ii);
+        if (opt->store_func == 1){
+            fprintf(fp,"%*.*G ",width,prec,opt->stored_func[ii]);
+        }
+        if (opt->store_grad == 1){
+            for (size_t jj = 0; jj < opt->d; jj++){
+                fprintf(fp,"%*.*G ",width,prec,opt->stored_grad[ii*opt->niters+jj]);
+            }
+        }
+        if (opt->store_x== 1){
+            for (size_t jj = 0; jj < opt->d; jj++){
+                fprintf(fp,"%*.*G ",width,prec,opt->stored_x[ii*opt->niters+jj]);
+            }
+        }
+        fprintf(fp,"\n");
+    }
+    
+}
+
 int c3opt_ls_get_initial(const struct c3Opt * opt)
 {
     assert (opt != NULL);
@@ -492,6 +601,12 @@ size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
     assert (opt != NULL);
     return c3ls_get_maxiter(opt->ls);
 }
+
+void c3opt_ls_set_alg(struct c3Opt * opt, enum c3opt_ls_alg alg){
+    assert (opt != NULL);
+    c3ls_set_alg(opt->ls,alg);
+}
+
 
 /***********************************************************//**
     Add brute-force optimization locations
@@ -787,6 +902,125 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     return t*alpha;
 }
 
+/***********************************************************//**
+    Line Search with bisection for Wolfe conditions
+
+    \param[in]     opt     - optimization structure
+    \param[in]     x       - base point
+    \param[in]     fx      - objective function value at x
+    \param[in,out] grad    - gradient at x
+    \param[in]     dir     - search direction
+    \param[in,out] newx    - new location (x + t*p)
+    \param[in,out] newf    - objective function value f(newx)
+    \param[in,out] info    -  0 - success
+                             -1 - alpha not within correct bounds
+                             -2 - beta not within correct bounds
+                             -3 - initial starting point violates constraints
+                             -4 - initial direction is not a descent direction
+                              1 - maximum number of iter reached
+    
+                              
+***************************************************************/
+double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
+                             double * grad, double * dir,
+                             double * newx, double * newf, int *info)
+{
+    double alpha = c3opt_ls_get_alpha(opt);
+    double beta = c3opt_ls_get_beta(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t d = c3opt_get_d(opt);
+    size_t maxiter = c3opt_ls_get_maxiter(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+    int verbose = c3opt_get_verbose(opt);
+
+    double tmax = 1e6;
+    double t = 1.0;
+    double tmin = 0.0;
+    double dg = cblas_ddot(d,grad,1,dir,1);
+    double normdir = cblas_ddot(d,dir,1,dir,1);
+    
+    *info = 0;
+    if ((alpha <= 0.0) || (alpha >= 0.5)){
+        printf("line search alpha (%G) is not (0,0.5)\n",alpha);
+        *info = -1;
+        return 0.0;
+    }
+    if ((beta <= 0.0) && (beta >= 1.0)) {
+        printf("line search beta (%G) is not (0,1)\n",beta);
+        *info = -2;
+        return 0.0;
+    }
+    for (size_t ii = 0; ii < d; ii++){
+        if (x[ii] < lb[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+        if (x[ii] > ub[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+    }
+    if (dg > 0){
+        printf("line search initial direction is not a descent direction\n");
+        *info = -4;
+        return 0.0;
+    }
+
+    double checkval, dg2;
+    size_t iter = 1;
+    double fval;
+    while(iter < maxiter){
+
+        if (verbose > 1){
+            printf("Iter=%zu,t=%G\n",iter,t);
+        }
+        checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
+        c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+        fval = c3opt_eval(opt,newx,NULL);
+        if (fval > checkval){
+            tmax = t;
+            t = 0.5 * (tmin + tmax);
+        }
+        else{
+            c3opt_eval(opt,newx,grad);
+            dg2 = cblas_ddot(d,grad,1,dir,1);
+            if (dg2 < beta * dg){
+                tmin = t;
+                if (tmax > 1e5){
+                    t = 2.0 * tmin;
+                }
+                else{
+                    t = 0.5 * (tmin + tmax);
+                }
+            }
+            else{
+                *newf = fval;
+                break;
+            }
+        }
+
+        if (t*normdir < absxtol){
+            *newf = c3opt_eval(opt,newx,grad);
+            break;
+        }
+        
+        iter += 1;
+    }
+    if (iter == maxiter){
+        *newf = c3opt_eval(opt,newx,grad);
+        *info = 1;
+        if (verbose > 1){
+            printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
+            printf("t = %G\n",t);
+        }
+    }
+    return t*alpha;
+}
+
+
 
 /***********************************************************//**
     Zoom function for Strong Wolfe
@@ -811,7 +1045,7 @@ double c3opt_ls_zoom(struct c3Opt * opt, double tlow, double flow,
     /* if (fabs(th - tl) < 1e-){ */
     /*     exit(1); */
     /* } */
-    while (fabs(th-tl) >= 1e-60){
+    while (fabs(th-tl) >= 1e-20){
         /* printf("(tlow,thigh) = (%3.15G,%3.15G),\n",tl,th); */
 
         t = (tl + th)/2.0;
@@ -856,6 +1090,8 @@ double c3opt_ls_zoom(struct c3Opt * opt, double tlow, double flow,
     \param[in,out] info    -  0 - success
                              -1 - alpha not within correct bounds
                              -2 - beta not within correct bounds
+                             -3 - initial starting point violates constraints
+                             -4 - initial direction is not a descent direction
                               1 - maximum number of iter reached
     
                               
@@ -901,6 +1137,11 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
     double tmax = 1.0;
     double t = 1.0;
     double dg = cblas_ddot(d,grad,1,dir,1);
+    if (dg > 0){
+        printf("line search initial direction is not a descent direction\n");
+        *info = -4;
+        return 0.0;
+    }
     if (initial == 1){
         t = fabs(2.0 * (fx - opt->prev_eval) / dg);
         if (1.01 * t > 1.0){
@@ -1035,6 +1276,17 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     opt->niters = 1;    
 
     *fval = c3opt_eval(opt,x,grad);
+    if (opt->store_func == 1){
+        opt->stored_func[opt->niters-1] = *fval;
+    }
+    if (opt->store_grad == 1){
+        memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double));
+    }
+    if (opt->store_x == 1){
+        memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
+    }
+
+
     
     cblas_dsymv(CblasColMajor,CblasUpper,
                 d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
@@ -1076,42 +1328,37 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
                               x,fval,&res);
             c3opt_eval(opt,x,workspace+2*d);
-
-            /* printf("x = "); dprint(d, x); */
-            /* printf("fvaltemp = %G\n",fvaltemp); */
-            /* printf("Grad = "); dprint(d,grad); */
-            /* printf("dir = "); dprint(d,workspace+d); */
-            /* printf("sc = %G\n",sc); */
-            /* assert (*fval < fvaltemp); */
         }
         else if (alg == STRONGWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
             sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
                                        workspace+2*d,workspace+d,
                                        x,fval,&res);
-
-            /* printf("x = "); dprint(d, x); */
-            /* printf("fvaltemp = %G\n",fvaltemp); */
-            /* printf("Grad = "); dprint(d,grad); */
-            /* printf("dir = "); dprint(d,workspace+d); */
-            /* printf("sc = %G\n",sc); */
-            assert (*fval < fvaltemp);
-            /* double * gtest = calloc_double(d); */
-            /* /\* double fshould = c3opt_eval(opt,x,gtest); *\/ */
-            /* /\* printf("g is"); dprint(d,workspace+2*d); *\/ */
-            /* /\* printf("g should"); dprint(d, gtest); *\/ */
-            /* /\* printf("f is %G\n", *fval); *\/ */
-            /* /\* printf("f should %G\n", fshould); *\/ */
-
-            /* if (fabs(*fval-fshould) > 1e-20){ */
-            /*     exit(1); */
-            /* } */
         }
+        else if (alg == WEAKWOLFE){
+            memmove(workspace+2*d,grad,d*sizeof(double));
+            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                       workspace+2*d,workspace+d,
+                                       x,fval,&res);
+        }
+        /* assert (*fval < fvaltemp); */
+        assert (res > -1);
 
         opt->prev_eval = fvaltemp;
         double * s = workspace+d;
         cblas_dscal(d,sc,s,1);
 
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = *fval;
+        }
+        if (opt->store_grad == 1){
+            memmove(opt->stored_grad+opt->niters*opt->d,workspace+2*d,d*sizeof(double));
+        }
+        if (opt->store_x == 1){
+            memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
+        }
+
+        
         opt->niters++;
         iter += 1;
         if (iter > maxiter){
@@ -1253,6 +1500,16 @@ int c3_opt_gradient(struct c3Opt * opt,
     opt->niters = 1;    
 
     *fval = c3opt_eval(opt,x,grad);
+    if (opt->store_func == 1){
+        opt->stored_func[opt->niters-1] = *fval;
+    }
+    if (opt->store_grad == 1){
+        memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double));
+    }
+    if (opt->store_x == 1){
+        memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
+    }
+
     double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1));    
     int ret = C3OPT_SUCCESS;;
 
@@ -1275,6 +1532,8 @@ int c3_opt_gradient(struct c3Opt * opt,
     int res = 0;
     double sc, eta;
     opt->prev_eval = 0.0;
+    enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
+    /* printf("alpha = %G\n",c3opt_ls_get_alpha(opt)); */
     while (converged == 0){
         
         memmove(workspace,x,d*sizeof(double));
@@ -1283,22 +1542,42 @@ int c3_opt_gradient(struct c3Opt * opt,
         }
         fvaltemp = *fval;
 
-        sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,
-                          workspace+d,
-                          x,fval,&res);
-
-        /* printf("gradient is "); dprint(d,grad); */
-        opt->prev_eval = fvaltemp;
+        if (alg == BACKTRACK){
+            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,
+                              workspace+d,
+                              x,fval,&res);
+            *fval = c3opt_eval(opt,x,grad);
+        }
+        else if (alg == STRONGWOLFE){
+            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                       grad,workspace+d,
+                                       x,fval,&res);
+        }
+        else if (alg == WEAKWOLFE){
+            /* printf("call weak-wolfe, alpha=%G\n",c3opt_ls_get_alpha(opt)); */
+            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                       grad,workspace+d,
+                                       x,fval,&res);
+        }
         
-        /* cblas_daxpy(d,-1e-3,grad,1,x,1); */
+
+        opt->prev_eval = fvaltemp;
+
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = *fval;
+        }
+        if (opt->store_grad == 1){
+            memmove(opt->stored_grad+opt->niters*opt->d,grad,d*sizeof(double));
+        }
+        if (opt->store_x == 1){
+            memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
+        }
         
         opt->niters++;
         iter += 1;
         if (iter > maxiter){
             return C3OPT_MAXITER_REACHED;
         }
-
-        *fval = c3opt_eval(opt,x,grad);
 
         eta = cblas_ddot(d,grad,1,grad,1);
         onbound = 0;

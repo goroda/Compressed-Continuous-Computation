@@ -49,20 +49,15 @@ void RunAllTests(void) {
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * cheb = ChebGetSuite();
-    CuSuite * leg = LegGetSuite();
+    CuSuite * leg  = LegGetSuite();
     CuSuite * herm = HermGetSuite();
-    CuSuite * sp = StandardPolyGetSuite();
-    CuSuite * alg = PolyAlgorithmsGetSuite();
-    CuSuite * ser = PolySerializationGetSuite();
-    
+    CuSuite * sp   = StandardPolyGetSuite();
+    CuSuite * alg  = PolyAlgorithmsGetSuite();
+    CuSuite * ser  = PolySerializationGetSuite();
     CuSuite * lelm = LelmGetSuite();
-
-    CuSuite * ll = LinkedListGetSuite();
-
-    
-    CuSuite * pp = PiecewisePolyGetSuite();
-    CuSuite * pap = PolyApproxSuite();
-
+    CuSuite * ll   = LinkedListGetSuite();
+    CuSuite * pp   = PiecewisePolyGetSuite();
+    CuSuite * pap  = PolyApproxSuite();
     CuSuite * preg = PolyRegressionSuite();
 
     // polynomials

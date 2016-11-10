@@ -50,7 +50,7 @@ double * unc_test_problem_get_start(void * arg);
 double * unc_test_problem_get_sol(void * arg);
 double unc_test_problem_eval(size_t dim,const double * x,double * grad,void *arg);
 
-static struct UncTestProblem tprobs[34];
+struct UncTestProblem tprobs[34];
 void create_unc_probs();
 
 #endif

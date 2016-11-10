@@ -918,19 +918,19 @@ double ff23(size_t dim, const double * x, double * grad, void * arg)
     out += f[0]*f[0];
     for (size_t ii = 1; ii < d; ii++){
         y[ii] = exp((double)(ii+1)/10.0) + exp((double)(ii)/10.0);
-        f[ii] = sqrt(a)*(exp(x[ii]/10.0) + exp(x[ii-1]/10.0) - y[ii]);
+        f[ii] = pow(a,0.5)*(exp(x[ii]/10.0) + exp(x[ii-1]/10.0) - y[ii]);
         out += f[ii]*f[ii];
     }
     
     for (size_t ii = 4; ii < 7; ii++){
     /* for (size_t ii = 4; ii < 5; ii++){ */
-        f[ii] += sqrt(a)*(exp(x[ii-d]/10.0) - exp(-1.0/10.0));
+        f[ii] += pow(a,0.5)*(exp(x[ii-d+1]/10.0) - exp(-1.0/10.0));
         out += f[ii]*f[ii];
     }
     
     f[7] = -1.0;
     for (size_t jj = 0; jj < d; jj++){
-        f[2*d-1] += (double)(d-jj+2)*pow(x[jj],2);
+        f[2*d-1] += (double)(d-jj)*pow(x[jj],2);
     }
     out += f[2*d-1]*f[2*d-1];
     
@@ -947,19 +947,17 @@ double ff23(size_t dim, const double * x, double * grad, void * arg)
         
         for (size_t ii = d; ii < 2*d-1; ii++){
         /* for (size_t ii = 4; ii < 5; ii++){ */
-            grad[ii-d] += 2.0*f[ii]*sqrt(a)*exp(x[ii-d]/10.0)/10.0;
+            grad[ii-d] += 2.0*f[ii]*pow(a,0.5)*exp(x[ii-d+1]/10.0)/10.0;
         }
         
         for (size_t jj = 0; jj < d; jj++){
-            grad[jj] += 2.0 * f[2*d-1] * (double)(d-jj+2)*2.0*x[jj];
+            grad[jj] += 2.0 * f[2*d-1] * (double)(d-jj)*2.0*x[jj];
         }
     }
 
     return out;
 }
 
-/* static double f22start[10] = {1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0}; */
-/* static double f22sol[11]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.08765e-5}; */
 static double f23start[4] = {0.5,0.5,0.5,0.5};
 static double f23sol[5]   = {0.0,0.0,0.0,0.0,9.37629e-6};
 

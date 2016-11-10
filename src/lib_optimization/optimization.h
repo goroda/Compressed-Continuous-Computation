@@ -36,7 +36,7 @@
 #define OPTIMIZATION_H
 
 
-enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE};
+enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE, WEAKWOLFE};
 
 enum c3opt_alg {BFGS, BATCHGRAD, BRUTEFORCE};
 enum c3opt_return {
@@ -71,7 +71,12 @@ size_t c3opt_get_ngvals(struct c3Opt *);
 void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
 
+void c3opt_set_storage_options(struct c3Opt *, int, int, int);
+void c3opt_print_stored_values(struct c3Opt *, FILE *, int, int);
+    
 int c3opt_ls_get_initial(const struct c3Opt *);
+
+void c3opt_ls_set_alg(struct c3Opt *, enum c3opt_ls_alg);
 enum c3opt_ls_alg c3opt_ls_get_alg(const struct c3Opt *);
 
 void   c3opt_ls_set_alpha(struct c3Opt *,double);
@@ -83,6 +88,13 @@ double c3opt_ls_get_beta(struct c3Opt *);
 void   c3opt_ls_set_maxiter(struct c3Opt *,size_t);
 size_t c3opt_ls_get_maxiter(struct c3Opt *);
 
+void c3opt_ls_set_alg(struct c3Opt *, enum c3opt_ls_alg);
+
+
+
+double c3opt_ls_wolfe_bisect(struct c3Opt *, double *, double,
+                             double *, double *,
+                             double *, double *, int *);
 double c3opt_ls_strong_wolfe(struct c3Opt *, double *, double,
                              double *, double *,
                              double *, double *, int *);
