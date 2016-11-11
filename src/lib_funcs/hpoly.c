@@ -146,7 +146,7 @@ int hermite_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, doub
         p[1] = x;
         grad[iter*inc] = p[1]; // * SQRTPIINV;
         iter++;
-    }   
+    }  
     for (iter = 2; iter < poly->num_poly; iter++){
         
         pnew = x * p[1] - (double)(iter-1) * p[0];
