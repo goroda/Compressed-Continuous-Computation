@@ -532,13 +532,12 @@ double * deserialize_darray_from_text(char * num, size_t *N)
 /***********************************************************//**
     Save an array to file
     
-    \param rows [in] - number of rows
-    \param cols [in] - number of cols
-    \param arr [in] - array to save
-
-    \param filename [in] - filename
-    \param type [in] - 0 not human readable (fast)
-                     - 1 human readable (slow)
+    \param[in] rows     - number of rows
+    \param[in] cols     - number of cols
+    \param[in] arr      - array to save
+    \param[in] filename - filename
+    \param[in] type     - 0 not human readable (fast)
+                        - 1 human readable (slow)
 
     \return success (1) or failure (0) of opening the file
 ***************************************************************/
