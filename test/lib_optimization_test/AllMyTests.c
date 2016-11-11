@@ -56,7 +56,7 @@ void RunAllTests(void) {
     CuSuiteAddSuite(suite, opt);
 
     create_unc_probs();
-    CuSuiteAddSuite(suite, bfgs);
+    //CuSuiteAddSuite(suite, bfgs);
     /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
 
     CuSuiteRun(suite);

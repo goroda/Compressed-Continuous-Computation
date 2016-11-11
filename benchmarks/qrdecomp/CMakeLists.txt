@@ -5,6 +5,7 @@ add_executable(qrbench qr.c)
 target_link_libraries(qrbench -g
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

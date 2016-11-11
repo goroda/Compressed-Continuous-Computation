@@ -1860,6 +1860,7 @@ void Test_LS_cheb_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;
@@ -1916,6 +1917,7 @@ void Test_LS_leg_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;
@@ -1972,6 +1974,7 @@ void Test_LS_herm_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;
@@ -2029,6 +2032,7 @@ void Test_RLS2_cheb_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;
@@ -2086,6 +2090,7 @@ void Test_RLS2_leg_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;
@@ -2144,6 +2149,7 @@ void Test_RLS2_herm_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
+    ope_opts_free(aopts);  aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;

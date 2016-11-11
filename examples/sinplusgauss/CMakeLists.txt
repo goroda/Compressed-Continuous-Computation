@@ -5,6 +5,7 @@ add_executable(sinplusgauss sinrank2.c)
 target_link_libraries(sinplusgauss -g
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

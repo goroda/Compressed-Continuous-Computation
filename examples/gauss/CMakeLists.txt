@@ -5,6 +5,7 @@ add_executable(gauss gauss.c)
 target_link_libraries(gauss -g 
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

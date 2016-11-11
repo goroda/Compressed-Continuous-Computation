@@ -5,6 +5,7 @@ add_executable(quadstudy quad.c)
 target_link_libraries(quadstudy -g 
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

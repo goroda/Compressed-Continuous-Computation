@@ -6,7 +6,8 @@ target_link_libraries(elliptic1d
     -g
     prob
     clinalg 
-    funcs 
+    funcs
+    opt 
     quadrature 
     linalg 
     array 

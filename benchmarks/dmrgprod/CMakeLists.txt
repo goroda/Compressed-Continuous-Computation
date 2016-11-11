@@ -5,6 +5,7 @@ add_executable(dmrgprodbench dmrgprod.c)
 target_link_libraries(dmrgprodbench -g
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 
