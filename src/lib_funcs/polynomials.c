@@ -1111,7 +1111,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
-    assert (p->p->ptype != HERMITE);
+    /* assert (p->p->ptype != HERMITE); */
     struct OrthPolyExpansion * out = NULL;
     if ( p == NULL ){
         return out;
@@ -1140,9 +1140,11 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
             //orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);
                 break;
             case HERMITE:
-                assert(1 == 0);
+                fprintf(stderr,"Derivative of hermite polynomials not yet implemented\n");
+                exit(1);
             case CHEBYSHEV:
-                break;
+                fprintf(stderr,"Derivative of chebyshev polynomials not yet implemented\n");
+                exit(1);
             case STANDARD:
                 break;
         }
@@ -1735,7 +1737,7 @@ orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * pol
     int res = 1;
     if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
         for (size_t ii = 0; ii < poly->num_poly; ii++){
-            grad[ii] += scale * poly->coeff[ii];
+            grad[ii] += 2.0*scale * poly->coeff[ii];
         }
         res = 0;
     }
@@ -1755,10 +1757,176 @@ orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * pol
                     n2 = jj-ii;
                 }
                 if (n1 % 2 == 0){
-                    grad[ii] += scale*temp[n1/2];
+                    grad[ii] += 2.0*scale*temp[n1/2];
                 }
                 if (n2 % 2 == 0){
-                    grad[ii] += scale*temp[n2/2];
+                    grad[ii] += 2.0*scale*temp[n2/2];
+                }
+            }
+        }
+        free(temp); temp = NULL;
+        res = 0;
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return res;
+}
+
+/********************************************************//**
+    Squared norm of a function in RKHS 
+
+    \param[in]     poly        - polynomial
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+
+    \return  0 - success, 1 -failure
+************************************************************/
+double
+orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
+                                      enum coeff_decay_type decay_type,
+                                      double decay_param)
+{
+    double out = 0.0;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        if (decay_type == ALGEBRAIC){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow(decay_param,ii);
+            }   
+        }
+        else if (decay_type == EXPONENTIAL){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow((double)ii+1.0,-decay_param);
+            }   
+        }
+        else{
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii];
+            }
+        }
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            double temp_sum = 0.0;
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (n1 % 2 == 0){
+                    temp_sum += poly->coeff[jj]*temp[n1/2];
+                }
+                if (n2 % 2 == 0){
+                    temp_sum += poly->coeff[jj]*temp[n2/2];
+                }
+            }
+            if (decay_type == ALGEBRAIC){
+                out += temp_sum*temp_sum * pow(decay_param,ii);
+            }
+            else if (decay_type == EXPONENTIAL){
+                out += temp_sum*temp_sum * pow((double)ii+1.0,-decay_param);
+            }
+            else{
+                out += temp_sum * temp_sum;
+            }
+        }
+        free(temp); temp = NULL;
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return out;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly        - polynomial
+    \param[in]     scale       - scaling for additional gradient
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+    \param[in,out] grad        - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+
+    \note 
+    NEED TO DO SOME TESTS FOR CHEBYSHEV (dont use for now)
+************************************************************/
+int
+orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
+                                                 double scale, enum coeff_decay_type decay_type,
+                                                 double decay_param, double * grad)
+{
+    int res = 1;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        if (decay_type == ALGEBRAIC){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii] * pow(decay_param,ii);
+            }   
+        }
+        else if (decay_type == EXPONENTIAL){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii] * pow((double)ii+1.0,-decay_param);
+            }   
+        }
+        else{
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii];
+            }
+        }
+        res = 0;
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        // THIS COULD BE WRONG!!
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (decay_type == ALGEBRAIC){
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2]* pow(decay_param,ii);
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2]* pow(decay_param,ii);
+                    }
+                }
+                else if (decay_type == EXPONENTIAL){
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2]*pow((double)ii+1.0,-decay_param);
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2]*pow((double)ii+1.0,-decay_param);
+                    }
+                }
+                else {
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2];
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2];
+                    }
                 }
             }
         }

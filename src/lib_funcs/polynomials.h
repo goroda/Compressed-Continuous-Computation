@@ -49,6 +49,8 @@
 
 #include "fwrap.h"
 
+enum coeff_decay_type {NONE,ALGEBRAIC,EXPONENTIAL};
+
 /** \enum poly_type
  * contains LEGENDRE, CHEBYSHEV, STANDARD, HERMITE
  */
@@ -252,6 +254,14 @@ int orth_poly_expansion_param_grad_eval(
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);
+double
+orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion *,
+                                      enum coeff_decay_type,
+                                      double);
+int
+orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion *,
+                                                 double, enum coeff_decay_type,
+                                                 double, double *);
 
 
 void orth_poly_expansion_round(struct OrthPolyExpansion **);

@@ -2453,10 +2453,16 @@ generic_function_array_orth(size_t n,
  * regression problem
  * \var Regress1DOpts:fc
  * function class of the approximation
+ * \var Regress1DOpts:reg_param_set
+ * indicator of whethe the regularization parameter is set
  * \var Regress1DOpts:lambda
  * regularization parameter
+ * \var Regress1DOpts:decay_type
+ * decay type (used for regularized RKHS regression)
+ * \var Regress1DOpts:coeff_decay_opt
+ * parameter specifying decay rate
  * \var Regress1DOpts:N
- * number of training sampples
+ * number of training samples
  * \var Regress1DOpts:x
  * location of training samples
  * \var Regress1DOpts:y
@@ -2483,7 +2489,10 @@ struct Regress1DOpts
     enum function_class fc;
 
     // Regularization options
-    double lambda; // reg parameter
+    int reg_param_set;
+    double lambda;
+    enum coeff_decay_type decay_type;
+    double coeff_decay_param;
 
     size_t N;
     const double * x;
@@ -2541,7 +2550,11 @@ regress_1d_opts_create(enum approx_type atype, enum regress_type rtype,
     opts->grad  = NULL;
     opts->resid = calloc_double(N);
 
-
+    // regularization options
+    opts->reg_param_set     = 0;
+    opts->lambda            = 0.0;
+    opts->decay_type        = NONE;
+    opts->coeff_decay_param = 1.0;
     
     return opts;
 }
@@ -2605,10 +2618,44 @@ void regress_1d_opts_set_regularization_penalty(
     struct Regress1DOpts * opts, double lambda)
 {
     assert (opts != NULL);
+    opts->reg_param_set = 1;
     opts->lambda = lambda;
 }
 
+/********************************************************//**
+    Set RKHS decay
+************************************************************/
+void regress_1d_opts_set_RKHS_decay_rate(
+    struct Regress1DOpts * opts, enum coeff_decay_type decay_type, double lambda)
+{
+    assert (opts != NULL);
+    opts->decay_type = decay_type;
 
+    if (decay_type == ALGEBRAIC){
+        if ((lambda < 1e-15) || (lambda > 1)){
+            fprintf(stderr,"For algebraic decay of RKHS must specify decay rate in (0,1)\n");
+            fprintf(stderr,"\t Currently specified as %G\n",lambda);
+            exit(1);
+        }
+        else{
+            opts->coeff_decay_param = lambda;
+        }
+    }
+    else if (decay_type == EXPONENTIAL){
+        if (lambda < 0){
+            fprintf(stderr,"For exponential decay of RKHS must specify decay rate > 0\n");
+            fprintf(stderr,"\t Currently specified as %G\n",lambda);
+            exit(1);
+        }
+        else{
+            opts->coeff_decay_param = lambda;
+        }
+    }
+    else{
+        fprintf(stderr,"Do not recognized RKHS decay type %d\n",decay_type);
+        exit(1);
+    }
+}
 
 /********************************************************//**
     Create a generic function with particular parameters
@@ -2722,6 +2769,72 @@ generic_function_squared_norm_param_grad(const struct GenericFunction * gf,
     return res;
 }
 
+/********************************************************//**
+    Norm in the RKHS (instead of L2)
+
+    \param[in]     gf          - generic function
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+
+    \return  0 - success, 1 -failure
+************************************************************/
+double
+generic_function_rkhs_squared_norm(const struct GenericFunction * gf,
+                                   enum coeff_decay_type decay_type,
+                                   double decay_param)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    double out = 0.0;
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL:
+        out = orth_poly_expansion_rkhs_squared_norm(gf->f,decay_type,decay_param);
+        break;
+    case LINELM:     fprintf(stderr,"No RKHS squared norm for linelm yet\n");          exit(1);
+    case RATIONAL:                                                                     break;
+    case KERNEL:                                                                       break;
+    }
+
+    return out;
+}
+
+
+/********************************************************//**
+    Take a gradient of the norm in the RKHS (instead of L2)
+
+    \param[in]     gf          - generic function
+    \param[in]     scale       - scaling for additional gradient
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+    \param[in,out] grad        - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+generic_function_rkhs_squared_norm_param_grad(const struct GenericFunction * gf,
+                                         double scale, enum coeff_decay_type decay_type,
+                                         double decay_param, double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_rkhs_squared_norm_param_grad(
+                       gf->f,scale,decay_type,decay_param,grad);
+        break;
+    case LINELM:     fprintf(stderr,"No deriv of RKHS squared norm for linelm yet\n"); exit(1);
+    case RATIONAL:                                                                     break;
+    case KERNEL:                                                                       break;
+    }
+
+    return res;
+}
+
 
 /********************************************************//**
     LS regression objective function
@@ -2771,7 +2884,7 @@ double param_RLS2regress_cost(size_t dim, const double * param, double * grad, v
 
     struct Regress1DOpts * opts = arg;
     
-    // first part (recall this funciton updates parameters already!)
+    // first part (recall this function updates parameters already!)
     double ls_portion = param_LSregress_cost(dim,param,grad,arg);
 
     // second part
@@ -2780,7 +2893,64 @@ double param_RLS2regress_cost(size_t dim, const double * param, double * grad, v
     double out = ls_portion + 0.5*opts->lambda * regularization;
     
     if (grad != NULL){
-        int res = generic_function_squared_norm_param_grad(opts->gf,opts->lambda,grad);
+        int res = generic_function_squared_norm_param_grad(opts->gf,0.5*opts->lambda,grad);
+        assert (res == 0);
+    }
+
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression penalizing second derivative
+************************************************************/
+double param_RLSD2regress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this function updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    struct GenericFunction * gf1 = generic_function_deriv(opts->gf);
+    struct GenericFunction * gf2 = generic_function_deriv(gf1);
+    double regularization = generic_function_inner(gf2,gf2);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_squared_norm_param_grad(gf2,0.5*opts->lambda,grad);
+        assert (res == 0);
+    }
+
+    generic_function_free(gf1); gf1 = NULL;
+    generic_function_free(gf2); gf2 = NULL;
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression with an RKHS penalty
+************************************************************/
+double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this function updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    double regularization =
+        generic_function_rkhs_squared_norm(opts->gf,
+                                           opts->decay_type,
+                                           opts->coeff_decay_param);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_rkhs_squared_norm_param_grad(opts->gf,opts->lambda,
+                                                                opts->decay_type,
+                                                                opts->coeff_decay_param,grad);
         assert (res == 0);
     }
 
@@ -2811,7 +2981,33 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
             c3opt_add_objective(optimizer,param_LSregress_cost,opts);
         }
         else if (opts->rtype == RLS2){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLS2 regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
             c3opt_add_objective(optimizer,param_RLS2regress_cost,opts);
+        }
+        else if (opts->rtype == RLSD2){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLSD2 regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            c3opt_add_objective(optimizer,param_RLSD2regress_cost,opts);
+        }
+        else if (opts->rtype == RLSRKHS){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLSRKHS regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            else if (opts->decay_type == NONE){
+                printf("Must set decay type for parameter for RLSRKHS regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,opts);
         }
         else if (opts->rtype == RLS1){
             printf("Parameteric regression with L1 regularization not yet implemented\n");
@@ -2826,9 +3022,9 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
         
         opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
         *info = c3opt_minimize(optimizer,start,&val);
-        if (*info > -1){
+        /* if (*info > -1){ */
             func = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
-        }
+        /* } */
         free(start); start = NULL;
     }
     else if (opts->atype == NONPARAMETRIC){
