@@ -419,6 +419,42 @@ double function_train_get_avgrank(const struct FunctionTrain * ft)
 
 
 /***********************************************************//**
+    Evaluate a function train up to, but not including core k
+
+    \param[in] ft - function train
+    \param[in] x  - location at which to evaluate
+    \param[in] k  - first core not to be included
+
+    \return val - value of the function train
+***************************************************************/
+
+
+/***********************************************************//**
+    Evaluate a new core and multiply against the previous evaluations
+
+    \param[in] ft             - function train
+    \param[in] core           - which core to evaluate
+    \param[in] x              - evaluation location
+    \param[in] prev_eval      - result of evaluating previous cores
+    \param[in] new_eval_space - space for the evaluation of a core
+    \param[in] new_eval       - output location for prev_eval * new_eval_space
+***************************************************************/
+void function_train_eval_next_core(struct FunctionTrain * ft, size_t core, double x,
+                                   double * prev_eval, double * new_eval_space,
+                                   double * new_eval)
+{
+    generic_function_1darray_eval2(
+        ft->cores[core]->nrows * ft->cores[core]->ncols,
+        ft->cores[core]->funcs, x, new_eval_space);
+
+    cblas_dgemv(CblasColMajor,CblasTrans,
+                ft->ranks[core], ft->ranks[core+1], 1.0,
+                new_eval_space, ft->ranks[core],
+                prev_eval, 1, 0.0, new_eval, 1);
+    
+}
+
+/***********************************************************//**
     Evaluate a function train
 
     \param[in] ft - function train
@@ -456,37 +492,14 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
     double * t3 = ft->evalspace3;
     int onsol = 1;
     for (ii = 1; ii < dim; ii++){
-        generic_function_1darray_eval2(
-            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, x[ii],t2);
-            
-        /* printf("\t\t t2 = \n"); */
-        /* dprint2d_col(ft->cores[ii]->nrows,ft->cores[ii]->ncols,t2); */
         if (ii%2 == 1){
-            // previous times new core
-            cblas_dgemv(CblasColMajor,CblasTrans,
-                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        t2, ft->ranks[ii],
-                        t1, 1, 0.0, t3, 1);
+            function_train_eval_next_core(ft,ii,x[ii],t1,t2,t3);
             onsol = 2;
-            /* printf("\t next is t3 \n \t"); */
-            /* dprint(ft->ranks[ii+1],t3); */
         }
-        else {
-            cblas_dgemv(CblasColMajor,CblasTrans,
-                        ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        t2, ft->ranks[ii],
-                        t3,1,0.0,t1,1);
-            onsol = 1;
-            /* printf("\t next is t1 \n \t"); */
-            /* dprint(ft->ranks[ii+1],t1); */
-
+        else{
+            function_train_eval_next_core(ft,ii,x[ii],t3,t2,t1);
+            onsol=1;
         }
-
-        /* if (ii == dim-2){ */
-        /*     printf("in ft eval t1 before multiplying by matrix is \n \t"); */
-        /*     dprint(ft->ranks[dim-1],t1); */
-        /* } */
     }
     
     double out;// = 0.123456789;
