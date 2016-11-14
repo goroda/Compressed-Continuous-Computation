@@ -2957,6 +2957,37 @@ double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad
     return out;
 }
 
+/********************************************************//**
+    L1 penality
+************************************************************/
+/* double param_RLS1regress_cost(size_t dim, const double * param, double * grad, void * arg) */
+/* { */
+
+/*     struct Regress1DOpts * opts = arg; */
+
+/*     double out = 0.0; */
+/*     /\* // first part (recall this function updates parameters already!) *\/ */
+/*     /\* double ls_portion = param_LSregress_cost(dim,param,grad,arg); *\/ */
+
+/*     /\* // second part *\/ */
+/*     /\* double regularization = *\/ */
+/*     /\*     generic_function_rkhs_squared_norm(opts->gf, *\/ */
+/*     /\*                                        opts->decay_type, *\/ */
+/*     /\*                                        opts->coeff_decay_param); *\/ */
+
+/*     /\* double out = ls_portion + 0.5*opts->lambda * regularization; *\/ */
+    
+/*     /\* if (grad != NULL){ *\/ */
+/*     /\*     int res = generic_function_rkhs_squared_norm_param_grad(opts->gf,opts->lambda, *\/ */
+/*     /\*                                                             opts->decay_type, *\/ */
+/*     /\*                                                             opts->coeff_decay_param,grad); *\/ */
+/*     /\*     assert (res == 0); *\/ */
+/*     /\* } *\/ */
+
+
+/*     return out; */
+/* } */
+
 
     
 /********************************************************//**
@@ -3010,9 +3041,10 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
             c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,opts);
         }
         else if (opts->rtype == RLS1){
-            printf("Parameteric regression with L1 regularization not yet implemented\n");
+            printf("L1 regularization not yet implemented\n");
             free(start); start = NULL;
             return NULL;
+            /* c3opt_add_objective(optimizer,param_RLS1regress_cost,opts); */
         }
         else{
             printf("Parameteric regression type %d is not recognized\n",opts->rtype);

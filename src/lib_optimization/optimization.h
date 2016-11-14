@@ -109,6 +109,19 @@ double * c3opt_get_ub(struct c3Opt *);
 double c3opt_eval(struct c3Opt *, const double *, double *);
 double c3opt_check_deriv(struct c3Opt *, const double *, double);
 double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
+
+
+// LBFGS STUFF
+struct c3opt_lbfgs_list;
+struct c3opt_lbfgs_list * c3opt_lbfgs_list_alloc(size_t,size_t);
+void c3opt_lbfgs_list_insert(struct c3opt_lbfgs_list *, size_t,
+                             double *, double *,
+                             double *, double *);
+void c3opt_lbfgs_list_step(struct c3opt_lbfgs_list *, size_t *, double *, double *, double *);
+void c3opt_lbfgs_list_step_back(struct c3opt_lbfgs_list *, size_t *, double *, double *, double *);
+void c3opt_lbfgs_list_print(struct c3opt_lbfgs_list *, FILE *, int, int);
+void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list *);
+
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),
