@@ -2573,6 +2573,27 @@ void regress_1d_opts_destroy(struct Regress1DOpts * opts)
     }
 }
 
+
+/********************************************************//**
+    Get the number of parameters describg the generic function
+************************************************************/
+size_t generic_function_get_num_params(const struct GenericFunction * gf)
+{
+
+    assert (gf != NULL);
+    size_t nparam = 0;
+    switch (gf->fc){
+    case CONSTANT:                                                     break;
+    case PIECEWISE:                                                    break;
+    case POLYNOMIAL: nparam = orth_poly_expansion_get_num_poly(gf->f); break;
+    case LINELM:     nparam = lin_elem_exp_get_num_nodes(gf->f);       break;
+    case RATIONAL:                                                     break;
+    case KERNEL:                                                       break;
+    }   
+
+    return nparam;
+}
+
 /********************************************************//**
     Add a parametric form to learn
 
@@ -2716,7 +2737,7 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
 
     \param[in]     gf   - generic function
     \param[in]     nx   - number of x values
-    \param[in]      x   - x values
+    \param[in]     x   - x values
     \param[in,out] grad - gradient (N,nx)
 
     \return  0 - success, 1 -failure

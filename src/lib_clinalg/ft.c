@@ -417,18 +417,6 @@ double function_train_get_avgrank(const struct FunctionTrain * ft)
     return (avg / (ft->dim - 1.0));
 }
 
-
-/***********************************************************//**
-    Evaluate a function train up to, but not including core k
-
-    \param[in] ft - function train
-    \param[in] x  - location at which to evaluate
-    \param[in] k  - first core not to be included
-
-    \return val - value of the function train
-***************************************************************/
-
-
 /***********************************************************//**
     Evaluate a new core and multiply against the previous evaluations
 
@@ -443,6 +431,7 @@ void function_train_eval_next_core(struct FunctionTrain * ft, size_t core, doubl
                                    double * prev_eval, double * new_eval_space,
                                    double * new_eval)
 {
+    assert (core > 0);
     generic_function_1darray_eval2(
         ft->cores[core]->nrows * ft->cores[core]->ncols,
         ft->cores[core]->funcs, x, new_eval_space);
@@ -454,17 +443,20 @@ void function_train_eval_next_core(struct FunctionTrain * ft, size_t core, doubl
     
 }
 
+
 /***********************************************************//**
-    Evaluate a function train
+    Evaluate a function train up to, and including core k
 
-    \param[in] ft - function train
-    \param[in] x  - location at which to evaluate
+    \param[in]     ft      - function train
+    \param[in]     core    - last core to evaluate
+    \param[in]     x       - location at which to evaluate
+    \param[in,out] out     - evaluation, with enough space
+    \param[in,out] out_dim - size of out
 
-    \return val - value of the function train
+    \note NOT TESTED
 ***************************************************************/
-double function_train_eval(struct FunctionTrain * ft, const double * x)
+void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, const double * x, double * out, size_t *out_dim)
 {
-    
     size_t dim = ft->dim;
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
@@ -485,11 +477,81 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
     generic_function_1darray_eval2(
         ft->cores[ii]->nrows * ft->cores[ii]->ncols,
         ft->cores[ii]->funcs, x[ii],t1);
-    /* printf("ft first core is \n \t"); */
-    /* dprint(ft->cores[ii]->ncols,t1); */
-
+    
     double * t2 = ft->evalspace2;
     double * t3 = ft->evalspace3;
+    int onsol = 1;
+    for (ii = 1; ii < core; ii++){
+        if (ii%2 == 1){
+            function_train_eval_next_core(ft,ii,x[ii],t1,t2,t3);
+            onsol = 2;
+        }
+        else{
+            function_train_eval_next_core(ft,ii,x[ii],t3,t2,t1);
+            onsol=1;
+        }
+    }
+
+    *out_dim = ft->cores[core]->ncols;
+    if (onsol == 2){
+        memmove(out,t3,*out_dim*sizeof(double));
+    }
+    else if ( onsol == 1){
+        memmove(out,t1,*out_dim*sizeof(double));
+    }
+    else{
+        fprintf(stderr,"Weird error in function_train_val\n");
+        exit(1);
+    }
+}
+
+
+/***********************************************************//**
+    Some overhead for function train evaluation functions
+***************************************************************/
+void function_train_pre_eval(struct FunctionTrain * ft, size_t * maxrank,
+                             double ** t1,double ** t2,double ** t3)
+{
+
+    *maxrank = function_train_get_maxrank(ft);
+    if (ft->evalspace1 == NULL){
+        ft->evalspace1 = calloc_double(*maxrank * *maxrank);
+    }
+    if (ft->evalspace2 == NULL){
+        ft->evalspace2 = calloc_double(*maxrank * *maxrank);
+    }
+    if (ft->evalspace3 == NULL){
+        ft->evalspace3 = calloc_double(*maxrank * *maxrank);
+    }
+
+    *t1 = ft->evalspace1;
+    *t2 = ft->evalspace2;
+    *t3 = ft->evalspace3;
+}
+
+/***********************************************************//**
+    Evaluate a function train
+
+    \param[in] ft - function train
+    \param[in] x  - location at which to evaluate
+
+    \return val - value of the function train
+***************************************************************/
+double function_train_eval(struct FunctionTrain * ft, const double * x)
+{
+    
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3);
+
+    size_t ii = 0;
+    generic_function_1darray_eval2(
+        ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+        ft->cores[ii]->funcs, x[ii],t1);
     int onsol = 1;
     for (ii = 1; ii < dim; ii++){
         if (ii%2 == 1){
@@ -520,6 +582,189 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
 }
 
 /***********************************************************//**
+   Get number of parameters describing a core
+
+   \param[in]     ft           - functoin train
+   \param[in]     core         - which core parameters to count
+   \param[in,out] ncoreparams  - number of parameters in the core
+   \param[in,out] maxparamfunc - number of parameters in the function with most parameters within the core
+***************************************************************/
+void function_train_core_get_nparams(const struct FunctionTrain * ft, size_t core,
+                                     size_t * ncoreparams, size_t * maxparamfunc)
+{
+    qmarray_get_nparams(ft->cores[core],ncoreparams,maxparamfunc);
+}
+
+
+/***********************************************************//**
+    Evaluate the FT and get the gradient with respect to all the 
+    parameters of a particular core
+
+    \param[in]     ft               - function_train
+    \param[in]     x                - location at which to evaluate
+    \param[in]     core             - dimension to evaluate
+    \param[in]     nparam           - total number of parameters in the core
+    \param[in,out] grad_core_space1 - gradient of the core, r1 * r2 * nparam, where r1,r2 are the size of the core
+    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params of any function making up the core
+    \param[in,out] grad             - gradient of the function (nparam,)
+    \param[in,out] pre              - vector of evaluation of all cores prior to *core*
+    \param[in,out] cur              - evaluation of *core*
+    \param[in,out] post             - evaluation of all cores after *core*
+
+    \return        val              - value of FT
+***************************************************************/
+double
+function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x, size_t core,
+                                    size_t nparam, double * grad_core_space1, double * grad_core_space2,
+                                    double * grad, double ** pre, double * cur, double ** post)
+{
+
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3);
+
+    size_t ii = 0;
+    if (core != 0){
+        generic_function_1darray_eval2(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, x[ii],t1);
+        
+        int onsol = 1;
+        for (ii = 1; ii < core; ii++){
+            if (ii%2 == 1){
+                function_train_eval_next_core(ft,ii,x[ii],t1,t2,t3);
+                onsol = 2;
+            }
+            else{
+                function_train_eval_next_core(ft,ii,x[ii],t3,t2,t1);
+                onsol=1;
+            }
+        }
+
+        if (onsol == 2){
+            memmove(*pre,t3,ft->cores[ii]->ncols * sizeof(double));
+        }
+        else{
+            memmove(*pre,t1,ft->cores[ii]->ncols * sizeof(double));
+        }
+    }
+    else{
+        free(*pre); *pre = NULL;
+    }
+
+    ii = core;
+    qmarray_param_grad_eval(ft->cores[core],x[ii],cur,grad_core_space1,grad_core_space2);
+    /* qmarray_param_grad_eval(ft->cores[core],x[ii],grad_core_space); */
+
+
+    if (core == dim-1){
+        free(*post); *post = NULL;
+    }
+    else{ // come from tha back
+        ii = dim-1;
+        size_t nrows = ft->cores[ii]->nrows;
+        size_t ncols = ft->cores[ii]->ncols;
+        struct GenericFunction ** arr = ft->cores[dim-1]->funcs;
+        generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t1);
+        int onsol = 1;
+        for (ii = dim-2; ii > core; ii--){
+            nrows = ft->cores[ii]->nrows;
+            ncols = ft->cores[ii]->ncols;
+            arr = ft->cores[ii]->funcs;
+            generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t1);
+            if (onsol == 1){
+                // previous times new core
+                cblas_dgemv(CblasColMajor,CblasNoTrans,
+                            nrows, ncols, 1.0, t2, nrows,
+                            t1, 1, 0.0, t3, 1);
+                onsol = 2;
+            }
+            else {
+                cblas_dgemv(CblasColMajor,CblasNoTrans, 
+                            nrows, ncols, 1.0,
+                            t2, nrows,
+                            t3,1,0.0,t1,1);
+                onsol = 1;
+            }
+        }
+
+        if (onsol == 2){
+            memmove(*post,t3,ft->cores[ii]->nrows * sizeof(double));
+        }
+        else{
+            memmove(*post,t1,ft->cores[ii]->nrows * sizeof(double));
+        }
+    }
+
+    // combine
+    double val;
+    if (pre == NULL){
+        size_t r1 = ft->cores[core]->nrows;
+        size_t r2 = ft->cores[core]->ncols;
+        for (size_t kk = 0; kk < nparam; kk++){
+            cblas_dgemv(CblasColMajor,CblasNoTrans, 
+                        r1, r2, 1.0,
+                        grad_core_space1 + kk*r1*r2, r1,
+                        *post,1,0.0,t1,1);
+
+            grad[ii] = t1[0];
+        }
+
+        cblas_dgemv(CblasColMajor,CblasNoTrans, 
+                        r1, r2, 1.0,
+                        cur, r1,
+                        *post,1,0.0,t1,1);
+        val = t1[0];
+        
+    }
+    else if (post == NULL){
+        size_t r1 = ft->cores[core]->nrows;
+        size_t r2 = ft->cores[core]->ncols;
+        for (size_t kk = 0; kk < nparam; kk++){
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[core], ft->ranks[core+1], 1.0,
+                        grad_core_space1 + kk*r1*r2 , ft->ranks[core],
+                        *pre, 1, 0.0, t1, 1);
+            
+            grad[kk] = t1[0];
+        }
+        cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[core], ft->ranks[core+1], 1.0,
+                        cur, ft->ranks[core],
+                        *pre, 1, 0.0, t1, 1);
+        val = t1[0];
+    }
+    else{ //} (pre != NULL){
+        size_t r1 = ft->cores[core]->nrows;
+        size_t r2 = ft->cores[core]->ncols;
+        for (size_t kk = 0; kk < nparam; kk++){
+
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[core], ft->ranks[core+1], 1.0,
+                        grad_core_space1 + kk*r1*r2 , ft->ranks[core],
+                        *pre, 1, 0.0, t1, 1);
+            
+            grad[kk] = cblas_ddot(r2,t1,1,*post,1);
+        }
+
+        cblas_dgemv(CblasColMajor,CblasTrans,
+                        ft->ranks[core], ft->ranks[core+1], 1.0,
+                        cur, ft->ranks[core],
+                        *pre, 1, 0.0, t1, 1);
+        val = cblas_ddot(r2,t1,1,*post,1);
+
+        
+        
+    }
+
+    return val;
+}
+
+/***********************************************************//**
     Evaluate a function train at particular indices which
     should be valid for underlying univariate functions 
     that are nodal basis functions
@@ -536,25 +781,15 @@ double function_train_eval_ind(struct FunctionTrain * ft, const size_t * ind)
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    size_t ii = 0;
-    size_t maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(maxrank*maxrank);
-    }
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3);
 
-    double * t1 = ft->evalspace1;
+    size_t ii = 0;
     generic_function_1darray_eval2_ind(
         ft->cores[ii]->nrows * ft->cores[ii]->ncols,
         ft->cores[ii]->funcs, ind[ii],t1);
 
-    double * t2 = ft->evalspace2;
-    double * t3 = ft->evalspace3;
     int onsol = 1;
     for (ii = 1; ii < dim; ii++){
         generic_function_1darray_eval2_ind(
@@ -621,20 +856,10 @@ void function_train_eval_fiber_ind(struct FunctionTrain * ft,
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    size_t maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(maxrank*maxrank);
-    }
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3);
 
-    double * t1 = ft->evalspace1;
-    double * t2 = ft->evalspace2;
-    double * t3 = ft->evalspace3;
     double * temp_tensor = NULL;
     double * temp_mat = NULL;
 
@@ -795,6 +1020,7 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft,
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
+    
     size_t maxrank = function_train_get_maxrank(ft);
     if (ft->evalspace1 == NULL){
         ft->evalspace1 = calloc_double(maxrank*maxrank);

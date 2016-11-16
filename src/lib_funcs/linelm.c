@@ -266,6 +266,16 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts * aopts, double hmin)
 ///////////////////////////////////////////////
 
 /********************************************************//**
+    Get number of nodes
+*************************************************************/
+size_t lin_elem_exp_get_num_nodes(const struct LinElemExp * lexp)
+{
+    assert (lexp != NULL);
+    return lexp->num_nodes;
+}
+
+
+/********************************************************//**
 *   Allocate a Linear Element Expansion
 *
 *  \return  Allocated Expansion
@@ -542,6 +552,8 @@ double lin_elem_exp_get_nodal_val(const struct LinElemExp * f, size_t node)
     assert (node < f->num_nodes);
     return f->coeff[node];
 }
+
+
 
 /********************************************************//**
 *   Take a derivative same nodes,

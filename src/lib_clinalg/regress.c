@@ -39,6 +39,8 @@
 #include <assert.h>
 #include <math.h>
 
+#include "array.h"
+#include "ft.h"
 /* #include "regress.h" */
 #include "lib_linalg.h"
 
@@ -47,6 +49,8 @@
  *  \brief Alternating least squares regression
  *  \var RegressALS::dim
  *  dimension of approximation
+ *  \var RegressALS::nparams
+ *  number of params in each core
  *  \var RegressALS::N
  *  number of data points
  *  \var RegressALS::y
@@ -59,21 +63,27 @@
  *  evaluations prior to dimension k
  * \var RegressALS::post_eval
  *  evaluations post dimension k
+ * \var RegressALS::grad_core_space
+ *  space for evaluation of the gradient of the core with respect to every param
+ * \var RegressALS::fparam_space
+ *  space for evaluation of gradient of params for a given function in a core
  */
 struct RegressALS
 {
     size_t dim;
+    size_t * nparams;
     
     size_t N; 
     const double * y;
     const double * x;
-
+    
     size_t k;
     double * prev_eval;
     double * post_eval;
-
-    /* double * pre_int; */
-    /* double * post_int; */
+    double * curr_eval;
+    
+    double * grad_core_space;
+    double * fparam_space;
 
 };
 
@@ -89,12 +99,17 @@ struct RegressALS * regress_als_alloc(size_t dim)
     }
     
     als->dim = dim;
+    als->nparams = calloc_size_t(dim);
     
     als->y = NULL;
     als->x = NULL;
 
     als->prev_eval = NULL;
     als->post_eval = NULL;
+    als->curr_eval = NULL;
+    
+    als->grad_core_space = NULL;
+    als->fparam_space    = NULL;
 
     return als;
 }
@@ -105,8 +120,13 @@ struct RegressALS * regress_als_alloc(size_t dim)
 void regress_als_free(struct RegressALS * als)
 {
     if (als != NULL){
-        free(als->prev_eval); als->prev_eval  = NULL;
+        free(als->prev_eval); als->prev_eval = NULL;
         free(als->post_eval); als->post_eval = NULL;
+        free(als->curr_eval); als->curr_eval = NULL;
+
+        free(als->grad_core_space); als->grad_core_space = NULL;
+        free(als->fparam_space);    als->fparam_space    = NULL;
+        
         free(als); als = NULL;
     }
 }
@@ -123,6 +143,38 @@ void regress_als_add_data(struct RegressALS * als, size_t N, const double * y, c
 }
 
 
+/***********************************************************//**
+    Prepare memmory
+***************************************************************/
+void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
+{
+    assert (als != NULL);
+    assert (ft != NULL);
+    if (als->dim != ft->dim){
+        fprintf(stderr, "ALS Regression dimension is not the same as FT dimension\n");
+        assert (als->dim == ft->dim);
+    }
+    
+    size_t maxrank = function_train_get_maxrank(ft);
+
+    size_t maxparamfunc = 0;
+    size_t nparamfunc = 0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        nparamfunc = 0;
+        function_train_core_get_nparams(ft,ii,als->nparams+ii,&nparamfunc);
+        if (nparamfunc > maxparamfunc){
+            maxparamfunc = nparamfunc;
+        }
+    }
+
+    als->prev_eval = calloc_double(maxrank);
+    als->post_eval = calloc_double(maxrank);
+    als->curr_eval = calloc_double(maxrank*maxrank);
+
+    als->grad_core_space = calloc_double(maxrank*maxrank*maxparamfunc);
+    als->fparam_space    = calloc_double(maxparamfunc);
+    
+}
 
 
 /***********************************************************//**
@@ -135,7 +187,7 @@ void regress_als_add_data(struct RegressALS * als, size_t N, const double * y, c
 /*     als->k = als->dim-1; */
     
 /*     if (als->prev_eval == NULL){ // need to precompute everything */
-        
+/*         function_train_eval_up_to_core */
 /*     } */
 /*     else{ */
         

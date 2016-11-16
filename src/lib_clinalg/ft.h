@@ -90,7 +90,15 @@ size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
 
 // evaluators
+void function_train_eval_up_to_core(struct FunctionTrain *,size_t, const double *, double *, size_t *);
 double function_train_eval(struct FunctionTrain *, const double *);
+
+void function_train_core_get_nparams(const struct FunctionTrain *,size_t,size_t *,size_t *);
+double
+function_train_core_param_grad_eval(struct FunctionTrain *, const double *, size_t,
+                                    size_t, double *, double *,
+                                    double *, double **, double *, double **);
+
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
                                       const double *, const double *, 
