@@ -2630,6 +2630,7 @@ void regress_1d_opts_set_initial_parameters(
 {
     assert (opts != NULL);
     opts->init_param = param;
+    opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,param);
 }
 
 /********************************************************//**
@@ -2865,13 +2866,21 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
 
     struct Regress1DOpts * opts = arg;
 
+    assert (opts->nparam == dim);
+    assert (opts->gf != NULL);
     // update function
+    /* printf("update param\n"); */
+    /* printf("\t old = "); */
+    /* print_generic_function(opts->gf,0,NULL); */
+    /* printf("\t param = "); dprint(dim,param); */
     generic_function_update_params(opts->gf,dim,param);
 
+    /* printf("evaluate\n"); */
     for (size_t ii = 0; ii < opts->N; ii++){
         opts->eval[ii] = generic_function_1d_eval(opts->gf,opts->x[ii]);
     }
 
+    /* printf("compute resid\n"); */
     double out = 0.0;
     for (size_t ii = 0; ii < opts->N; ii++){
         opts->resid[ii] = opts->y[ii]-opts->eval[ii];
@@ -2880,7 +2889,7 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
     out *= 0.5;
     
     if (grad != NULL){
-
+        /* printf("grad is not null!\n"); */
         for (size_t ii = 0; ii < dim; ii++){
             grad[ii] = 0.0;
         }
@@ -2892,6 +2901,7 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
                 grad[ii] += opts->resid[jj] * (-1.0)*opts->grad[ii];
             }
         }
+        /* printf("done\n"); */
     }
 
     return out;
@@ -3039,7 +3049,7 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
             return NULL;
         }
         
-        opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
+
         *info = c3opt_minimize(optimizer,start,&val);
         /* if (*info > -1){ */
             func = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);

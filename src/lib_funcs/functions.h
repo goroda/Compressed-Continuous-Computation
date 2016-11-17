@@ -311,6 +311,10 @@ void regress_1d_opts_set_regularization_penalty(struct Regress1DOpts *, double);
 void regress_1d_opts_set_RKHS_decay_rate(struct Regress1DOpts *, enum coeff_decay_type, double);
 
 
+double param_LSregress_cost(size_t, const double *, double *, void *);
+double param_RLS2regress_cost(size_t, const double *, double *, void *);
+double param_RLSD2regress_cost(size_t, const double *, double *, void *);
+double param_RLSRKHSregress_cost(size_t, const double *, double *, void *);
 struct GenericFunction *
 generic_function_regress1d(struct Regress1DOpts *, struct c3Opt *, int *);
 

@@ -626,7 +626,7 @@ void function_train_update_core_params(struct FunctionTrain * ft, size_t core,
 double
 function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x, size_t core,
                                     size_t nparam, double * grad_core_space1, double * grad_core_space2,
-                                    double * grad, double ** pre, double * cur, double ** post)
+                                    double * grad, double * pre, double * cur, double * post)
 {
 
     size_t dim = ft->dim;
@@ -637,9 +637,9 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
     double *t1=NULL, *t2=NULL, *t3=NULL;
     function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3);
 
-    printf("do first cores\n");
+    /* printf("do first cores\n"); */
     size_t ii = 0;
-    printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim);
+    /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
     if (core != 0){
         generic_function_1darray_eval2(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
@@ -647,7 +647,7 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         
         int onsol = 1;
         for (ii = 1; ii < core; ii++){
-            printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim);
+            /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
             if (ii%2 == 1){
                 function_train_eval_next_core(ft,ii,x[ii],t1,t2,t3);
                 onsol = 2;
@@ -659,39 +659,34 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         }
 
         if (onsol == 2){
-            memmove(*pre,t3,ft->cores[ii]->ncols * sizeof(double));
+            memmove(pre,t3,ft->cores[ii]->ncols * sizeof(double));
         }
         else{
-            memmove(*pre,t1,ft->cores[ii]->ncols * sizeof(double));
+            memmove(pre,t1,ft->cores[ii]->ncols * sizeof(double));
         }
     }
-    else{
-        free(*pre); *pre = NULL;
-    }
-    printf("do mid cores\n");
+
+    /* printf("do mid cores\n"); */
 
     ii = core;
-    printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim);
+    /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
+    /* printf("\t ranks = "); iprint_sz(dim+1,ft->ranks); */
     qmarray_param_grad_eval(ft->cores[core],x[ii],cur,grad_core_space1,grad_core_space2);
+    /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
+    /* printf("\t ranks = "); iprint_sz(dim+1,ft->ranks); */
+    /* printf("do last cores\n"); */
 
-    printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim);
-    printf("do last cores\n");
-
-    if (core == dim-1){
-        free(*post); *post = NULL;
-    }
-    else{ // come from tha back
-
+    if (core != dim-1){
         ii = dim-1;
-        printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim);
+        /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
         size_t nrows = ft->cores[ii]->nrows;
         size_t ncols = ft->cores[ii]->ncols;
-        printf("ii = %zu\n",ii);
+        /* printf("ii = %zu\n",ii); */
         struct GenericFunction ** arr = ft->cores[ii]->funcs;
         generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t1);
         int onsol = 1;
         for (ii = dim-2; ii > core; ii--){
-            printf("ii = %zu\n",ii);
+            /* printf("ii = %zu\n",ii); */
             nrows = ft->cores[ii]->nrows;
             ncols = ft->cores[ii]->ncols;
             arr = ft->cores[ii]->funcs;
@@ -713,24 +708,24 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         }
 
         if (onsol == 2){
-            memmove(*post,t3,ft->cores[ii]->nrows * sizeof(double));
+            memmove(post,t3,ft->cores[ii]->nrows * sizeof(double));
         }
         else{
-            memmove(*post,t1,ft->cores[ii]->nrows * sizeof(double));
+            memmove(post,t1,ft->cores[ii]->nrows * sizeof(double));
         }
     }
 
-    printf("combine\n");
+    /* printf("combine\n"); */
     // combine
     double val;
-    if (pre == NULL){
+    if (core == 0){
         size_t r1 = ft->cores[core]->nrows;
         size_t r2 = ft->cores[core]->ncols;
         for (size_t kk = 0; kk < nparam; kk++){
             cblas_dgemv(CblasColMajor,CblasNoTrans, 
                         r1, r2, 1.0,
                         grad_core_space1 + kk*r1*r2, r1,
-                        *post,1,0.0,t1,1);
+                        post,1,0.0,t1,1);
 
             grad[ii] = t1[0];
         }
@@ -738,48 +733,44 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         cblas_dgemv(CblasColMajor,CblasNoTrans, 
                         r1, r2, 1.0,
                         cur, r1,
-                        *post,1,0.0,t1,1);
+                        post,1,0.0,t1,1);
         val = t1[0];
         
     }
-    else if (post == NULL){
+    else if (core == dim-1){
         size_t r1 = ft->cores[core]->nrows;
         size_t r2 = ft->cores[core]->ncols;
         for (size_t kk = 0; kk < nparam; kk++){
             cblas_dgemv(CblasColMajor,CblasTrans,
                         ft->ranks[core], ft->ranks[core+1], 1.0,
                         grad_core_space1 + kk*r1*r2 , ft->ranks[core],
-                        *pre, 1, 0.0, t1, 1);
+                        pre, 1, 0.0, t1, 1);
             
             grad[kk] = t1[0];
         }
         cblas_dgemv(CblasColMajor,CblasTrans,
                         ft->ranks[core], ft->ranks[core+1], 1.0,
                         cur, ft->ranks[core],
-                        *pre, 1, 0.0, t1, 1);
+                        pre, 1, 0.0, t1, 1);
         val = t1[0];
     }
-    else{ //} (pre != NULL){
+    else{ 
         size_t r1 = ft->cores[core]->nrows;
         size_t r2 = ft->cores[core]->ncols;
         for (size_t kk = 0; kk < nparam; kk++){
-
             cblas_dgemv(CblasColMajor,CblasTrans,
                         ft->ranks[core], ft->ranks[core+1], 1.0,
                         grad_core_space1 + kk*r1*r2 , ft->ranks[core],
-                        *pre, 1, 0.0, t1, 1);
+                        pre, 1, 0.0, t1, 1);
             
-            grad[kk] = cblas_ddot(r2,t1,1,*post,1);
+            grad[kk] = cblas_ddot(r2,t1,1,post,1);
         }
 
         cblas_dgemv(CblasColMajor,CblasTrans,
                         ft->ranks[core], ft->ranks[core+1], 1.0,
                         cur, ft->ranks[core],
-                        *pre, 1, 0.0, t1, 1);
-        val = cblas_ddot(r2,t1,1,*post,1);
-
-        
-        
+                        pre, 1, 0.0, t1, 1);
+        val = cblas_ddot(r2,t1,1,post,1);
     }
 
     return val;

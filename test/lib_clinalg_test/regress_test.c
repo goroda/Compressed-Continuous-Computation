@@ -64,7 +64,7 @@ void Test_LS_ALS_grad(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 5000;
+    size_t ndata = 1;
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -73,40 +73,96 @@ void Test_LS_ALS_grad(CuTest * tc)
         for (size_t jj = 0; jj < dim; jj++){
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
+        // no noise!
         y[ii] = function_train_eval(a,x+ii*dim);
-        y[ii] += randn()*0.1;
+        /* y[ii] += randn()*0.1; */
     }
-
-
     
     struct RegressALS * als = regress_als_alloc(dim);
     regress_als_add_data(als,ndata,x,y);
     regress_als_prep_memory(als,a);
     regress_als_set_core(als,core);
 
-
     size_t totparam = 0;
     size_t maxparam = 0;
     function_train_core_get_nparams(a,core,&totparam,&maxparam);
-    CuAssertIntEquals(tc,(maxorder+1)*dim,totparam);
+    CuAssertIntEquals(tc,(maxorder+1)*2*2,totparam);
     CuAssertIntEquals(tc,maxorder+1,maxparam);
 
-    printf("Great!\n");
-    double * guess = calloc_double((maxorder+1)*dim);
+    double space1[100];
+    double space2[100];
+    double grad[100];
+    double pre[100];
+    double cur[100];
+    double post[100];
+    double core_eval[100];
+    double core_eval2[100];
+    double qm_grad[100];
+    double qm_eval[100];
+    
+    double * guess = calloc_double(totparam);
+    double h = 1e-8;
+    for (size_t ii = 0; ii < ndata; ii++){
+        for (size_t zz = 0; zz < totparam; zz++){
+            guess[zz] = randn();
+        }
+        function_train_update_core_params(a,core,totparam,guess);
+        CuAssertIntEquals(tc,dim,a->dim);
+        for (size_t zz = 1; zz < dim; zz++){
+            CuAssertIntEquals(tc,2,a->ranks[zz]);
+        }
+
+        double val = function_train_core_param_grad_eval(a,x+ii*dim,core,totparam,space1,space2,grad,pre,cur,post);
+        double val2 = function_train_eval(a,x+ii*dim);
+        qmarray_eval(a->cores[core],x[ii*dim+core],core_eval);
+        CuAssertDblEquals(tc,val2,val,1e-13);
+        for (size_t ii = 0; ii < 4; ii++){
+            CuAssertDblEquals(tc,core_eval[ii],cur[ii],1e-14);
+        }
+        CuAssertIntEquals(tc,4,a->dim);
+
+        qmarray_param_grad_eval(a->cores[core],x[ii*dim+core],qm_eval,qm_grad,space2);
+        for (size_t ii = 0; ii < 4; ii++){
+            CuAssertDblEquals(tc,core_eval[ii],qm_eval[ii],1e-14);
+        }
+        CuAssertIntEquals(tc,4,a->dim);
+
+
+        // check derivatives
+        for (size_t jj = 0; jj < totparam; jj++){
+            guess[jj] = guess[jj]-h;
+            function_train_update_core_params(a,core,totparam,guess);
+
+            qmarray_eval(a->cores[core],x[ii*dim+core],core_eval2);
+            /* double val3 = function_train_eval(a,x+ii*dim); */
+            for (size_t zz = 0; zz < 4; zz++){
+                double v1 = core_eval[zz];
+                double v2 = core_eval2[zz];
+                double fd_diff = (v1-v2)/h;
+                printf("onparam = %zu, place = %zu,fd_diff = %G, grad = %G\n",jj,zz,fd_diff,qm_grad[jj*4+zz]);
+                CuAssertDblEquals(tc,fd_diff,space1[jj*4+zz],1e-5);
+            }
+
+            guess[jj] = guess[jj]+h;
+            function_train_update_core_params(a,core,totparam,guess);
+        }
+    }
+    printf("Great!\n");    
+    
     
     struct c3Opt * optimizer = c3opt_alloc(BFGS,totparam);
     c3opt_set_verbose(optimizer,0);
     c3opt_add_objective(optimizer,regress_core_LS,als);
 
     // check derivative
-    double * deriv_diff = calloc_double(totparam);
-    double gerr = c3opt_check_deriv_each(optimizer,guess,1e-8,deriv_diff);
-    for (size_t ii = 0; ii < totparam; ii++){
-        printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]);
-        CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3);
-    }
-    CuAssertDblEquals(tc,0.0,gerr,1e-3);
-    free(deriv_diff); deriv_diff = NULL;
+    /* double * deriv_diff = calloc_double(totparam); */
+    /* double gerr = c3opt_check_deriv_each(optimizer,guess,1e-8,deriv_diff); */
+    /* for (size_t ii = 0; ii < totparam; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    /* } */
+    /* CuAssertDblEquals(tc,0.0,gerr,1e-3); */
+    /* free(deriv_diff); deriv_diff = NULL; */
 
     bounding_box_free(bds); bds       = NULL;
     function_train_free(a); a         = NULL;

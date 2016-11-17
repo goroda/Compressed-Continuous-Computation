@@ -3092,6 +3092,7 @@ void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, doubl
 {
     size_t ii;
     size_t size = qma->nrows*qma->ncols;
+    printf("size = %zu\n",size);
     for (ii = 0; ii < size; ii++){
         out[ii] = generic_function_1d_eval(qma->funcs[ii],x);
     }
@@ -3104,13 +3105,15 @@ void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, doubl
             for (size_t kk = 0; kk < nparam; kk++){
 
                 // only one element changes so copy everything
-                memmove(grad+onparam*size,out,size*sizeof(double)); 
-
+                for(size_t zz = 0; zz < size; zz++){
+                    grad[onparam*size+zz] = 0.0;
+                }
                 // and change the one element
                 grad[onparam*size+ii] = workspace[kk];
                 onparam++;
             }
         }
+        /* printf("nparam = %zu\n",onparam); */
     }
 }
 

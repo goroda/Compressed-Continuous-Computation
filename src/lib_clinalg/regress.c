@@ -140,7 +140,7 @@ void regress_als_free(struct RegressALS * als)
         free(als->grad_core_space); als->grad_core_space = NULL;
         free(als->fparam_space);    als->fparam_space    = NULL;
 
-        function_train_free(als->ft); als->ft = NULL;
+        /* function_train_free(als->ft); als->ft = NULL; */
         free(als); als = NULL;
     }
 }
@@ -189,7 +189,7 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     als->grad_core_space = calloc_double(maxrank*maxrank*maxparamfunc);
     als->fparam_space    = calloc_double(maxparamfunc);
 
-    als->ft = function_train_copy(ft);
+    als->ft = ft; //function_train_copy(ft);
     
 }
 
@@ -230,9 +230,9 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
                                                    als->grad_core_space,
                                                    als->fparam_space,
                                                    als->grad_space,
-                                                   &(als->prev_eval),
+                                                   als->prev_eval,
                                                    als->curr_eval,
-                                                   &(als->post_eval));
+                                                   als->post_eval);
         resid = als->y[ii]-eval;
         out += 0.5*resid*resid;
         if (grad != NULL){

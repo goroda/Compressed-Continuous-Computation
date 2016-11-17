@@ -99,7 +99,7 @@ void function_train_update_core_params(struct FunctionTrain *, size_t,
 double
 function_train_core_param_grad_eval(struct FunctionTrain *, const double *, size_t,
                                     size_t, double *, double *,
-                                    double *, double **, double *, double **);
+                                    double *, double *, double *, double *);
 
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
