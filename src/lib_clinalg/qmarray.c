@@ -3055,6 +3055,30 @@ void qmarray_get_nparams(const struct Qmarray * qma, size_t * ntot, size_t * nfu
 }
 
 /***********************************************************//**
+    Update Qmarray parameters
+
+    \param[in,out]  qma     - quasimatrix array whose parameters to update
+    \param[in]      nparams - total number of parameters
+    \param[in]      param   - parameters with which to update
+***************************************************************/
+void qmarray_update_params(struct Qmarray * qma, size_t nparams, const double * param)
+{
+
+     size_t size = qma->nrows*qma->ncols;
+     size_t onind = 0;
+     for (size_t ii = 0; ii < size; ii++){
+         size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+         generic_function_update_params(qma->funcs[ii],nparam,param+onind);
+         onind += nparam;
+     }
+     if (onind != nparams){
+         fprintf(stderr,"Error updating the parameters of a Qmarray\n");
+         fprintf(stderr,"number of parameters expected is not the number of actual parameters\n");
+         exit(1);
+     }
+}
+
+/***********************************************************//**
     Evaluate the gradient of a qmarray with respect to the parameters
     of the function
 

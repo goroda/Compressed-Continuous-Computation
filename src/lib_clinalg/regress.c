@@ -31,8 +31,8 @@
 
 //Code
 
-/** \file dmrg.c
- * Provides routines for dmrg based algorithms for the FT
+/** \file regress.c
+ * Provides routines for FT-regression
  */
 
 #include <stdlib.h>
@@ -57,16 +57,20 @@
  *  evaluations
  *  \var RegressALS::x
  *  input locations
- *  \var RegressALS::k
- *  dimension to optimize over
+ *  \var RegressALS::core
+ *  core over which to optimize
  *  \var RegressALS::pre_eval
- *  evaluations prior to dimension k
+ *  evaluations prior to dimension *core*
  * \var RegressALS::post_eval
- *  evaluations post dimension k
+ *  evaluations post dimension *core*
+ * \var RegressALS:grad_space
+ *  spare space for gradient evaluations
  * \var RegressALS::grad_core_space
  *  space for evaluation of the gradient of the core with respect to every param
  * \var RegressALS::fparam_space
  *  space for evaluation of gradient of params for a given function in a core
+ * \var RegressALS::ft
+ *  function_train
  */
 struct RegressALS
 {
@@ -77,14 +81,16 @@ struct RegressALS
     const double * y;
     const double * x;
     
-    size_t k;
+    size_t core;
     double * prev_eval;
     double * post_eval;
     double * curr_eval;
-    
+
+    double * grad_space;
     double * grad_core_space;
     double * fparam_space;
 
+    struct FunctionTrain * ft;
 };
 
 /***********************************************************//**
@@ -107,10 +113,13 @@ struct RegressALS * regress_als_alloc(size_t dim)
     als->prev_eval = NULL;
     als->post_eval = NULL;
     als->curr_eval = NULL;
-    
+
+    als->grad_space      = NULL;
     als->grad_core_space = NULL;
     als->fparam_space    = NULL;
 
+    als->ft = NULL;
+    
     return als;
 }
 
@@ -120,13 +129,18 @@ struct RegressALS * regress_als_alloc(size_t dim)
 void regress_als_free(struct RegressALS * als)
 {
     if (als != NULL){
+
+        free(als->nparams);  als->nparams    = NULL;
+        
         free(als->prev_eval); als->prev_eval = NULL;
         free(als->post_eval); als->post_eval = NULL;
         free(als->curr_eval); als->curr_eval = NULL;
 
+        free(als->grad_space);      als->grad_space      = NULL;
         free(als->grad_core_space); als->grad_core_space = NULL;
         free(als->fparam_space);    als->fparam_space    = NULL;
-        
+
+        function_train_free(als->ft); als->ft = NULL;
         free(als); als = NULL;
     }
 }
@@ -171,30 +185,63 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     als->post_eval = calloc_double(maxrank);
     als->curr_eval = calloc_double(maxrank*maxrank);
 
+    als->grad_space      = calloc_double(maxparamfunc);
     als->grad_core_space = calloc_double(maxrank*maxrank*maxparamfunc);
     als->fparam_space    = calloc_double(maxparamfunc);
+
+    als->ft = function_train_copy(ft);
     
 }
 
+/********************************************************//**
+    Set which core we are regressing on
+************************************************************/
+void regress_als_set_core(struct RegressALS * als, size_t core)
+{
+    assert (als != NULL);
+    assert (core < als->dim);
+    als->core = core;
+}
 
-/***********************************************************//**
-    Specify that we are working on the last dimension
+/********************************************************//**
+    LS regression objective function
+************************************************************/
+double regress_core_LS(size_t nparam, const double * param, double * grad, void * arg)
+{
 
-***************************************************************/
-/* void regress_als_set_last_dim(struct RegressALS * als, struct FunctionTrain * ftrain) */
-/* { */
-/*     assert (als != NULL); */
-/*     als->k = als->dim-1; */
-    
-/*     if (als->prev_eval == NULL){ // need to precompute everything */
-/*         function_train_eval_up_to_core */
-/*     } */
-/*     else{ */
-        
-/*     } */
+    struct RegressALS * als = arg;
+    size_t d      = als->dim;
+    size_t core   = als->core;
+    assert( nparam == als->nparams[core]);
 
-/*     free(als->post_eval); post->eval = NULL; */
-/* } */
+    printf("update core params\n");
+    function_train_update_core_params(als->ft,core,nparam,param);
+    printf("updated core params\n");
+
+    if (grad != NULL){
+        for (size_t ii = 0; ii < nparam; ii++){
+            grad[ii] = 0.0;
+        }
+    }
+    double out=0.0, eval,resid;
+    for (size_t ii = 0; ii < als->N; ii++){
+        eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d,
+                                                   core, nparam,
+                                                   als->grad_core_space,
+                                                   als->fparam_space,
+                                                   als->grad_space,
+                                                   &(als->prev_eval),
+                                                   als->curr_eval,
+                                                   &(als->post_eval));
+        resid = als->y[ii]-eval;
+        out += 0.5*resid*resid;
+        if (grad != NULL){
+            cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
+        }
+    }
+
+    return out;
+}
 
 
 

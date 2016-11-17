@@ -965,7 +965,11 @@ static double f23sol[5]   = {0.0,0.0,0.0,0.0,9.37629e-6};
 ///////////////////////////////////////////////////////////////////////////
 //assign problems
 
+
+struct UncTestProblem tprobs[34];
 void create_unc_probs(){
+    /* extern struct UncTestProblem tprobs[34]; */
+        
     tprobs[0].dim = 2;
     tprobs[0].eval = rosen_brock_func;
     tprobs[0].start = rosen_brock_start;

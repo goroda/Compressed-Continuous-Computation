@@ -1530,7 +1530,7 @@ int c3_opt_gradient(struct c3Opt * opt,
     int onbound = 0;
     int converged = 0;
     int res = 0;
-    double sc, eta;
+    double eta;
     opt->prev_eval = 0.0;
     enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
     /* printf("alpha = %G\n",c3opt_ls_get_alpha(opt)); */
@@ -1543,21 +1543,21 @@ int c3_opt_gradient(struct c3Opt * opt,
         fvaltemp = *fval;
 
         if (alg == BACKTRACK){
-            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,
-                              workspace+d,
-                              x,fval,&res);
+            c3opt_ls_box(opt,workspace,fvaltemp,grad,
+                         workspace+d,
+                         x,fval,&res);
             *fval = c3opt_eval(opt,x,grad);
         }
         else if (alg == STRONGWOLFE){
-            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
-                                       grad,workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
         }
         else if (alg == WEAKWOLFE){
             /* printf("call weak-wolfe, alpha=%G\n",c3opt_ls_get_alpha(opt)); */
-            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
-                                       grad,workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
         }
         
 

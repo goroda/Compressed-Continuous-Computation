@@ -2978,8 +2978,6 @@ double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad
     return out;
 }
 
-
-    
 /********************************************************//**
     Create a generic function through regression of data
 

@@ -10,5 +10,6 @@ CuSuite * CLinalgCrossIndGetSuite();
 CuSuite * CLinalgFuncTrainArrayGetSuite();
 CuSuite * CLinalgDMRGGetSuite();
 CuSuite * CLinalgDiffusionGetSuite();
+CuSuite * CLinalgRegressGetSuite();
 
 #endif
