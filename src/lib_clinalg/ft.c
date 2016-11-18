@@ -681,7 +681,6 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
         size_t nrows = ft->cores[ii]->nrows;
         size_t ncols = ft->cores[ii]->ncols;
-        /* printf("ii = %zu\n",ii); */
         struct GenericFunction ** arr = ft->cores[ii]->funcs;
         generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t1);
         int onsol = 1;
@@ -691,6 +690,7 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
             ncols = ft->cores[ii]->ncols;
             arr = ft->cores[ii]->funcs;
             generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t2);
+            /* printf("got t\n"); */
             if (onsol == 1){
                 // previous times new core
                 cblas_dgemv(CblasColMajor,CblasNoTrans,
@@ -759,7 +759,7 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         size_t r2 = ft->cores[core]->ncols;
         for (size_t kk = 0; kk < nparam; kk++){
             cblas_dgemv(CblasColMajor,CblasTrans,
-                        ft->ranks[core], ft->ranks[core+1], 1.0,
+                        r1, r2, 1.0,
                         grad_core_space1 + kk*r1*r2 , ft->ranks[core],
                         pre, 1, 0.0, t1, 1);
             

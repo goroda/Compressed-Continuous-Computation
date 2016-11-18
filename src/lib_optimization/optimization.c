@@ -741,9 +741,15 @@ double c3opt_check_deriv_each(struct c3Opt * opt, const double * x, double eps, 
         x2[ii] -= eps;
         v1 = c3opt_eval(opt,x1,NULL);
         v2 = c3opt_eval(opt,x2,NULL);
-        diff += pow( (v1-v2)/2.0/eps - grad[ii], 2 );
-        diffs[ii] =(v1-v2)/2.0/eps - grad[ii];
-        norm += pow( (v1-v2)/2.0/eps,2);
+
+        double fd = (v1-v2)/2.0/eps;
+        diff += pow( fd - grad[ii], 2 );
+        diffs[ii] = fd - grad[ii];
+        /* printf("ii=%zu, fd =%G, grad=%G, diff=%G\n",ii,fd,grad[ii],diffs[ii]); */
+        /* printf("\t v1=%G, v2=%G\n",v1,v2); */
+
+        
+        norm += pow(fd,2);
         
         x1[ii] -= eps;
         x2[ii] += eps;

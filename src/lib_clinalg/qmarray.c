@@ -3092,18 +3092,16 @@ void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, doubl
 {
     size_t ii;
     size_t size = qma->nrows*qma->ncols;
-    printf("size = %zu\n",size);
     for (ii = 0; ii < size; ii++){
         out[ii] = generic_function_1d_eval(qma->funcs[ii],x);
     }
-
+    
     if (grad != NULL){
         size_t onparam = 0;
         for (ii = 0; ii < size; ii++){
             size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
             generic_function_param_grad_eval(qma->funcs[ii],1,&x,workspace);
             for (size_t kk = 0; kk < nparam; kk++){
-
                 // only one element changes so copy everything
                 for(size_t zz = 0; zz < size; zz++){
                     grad[onparam*size+zz] = 0.0;
@@ -3113,7 +3111,6 @@ void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, doubl
                 onparam++;
             }
         }
-        /* printf("nparam = %zu\n",onparam); */
     }
 }
 

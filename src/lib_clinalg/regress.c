@@ -140,7 +140,7 @@ void regress_als_free(struct RegressALS * als)
         free(als->grad_core_space); als->grad_core_space = NULL;
         free(als->fparam_space);    als->fparam_space    = NULL;
 
-        /* function_train_free(als->ft); als->ft = NULL; */
+        function_train_free(als->ft); als->ft = NULL;
         free(als); als = NULL;
     }
 }
@@ -173,11 +173,15 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
 
     size_t maxparamfunc = 0;
     size_t nparamfunc = 0;
+    size_t max_core_params = 0;
     for (size_t ii = 0; ii < ft->dim; ii++){
         nparamfunc = 0;
         function_train_core_get_nparams(ft,ii,als->nparams+ii,&nparamfunc);
         if (nparamfunc > maxparamfunc){
             maxparamfunc = nparamfunc;
+        }
+        if (als->nparams[ii] > max_core_params){
+            max_core_params = als->nparams[ii];
         }
     }
 
@@ -185,11 +189,14 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     als->post_eval = calloc_double(maxrank);
     als->curr_eval = calloc_double(maxrank*maxrank);
 
-    als->grad_space      = calloc_double(maxparamfunc);
-    als->grad_core_space = calloc_double(maxrank*maxrank*maxparamfunc);
+
+    /* printf("grad_core_space allocated = %zu\n",max_core_params*maxrank*maxrank); */
+    /* printf("max paramfunc = %zu\n",max_core_params); */
+    als->grad_space      = calloc_double(max_core_params);
+    als->grad_core_space = calloc_double(max_core_params * maxrank * maxrank);
     als->fparam_space    = calloc_double(maxparamfunc);
 
-    als->ft = ft; //function_train_copy(ft);
+    als->ft = function_train_copy(ft);
     
 }
 
@@ -214,9 +221,9 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     size_t core   = als->core;
     assert( nparam == als->nparams[core]);
 
-    printf("update core params\n");
+    /* printf("update core params\n"); */
     function_train_update_core_params(als->ft,core,nparam,param);
-    printf("updated core params\n");
+    /* printf("updated core params\n"); */
 
     if (grad != NULL){
         for (size_t ii = 0; ii < nparam; ii++){
@@ -233,7 +240,9 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
                                                    als->prev_eval,
                                                    als->curr_eval,
                                                    als->post_eval);
+
         resid = als->y[ii]-eval;
+        /* printf("data=%zu, resid = %G, y = %G\n",ii,resid,als->y[ii]); */
         out += 0.5*resid*resid;
         if (grad != NULL){
             cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
