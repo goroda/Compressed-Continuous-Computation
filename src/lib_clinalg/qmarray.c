@@ -3036,22 +3036,44 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
     Get number of parameters describing the qmarray
 
     \param[in]     qma   - quasimatrix array
-    \param[in,out] ntot  - total number of parameters
     \param[in,out] nfunc - number of parameters in the function with most parameters
+
+    \returns - total number of parameters
 ***************************************************************/
-void qmarray_get_nparams(const struct Qmarray * qma, size_t * ntot, size_t * nfunc)
+size_t qmarray_get_nparams(const struct Qmarray * qma, size_t * nfunc)
 {
 
      size_t size = qma->nrows*qma->ncols;
-     *ntot = 0;
+     size_t ntot = 0;
      *nfunc = 0;
      for (size_t ii = 0; ii < size; ii++){
          size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
-         *ntot += nparam;
+         ntot += nparam;
          if (nparam > *nfunc){
              *nfunc = nparam;
          }
      }
+     return ntot;
+}
+
+/***********************************************************//**
+    Get Qmarray parameters
+
+    \param[in]      qma     - quasimatrix array whose parameters to update
+    \param[in,out]  param   - location to store parameters
+
+    \returns total number of parameters
+***************************************************************/
+size_t qmarray_get_params(struct Qmarray * qma, double * param)
+{
+     size_t size = qma->nrows*qma->ncols;
+     size_t onind = 0;
+     size_t nparam;
+     for (size_t ii = 0; ii < size; ii++){
+         nparam = generic_function_get_params(qma->funcs[ii],param+onind);
+         onind += nparam;
+     }
+     return onind;
 }
 
 /***********************************************************//**

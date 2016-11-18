@@ -93,8 +93,9 @@ double function_train_get_avgrank(const struct FunctionTrain *);
 void function_train_eval_up_to_core(struct FunctionTrain *,size_t, const double *, double *, size_t *);
 double function_train_eval(struct FunctionTrain *, const double *);
 
-void function_train_core_get_nparams(const struct FunctionTrain *,size_t,size_t *,size_t *);
-void function_train_update_core_params(struct FunctionTrain *, size_t,
+size_t function_train_core_get_nparams(const struct FunctionTrain *,size_t,size_t *);
+size_t function_train_core_get_params(const struct FunctionTrain *,size_t,double *);
+void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
 double
 function_train_core_param_grad_eval(struct FunctionTrain *, const double *, size_t,

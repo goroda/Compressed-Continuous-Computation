@@ -97,6 +97,7 @@ lin_elem_exp_create_with_params(struct LinElemExpAopts *,
 void
 lin_elem_exp_update_params(struct LinElemExp *,
                            size_t, const double *);
+size_t lin_elem_exp_get_params(const struct LinElemExp *, double *);
 
 unsigned char *
 serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);

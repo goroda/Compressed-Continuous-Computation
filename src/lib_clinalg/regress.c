@@ -71,6 +71,8 @@
  *  space for evaluation of gradient of params for a given function in a core
  * \var RegressALS::ft
  *  function_train
+ * \var RegressALS::ft_param
+ *  flattened array of function train parameters
  */
 struct RegressALS
 {
@@ -91,6 +93,7 @@ struct RegressALS
     double * fparam_space;
 
     struct FunctionTrain * ft;
+    double * ft_param;
 };
 
 /***********************************************************//**
@@ -119,6 +122,7 @@ struct RegressALS * regress_als_alloc(size_t dim)
     als->fparam_space    = NULL;
 
     als->ft = NULL;
+    als->ft_param = NULL;
     
     return als;
 }
@@ -141,6 +145,7 @@ void regress_als_free(struct RegressALS * als)
         free(als->fparam_space);    als->fparam_space    = NULL;
 
         function_train_free(als->ft); als->ft = NULL;
+        free(als->ft_param);          als->ft_param = NULL;
         free(als); als = NULL;
     }
 }
@@ -174,15 +179,17 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     size_t maxparamfunc = 0;
     size_t nparamfunc = 0;
     size_t max_core_params = 0;
+    size_t ntotparams = 0;
     for (size_t ii = 0; ii < ft->dim; ii++){
         nparamfunc = 0;
-        function_train_core_get_nparams(ft,ii,als->nparams+ii,&nparamfunc);
+        als->nparams[ii] = function_train_core_get_nparams(ft,ii,&nparamfunc);
         if (nparamfunc > maxparamfunc){
             maxparamfunc = nparamfunc;
         }
         if (als->nparams[ii] > max_core_params){
             max_core_params = als->nparams[ii];
         }
+        ntotparams += als->nparams[ii];
     }
 
     als->prev_eval = calloc_double(maxrank);
@@ -196,7 +203,13 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     als->fparam_space    = calloc_double(maxparamfunc);
 
     als->ft = function_train_copy(ft);
-    
+    als->ft_param = calloc_double(ntotparams);
+
+    size_t running = 0, incr;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        incr = function_train_core_get_params(ft,ii,als->ft_param + running);
+        running += incr;
+    }
 }
 
 /********************************************************//**
@@ -224,7 +237,7 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     /* printf("data = \n"); */
     /* dprint2d_col(d,als->N,als->x); */
     /* printf("update core params\n"); */
-    function_train_update_core_params(als->ft,core,nparam,param);
+    function_train_core_update_params(als->ft,core,nparam,param);
     /* printf("updated core params\n"); */
 
     if (grad != NULL){
@@ -262,5 +275,40 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
 }
 
 
+/********************************************************//**
+    Optimize over a particular core
+************************************************************/
+int regress_als_run_core(struct RegressALS * als, struct c3Opt * optimizer, double *val)
+{
+    assert (als != NULL);
+    assert (als->ft != NULL);
+
+    size_t core = als->core;
+    size_t nparambefore = 0;
+    for (size_t ii = 0; ii < core; ii++){
+        nparambefore += als->nparams[ii];
+    }
+    int info = c3opt_minimize(optimizer,als->ft_param + nparambefore,val);
+    if (info < 0){
+        fprintf(stderr, "Minimizing core %zu resulted in nonconvergence with output %d\n",core,info);
+    }
+    
+    function_train_core_update_params(als->ft,core,als->nparams[core],als->ft_param + nparambefore);
+    return info;
+}
 
 
+/********************************************************//**
+    Advance to the right
+************************************************************/
+void regress_als_step_right(struct RegressALS * als)
+{
+
+    assert (als != NULL);
+    assert (als->ft != NULL);
+    if (als->core == als->dim-1){
+        fprintf(stderr, "Cannot step right in ALS regression, already on last dimension!!\n");
+        exit(1);
+    }
+    als->core++;
+}

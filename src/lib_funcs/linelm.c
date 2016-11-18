@@ -412,6 +412,22 @@ lin_elem_exp_create_with_params(struct LinElemExpAopts * opts,
 }
 
 /********************************************************//**
+    Get the parameters of a linear element expansion
+
+    \param[in] lexp  - expansion
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+
+    \returns number of parameters
+*************************************************************/
+size_t lin_elem_exp_get_params(const struct LinElemExp * lexp, double * param)
+{
+    assert (lexp != NULL);
+    memmove(param,lexp->coeff,lexp->num_nodes*sizeof(double));
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
     Update the parameters (coefficients) for a linear element expansion
 
     \param[in] lexp  - expansion

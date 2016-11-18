@@ -2575,7 +2575,7 @@ void regress_1d_opts_destroy(struct Regress1DOpts * opts)
 
 
 /********************************************************//**
-    Get the number of parameters describg the generic function
+    Get the number of parameters describing the generic function
 ************************************************************/
 size_t generic_function_get_num_params(const struct GenericFunction * gf)
 {
@@ -2584,11 +2584,36 @@ size_t generic_function_get_num_params(const struct GenericFunction * gf)
     size_t nparam = 0;
     switch (gf->fc){
     case CONSTANT:                                                     break;
-    case PIECEWISE:                                                    break;
+    case PIECEWISE:  assert (1 == 0);                                  break;
     case POLYNOMIAL: nparam = orth_poly_expansion_get_num_poly(gf->f); break;
     case LINELM:     nparam = lin_elem_exp_get_num_nodes(gf->f);       break;
     case RATIONAL:                                                     break;
     case KERNEL:                                                       break;
+    }   
+
+    return nparam;
+}
+
+/********************************************************//**
+    Get the parameters of generic function
+
+    \param[in] gf         - generic function
+    \param[in,out] params - location to write parameters
+
+    \returns number of parameters
+************************************************************/
+size_t generic_function_get_params(const struct GenericFunction * gf, double * params)
+{
+
+    assert (gf != NULL);
+    size_t nparam = 0;
+    switch (gf->fc){
+    case CONSTANT:                                                           break;
+    case PIECEWISE:  assert (1 == 0);                                        break;
+    case POLYNOMIAL: nparam = orth_poly_expansion_get_params(gf->f,params);  break;
+    case LINELM:     nparam = lin_elem_exp_get_params(gf->f,params);         break;
+    case RATIONAL:                                                           break;
+    case KERNEL:                                                             break;
     }   
 
     return nparam;

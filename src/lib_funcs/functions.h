@@ -296,6 +296,7 @@ regress_1d_opts_create(enum approx_type, enum regress_type,
                        size_t, const double *, const double *);
 void regress_1d_opts_destroy(struct Regress1DOpts *);
 size_t generic_function_get_num_params(const struct GenericFunction *);
+size_t generic_function_get_params(const struct GenericFunction *, double *);
 void regress_1d_opts_set_parametric_form(struct Regress1DOpts *, enum function_class, void *);
 void regress_1d_opts_set_initial_parameters(struct Regress1DOpts *, const double *);
 

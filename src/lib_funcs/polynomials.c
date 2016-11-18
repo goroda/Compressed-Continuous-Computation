@@ -836,6 +836,16 @@ orth_poly_expansion_create_with_params(struct OpeOpts * opts,
 }
 
 /********************************************************//**
+*   Get parameters defining polynomial (for now just coefficients)
+*************************************************************/
+size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion * ope, double * param)
+{
+    assert (ope != NULL);
+    memmove(param,ope->coeff,ope->num_poly * sizeof(double));
+    return ope->num_poly;
+}
+
+/********************************************************//**
 *   Update an expansion's parameters
 *            
 *   \param[in] ope     - expansion to update

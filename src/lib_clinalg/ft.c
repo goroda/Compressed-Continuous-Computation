@@ -562,6 +562,16 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
             function_train_eval_next_core(ft,ii,x[ii],t3,t2,t1);
             onsol=1;
         }
+
+        /* if (ii  == dim-1){ */
+        /*     if (onsol == 2){ */
+        /*         printf("pre_eval = "); dprint(2,t1); */
+        /*     } */
+        /*     else{ */
+        /*         printf("pre_eval = "); dprint(2,t3); */
+        /*     } */
+        /*     printf("last_core_eval = "); dprint(2,t2); */
+        /* } */
     }
     
     double out;// = 0.123456789;
@@ -586,25 +596,35 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
 
    \param[in]     ft           - functoin train
    \param[in]     core         - which core parameters to count
-   \param[in,out] ncoreparams  - number of parameters in the core
    \param[in,out] maxparamfunc - number of parameters in the function with most parameters within the core
+
+   \returns number of parameters in the core
 ***************************************************************/
-void function_train_core_get_nparams(const struct FunctionTrain * ft, size_t core,
-                                     size_t * ncoreparams, size_t * maxparamfunc)
+size_t function_train_core_get_nparams(const struct FunctionTrain * ft, size_t core,
+                                       size_t * maxparamfunc)
 {
-    qmarray_get_nparams(ft->cores[core],ncoreparams,maxparamfunc);
+    size_t ncoreparams = qmarray_get_nparams(ft->cores[core],maxparamfunc);
+    return ncoreparams;
 }
 
+/***********************************************************//**
+   Get core parameters
+***************************************************************/
+size_t function_train_core_get_params(const struct FunctionTrain * ft, size_t core,
+                                      double * param)
+{
+    size_t nparam = qmarray_get_params(ft->cores[core],param);
+    return nparam;
+}
 
 /***********************************************************//**
    Update the parameters defining a function train core
 ***************************************************************/
-void function_train_update_core_params(struct FunctionTrain * ft, size_t core,
+void function_train_core_update_params(struct FunctionTrain * ft, size_t core,
                                        size_t nparam, const double * param)
 {
     qmarray_update_params(ft->cores[core],nparam,param);
 }
-
 
 /***********************************************************//**
     Evaluate the FT and get the gradient with respect to all the 
@@ -657,12 +677,18 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
                 onsol=1;
             }
         }
-
+        ii = core-1;
         if (onsol == 2){
             memmove(pre,t3,ft->cores[ii]->ncols * sizeof(double));
+            /* printf("pre_aa = "); dprint(2,pre); */
+            /* printf("pre_t3 = "); dprint(2,t3); */
         }
         else{
             memmove(pre,t1,ft->cores[ii]->ncols * sizeof(double));
+            /* printf("ii=%zu ",ii); printf("ranks = "); iprint_sz(ft->dim+1,ft->ranks); */
+            /* printf("ft->cores[ii]->ncols = %zu\n",ft->cores[ii]->ncols); */
+            /* printf("pre_aa = "); dprint(2,pre); */
+            /* printf("pre_t1 = "); dprint(2,t1); */
         }
     }
 
@@ -685,9 +711,9 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         generic_function_1darray_eval2(nrows*ncols,arr,x[ii],t1);
         int onsol = 1;
         for (ii = dim-2; ii > core; ii--){
-            /* printf("ii = %zu\n",ii); */
             nrows = ft->cores[ii]->nrows;
             ncols = ft->cores[ii]->ncols;
+            /* printf("ii = %zu, nrows=%zu, ncols=%zu,\n",ii,nrows,ncols); */
             arr = ft->cores[ii]->funcs;
             generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t2);
             /* printf("got t\n"); */
@@ -707,6 +733,7 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
             }
         }
 
+        ii = core+1;
         if (onsol == 2){
             memmove(post,t3,ft->cores[ii]->nrows * sizeof(double));
         }
@@ -721,20 +748,27 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
     if (core == 0){
         size_t r1 = ft->cores[core]->nrows;
         size_t r2 = ft->cores[core]->ncols;
+        /* printf("nparam = %zu,r1=%zu,r2=%zu\n",nparam,r1,r2); */
+        /* printf("grad core space1 = \n"); */
         for (size_t kk = 0; kk < nparam; kk++){
-            cblas_dgemv(CblasColMajor,CblasNoTrans, 
-                        r1, r2, 1.0,
-                        grad_core_space1 + kk*r1*r2, r1,
-                        post,1,0.0,t1,1);
+            /* printf("\t kk = %zu, grad = ",kk); */
+            /* dprint(r2,grad_core_space1+kk*r2); */
+            /* cblas_dgemv(CblasColMajor,CblasNoTrans,  */
+            /*             r1, r2, 1.0, */
+            /*             grad_core_space1 + kk*r1*r2, r1, */
+            /*             post,1,0.0,t1,1); */
 
-            grad[ii] = t1[0];
+            /* grad[kk] = t1[0]; */
+            grad[kk] = cblas_ddot(r2,grad_core_space1 + kk*r1*r2,1,post,1);
         }
 
-        cblas_dgemv(CblasColMajor,CblasNoTrans, 
-                        r1, r2, 1.0,
-                        cur, r1,
-                        post,1,0.0,t1,1);
-        val = t1[0];
+        /* printf("cur = "); dprint(r2,cur); */
+        val = cblas_ddot(r2,cur,1,post,1);
+        /* cblas_dgemv(CblasColMajor,CblasNoTrans,  */
+        /*                 r1, r2, 1.0, */
+        /*                 cur, r1, */
+        /*                 post,1,0.0,t1,1); */
+        /* val = t1[0]; */
         
     }
     else if (core == dim-1){
@@ -752,6 +786,9 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
                         ft->ranks[core], ft->ranks[core+1], 1.0,
                         cur, ft->ranks[core],
                         pre, 1, 0.0, t1, 1);
+
+        /* printf("pre = "); dprint(r1,pre); */
+        /* printf("cur = "); dprint(r1,cur); */
         val = t1[0];
     }
     else{ 
