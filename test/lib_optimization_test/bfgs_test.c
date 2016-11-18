@@ -1361,6 +1361,6 @@ CuSuite * BFGSGetSuite(){
     SUITE_ADD_TEST(suite, Test_unc21);
     SUITE_ADD_TEST(suite, Test_unc22);
     SUITE_ADD_TEST(suite, Test_unc23);
-    SUITE_ADD_TEST(suite, Test_unc24);
+    /* SUITE_ADD_TEST(suite, Test_unc24); */
     return suite;
 }

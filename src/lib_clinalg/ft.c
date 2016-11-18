@@ -669,10 +669,10 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
     /* printf("do mid cores\n"); */
 
     ii = core;
-    /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
+    /* printf("here ! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
     /* printf("\t ranks = "); iprint_sz(dim+1,ft->ranks); */
     qmarray_param_grad_eval(ft->cores[core],x[ii],cur,grad_core_space1,grad_core_space2);
-    /* printf("here! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
+    /* printf("there! ii = %zu, dim = %zu, ft->dim= %zu \n",ii,dim,ft->dim); */
     /* printf("\t ranks = "); iprint_sz(dim+1,ft->ranks); */
     /* printf("do last cores\n"); */
 
@@ -682,7 +682,7 @@ function_train_core_param_grad_eval(struct FunctionTrain * ft, const double * x,
         size_t nrows = ft->cores[ii]->nrows;
         size_t ncols = ft->cores[ii]->ncols;
         struct GenericFunction ** arr = ft->cores[ii]->funcs;
-        generic_function_1darray_eval2(nrows * ncols,arr,x[ii],t1);
+        generic_function_1darray_eval2(nrows*ncols,arr,x[ii],t1);
         int onsol = 1;
         for (ii = dim-2; ii > core; ii--){
             /* printf("ii = %zu\n",ii); */

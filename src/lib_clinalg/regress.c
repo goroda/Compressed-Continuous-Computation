@@ -148,12 +148,12 @@ void regress_als_free(struct RegressALS * als)
 /***********************************************************//**
     Add data to ALS
 ***************************************************************/
-void regress_als_add_data(struct RegressALS * als, size_t N, const double * y, const double * x)
+void regress_als_add_data(struct RegressALS * als, size_t N, const double * x, const double * y)
 {
     assert (als != NULL);
     als->N = N;
-    als->y = y;
     als->x = x;
+    als->y = y;
 }
 
 
@@ -188,8 +188,7 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     als->prev_eval = calloc_double(maxrank);
     als->post_eval = calloc_double(maxrank);
     als->curr_eval = calloc_double(maxrank*maxrank);
-
-
+    /* max_core_params = 1000; */
     /* printf("grad_core_space allocated = %zu\n",max_core_params*maxrank*maxrank); */
     /* printf("max paramfunc = %zu\n",max_core_params); */
     als->grad_space      = calloc_double(max_core_params);
@@ -221,6 +220,9 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     size_t core   = als->core;
     assert( nparam == als->nparams[core]);
 
+    /* printf("N=%zu, d= %zu\n",als->N,d); */
+    /* printf("data = \n"); */
+    /* dprint2d_col(d,als->N,als->x); */
     /* printf("update core params\n"); */
     function_train_update_core_params(als->ft,core,nparam,param);
     /* printf("updated core params\n"); */
@@ -231,7 +233,8 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
         }
     }
     double out=0.0, eval,resid;
-    for (size_t ii = 0; ii < als->N; ii++){
+    if (grad != NULL){
+      for (size_t ii = 0; ii < als->N; ii++){
         eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d,
                                                    core, nparam,
                                                    als->grad_core_space,
@@ -242,11 +245,17 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
                                                    als->post_eval);
 
         resid = als->y[ii]-eval;
-        /* printf("data=%zu, resid = %G, y = %G\n",ii,resid,als->y[ii]); */
         out += 0.5*resid*resid;
-        if (grad != NULL){
-            cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
-        }
+	cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
+      }
+    }
+    else{
+      for (size_t ii = 0; ii < als->N; ii++){
+	/* dprint(d,als->x+ii*d); */
+        eval = function_train_eval(als->ft, als->x+ii*d);
+        resid = als->y[ii]-eval;
+        out += 0.5*resid*resid;
+      }
     }
 
     return out;

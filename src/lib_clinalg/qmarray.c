@@ -3091,16 +3091,21 @@ void qmarray_update_params(struct Qmarray * qma, size_t nparams, const double * 
 void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, double * grad, double * workspace)
 {
     size_t ii;
+    /* printf("\t cmoooonn\n"); */
     size_t size = qma->nrows*qma->ncols;
+    /* printf("\t evaluate! size=%zu\n",size); */
     for (ii = 0; ii < size; ii++){
         out[ii] = generic_function_1d_eval(qma->funcs[ii],x);
     }
-    
+    /* printf("\t grad==NULL=%d \n",grad==NULL); */
     if (grad != NULL){
         size_t onparam = 0;
         for (ii = 0; ii < size; ii++){
             size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
             generic_function_param_grad_eval(qma->funcs[ii],1,&x,workspace);
+	    /* printf("ii=%zu, nparam=%zu\n",ii,nparam); */
+	    /* printf("function = \n"); */
+	    /* print_generic_function(qma->funcs[ii],0,NULL); */
             for (size_t kk = 0; kk < nparam; kk++){
                 // only one element changes so copy everything
                 for(size_t zz = 0; zz < size; zz++){
@@ -3108,10 +3113,13 @@ void qmarray_param_grad_eval(struct Qmarray * qma, double x, double * out, doubl
                 }
                 // and change the one element
                 grad[onparam*size+ii] = workspace[kk];
+		/* printf("so far = \n"); */
+		/* dprint2d_col(2,2,grad+onparam*size); */
                 onparam++;
             }
         }
     }
+    /* printf("done there\n"); */
 }
 
 /***********************************************************//**
