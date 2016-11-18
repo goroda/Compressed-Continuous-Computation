@@ -117,7 +117,8 @@ void Test_LS_ALS_grad(CuTest * tc)
             CuAssertIntEquals(tc,2,a->ranks[zz]);
         }
 
-        double val = function_train_core_param_grad_eval(a,x+ii*dim,core,totparam,space1,space2,grad,pre,cur,post);
+        double val = function_train_core_param_grad_eval(a,x+ii*dim,core,totparam,space1,space2,
+                                                         grad,pre,cur,post);
         double val2 = function_train_eval(a,x+ii*dim);
         CuAssertDblEquals(tc,val2,val,1e-13);
         CuAssertIntEquals(tc,4,a->dim);
@@ -132,18 +133,18 @@ void Test_LS_ALS_grad(CuTest * tc)
     	/* printf("x = %G\n",x[ii*dim+core]); */
     	size_t onparam = 0;
         for (size_t zz = 0; zz < 4; zz++){
-    	  /* print_generic_function(a->cores[core]->funcs[zz],0,NULL); */
-    	  generic_function_param_grad_eval(a->cores[core]->funcs[zz],1,x+ii*dim+core,param_grad);
-    	  CuAssertDblEquals(tc,core_eval[zz],cur[zz],1e-14);
-    	  CuAssertDblEquals(tc,core_eval[zz],qm_eval[zz],1e-14);
-    	  /* dprint(maxorder+1,param_grad); */
+            /* print_generic_function(a->cores[core]->funcs[zz],0,NULL); */
+            generic_function_param_grad_eval(a->cores[core]->funcs[zz],1,x+ii*dim+core,param_grad);
+            CuAssertDblEquals(tc,core_eval[zz],cur[zz],1e-14);
+            CuAssertDblEquals(tc,core_eval[zz],qm_eval[zz],1e-14);
+            /* dprint(maxorder+1,param_grad); */
 	  
-    	  for (size_t qq = 0; qq < maxorder+1; qq++){
-    	    /* printf("pred grad with respect to first param\n"); */
-    	    /* dprint2d_col(2,2,qm_grad + onparam*4); */
-    	    CuAssertDblEquals(tc,qm_grad[onparam*4+zz],param_grad[qq],1e-10);
-    	    onparam++;
-    	  }
+            for (size_t qq = 0; qq < maxorder+1; qq++){
+                /* printf("pred grad with respect to first param\n"); */
+                /* dprint2d_col(2,2,qm_grad + onparam*4); */
+                CuAssertDblEquals(tc,qm_grad[onparam*4+zz],param_grad[qq],1e-10);
+                onparam++;
+            }
         }
         CuAssertIntEquals(tc,4,a->dim);
     	free(param_grad); param_grad = NULL;
@@ -164,7 +165,7 @@ void Test_LS_ALS_grad(CuTest * tc)
                 double v2 = core_eval2[zz];
                 fd_diff[zz] = (v1-v2)/h;
                 CuAssertDblEquals(tc,fd_diff[zz],space1[jj*4+zz],1e-5);
-    		CuAssertDblEquals(tc,fd_diff[zz],qm_grad[jj*4+zz],1e-5);
+                CuAssertDblEquals(tc,fd_diff[zz],qm_grad[jj*4+zz],1e-5);
             }
     	    /* printf("FD is = \n"); */
     	    /* dprint2d_col(2,2,fd_diff); */

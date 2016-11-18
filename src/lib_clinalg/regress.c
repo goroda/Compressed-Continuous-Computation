@@ -234,28 +234,28 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     }
     double out=0.0, eval,resid;
     if (grad != NULL){
-      for (size_t ii = 0; ii < als->N; ii++){
-        eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d,
-                                                   core, nparam,
-                                                   als->grad_core_space,
-                                                   als->fparam_space,
-                                                   als->grad_space,
-                                                   als->prev_eval,
-                                                   als->curr_eval,
-                                                   als->post_eval);
+        for (size_t ii = 0; ii < als->N; ii++){
+            eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d,
+                                                       core, nparam,
+                                                       als->grad_core_space,
+                                                       als->fparam_space,
+                                                       als->grad_space,
+                                                       als->prev_eval,
+                                                       als->curr_eval,
+                                                       als->post_eval);
 
-        resid = als->y[ii]-eval;
-        out += 0.5*resid*resid;
-	cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
-      }
+            resid = als->y[ii]-eval;
+            out += 0.5*resid*resid;
+            cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
+        }
     }
     else{
-      for (size_t ii = 0; ii < als->N; ii++){
-	/* dprint(d,als->x+ii*d); */
-        eval = function_train_eval(als->ft, als->x+ii*d);
-        resid = als->y[ii]-eval;
-        out += 0.5*resid*resid;
-      }
+        for (size_t ii = 0; ii < als->N; ii++){
+            /* dprint(d,als->x+ii*d); */
+            eval = function_train_eval(als->ft, als->x+ii*d);
+            resid = als->y[ii]-eval;
+            out += 0.5*resid*resid;
+        }
     }
 
     return out;
