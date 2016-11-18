@@ -741,9 +741,15 @@ double c3opt_check_deriv_each(struct c3Opt * opt, const double * x, double eps, 
         x2[ii] -= eps;
         v1 = c3opt_eval(opt,x1,NULL);
         v2 = c3opt_eval(opt,x2,NULL);
-        diff += pow( (v1-v2)/2.0/eps - grad[ii], 2 );
-        diffs[ii] =(v1-v2)/2.0/eps - grad[ii];
-        norm += pow( (v1-v2)/2.0/eps,2);
+
+        double fd = (v1-v2)/2.0/eps;
+        diff += pow( fd - grad[ii], 2 );
+        diffs[ii] = fd - grad[ii];
+        /* printf("ii=%zu, fd =%G, grad=%G, diff=%G\n",ii,fd,grad[ii],diffs[ii]); */
+        /* printf("\t v1=%G, v2=%G\n",v1,v2); */
+
+        
+        norm += pow(fd,2);
         
         x1[ii] -= eps;
         x2[ii] += eps;
@@ -1859,7 +1865,7 @@ int c3_opt_gradient(struct c3Opt * opt,
     int onbound = 0;
     int converged = 0;
     int res = 0;
-    double sc, eta;
+    double eta;
     opt->prev_eval = 0.0;
     enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
     /* printf("alpha = %G\n",c3opt_ls_get_alpha(opt)); */
@@ -1872,21 +1878,21 @@ int c3_opt_gradient(struct c3Opt * opt,
         fvaltemp = *fval;
 
         if (alg == BACKTRACK){
-            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,
-                              workspace+d,
-                              x,fval,&res);
+            c3opt_ls_box(opt,workspace,fvaltemp,grad,
+                         workspace+d,
+                         x,fval,&res);
             *fval = c3opt_eval(opt,x,grad);
         }
         else if (alg == STRONGWOLFE){
-            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
-                                       grad,workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
         }
         else if (alg == WEAKWOLFE){
             /* printf("call weak-wolfe, alpha=%G\n",c3opt_ls_get_alpha(opt)); */
-            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
-                                       grad,workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
         }
         
 

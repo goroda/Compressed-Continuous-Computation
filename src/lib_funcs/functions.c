@@ -2573,6 +2573,27 @@ void regress_1d_opts_destroy(struct Regress1DOpts * opts)
     }
 }
 
+
+/********************************************************//**
+    Get the number of parameters describg the generic function
+************************************************************/
+size_t generic_function_get_num_params(const struct GenericFunction * gf)
+{
+
+    assert (gf != NULL);
+    size_t nparam = 0;
+    switch (gf->fc){
+    case CONSTANT:                                                     break;
+    case PIECEWISE:                                                    break;
+    case POLYNOMIAL: nparam = orth_poly_expansion_get_num_poly(gf->f); break;
+    case LINELM:     nparam = lin_elem_exp_get_num_nodes(gf->f);       break;
+    case RATIONAL:                                                     break;
+    case KERNEL:                                                       break;
+    }   
+
+    return nparam;
+}
+
 /********************************************************//**
     Add a parametric form to learn
 
@@ -2609,6 +2630,7 @@ void regress_1d_opts_set_initial_parameters(
 {
     assert (opts != NULL);
     opts->init_param = param;
+    opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,param);
 }
 
 /********************************************************//**
@@ -2716,7 +2738,7 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
 
     \param[in]     gf   - generic function
     \param[in]     nx   - number of x values
-    \param[in]      x   - x values
+    \param[in]     x   - x values
     \param[in,out] grad - gradient (N,nx)
 
     \return  0 - success, 1 -failure
@@ -2844,13 +2866,21 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
 
     struct Regress1DOpts * opts = arg;
 
+    assert (opts->nparam == dim);
+    assert (opts->gf != NULL);
     // update function
+    /* printf("update param\n"); */
+    /* printf("\t old = "); */
+    /* print_generic_function(opts->gf,0,NULL); */
+    /* printf("\t param = "); dprint(dim,param); */
     generic_function_update_params(opts->gf,dim,param);
 
+    /* printf("evaluate\n"); */
     for (size_t ii = 0; ii < opts->N; ii++){
         opts->eval[ii] = generic_function_1d_eval(opts->gf,opts->x[ii]);
     }
 
+    /* printf("compute resid\n"); */
     double out = 0.0;
     for (size_t ii = 0; ii < opts->N; ii++){
         opts->resid[ii] = opts->y[ii]-opts->eval[ii];
@@ -2859,7 +2889,7 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
     out *= 0.5;
     
     if (grad != NULL){
-
+        /* printf("grad is not null!\n"); */
         for (size_t ii = 0; ii < dim; ii++){
             grad[ii] = 0.0;
         }
@@ -2871,6 +2901,7 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
                 grad[ii] += opts->resid[jj] * (-1.0)*opts->grad[ii];
             }
         }
+        /* printf("done\n"); */
     }
 
     return out;
@@ -2960,36 +2991,7 @@ double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad
 /********************************************************//**
     L1 penality
 ************************************************************/
-/* double param_RLS1regress_cost(size_t dim, const double * param, double * grad, void * arg) */
-/* { */
 
-/*     struct Regress1DOpts * opts = arg; */
-
-/*     double out = 0.0; */
-/*     /\* // first part (recall this function updates parameters already!) *\/ */
-/*     /\* double ls_portion = param_LSregress_cost(dim,param,grad,arg); *\/ */
-
-/*     /\* // second part *\/ */
-/*     /\* double regularization = *\/ */
-/*     /\*     generic_function_rkhs_squared_norm(opts->gf, *\/ */
-/*     /\*                                        opts->decay_type, *\/ */
-/*     /\*                                        opts->coeff_decay_param); *\/ */
-
-/*     /\* double out = ls_portion + 0.5*opts->lambda * regularization; *\/ */
-    
-/*     /\* if (grad != NULL){ *\/ */
-/*     /\*     int res = generic_function_rkhs_squared_norm_param_grad(opts->gf,opts->lambda, *\/ */
-/*     /\*                                                             opts->decay_type, *\/ */
-/*     /\*                                                             opts->coeff_decay_param,grad); *\/ */
-/*     /\*     assert (res == 0); *\/ */
-/*     /\* } *\/ */
-
-
-/*     return out; */
-/* } */
-
-
-    
 /********************************************************//**
     Create a generic function through regression of data
 
@@ -3052,7 +3054,7 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
             return NULL;
         }
         
-        opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
+
         *info = c3opt_minimize(optimizer,start,&val);
         /* if (*info > -1){ */
             func = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);

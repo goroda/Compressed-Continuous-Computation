@@ -47,6 +47,7 @@ CuSuite * BGradGetSuite();
 void RunAllTests(void) {
     
     printf("Running test suite for: lib_optimization\n");
+
     CuString * output = CuStringNew();
     CuSuite * suite = CuSuiteNew();
     
@@ -58,10 +59,10 @@ void RunAllTests(void) {
     /* CuSuiteAddSuite(suite, opt); */
 
     create_unc_probs();
-    //CuSuiteAddSuite(suite, bfgs);
 
     CuSuiteAddSuite(suite, lbfgs);
-    
+    CuSuiteAddSuite(suite, bfgs);
+
     /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
     
 
@@ -81,5 +82,6 @@ void RunAllTests(void) {
 }
 
 int main(void) {
+
     RunAllTests();
 }

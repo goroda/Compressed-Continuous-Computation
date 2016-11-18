@@ -181,6 +181,9 @@ struct Qmarray * qmarray_deriv(struct Qmarray *);
 void qmarray_roundt(struct Qmarray **, double);
 
 void qmarray_eval(struct Qmarray *, double, double *);
+void qmarray_get_nparams(const struct Qmarray *, size_t *, size_t *);
+void qmarray_update_params(struct Qmarray *, size_t, const double *);
+void qmarray_param_grad_eval(struct Qmarray *, double, double *, double *, double *);
 struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 
 

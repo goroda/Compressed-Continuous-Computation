@@ -306,6 +306,7 @@ enum poly_type ope_opts_get_ptype(const struct OpeOpts * ope)
     return ope->ptype;
 }
 
+
 /********************************************************//**
 *   Initialize a standard basis polynomial
 *
@@ -756,9 +757,17 @@ orth_poly_eval(const struct OrthPoly * rec, size_t n, double x)
     }
 }
 
+/********************************************************//**
+*   Get number of polynomials
+*************************************************************/
+size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->num_poly;
+}
 
 /********************************************************//**
-*   Initialize an expanion of a certain orthogonal polynomial family
+*   Initialize an expansion of a certain orthogonal polynomial family
 *            
 *   \param[in] ptype    - type of polynomial
 *   \param[in] num_poly - number of polynomials

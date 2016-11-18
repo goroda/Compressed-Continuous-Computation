@@ -1835,6 +1835,17 @@ void Test_LS_cheb_regress(CuTest * tc){
     struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    // check derivative
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -1892,6 +1903,17 @@ void Test_LS_leg_regress(CuTest * tc){
     struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -1949,6 +1971,18 @@ void Test_LS_herm_regress(CuTest * tc){
     struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2007,7 +2041,18 @@ void Test_RLS2_cheb_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2065,7 +2110,18 @@ void Test_RLS2_leg_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2123,6 +2179,18 @@ void Test_RLS2_herm_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-4/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2182,7 +2250,18 @@ void Test_RLSD2_cheb_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLSD2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2240,7 +2319,18 @@ void Test_RLSD2_leg_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLSD2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2298,7 +2388,18 @@ void Test_RLSD2_herm_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
     regress_1d_opts_set_regularization_penalty(regopts,1e-4/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLSD2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2358,6 +2459,18 @@ void Test_RLSRKHS_alg_cheb_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,ALGEBRAIC,0.9);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2417,7 +2530,18 @@ void Test_RLSRKHS_exp_cheb_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,EXPONENTIAL,2.0);
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2477,6 +2601,17 @@ void Test_RLSRKHS_alg_leg_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,ALGEBRAIC,0.9);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2536,6 +2671,17 @@ void Test_RLSRKHS_exp_leg_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,EXPONENTIAL,2.0);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2596,6 +2742,17 @@ void Test_RLSRKHS_alg_herm_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-4/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,ALGEBRAIC,0.9);
     regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
     
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
@@ -2656,7 +2813,18 @@ void Test_RLSRKHS_exp_herm_regress(CuTest * tc){
     regress_1d_opts_set_regularization_penalty(regopts,1e-4/sqrt(ndata));
     regress_1d_opts_set_RKHS_decay_rate(regopts,EXPONENTIAL,1.1);
     regress_1d_opts_set_initial_parameters(regopts,params);
-    
+
+    c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    /* for (size_t ii = 0; ii < nparams; ii++){ */
+    /*     printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+    /*     /\* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); *\/ */
+    /* } */
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2701,7 +2869,7 @@ CuSuite * PolyRegressionSuite(){
     SUITE_ADD_TEST(suite, Test_RLS2_herm_regress);
 
     /* SUITE_ADD_TEST(suite, Test_RLSD2_cheb_regress); */
-    SUITE_ADD_TEST(suite, Test_RLSD2_leg_regress);
+    /* SUITE_ADD_TEST(suite, Test_RLSD2_leg_regress); */
     /* SUITE_ADD_TEST(suite, Test_RLSD2_herm_regress); */
 
     SUITE_ADD_TEST(suite, Test_RLSRKHS_alg_cheb_regress);

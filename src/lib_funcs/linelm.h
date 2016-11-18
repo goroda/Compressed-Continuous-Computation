@@ -86,6 +86,7 @@ struct LinElemExp{
     double * inner;
 };
 
+size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_alloc();
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
 void lin_elem_exp_free(struct LinElemExp *);
