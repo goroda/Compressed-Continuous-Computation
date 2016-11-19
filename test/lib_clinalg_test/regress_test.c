@@ -676,12 +676,78 @@ void Test_LS_ALS_grad3(CuTest * tc)
 }
 
 
+void Test_LS_ALS_sweep_lr(CuTest * tc)
+{
+    printf("Testing Function: regress_als_sweep_lr \n");
+
+    size_t dim = 10;    
+    struct c3Opt * optimizer[10];    
+    size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 1000;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+        /* y[ii] += randn(); */
+    }
+    struct RegressALS * als = regress_als_alloc(dim);
+    regress_als_add_data(als,ndata,x,y);
+    regress_als_prep_memory(als,b);
+
+    for (size_t ii = 0; ii < dim; ii++){
+        size_t r1 = ranks[ii];
+        size_t r2 = ranks[ii+1];
+        optimizer[ii] = c3opt_alloc(BFGS,r1*r2*(maxorder+1));
+        c3opt_set_verbose(optimizer[ii],0);
+        /* c3opt_set_relftol(optimizer[ii],1e-5); */
+        c3opt_add_objective(optimizer[ii],regress_core_LS,als);
+    }
+    
+    size_t nsweeps = 100;
+    regress_als_sweep_lr(als,optimizer,0);
+    for (size_t ii = 0; ii < nsweeps; ii++){
+        printf("On Sweep %zu\n",ii);
+        /* regress_als_sweep_rl(als,optimizer,1); */
+        /* regress_als_sweep_lr(als,optimizer,1); */
+
+        regress_als_sweep_lr(als,optimizer,0);
+    }
+    
+    bounding_box_free(bds); bds       = NULL;
+    function_train_free(a); a         = NULL;
+    function_train_free(b); b         = NULL;
+    for (size_t ii = 0; ii < dim; ii++){
+        c3opt_free(optimizer[ii]);  optimizer[ii] = NULL;
+    }
+    regress_als_free(als);  als       = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+}
+
+
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad1);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad2);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad3);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad3); */
+    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr);
     return suite;
 }

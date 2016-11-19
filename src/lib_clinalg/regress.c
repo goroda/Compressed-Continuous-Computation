@@ -312,3 +312,59 @@ void regress_als_step_right(struct RegressALS * als)
     }
     als->core++;
 }
+
+/********************************************************//**
+    Left-right sweep
+************************************************************/
+void regress_als_sweep_lr(struct RegressALS * als, struct c3Opt ** optimizers, int skip_first)
+{
+    
+    assert (als != NULL);
+    assert (als->ft != NULL);
+    size_t start = 0;
+    if (skip_first == 0){
+        als->core = 0;
+    }
+    else{
+        start = 1;
+        als->core = 1;
+    }
+    int res;
+    double val;
+    for (size_t ii = start; ii < als->dim; ii++){
+        res = regress_als_run_core(als,optimizers[als->core],&val);
+        printf("Core:%zu, Residual=%G\n",als->core,val);
+        als->core++;
+    }
+    
+}
+
+/********************************************************//**
+    Left-right sweep
+************************************************************/
+void regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,int skip_first)
+{
+    
+    assert (als != NULL);
+    assert (als->ft != NULL);
+
+    size_t start = 0;
+    if (skip_first == 0){
+        als->core = als->dim-1;
+    }
+    else{
+        start = 1;
+        als->core = als->dim-2;
+    }
+    int res;
+    double val;
+    for (size_t ii = start; ii < als->dim; ii++){
+        res = regress_als_run_core(als,optimizers[als->core],&val);
+        printf("\t Core:%zu, Residual=%G\n",als->core,val);
+        als->core--;
+    }
+    
+}
+
+
+
