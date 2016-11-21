@@ -107,7 +107,8 @@
 
                    
 #else
-    #include <gsl/gsl_cblas.h>
+    /* #include <gsl/gsl_cblas.h> */
+    #include <cblas.h>
     #include "f2c.h" // this is worrysome because it redfines ints and such 
     #include "clapack.h"
 
