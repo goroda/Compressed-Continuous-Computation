@@ -5,6 +5,7 @@ add_executable(sinsumstudy sinsum.c)
 target_link_libraries(sinsumstudy -g 
     clinalg 
     funcs 
+    opt
     quadrature 
     linalg 
     array 

@@ -49,6 +49,8 @@
 
 #include "fwrap.h"
 
+enum coeff_decay_type {NONE,ALGEBRAIC,EXPONENTIAL};
+
 /** \enum poly_type
  * contains LEGENDRE, CHEBYSHEV, STANDARD, HERMITE
  */
@@ -185,8 +187,17 @@ struct OrthPolyExpansion{
 
 #define OPECALLOC 50;
 
+size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion *);
+
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
+
+struct OrthPolyExpansion * 
+orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
+size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
+void
+orth_poly_expansion_update_params(struct OrthPolyExpansion *,
+                                  size_t, const double *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_copy(struct OrthPolyExpansion *);
@@ -233,10 +244,28 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
 int legendre_poly_expansion_arr_eval(size_t,
                                      struct OrthPolyExpansion **, 
                                      double, double *);
-
+int legendre_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
+    
 double chebyshev_poly_expansion_eval(struct OrthPolyExpansion *, double);
+int chebyshev_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
 
 double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);
+int orth_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, size_t, const double *, double *);
+int
+orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
+                                            double, double *);
+double
+orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion *,
+                                      enum coeff_decay_type,
+                                      double);
+int
+orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion *,
+                                                 double, enum coeff_decay_type,
+                                                 double, double *);
+
 
 void orth_poly_expansion_round(struct OrthPolyExpansion **);
 void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);

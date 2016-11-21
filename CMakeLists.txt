@@ -8,7 +8,6 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 
-# set(tool_dest "bin")
 # set(include_dest "include/c3-${C3_VERSION}")
 # set(main_lib_dest "lib/c3-${C3_VERSION}")
 # set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
@@ -17,7 +16,10 @@ set(main_lib_dest "lib/c3")
 set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 
 if (APPLE)
-    option(USE_CLANG "build application with clang" ON)
+    # option(USE_CLANG "build application with clang" ON)
+    # set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn")
+    # set(CMAKE_C_COMPILER "clang")
+
     include_directories(/opt/local/include)
     find_library(macblas
         NAMES ACCELERATE
@@ -26,11 +28,13 @@ if (APPLE)
         NO_DEFAULT_PATH)
         
     set(blas_lapack ${macblas}/Accelerate)
-    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn")
-    set(CMAKE_C_COMPILER "clang")
+
+    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
+    set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 else ()
+
     set(compiler_flags "-g -Wall -Wextra -O2 -std=c99")
-    set(CMAKE_C_COMPILER "gcc")
+    set(CMAKE_C_COMPILER "cc")
 
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
@@ -44,8 +48,8 @@ endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
-#set(static_libs 1)
-set(static_libs 0)
+set(static_libs 1)
+#set(static_libs 0)
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
@@ -66,8 +70,6 @@ include_directories(src/lib_funcdecomp)
 include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 include_directories(include)
-
-
 
 add_subdirectory(src)
 add_subdirectory(test)

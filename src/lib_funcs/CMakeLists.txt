@@ -18,7 +18,8 @@ if ( ${static_libs} )
 else ()
     add_library(funcs SHARED ${SRC_FILES} )
     target_link_libraries(funcs 
-        -fPIC 
+        -fPIC
+        opt
         quadrature 
         array
         stringmanip

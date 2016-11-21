@@ -40,7 +40,7 @@
 
 struct UncTestProblem {
     size_t dim;
-    double (*eval)(size_t,double *,double *, void *);
+    double (*eval)(size_t,const double *,double *, void *);
     double * start;
     double * sol;
 };
@@ -48,9 +48,11 @@ struct UncTestProblem {
 size_t unc_test_problem_get_dim(void * arg);
 double * unc_test_problem_get_start(void * arg);
 double * unc_test_problem_get_sol(void * arg);
-double unc_test_problem_eval(size_t dim,double * x,double * grad,void *arg);
+double unc_test_problem_eval(size_t dim,const double * x,double * grad,void *arg);
 
-struct UncTestProblem tprobs[34];
 void create_unc_probs();
+
+
+extern struct UncTestProblem tprobs[34];
 
 #endif

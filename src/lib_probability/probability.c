@@ -618,7 +618,7 @@ struct ProbabilityDensity *
 /* probability_density_laplace(double *(*gradLogPost)(double * x, void * args),  */
 
 /*                             void * args, size_t dim, double * start) */
-probability_density_laplace(double (*f)(size_t,double *,double*,void *),
+probability_density_laplace(double (*f)(size_t,const double *,double*,void *),
                             double *(*hessLogPost)(double * x, void * args),
                             void * args, size_t dim, double * start)
 {

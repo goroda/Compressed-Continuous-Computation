@@ -13,6 +13,7 @@ CuSuite * PolySerializationGetSuite();
 CuSuite * LinkedListGetSuite();
 CuSuite * PiecewisePolyGetSuite();
 CuSuite * PolyApproxSuite();
+CuSuite * PolyRegressionSuite();
 
 
 #endif

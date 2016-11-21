@@ -6,7 +6,8 @@ file(GLOB SRC_FILES other_test.c piecewise_test.c linelm_test.c poly_test.c test
 add_executable(funcs_test ${SRC_FILES})
 target_link_libraries(funcs_test 
     -g 
-    funcs 
+    funcs
+    opt 
     quadrature 
     array 
     stringmanip

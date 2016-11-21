@@ -44,6 +44,7 @@
 #include "approximate.h"
 #include "dmrgprod.h"
 #include "diffusion.h"
+#include "regress.h"
 //#include "dmrg.h"
 
 //#include "cross2d.h"

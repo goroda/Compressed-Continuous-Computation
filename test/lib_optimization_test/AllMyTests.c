@@ -40,21 +40,25 @@
 #include "uncon_test.h"
 
 CuSuite * OptGetSuite();
-CuSuite * UnGetSuite();
+CuSuite * BFGSGetSuite();
+CuSuite * BGradGetSuite();
 
 void RunAllTests(void) {
     
     printf("Running test suite for: lib_optimization\n");
+
     CuString * output = CuStringNew();
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * opt = OptGetSuite();
-    CuSuite * unc = UnGetSuite();
+    CuSuite * bfgs = BFGSGetSuite();
+    CuSuite * bgrad = BGradGetSuite();
 
-    CuSuiteAddSuite(suite, opt);
+    /* CuSuiteAddSuite(suite, opt); */
 
     create_unc_probs();
-    CuSuiteAddSuite(suite, unc);
+    CuSuiteAddSuite(suite, bfgs);
+    /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -62,7 +66,8 @@ void RunAllTests(void) {
     printf("%s \n", output->buffer);
     
     CuSuiteDelete(opt);
-    CuSuiteDelete(unc);
+    CuSuiteDelete(bfgs);
+    CuSuiteDelete(bgrad);
     
     CuStringDelete(output);
     free(suite);
@@ -70,5 +75,6 @@ void RunAllTests(void) {
 }
 
 int main(void) {
+
     RunAllTests();
 }

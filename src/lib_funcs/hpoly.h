@@ -51,5 +51,7 @@
 struct OrthPoly * init_hermite_poly();
 double hermite_poly_expansion_eval(struct OrthPolyExpansion *, double);
 double hermite_integrate(struct OrthPolyExpansion *);
+int hermite_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
 
 #endif

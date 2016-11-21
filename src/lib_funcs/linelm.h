@@ -55,6 +55,7 @@ struct LinElemExpAopts *
 lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts **);
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
 void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
                                   size_t, double *);
 void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
@@ -85,10 +86,19 @@ struct LinElemExp{
     double * inner;
 };
 
+size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_alloc();
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
 void lin_elem_exp_free(struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_init(size_t, double *, double *);
+struct LinElemExp *
+lin_elem_exp_create_with_params(struct LinElemExpAopts *,
+                                size_t, const double *);
+void
+lin_elem_exp_update_params(struct LinElemExp *,
+                           size_t, const double *);
+size_t lin_elem_exp_get_params(const struct LinElemExp *, double *);
+
 unsigned char *
 serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
 unsigned char * deserialize_lin_elem_exp(unsigned char *, 
@@ -96,6 +106,9 @@ unsigned char * deserialize_lin_elem_exp(unsigned char *,
 double lin_elem_exp_eval(const struct LinElemExp *, double);
 double lin_elem_exp_get_nodal_val(const struct LinElemExp *, size_t);
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
+int lin_elem_exp_param_grad_eval(
+    struct LinElemExp *, size_t, const double *, double *);
+
 double lin_elem_exp_integrate(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
 int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);

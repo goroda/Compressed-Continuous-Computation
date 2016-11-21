@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
                 toc = clock();
                 time += (double)(toc - tic) / CLOCKS_PER_SEC;
 
-                results[nranks+jj] = (double)function_train_get_maxrank(doubled);
+                results[nranks+jj] = 1.0*function_train_get_maxrank(doubled);
                 mrank += function_train_get_maxrank(rounded);
 
                 /* printf("finish ranks"); */

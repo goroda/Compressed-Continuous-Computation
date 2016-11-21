@@ -1,5 +1,3 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -33,19 +31,25 @@
 
 //Code
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
+/** \file regress.h
+ * Provides header files for FT regression
+ */
 
-#include "array.h"
-#include "CuTest.h"
+#ifndef C3_FT_REGRESSION
+#define C3_FT_REGRESSION
 
-#include "lib_funcs.h"
-#include "lib_clinalg.h"
-#include "lib_linalg.h"
+#include "ft.h"
 
-
+struct RegressALS;
+struct RegressALS * regress_als_alloc(size_t);
+void regress_als_free(struct RegressALS *);
+void regress_als_add_data(struct RegressALS *,size_t,const double *,const double *);
+void regress_als_prep_memory(struct RegressALS *, struct FunctionTrain *);
+void regress_als_set_core(struct RegressALS *, size_t);
+double regress_core_LS(size_t, const double *, double *, void *);
+int regress_als_run_core(struct RegressALS *, struct c3Opt *, double *);
+void regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
+void regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
+#endif
 
 

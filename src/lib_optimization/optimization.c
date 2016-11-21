@@ -52,15 +52,19 @@
 // Line search parameters
 struct c3LS
 {
+    enum c3opt_ls_alg alg;
+    
     double alpha;
     double beta;
     size_t maxiter;
+
+    int set_initial; // (0 for (quasi) newton methods, 1 otherwise)
 };
 
 /***********************************************************//**
     Allocate line-search parameters
 ***************************************************************/
-struct c3LS * c3ls_alloc()
+struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
 {
     struct c3LS * ls = malloc(sizeof(struct c3LS));
     if (ls == NULL){
@@ -68,10 +72,29 @@ struct c3LS * c3ls_alloc()
         exit(1);
     }
 
-    ls->alpha = 0.4;
-    ls->beta = 0.9;
-    ls->maxiter = 100;
+    ls->alg = alg;
+    if (alg == BACKTRACK){
+        ls->alpha = 0.4;
+        ls->beta = 0.9;
+    }
+    else if (alg == STRONGWOLFE){
+        ls->alpha = 0.1;
+        ls->beta = 0.4;
+    }
+    else if (alg == WEAKWOLFE){
+        ls->alpha = 0.1;
+        ls->beta = 0.9;
+    }
+    else{
+        printf("Line search algorithm, %d, is not recognized\n",alg);
+        exit(1);
+    }
+        
+    
+    ls->maxiter = 10000;
 
+    ls->set_initial = set_initial;
+    
     return ls;
 }
 
@@ -80,7 +103,7 @@ struct c3LS * c3ls_alloc()
 ***************************************************************/
 struct c3LS * c3ls_copy(struct c3LS * old)
 {
-    struct c3LS * new = c3ls_alloc();
+    struct c3LS * new = c3ls_alloc(old->alg,old->set_initial);
     new->alpha   = old->alpha;
     new->beta    = old->beta;
     new->maxiter = old->maxiter;
@@ -96,6 +119,24 @@ void c3ls_free(struct c3LS * ls)
     if (ls != NULL){
         free(ls); ls = NULL;
     }
+}
+
+int c3ls_get_initial(const struct c3LS * ls)
+{
+    assert (ls != NULL);
+    return ls->set_initial;
+}
+
+void c3ls_set_alg(struct c3LS * ls, enum c3opt_ls_alg alg)
+{
+    assert (ls != NULL);
+    ls->alg = alg;
+}
+
+enum c3opt_ls_alg c3ls_get_alg(const struct c3LS * ls)
+{
+    assert (ls != NULL);
+    return ls->alg;
 }
 
 void c3ls_set_alpha(struct c3LS * ls, double alpha)
@@ -141,7 +182,7 @@ struct c3Opt
     enum c3opt_alg alg;
     size_t d;
 
-    double (*f)(size_t, double *, double *, void *);
+    double (*f)(size_t, const double *, double *, void *);
     void * farg;
     
     double * lb;
@@ -166,6 +207,18 @@ struct c3Opt
     size_t nevals; // number of function evaluations
     size_t ngvals; // number of gradient evaluations
     size_t niters; // number of iterations
+
+    // for different algorithmic details
+    double prev_eval;
+
+    // storing traces
+    int store_grad;
+    int store_func;
+    int store_x;
+    double * stored_grad;
+    double * stored_func;
+    double * stored_x;
+    
 
 };
 
@@ -195,7 +248,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     }
 
     opt->verbose = 0;
-    opt->maxiter = 100;
+    opt->maxiter = 1000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
     opt->relftol = 1e-8;
@@ -204,7 +257,15 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     if (alg == BFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*d);
-        opt->ls = c3ls_alloc();
+        /* opt->ls = c3ls_alloc(BACKTRACK,0); */
+        /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
+    else if (alg==BATCHGRAD){
+        opt->grad = 1;
+        opt->workspace = calloc_double(2*d);
+        /* opt->ls = c3ls_alloc(BACKTRACK,1); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
     else{
         opt->nlocs = 0;
@@ -217,6 +278,13 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->ngvals = 0;
     opt->niters = 0;
 
+    opt->store_grad = 0;
+    opt->store_func = 0;
+    opt->store_x = 0;
+    opt->stored_grad = NULL;
+    opt->stored_func = NULL;
+    opt->stored_x = NULL;
+    
     return opt;
 }
 
@@ -240,7 +308,7 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->relftol = old->relftol;
     opt->gtol    = old->gtol;
     opt->nlocs   = old->nlocs;
-    if (opt->alg == BFGS){
+    if ((opt->alg == BFGS) || (opt->alg == BATCHGRAD)){
         opt->grad = 1;
         memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
         c3ls_free(opt->ls); opt->ls = NULL;
@@ -256,6 +324,24 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->ngvals = old->ngvals;
     opt->niters = old->niters;
 
+    opt->prev_eval = old->prev_eval;
+
+    opt->store_grad  = old->store_grad;
+    opt->store_func = old->store_func;
+    opt->store_x     = old->store_x;
+    if (opt->store_grad == 1){
+        opt->stored_grad = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+        memmove(opt->stored_grad,old->stored_grad,opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_x == 1){
+        opt->stored_x = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+        memmove(opt->stored_x,old->stored_x,opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_func == 1){
+        opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
+        memmove(opt->stored_func,old->stored_func,sizeof(double)*opt->maxiter);
+    }
+
     return opt;
 }
 
@@ -269,6 +355,10 @@ void c3opt_free(struct c3Opt * opt)
         free(opt->ub); opt->ub = NULL;
         free(opt->workspace); opt->workspace = NULL;
         c3ls_free(opt->ls); opt->ls = NULL;
+
+        free(opt->stored_grad); opt->stored_grad = NULL;
+        free(opt->stored_func); opt->stored_func = NULL;
+        free(opt->stored_x);    opt->stored_x    = NULL;
         free(opt); opt = NULL;
     }
 }
@@ -405,6 +495,77 @@ double * c3opt_get_workspace(struct c3Opt * opt)
     return opt->workspace;
 }
 
+
+void c3opt_set_storage_options(struct c3Opt * opt, int store_func, int store_grad, int store_x)
+{
+    assert (opt != NULL);
+    opt->store_func = store_func;
+    opt->store_grad = store_grad;
+    opt->store_x = store_x;
+
+    if (opt->store_grad == 1){
+        opt->stored_grad = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_x == 1){
+        opt->stored_x = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_func == 1){
+        opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
+    }
+}
+
+void c3opt_print_stored_values(struct c3Opt * opt, FILE * fp, int width, int prec)
+{
+    assert (opt != NULL);
+
+    fprintf(fp,"# iter ");
+    if (opt->store_func == 1){
+        fprintf(fp, "F ");
+    }
+    if (opt->store_grad == 1){
+        for (size_t jj = 0; jj < opt->d; jj++){
+            fprintf(fp, "G%zu ",jj);
+        }
+    }
+    if (opt->store_x == 1){
+        for (size_t jj = 0; jj < opt->d; jj++){
+            fprintf(fp, "x%zu ",jj);
+        }
+    }
+    fprintf(fp,"\n");
+        
+    for (size_t ii = 0; ii < opt->niters; ii++){
+        fprintf(fp,"%zu ",ii);
+        if (opt->store_func == 1){
+            fprintf(fp,"%*.*G ",width,prec,opt->stored_func[ii]);
+        }
+        if (opt->store_grad == 1){
+            for (size_t jj = 0; jj < opt->d; jj++){
+                fprintf(fp,"%*.*G ",width,prec,opt->stored_grad[ii*opt->niters+jj]);
+            }
+        }
+        if (opt->store_x== 1){
+            for (size_t jj = 0; jj < opt->d; jj++){
+                fprintf(fp,"%*.*G ",width,prec,opt->stored_x[ii*opt->niters+jj]);
+            }
+        }
+        fprintf(fp,"\n");
+    }
+    
+}
+
+int c3opt_ls_get_initial(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return c3ls_get_initial(opt->ls);
+}
+
+enum c3opt_ls_alg c3opt_ls_get_alg(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return c3ls_get_alg(opt->ls);
+}
+
 void c3opt_ls_set_alpha(struct c3Opt * opt, double alpha)
 {
     assert (opt != NULL);
@@ -441,6 +602,12 @@ size_t c3opt_ls_get_maxiter(struct c3Opt * opt)
     return c3ls_get_maxiter(opt->ls);
 }
 
+void c3opt_ls_set_alg(struct c3Opt * opt, enum c3opt_ls_alg alg){
+    assert (opt != NULL);
+    c3ls_set_alg(opt->ls,alg);
+}
+
+
 /***********************************************************//**
     Add brute-force optimization locations
     
@@ -464,7 +631,7 @@ void c3opt_set_brute_force_vals(struct c3Opt * opt, size_t nvals, double * loc)
     Add objective function
 ***************************************************************/
 void c3opt_add_objective(struct c3Opt * opt,
-                         double(*f)(size_t,double *,double *,void *),
+                         double(*f)(size_t,const double *,double *,void *),
                          void * farg)
 {
     assert (opt != NULL);
@@ -474,8 +641,14 @@ void c3opt_add_objective(struct c3Opt * opt,
 
 /***********************************************************//**
     Evaluate the objective function
+    
+    \param[in]     opt  - optimization structure
+    \param[in]     x    - location at which to evaluate
+    \param[in,out] grad - gradient of evaluation (evaluates if not NULL)
+
+    \return  Evaluation
 ***************************************************************/
-double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
+double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
 {
     assert (opt != NULL);
     assert (opt->f != NULL);
@@ -496,7 +669,7 @@ double c3opt_eval(struct c3Opt * opt, double * x, double * grad)
 
     \return ||deriv num - deriv nalytic||/ || deriv_num ||
 ***************************************************************/
-double c3opt_check_deriv(struct c3Opt * opt, double * x, double eps)
+double c3opt_check_deriv(struct c3Opt * opt, const double * x, double eps)
 {
     assert (opt != NULL);
 
@@ -534,75 +707,92 @@ double c3opt_check_deriv(struct c3Opt * opt, double * x, double eps)
     return sqrt(diff);
 }
 
-double c3opt_ls_box2(struct c3Opt * opt, const double * x, double fx,
-                     const double * grad, const double * dir,
-                     double * newx, double * newf, int *info)
+/***********************************************************//**
+    Compares the numerical and analytic derivatives, also outputs
+    the difference between numerical and analytic for each  input
+
+    \param[in] opt       - optimization structure 
+    \param[in] x         - evaluation location
+    \param[in] eps       - difference for central difference
+    \param[in,out] diffs - difference for every input
+
+    \return ||deriv num - deriv analytic||/ || deriv_num ||
+***************************************************************/
+double c3opt_check_deriv_each(struct c3Opt * opt, const double * x, double eps, double * diffs)
 {
-    double alpha = c3opt_ls_get_alpha(opt);
-    double beta = c3opt_ls_get_beta(opt);
-    double * lb = c3opt_get_lb(opt);
-    double * ub = c3opt_get_ub(opt);
-    size_t d = c3opt_get_d(opt);
-    size_t maxiter = c3opt_ls_get_maxiter(opt);
-    /* double absxtol = c3opt_get_absxtol(opt); */
-    int verbose = c3opt_get_verbose(opt);
+    assert (opt != NULL);
 
-    *info = 0;
-    if ((alpha <= 0.0) || (alpha >= 0.5)){
-        printf("line search alpha (%G) is not (0,0.5)\n",alpha);
-        *info = -1;
-        return 0.0;
+    size_t dim = opt->d;
+    double * x1 = calloc_double(dim);
+    double * x2 = calloc_double(dim);
+    double * grad = calloc_double(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] = x[ii];
+        x2[ii] = x[ii];
     }
-    if ((beta <= 0.0) && (beta >= 1.0)) {
-        printf("line search beta (%G) is not (0,1)\n",beta);
-        *info = -2;
-        return 0.0;
-    }
+    
+    c3opt_eval(opt,x,grad);
 
-    double gamma = 1.0;
-    for (size_t ii = 0; ii < d; ii++){
-        newx[ii] = x[ii] - gamma * beta * dir[ii];
-        if (newx[ii] < lb[ii]){
-            newx[ii] = lb[ii];
-        }
-        else if (newx[ii] > ub[ii]){
-            newx[ii] = ub[ii];
-        }
+    double diff = 0.0;
+    double v1,v2;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] += eps;
+        x2[ii] -= eps;
+        v1 = c3opt_eval(opt,x1,NULL);
+        v2 = c3opt_eval(opt,x2,NULL);
+
+        double fd = (v1-v2)/2.0/eps;
+        diff += pow( fd - grad[ii], 2 );
+        diffs[ii] = fd - grad[ii];
+        /* printf("ii=%zu, fd =%G, grad=%G, diff=%G\n",ii,fd,grad[ii],diffs[ii]); */
+        /* printf("\t v1=%G, v2=%G\n",v1,v2); */
+
+        
+        norm += pow(fd,2);
+        
+        x1[ii] -= eps;
+        x2[ii] += eps;
     }
-    *newf = c3opt_eval(opt,newx,NULL);
-    double dg = cblas_ddot(d,grad,1,dir,1);
-    double check = alpha * gamma * beta * dg;
-    size_t iter = 1;
-    *info = 0;
-    while ((fx - *newf) >= check){
-        iter++;
-        gamma = gamma * beta;
+    if (norm > 1){
+        diff /= norm;
+    }
+    free(x1); x1 = NULL;
+    free(x2); x2 = NULL;
+    free(grad); grad = NULL;
+    return sqrt(diff);
+}
+
+/***********************************************************//**
+    Move along a line during line search
+
+    \param[in]     d    - dimension
+    \param[in]     t    - scale of direction
+    \param[in]     dir  - direction (d,)
+    \param[in]     x    - location to move from (d,)
+    \param[in,out] newx - allocated area for new location (d,)
+    \param[in]     lb   - lower bounds
+    \param[in]     ub   - upper bounds
+***************************************************************/
+void c3opt_ls_x_move(size_t d, double t, const double * dir,
+                     const double * x,
+                     double * newx, double * lb, double * ub)
+{
+
+    memmove(newx,x,d*sizeof(double));
+    cblas_daxpy(d,t,dir,1,newx,1);
+    if (lb != NULL){
+        assert (ub != NULL);
         for (size_t ii = 0; ii < d; ii++){
-            newx[ii] = x[ii] - gamma * beta * dir[ii];
-            // projection step
-            if (newx[ii] < lb[ii]){
-                newx[ii] = lb[ii];
-            }
-            else if (newx[ii] > ub[ii]){
-                newx[ii] = ub[ii];
-            }
-        }
-        *newf = c3opt_eval(opt,newx,NULL);
-        check = alpha * gamma * beta;
-        if (iter > maxiter){
-            *info = 1;
-            if (verbose > 1){
-                printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
-                printf("gamma = %G\n",gamma);
-            }
-            break;
+            if      (newx[ii] <= lb[ii]){ newx[ii] = lb[ii]; }
+            else if (newx[ii] >= ub[ii]){ newx[ii] = ub[ii]; }
         }
     }
-    return gamma;
 }
 
 /***********************************************************//**
     Backtracking Line search with projection onto box constraints
+    Uses Armijo condition
 
     \param[in]     opt     - optimization structure
     \param[in]     x       - base point
@@ -631,6 +821,7 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     size_t maxiter = c3opt_ls_get_maxiter(opt);
     double absxtol = c3opt_get_absxtol(opt);
     int verbose = c3opt_get_verbose(opt);
+    int initial = c3opt_ls_get_initial(opt);
     
     *info = 0;
     if ((alpha <= 0.0) || (alpha >= 0.5)){
@@ -657,10 +848,32 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     }
 
     double t = 1.0;
+    // add a different scale here
+    
     size_t iter = 1;
     double dg = cblas_ddot(d,grad,1,dir,1);
-    double checkval;
-    do{
+    /* printf("initial = %d\n",initial); */
+    if (initial == 1){
+        t = fabs(2.0 * (fx - opt->prev_eval) / dg);
+        /* printf("initial = 1 t = %G dg=%G\n",t,dg); */
+        if (1.01 * t > 1.01){
+            t = 1.0;
+        }
+    }
+    t = 1.0;
+    /* printf("t = %G\n",t); */
+    
+    c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+    *newf = c3opt_eval(opt,newx,NULL);
+
+    if (verbose > 2){
+        printf("\t LineSearch Iteration:%zu (fval) = (%G)\n",iter,*newf);
+        printf("\t\t newx = "); dprint(d,newx);
+    }
+    
+    double checkval = fx + alpha*t*dg;
+    while(*newf > checkval)
+    {
         if (iter >= maxiter){
             *info = 1;
             if (verbose > 1){
@@ -673,22 +886,11 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
             t = beta * t;            
         }
 
-        /* printf("\t\t dir = "); dprint(d,grad); */
+        checkval = fx + alpha*t*dg;
+        c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+        *newf = c3opt_eval(opt,newx,NULL);
 
-        memmove(newx,x,d*sizeof(double));
-        checkval = fx + alpha*t*dg;        
-        cblas_daxpy(d,t,dir,1,newx,1);
-
-        for (size_t ii = 0; ii < d; ii++){
-            if (newx[ii] <= lb[ii]){
-                newx[ii] = lb[ii];
-            }
-            else if (newx[ii] >= ub[ii]){
-                newx[ii] = ub[ii];
-            }
-        }
         
-        *newf = c3opt_eval(opt,newx,NULL);//f(newx,fargs);
         iter += 1;
         //printf("absxtol = %G\n",absxtol);
         if (verbose > 2){
@@ -701,8 +903,325 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
         if (diff < absxtol){
             break;
         }
-    } while(*newf > checkval);
+    } 
 
+    return t*alpha;
+}
+
+/***********************************************************//**
+    Line Search with bisection for Wolfe conditions
+
+    \param[in]     opt     - optimization structure
+    \param[in]     x       - base point
+    \param[in]     fx      - objective function value at x
+    \param[in,out] grad    - gradient at x
+    \param[in]     dir     - search direction
+    \param[in,out] newx    - new location (x + t*p)
+    \param[in,out] newf    - objective function value f(newx)
+    \param[in,out] info    -  0 - success
+                             -1 - alpha not within correct bounds
+                             -2 - beta not within correct bounds
+                             -3 - initial starting point violates constraints
+                             -4 - initial direction is not a descent direction
+                              1 - maximum number of iter reached
+    
+                              
+***************************************************************/
+double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
+                             double * grad, double * dir,
+                             double * newx, double * newf, int *info)
+{
+    double alpha = c3opt_ls_get_alpha(opt);
+    double beta = c3opt_ls_get_beta(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t d = c3opt_get_d(opt);
+    size_t maxiter = c3opt_ls_get_maxiter(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+    int verbose = c3opt_get_verbose(opt);
+
+    double tmax = 1e6;
+    double t = 1.0;
+    double tmin = 0.0;
+    double dg = cblas_ddot(d,grad,1,dir,1);
+    double normdir = cblas_ddot(d,dir,1,dir,1);
+    
+    *info = 0;
+    if ((alpha <= 0.0) || (alpha >= 0.5)){
+        printf("line search alpha (%G) is not (0,0.5)\n",alpha);
+        *info = -1;
+        return 0.0;
+    }
+    if ((beta <= 0.0) && (beta >= 1.0)) {
+        printf("line search beta (%G) is not (0,1)\n",beta);
+        *info = -2;
+        return 0.0;
+    }
+    for (size_t ii = 0; ii < d; ii++){
+        if (x[ii] < lb[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+        if (x[ii] > ub[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+    }
+    if (dg > 0){
+        printf("line search initial direction is not a descent direction\n");
+        *info = -4;
+        return 0.0;
+    }
+
+    double checkval, dg2;
+    size_t iter = 1;
+    double fval;
+    while(iter < maxiter){
+
+        if (verbose > 1){
+            printf("Iter=%zu,t=%G\n",iter,t);
+        }
+        checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
+        c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+        fval = c3opt_eval(opt,newx,NULL);
+        if (fval > checkval){
+            tmax = t;
+            t = 0.5 * (tmin + tmax);
+        }
+        else{
+            c3opt_eval(opt,newx,grad);
+            dg2 = cblas_ddot(d,grad,1,dir,1);
+            if (dg2 < beta * dg){
+                tmin = t;
+                if (tmax > 1e5){
+                    t = 2.0 * tmin;
+                }
+                else{
+                    t = 0.5 * (tmin + tmax);
+                }
+            }
+            else{
+                *newf = fval;
+                break;
+            }
+        }
+
+        if (t*normdir < absxtol){
+            *newf = c3opt_eval(opt,newx,grad);
+            break;
+        }
+        
+        iter += 1;
+    }
+    if (iter == maxiter){
+        *newf = c3opt_eval(opt,newx,grad);
+        *info = 1;
+        if (verbose > 1){
+            printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
+            printf("t = %G\n",t);
+        }
+    }
+    return t*alpha;
+}
+
+
+
+/***********************************************************//**
+    Zoom function for Strong Wolfe
+***************************************************************/
+double c3opt_ls_zoom(struct c3Opt * opt, double tlow, double flow,
+                     double thigh, const double * x, double * dir,
+                     double * newx, double fx, double dg, double * grad,
+                     double * fval)
+{
+    double alpha = c3opt_ls_get_alpha(opt);
+    double beta = c3opt_ls_get_beta(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t d = c3opt_get_d(opt);
+    double th = thigh;
+    double tl = tlow;
+    double fl = flow;
+    
+    // might need to do something smarter here
+    double t,checkval,dg2,fcurr;
+    /* printf("start new\n"); */
+    /* if (fabs(th - tl) < 1e-){ */
+    /*     exit(1); */
+    /* } */
+    while (fabs(th-tl) >= 1e-20){
+        /* printf("(tlow,thigh) = (%3.15G,%3.15G),\n",tl,th); */
+
+        t = (tl + th)/2.0;
+        c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+
+        fcurr = c3opt_eval(opt,newx,grad);
+        *fval = fcurr;
+        
+        checkval = fx + alpha * t * dg;
+        /* printf("\t fcurr=%G, fx=%G, checkval=%G\n",fcurr,fx,checkval); */
+        if ((fcurr > checkval) || (fcurr >= fl)){
+            th = t;
+        }
+        else{
+            dg2 = cblas_ddot(d,grad,1,dir,1);
+            if (fabs(dg2) <= -beta * dg){
+                *fval = fcurr;
+                /* printf("out normal\n"); */
+                return t;
+            }
+            else if (dg2 * (th - tl) >= 0.0){
+                th = tl;
+            }
+            tl = t; // this is weird because t is between?
+            fl = fcurr;
+        }
+    }
+    /* printf("out bad\n"); */
+    return tlow;
+}
+
+/***********************************************************//**
+    Line Search with Strong Wolfe
+
+    \param[in]     opt     - optimization structure
+    \param[in]     x       - base point
+    \param[in]     fx      - objective function value at x
+    \param[in,out] grad    - gradient at x
+    \param[in]     dir     - search direction
+    \param[in,out] newx    - new location (x + t*p)
+    \param[in,out] newf    - objective function value f(newx)
+    \param[in,out] info    -  0 - success
+                             -1 - alpha not within correct bounds
+                             -2 - beta not within correct bounds
+                             -3 - initial starting point violates constraints
+                             -4 - initial direction is not a descent direction
+                              1 - maximum number of iter reached
+    
+                              
+***************************************************************/
+double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
+                             double * grad, double * dir,
+                             double * newx, double * newf, int *info)
+{
+    double alpha = c3opt_ls_get_alpha(opt);
+    double beta = c3opt_ls_get_beta(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t d = c3opt_get_d(opt);
+    size_t maxiter = c3opt_ls_get_maxiter(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+    int verbose = c3opt_get_verbose(opt);
+    int initial = c3opt_ls_get_initial(opt);
+    
+    *info = 0;
+    if ((alpha <= 0.0) || (alpha >= 0.5)){
+        printf("line search alpha (%G) is not (0,0.5)\n",alpha);
+        *info = -1;
+        return 0.0;
+    }
+    if ((beta <= 0.0) && (beta >= 1.0)) {
+        printf("line search beta (%G) is not (0,1)\n",beta);
+        *info = -2;
+        return 0.0;
+    }
+    for (size_t ii = 0; ii < d; ii++){
+        if (x[ii] < lb[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+        if (x[ii] > ub[ii]){
+            printf("line search starting point violates constraints\n");
+            *info = -3;
+            return 0.0;
+        }
+    }
+
+    double tmax = 1.0;
+    double t = 1.0;
+    double dg = cblas_ddot(d,grad,1,dir,1);
+    if (dg > 0){
+        printf("line search initial direction is not a descent direction\n");
+        *info = -4;
+        return 0.0;
+    }
+    if (initial == 1){
+        t = fabs(2.0 * (fx - opt->prev_eval) / dg);
+        if (1.01 * t > 1.0){
+            t = 1.0;
+        }
+    }
+    t = 0.1;
+    
+    //phi(t) = f(x + t dir)
+    double checkval;
+    double t_prev = 0.0;
+    double f_prev = fx;
+    size_t iter = 1;
+    while (iter <= maxiter){
+        /* printf("(t1,t2) = (%G,%G)\n",t_prev,t); */
+        c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
+        *newf = c3opt_eval(opt,newx,grad);
+        
+        double diff = norm2diff(newx,x,d);
+        if (diff < absxtol){ return t*alpha;}
+
+
+        checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
+
+        if (verbose > 1){
+            printf("Iter=%zu,t=%G,fx=%G,checkval=%G,dg=%G\n",iter,t,fx,checkval,dg);
+        }
+        if ((*newf > checkval) || ( (*newf >= f_prev) && (iter > 1))){
+            /* printf("found range (%G,%G) \n",t_prev,t); */
+            if (f_prev > *newf){
+                /* printf("f_prev = %G\n",f_prev); */
+                /* printf("*newf = %G\n",*newf); */
+                assert (f_prev < *newf);
+            }
+            t = c3opt_ls_zoom(opt,t_prev,f_prev,t,x,dir,newx,fx,dg,grad,newf);
+            return t * alpha;
+        }
+        
+        double dg2 = cblas_ddot(d,grad,1,dir,1);
+        if (verbose > 2){
+            printf("\t dg2=%G x=",dg2); dprint(d,newx);
+            printf("\t \t grad=");dprint(d,grad);
+        }
+        /* printf("fx=%G, f_prev = %G, *newf=%G\n",fx,f_prev,*newf); */
+        if (fabs(dg2) <= -beta*dg){
+            /* printf("here?\n"); */
+            return t*alpha;
+        }
+        else if (dg2 >= 0.0){
+            assert (*newf < f_prev);
+            t = c3opt_ls_zoom(opt,t,*newf,t_prev,x,dir,newx,fx,dg,grad,newf);
+            return t * alpha;
+        }
+
+        t_prev = t;
+        f_prev = *newf;
+        /* printf("INCREASE STEP LENGTH\n"); */
+        t = t + 0.5*(tmax-t);
+        /* if (fabs(tmax-t) < 1e-10){ */
+        /*     printf("Cannot increase step length anymore!\n"); */
+        /*     return t*alpha; */
+        /*     /\* exit(1); *\/ */
+        /* } */
+
+
+        iter++;
+    }
+    
+    *info = 1;
+    if (verbose > 1){
+        printf("Warning: maximum number of iterations (%zu) of line search reached\n",iter);
+        printf("t = %G\n",t);
+    }
+    
     return t*alpha;
 }
 
@@ -724,81 +1243,6 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
 
     \note  Domgmin Kim 2010 (with suvrit sra)
 ***************************************************************/
-/* int c3_opt_pqn_bfgs(struct c3Opt * opt, */
-/*                      double * x, double * fval, double * grad, */
-/*                      double * invhess) */
-/* { */
-
-    /* size_t d = c3opt_get_d(opt); */
-    /* double * workspace = c3opt_get_workspace(opt); */
-    /* int verbose = c3opt_get_verbose(opt); */
-    /* double * lb = c3opt_get_lb(opt); */
-    /* double * ub = c3opt_get_ub(opt); */
-    /* size_t maxiter = c3opt_get_maxiter(opt); */
-    /* double gtol = c3opt_get_gtol(opt); */
-    /* double relftol = c3opt_get_relftol(opt); */
-    /* double absxtol = c3opt_get_absxtol(opt); */
-    
-    /* int * free_vars = calloc_int(d); */
-    /* // first index set */
-    /* for (size_t ii = 0; ii < d; ii++){ */
-    /*     free_vars[ii] = 1; */
-    /*     if (x[ii] > lb[ii]){ */
-    /*         if (x[ii] < ub[ii]){ */
-    /*             free_vars[ii] = 1; */
-    /*         } */
-    /*         else if (grad[ii] < 0){ */
-    /*             free_vars[ii] = 1; */
-    /*         } */
-    /*         else{ */
-    /*             free_vars[ii] = 0; // on boundary and gradient points out; */
-    /*         } */
-    /*     } */
-    /*     else if (grad[ii] > 0){ */
-    /*         free_vars[ii] = 1; // on boundary and gradient points in */
-    /*     } */
-    /*     else{ */
-    /*         free_vars[ii] = 0; */
-    /*     } */
-    /* } */
-    
-    /* double * sbar = calloc_double(d*d); */
-    /* for (size_t ii = 0; ii < d; ii++){ */
-    /*     for (size_t jj = 0; jj < d; jj++){ */
-    /*         if ( (free_vars[ii] == 1) && (free_vars[jj] == 1)){ */
-    /*             sbar[ii*d + jj ] = invhess[ii*d+jj]; */
-    /*         } */
-    /*     } */
-    /* } */
-
-    /* double * dir1 = calloc_double(d); */
-    /* cblas_dsymv(CblasColMajor,CblasUpper, */
-    /*             d,-1.0,sbar,d,grad,1,0.0,dir1,1); */
-
-    /* // second index set */
-    /* for (size_t ii = 0; ii < d; ii++ ){ */
-    /*     if (free_vars[ii] == 1){ */
-    /*         if (x[ii] > lb[ii]){ */
-    /*             if (x[ii] >= ub[ii]){ */
-    /*                 if (dir1[ii] > 0){ */
-    /*                     free_vars[ii] = 0; */
-    /*                 } */
-    /*             } */
-    /*         } */
-    /*         else if (dir1[ii] < 0.0){ */
-    /*             free_vars[ii] = 0; */
-    /*         } */
-    /*     } */
-    /* } */
-    /* double * shat = calloc_double(d*d); */
-    /* for (size_t ii = 0; ii < d; ii++){ */
-    /*     for (size_t jj = 0; jj < d; jj++){ */
-    /*         if ( (free_vars[ii] == 1) && (free_vars[jj] == 1)){ */
-    /*             shat[ii*d + jj ] = invhess[ii*d+jj]; */
-    /*         } */
-    /*     } */
-    /* } */
-/* } */
 
 
 /***********************************************************//**
@@ -838,6 +1282,17 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     opt->niters = 1;    
 
     *fval = c3opt_eval(opt,x,grad);
+    if (opt->store_func == 1){
+        opt->stored_func[opt->niters-1] = *fval;
+    }
+    if (opt->store_grad == 1){
+        memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double));
+    }
+    if (opt->store_x == 1){
+        memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
+    }
+
+
     
     cblas_dsymv(CblasColMajor,CblasUpper,
                 d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
@@ -868,29 +1323,48 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     int onbound = 0;
     int converged = 0;
     int res = 0;
-    double sc;
+    double sc = 0.0;;
+    opt->prev_eval = 0.0;
+    enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
     while (converged == 0){
         
         memmove(workspace,x,d*sizeof(double));
         fvaltemp = *fval;
+        if (alg == BACKTRACK){
+            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
+                              x,fval,&res);
+            c3opt_eval(opt,x,workspace+2*d);
+        }
+        else if (alg == STRONGWOLFE){
+            memmove(workspace+2*d,grad,d*sizeof(double));
+            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                       workspace+2*d,workspace+d,
+                                       x,fval,&res);
+        }
+        else if (alg == WEAKWOLFE){
+            memmove(workspace+2*d,grad,d*sizeof(double));
+            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                       workspace+2*d,workspace+d,
+                                       x,fval,&res);
+        }
+        /* assert (*fval < fvaltemp); */
+        assert (res > -1);
 
-        sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
-                          x,fval,&res);
-        
-        /* if (verbose == 1){ */
-        /*     printf("%G,%G\n",workspace[0],workspace[1]); */
-        /*     printf("dir = ");dprint(d,workspace+d); */
-        /*     printf("fold,fnew=(%G,%G)\n",fvaltemp,*fval); */
-        /*     printf("grad ="); dprint(d,grad); */
-        /*     printf("sc = %G\n",sc); */
-        /*     printf("%G,%G\n",x[0],x[1]); */
-        /* } */
+        opt->prev_eval = fvaltemp;
         double * s = workspace+d;
         cblas_dscal(d,sc,s,1);
 
-        /* if (res != 0){ */
-        /*     return res; */
-        /* } */
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = *fval;
+        }
+        if (opt->store_grad == 1){
+            memmove(opt->stored_grad+opt->niters*opt->d,workspace+2*d,d*sizeof(double));
+        }
+        if (opt->store_x == 1){
+            memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
+        }
+
+        
         opt->niters++;
         iter += 1;
         if (iter > maxiter){
@@ -898,8 +1372,6 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             return C3OPT_MAXITER_REACHED;
         }
 
-        c3opt_eval(opt,x,workspace+2*d);
-        
         // compute difference in gradients
         cblas_daxpy(d,-1.0,grad,1,workspace+2*d,1); 
         double * y = workspace+2*d;
@@ -1001,6 +1473,192 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     return ret;
 }
 
+/***********************************************************//**
+    Projected Gradient (Batch)
+
+    \param[in]     opt        - optimization
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+    \param[in,out] grad       - gradient at final point
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+***************************************************************/
+int c3_opt_gradient(struct c3Opt * opt,
+                    double * x, double * fval, double * grad)
+{
+
+    size_t d = c3opt_get_d(opt);
+    double * workspace = c3opt_get_workspace(opt);
+    int verbose = c3opt_get_verbose(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t maxiter = c3opt_get_maxiter(opt);
+    double gtol = c3opt_get_gtol(opt);
+    double relftol = c3opt_get_relftol(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+    
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 1;    
+
+    *fval = c3opt_eval(opt,x,grad);
+    if (opt->store_func == 1){
+        opt->stored_func[opt->niters-1] = *fval;
+    }
+    if (opt->store_grad == 1){
+        memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double));
+    }
+    if (opt->store_x == 1){
+        memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
+    }
+
+    double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1));    
+    int ret = C3OPT_SUCCESS;;
+
+    if (verbose > 0){
+
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,grad_norm);
+        if (verbose > 1){
+            printf("\t x = "); dprint(d,x);
+        }
+    }
+
+    if ( grad_norm < gtol){
+        return C3OPT_GTOL_REACHED;
+    }
+
+    size_t iter = 1;
+    double fvaltemp;
+    int onbound = 0;
+    int converged = 0;
+    int res = 0;
+    double eta;
+    opt->prev_eval = 0.0;
+    enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
+    /* printf("alpha = %G\n",c3opt_ls_get_alpha(opt)); */
+    while (converged == 0){
+        
+        memmove(workspace,x,d*sizeof(double));
+        for (size_t ii = 0; ii < d; ii++){
+            workspace[ii+d] = -grad[ii];
+        }
+        fvaltemp = *fval;
+
+        if (alg == BACKTRACK){
+            c3opt_ls_box(opt,workspace,fvaltemp,grad,
+                         workspace+d,
+                         x,fval,&res);
+            *fval = c3opt_eval(opt,x,grad);
+        }
+        else if (alg == STRONGWOLFE){
+            c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
+        }
+        else if (alg == WEAKWOLFE){
+            /* printf("call weak-wolfe, alpha=%G\n",c3opt_ls_get_alpha(opt)); */
+            c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                  grad,workspace+d,
+                                  x,fval,&res);
+        }
+        
+
+        opt->prev_eval = fvaltemp;
+
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = *fval;
+        }
+        if (opt->store_grad == 1){
+            memmove(opt->stored_grad+opt->niters*opt->d,grad,d*sizeof(double));
+        }
+        if (opt->store_x == 1){
+            memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
+        }
+        
+        opt->niters++;
+        iter += 1;
+        if (iter > maxiter){
+            return C3OPT_MAXITER_REACHED;
+        }
+
+        eta = cblas_ddot(d,grad,1,grad,1);
+        onbound = 0;
+        for (size_t ii = 0; ii < d; ii++){
+            if ((x[ii] <= lb[ii]) || (x[ii] >= ub[ii])){
+                onbound = 1;
+                break;
+            }
+        }
+        double diff = fabs(*fval - fvaltemp);
+        if (fabs(fvaltemp) > 1e-10){
+            diff /= fabs(fvaltemp);
+        }
+
+        double xdiff = 0.0;
+        for (size_t ii = 0; ii < d; ii++){
+            xdiff += pow(x[ii]-workspace[ii],2);
+        }
+        xdiff = sqrt(xdiff);
+        if (onbound == 1){
+            if (diff < relftol){
+                ret = C3OPT_FTOL_REACHED;
+                converged = 1;
+            }
+            else{
+                if (xdiff < absxtol){
+                    ret = C3OPT_XTOL_REACHED;
+                    converged = 1;
+                }
+            }
+        }
+        else{
+            if ( eta < pow(gtol,2)){
+                ret = C3OPT_GTOL_REACHED;
+                converged = 1;
+            }
+            else if (diff < relftol){
+                ret = C3OPT_FTOL_REACHED;
+                converged = 1;
+            }
+            else if (xdiff < absxtol){
+                ret = C3OPT_XTOL_REACHED;
+                converged = 1;
+            }
+        }
+        
+        if (verbose > 0){
+            printf("Iteration:%zu/%zu\n",iter,maxiter);
+            printf("\t f(x)          = %3.5G\n",*fval);
+            printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
+            printf("\t |x - x_p|     = %3.5G\n",xdiff);
+            printf("\t |g| =         = %3.5G\n",eta);
+            printf("\t Onbound       = %d\n",onbound);
+            if (verbose > 1){
+                printf("\t x = "); dprint(d,x);
+            }
+
+        }
+    }
+    return ret;
+}
+
+/***********************************************************//**
+    Main minimization routine
+
+    \param[in]     opt        - optimization
+    \param[in,out] start       - starting/final point
+    \param[in,out] minf       - final function value
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+***************************************************************/
 int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
 {
     int res = 0;
@@ -1014,6 +1672,12 @@ int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
         res = c3_opt_damp_bfgs(opt,start,minf,grad,invhess);
         free(grad); grad = NULL;
         free(invhess); invhess = NULL;
+    }
+    else if (opt->alg == BATCHGRAD){
+        size_t d = c3opt_get_d(opt);
+        double * grad = calloc_double(d);
+        res = c3_opt_gradient(opt,start,minf,grad);
+        free(grad); grad = NULL;
     }
     else if (opt->alg == BRUTEFORCE){
         size_t minind = 0;
@@ -1036,6 +1700,16 @@ int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
     }
     return res;
 }
+
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+/////////////   Old and standalone /////////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
 
 /***********************************************************//**

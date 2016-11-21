@@ -71,7 +71,7 @@ double * dconcat_cols(size_t, size_t, size_t, double *, double *);
 
 char * serialize_double_to_text(double);
 double deserialize_double_from_text(char *);
-char * serialize_darray_to_text(size_t, double *);
+char * serialize_darray_to_text(size_t, const double *);
 double * deserialize_darray_from_text(char *, size_t *);
 
 int darray_save(size_t, size_t, double *, char *, int);

@@ -49,19 +49,16 @@ void RunAllTests(void) {
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * cheb = ChebGetSuite();
-    CuSuite * leg = LegGetSuite();
+    CuSuite * leg  = LegGetSuite();
     CuSuite * herm = HermGetSuite();
-    CuSuite * sp = StandardPolyGetSuite();
-    CuSuite * alg = PolyAlgorithmsGetSuite();
-    CuSuite * ser = PolySerializationGetSuite();
-    
+    CuSuite * sp   = StandardPolyGetSuite();
+    CuSuite * alg  = PolyAlgorithmsGetSuite();
+    CuSuite * ser  = PolySerializationGetSuite();
     CuSuite * lelm = LelmGetSuite();
-
-    CuSuite * ll = LinkedListGetSuite();
-
-    
-    CuSuite * pp = PiecewisePolyGetSuite();
-    CuSuite * pap = PolyApproxSuite();
+    CuSuite * ll   = LinkedListGetSuite();
+    CuSuite * pp   = PiecewisePolyGetSuite();
+    CuSuite * pap  = PolyApproxSuite();
+    CuSuite * preg = PolyRegressionSuite();
 
     // polynomials
     CuSuiteAddSuite(suite, cheb);
@@ -70,15 +67,14 @@ void RunAllTests(void) {
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
-
     // linear elements
     CuSuiteAddSuite(suite, lelm);
-
     // other stuff
     CuSuiteAddSuite(suite, ll);
-    
     CuSuiteAddSuite(suite, pp);
     CuSuiteAddSuite(suite, pap);
+
+    CuSuiteAddSuite(suite, preg);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -99,6 +95,9 @@ void RunAllTests(void) {
     CuSuiteDelete(pp);
 
     CuSuiteDelete(pap);
+    
+    CuSuiteDelete(preg);
+        
     CuStringDelete(output);
     free(suite);
 }

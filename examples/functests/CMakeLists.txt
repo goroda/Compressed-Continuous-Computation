@@ -5,7 +5,8 @@ add_executable(functest functest.c)
 target_link_libraries(functest -g
   prob
   clinalg 
-  funcs 
+  funcs
+  opt 
   quadrature 
   linalg 
   array 

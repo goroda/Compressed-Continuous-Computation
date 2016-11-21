@@ -58,14 +58,18 @@ void RunAllTests(void) {
     CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
+
+    CuSuite * regress = CLinalgRegressGetSuite();
     
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
+    /* CuSuiteAddSuite(suite, clin); */
+    /* CuSuiteAddSuite(suite, qma); */
+    /* CuSuiteAddSuite(suite, ftr); */
+    /* CuSuiteAddSuite(suite, cind); */
+    /* CuSuiteAddSuite(suite, fta); */
+    /* CuSuiteAddSuite(suite, dmrg); */
+    /* CuSuiteAddSuite(suite, diff); */
+
+    CuSuiteAddSuite(suite, regress);
     
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -79,6 +83,8 @@ void RunAllTests(void) {
     CuSuiteDelete(fta);
     CuSuiteDelete(dmrg);
     CuSuiteDelete(diff);
+
+    CuSuiteDelete(regress);
     
     CuStringDelete(output);
     free(suite);

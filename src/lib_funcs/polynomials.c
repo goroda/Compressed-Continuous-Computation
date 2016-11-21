@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
+//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -304,6 +305,7 @@ enum poly_type ope_opts_get_ptype(const struct OpeOpts * ope)
     assert (ope != NULL);
     return ope->ptype;
 }
+
 
 /********************************************************//**
 *   Initialize a standard basis polynomial
@@ -755,9 +757,17 @@ orth_poly_eval(const struct OrthPoly * rec, size_t n, double x)
     }
 }
 
+/********************************************************//**
+*   Get number of polynomials
+*************************************************************/
+size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->num_poly;
+}
 
 /********************************************************//**
-*   Initialize an expanion of a certain orthogonal polynomial family
+*   Initialize an expansion of a certain orthogonal polynomial family
 *            
 *   \param[in] ptype    - type of polynomial
 *   \param[in] num_poly - number of polynomials
@@ -801,6 +811,78 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
     p->upper_bound = ub;
 
     return p;
+}
+
+/********************************************************//**
+*   Initialize an expanion of a certain orthogonal polynomial family
+*            
+*   \param[in] opts    - approximation options
+*   \param[in] nparams - number of polynomials
+*   \param[in] param   - parameters
+*
+*   \return p - orthogonal polynomial expansion
+*************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_create_with_params(struct OpeOpts * opts,
+                                       size_t nparams, const double * param)
+{
+
+    struct OrthPolyExpansion * poly = NULL;
+    poly = orth_poly_expansion_init(opts->ptype,nparams,opts->lb,opts->ub);
+    for (size_t ii = 0; ii < nparams; ii++){
+        poly->coeff[ii] = param[ii];
+    }
+    return poly;
+}
+
+/********************************************************//**
+*   Get parameters defining polynomial (for now just coefficients)
+*************************************************************/
+size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion * ope, double * param)
+{
+    assert (ope != NULL);
+    memmove(param,ope->coeff,ope->num_poly * sizeof(double));
+    return ope->num_poly;
+}
+
+/********************************************************//**
+*   Update an expansion's parameters
+*            
+*   \param[in] ope     - expansion to update
+*   \param[in] nparams - number of polynomials
+*   \param[in] param   - parameters
+*************************************************************/
+void
+orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
+                                  size_t nparams, const double * param)
+{
+
+    size_t nold = ope->num_poly;
+    if (nold >= nparams){
+        ope->num_poly = nparams;
+        for (size_t ii = 0; ii < nparams; ii++){
+            ope->coeff[ii] = param[ii];
+        }
+        for (size_t ii = nparams; ii < nold; ii++){
+            ope->coeff[ii] = 0.0;
+        }
+    }
+    else{
+        if (nparams <= ope->nalloc){
+            for (size_t ii = 0; ii < nparams; ii++){
+                ope->coeff[ii] = param[ii];
+            }
+        }
+        else{
+            free(ope->coeff); ope->coeff = NULL;
+            ope->nalloc = nparams;
+            ope->num_poly = nparams;
+            ope->coeff = calloc_double(ope->nalloc);
+            for (size_t ii = 0; ii < nparams; ii++){
+                ope->coeff[ii] = param[ii];
+            }
+        }
+    }
 }
 
 /********************************************************//**
@@ -1048,7 +1130,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
-    assert (p->p->ptype != HERMITE);
+    /* assert (p->p->ptype != HERMITE); */
     struct OrthPolyExpansion * out = NULL;
     if ( p == NULL ){
         return out;
@@ -1077,9 +1159,11 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
             //orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);
                 break;
             case HERMITE:
-                assert(1 == 0);
+                fprintf(stderr,"Derivative of hermite polynomials not yet implemented\n");
+                exit(1);
             case CHEBYSHEV:
-                break;
+                fprintf(stderr,"Derivative of chebyshev polynomials not yet implemented\n");
+                exit(1);
             case STANDARD:
                 break;
         }
@@ -1384,6 +1468,7 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     return out;
 }
 
+
 /********************************************************//**
 *   Evaluate each orthonormal polynomial expansion that is in an 
 *   array of generic functions 
@@ -1452,6 +1537,50 @@ int legendre_poly_expansion_arr_eval(size_t n,
 }
 
 /********************************************************//**
+*   Gradients with respect to parameters of an orthonormal polynomial
+*   expansion
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradients
+*   \param[in]     inc  - increment of gradient
+*
+*   \return 0=success
+*************************************************************/
+int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+{
+    double p [2];
+    double pnew;
+    
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
+    double off = poly->p->upper - m * poly->upper_bound;
+    double x_norm =  m * x + off;
+    
+    size_t iter = 0;
+    
+    p[0] = 1.0;
+    grad[0*inc] = p[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = x_norm;
+        grad[iter*inc] = p[1];
+        iter++;
+    }   
+    for (iter = 2; iter < poly->num_poly; iter++){
+        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
+        pnew /= (double) iter;
+        grad[iter*inc] = pnew;
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    /* printf("iter=%zu grad here = ",iter); dprint(iter+1,grad); */
+    return 0;
+}
+
+
+
+/********************************************************//**
 *   Evaluate a Chebyshev polynomial expansion using clenshaw algorithm
 *
 *   \param[in] poly - polynomial expansion
@@ -1480,6 +1609,48 @@ double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     double out = poly->coeff[0] + x_norm * p[0] - p[1];
     return out;
 }
+
+/********************************************************//**
+*   Gradients with respect to parameters of an orthonormal polynomial
+*   expansion
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradients
+*   \param[in]     inc  - increment of gradient
+*
+*   \return 0=success
+*************************************************************/
+int chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+{
+
+    double p [2];
+    double pnew;
+    
+    double m = (poly->p->upper - poly->p->lower) / 
+        (poly->upper_bound- poly->lower_bound);
+    double off = poly->p->upper - m * poly->upper_bound;
+    double x_norm =  m * x + off;
+    
+    size_t iter = 0;
+    
+    p[0] = 1.0;
+    grad[0*inc] = p[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = x_norm;
+        grad[iter*inc] = p[1];
+        iter++;
+    }   
+    for (iter = 2; iter < poly->num_poly; iter++){
+        pnew = 2.0 * x_norm * p[1] - p[0];
+        grad[iter*inc] = pnew;
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    return 0;
+}
+
 
 /********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
@@ -1528,6 +1699,264 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
         }
     }
     return out;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   with respect to the parameters
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     nx   - number of x points
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return out - polynomial value
+*************************************************************/
+int orth_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
+{
+    int res = 1;
+    if (poly->p->ptype == LEGENDRE){
+        for (size_t ii = 0; ii < nx; ii++){
+            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+        }
+    }
+    else if (poly->p->ptype == HERMITE){
+        for (size_t ii = 0; ii < nx; ii++){
+            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+        }
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        for (size_t ii = 0; ii < nx; ii++){
+            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+        }
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return res;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly  - polynomial
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
+                                            double scale, double * grad)
+{
+    int res = 1;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            grad[ii] += 2.0*scale * poly->coeff[ii];
+        }
+        res = 0;
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (n1 % 2 == 0){
+                    grad[ii] += 2.0*scale*temp[n1/2];
+                }
+                if (n2 % 2 == 0){
+                    grad[ii] += 2.0*scale*temp[n2/2];
+                }
+            }
+        }
+        free(temp); temp = NULL;
+        res = 0;
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return res;
+}
+
+/********************************************************//**
+    Squared norm of a function in RKHS 
+
+    \param[in]     poly        - polynomial
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+
+    \return  0 - success, 1 -failure
+************************************************************/
+double
+orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
+                                      enum coeff_decay_type decay_type,
+                                      double decay_param)
+{
+    double out = 0.0;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        if (decay_type == ALGEBRAIC){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow(decay_param,ii);
+            }   
+        }
+        else if (decay_type == EXPONENTIAL){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow((double)ii+1.0,-decay_param);
+            }   
+        }
+        else{
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii];
+            }
+        }
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            double temp_sum = 0.0;
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (n1 % 2 == 0){
+                    temp_sum += poly->coeff[jj]*temp[n1/2];
+                }
+                if (n2 % 2 == 0){
+                    temp_sum += poly->coeff[jj]*temp[n2/2];
+                }
+            }
+            if (decay_type == ALGEBRAIC){
+                out += temp_sum*temp_sum * pow(decay_param,ii);
+            }
+            else if (decay_type == EXPONENTIAL){
+                out += temp_sum*temp_sum * pow((double)ii+1.0,-decay_param);
+            }
+            else{
+                out += temp_sum * temp_sum;
+            }
+        }
+        free(temp); temp = NULL;
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return out;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly        - polynomial
+    \param[in]     scale       - scaling for additional gradient
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+    \param[in,out] grad        - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+
+    \note 
+    NEED TO DO SOME TESTS FOR CHEBYSHEV (dont use for now)
+************************************************************/
+int
+orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
+                                                 double scale, enum coeff_decay_type decay_type,
+                                                 double decay_param, double * grad)
+{
+    int res = 1;
+    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+        if (decay_type == ALGEBRAIC){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii] * pow(decay_param,ii);
+            }   
+        }
+        else if (decay_type == EXPONENTIAL){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii] * pow((double)ii+1.0,-decay_param);
+            }   
+        }
+        else{
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                grad[ii] += 2.0*scale * poly->coeff[ii];
+            }
+        }
+        res = 0;
+    }
+    else if (poly->p->ptype == CHEBYSHEV){
+        // THIS COULD BE WRONG!!
+        double * temp = calloc_double(poly->num_poly);
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
+        }
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            for (size_t jj = 0; jj < poly->num_poly; jj++){
+                size_t n1 = ii+jj;
+                size_t n2;
+                if (ii > jj){
+                    n2 = ii-jj;
+                }
+                else{
+                    n2 = jj-ii;
+                }
+                if (decay_type == ALGEBRAIC){
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2]* pow(decay_param,ii);
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2]* pow(decay_param,ii);
+                    }
+                }
+                else if (decay_type == EXPONENTIAL){
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2]*pow((double)ii+1.0,-decay_param);
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2]*pow((double)ii+1.0,-decay_param);
+                    }
+                }
+                else {
+                    if (n1 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n1/2];
+                    }
+                    if (n2 % 2 == 0){
+                        grad[ii] += 2.0*scale*temp[n2/2];
+                    }
+                }
+            }
+        }
+        free(temp); temp = NULL;
+        res = 0;
+    }
+    else{
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        exit(1);
+    }
+    return res;
 }
 
 /********************************************************//**
