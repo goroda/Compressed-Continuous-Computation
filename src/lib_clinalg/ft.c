@@ -62,6 +62,59 @@
     #define VFTCROSS 0
 #endif
 
+
+struct FTMemSpace
+{
+    size_t num_spaces;
+    size_t space_size; // increment 1
+    double * vals; // num_spaces x space_size
+};
+
+struct FTMemSpace * ft_mem_space_alloc(size_t num_spaces, size_t space_size)
+{
+    struct FTMemSpace * ftmem = malloc(sizeof(struct FTMemSpace));
+    if (ftmem == NULL){
+        fprintf(stderr, "Failure to allocate memory in FT\n");
+        return NULL;
+    }
+
+    ftmem->num_spaces = num_spaces;
+    ftmem->space_size = space_size;
+    ftmem->vals = calloc_double(num_spaces * space_size);
+
+    return ftmem;
+}
+
+void ft_mem_space_free(struct FTMemSpace * ftmem)
+{
+    if (ftmem != NULL){
+        free(ftmem->vals); ftmem->vals = NULL;
+        free(ftmem); ftmem = NULL;
+    }
+}
+
+int ft_mem_space_check(struct FTMemSpace * ftmem, size_t num_spaces, size_t space_size)
+{
+    if (ftmem == NULL){
+        return 1;
+    }
+    if ( (ftmem->num_spaces < num_spaces) || (ftmem->space_size != space_size))
+    {
+        ftmem->num_spaces = num_spaces;
+        ftmem->space_size = space_size;
+        free(ftmem->vals); ftmem->vals = NULL;
+        ftmem->vals = calloc_double(num_spaces * space_size);
+    }
+    
+    return 0;
+    
+}
+    
+size_t ft_mem_space_get_incr(struct FTMemSpace * ftmem)
+{
+    return ftmem->space_size;
+}
+
 /***********************************************************//**
     Allocate space for a function_train
 
@@ -135,9 +188,12 @@ void function_train_free(struct FunctionTrain * ft)
             qmarray_free(ft->cores[ii]);ft->cores[ii] = NULL;
         }
         free(ft->cores); ft->cores=NULL;
-        free(ft->evalspace1); ft->evalspace1 = NULL;
-        free(ft->evalspace2); ft->evalspace2 = NULL;
-        free(ft->evalspace3); ft->evalspace3 = NULL;
+        /* free(ft->evalspace1); ft->evalspace1 = NULL; */
+        /* free(ft->evalspace2); ft->evalspace2 = NULL; */
+        /* free(ft->evalspace3); ft->evalspace3 = NULL; */
+        ft_mem_space_free(ft->evalspace1); ft->evalspace1 = NULL;
+        ft_mem_space_free(ft->evalspace2); ft->evalspace2 = NULL;
+        ft_mem_space_free(ft->evalspace3); ft->evalspace3 = NULL;
         free_dd(ft->dim,ft->evaldd1); ft->evaldd1 = NULL;
         /* free_dd(2*ft->dim,ft->evaldd2);   ft->evaldd2 = NULL; */
         free_dd(ft->dim,ft->evaldd3);     ft->evaldd3 = NULL;
@@ -495,6 +551,32 @@ void function_train_eval_prev_core(struct FunctionTrain * ft, size_t core, size_
     
 }
 
+/***********************************************************//**
+    Some overhead for function train evaluation functions
+***************************************************************/
+void function_train_pre_eval(struct FunctionTrain * ft, size_t * maxrank,
+                             double ** t1,double ** t2,double ** t3, size_t N)
+{
+
+    *maxrank = function_train_get_maxrank(ft);
+    size_t mr2 = *maxrank * *maxrank;
+    int ok = ft_mem_space_check(ft->evalspace1, N, mr2);
+    if (ok == 1){
+        ft->evalspace1 = ft_mem_space_alloc(N, mr2);
+    }
+    ok = ft_mem_space_check(ft->evalspace2, N, mr2);
+    if (ok == 1){
+        ft->evalspace2 = ft_mem_space_alloc(N, mr2);
+    }
+    ok = ft_mem_space_check(ft->evalspace3, N, mr2);
+    if (ok == 1){
+        ft->evalspace3 = ft_mem_space_alloc(N, mr2);
+    }
+    
+    *t1 = ft->evalspace1->vals;
+    *t2 = ft->evalspace2->vals;
+    *t3 = ft->evalspace3->vals;
+}
 
 /***********************************************************//**
     Evaluate a function train up to, and including core k
@@ -513,25 +595,14 @@ void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, cons
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    size_t ii = 0;
-    size_t maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(maxrank*maxrank);
-    }
+    size_t maxrank,ii = 0;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,1);
 
-    double * t1 = ft->evalspace1;
     generic_function_1darray_eval2(
         ft->cores[ii]->nrows * ft->cores[ii]->ncols,
         ft->cores[ii]->funcs, x[ii],t1);
     
-    double * t2 = ft->evalspace2;
-    double * t3 = ft->evalspace3;
     int onsol = 1;
     for (ii = 1; ii < core; ii++){
         if (ii%2 == 1){
@@ -555,30 +626,6 @@ void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, cons
         fprintf(stderr,"Weird error in function_train_val\n");
         exit(1);
     }
-}
-
-
-/***********************************************************//**
-    Some overhead for function train evaluation functions
-***************************************************************/
-void function_train_pre_eval(struct FunctionTrain * ft, size_t * maxrank,
-                             double ** t1,double ** t2,double ** t3, size_t N)
-{
-
-    *maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(*maxrank * *maxrank * N);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(*maxrank * *maxrank * N);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(*maxrank * *maxrank * N);
-    }
-
-    *t1 = ft->evalspace1;
-    *t2 = ft->evalspace2;
-    *t3 = ft->evalspace3;
 }
 
 /***********************************************************//**
@@ -615,15 +662,15 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
             onsol=1;
         }
 
-        if (ii == dim-1){
-            if (onsol == 2){
-                printf("pre_eval = "); dprint(2,t1);
-            }
-            else{
-                printf("pre_eval = "); dprint(2,t3);
-            }
-            printf("last_core_eval = "); dprint(2,t2);
-        }
+        /* if (ii == dim-1){ */
+        /*     if (onsol == 2){ */
+        /*         printf("pre_eval = "); dprint(2,t1); */
+        /*     } */
+        /*     else{ */
+        /*         printf("pre_eval = "); dprint(2,t3); */
+        /*     } */
+        /*     printf("last_core_eval = "); dprint(2,t2); */
+        /* } */
     }
     
     double out;// = 0.123456789;
@@ -687,9 +734,11 @@ void function_train_core_update_params(struct FunctionTrain * ft, size_t core,
     \param[in]     x                - locations at which to evaluate
     \param[in]     core             - dimension to evaluate
     \param[in]     nparam           - total number of parameters in the core
-    \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, where r1,r2 are the size of the core
+    \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, 
+                                      where r1,r2 are the size of the core
     \param[in]     inc_grad         - increment between gradient evaluations for different locations
-    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params of any function making up the core
+    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params of any 
+                                      function making up the core
     \param[in,out] grad             - gradient of the function (nparam * n)
     \param[in,out] pre              - vector of evaluation of all cores prior to *core* r1 * n
     \parma[in]     inc_pre          - increment between data for previous cores
@@ -699,10 +748,14 @@ void function_train_core_update_params(struct FunctionTrain * ft, size_t core,
     \parma[in]     inc_post         - increment between data for evaluations after current core
     \param[in,out] val              - evaluation
 ***************************************************************/
-void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n, const double * x, size_t core,
-                                         size_t nparam, double * grad_core_space1, size_t inc_grad, double * grad_core_space2,
+void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n,
+                                         const double * x, size_t core,
+                                         size_t nparam,
+                                         double * grad_core_space1,size_t inc_grad,
+                                         double * grad_core_space2,
                                          double * grad, double * pre, size_t inc_pre,
-                                         double * cur, size_t inc_cur, double * post, size_t inc_post, double * val)
+                                         double * cur, size_t inc_cur, double * post,
+                                         size_t inc_post, double * val)
 {
 
     size_t dim = ft->dim;
@@ -822,7 +875,7 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n, co
             for (size_t kk = 0; kk < nparam; kk++){
                 grad[kk + jj*nparam] = cblas_ddot(r1,grad_core_space1 + kk*r1*r2 + jj*inc_grad,1,pre + jj*inc_pre,1);
             }
-            printf("pre1 = "); dprint(r1,pre+jj*inc_pre);
+            /* printf("pre1 = "); dprint(r1,pre+jj*inc_pre); */
             val[jj] = cblas_ddot(r1,cur + jj * inc_cur,1,pre + jj * inc_pre,1);
         }
     }
@@ -1107,17 +1160,11 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft,
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    
-    size_t maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(maxrank*maxrank);
-    }
+
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,1);
+
     if (ft->evaldd1 == NULL){
         ft->evaldd1 = malloc_dd(dim);
         for (size_t ii = 0; ii < dim; ii++){
@@ -1198,35 +1245,35 @@ double function_train_eval_co_perturb(struct FunctionTrain * ft,
 
         generic_function_1darray_eval2(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii], ft->evalspace1);
+            ft->cores[ii]->funcs, pert[2*ii],t1);
         generic_function_1darray_eval2(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii+1], ft->evalspace2);
+            ft->cores[ii]->funcs, pert[2*ii+1], t2);
         if (ii == 0){
-            vals[ii] = cblas_ddot(ft->ranks[1],ft->evalspace1,1,bprod[1],1);
-            vals[ii+1] = cblas_ddot(ft->ranks[1],ft->evalspace2,1,bprod[1],1);
+            vals[ii] = cblas_ddot(ft->ranks[1],t1,1,bprod[1],1);
+            vals[ii+1] = cblas_ddot(ft->ranks[1],t2,1,bprod[1],1);
         }
         else if (ii == dim-1){
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace1,1,
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],t1,1,
                                     fprod[dim-2],1);
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace2,
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],t2,
                                       1,fprod[dim-2],1);
         }
         else{
             /* double * temp = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        ft->evalspace1, ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+                        t1, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, t3, 1);
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],t3,1,
                                     fprod[ii-1],1);
 
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        ft->evalspace2, ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
+                        t2, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, t3, 1);
 
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],t3,1,
                                     fprod[ii-1],1);
             /* free(temp); temp = NULL; */
         }
@@ -1269,16 +1316,9 @@ double function_train_eval_co_perturb_ind(struct FunctionTrain * ft,
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    size_t maxrank = function_train_get_maxrank(ft);
-    if (ft->evalspace1 == NULL){
-        ft->evalspace1 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace2 == NULL){
-        ft->evalspace2 = calloc_double(maxrank*maxrank);
-    }
-    if (ft->evalspace3 == NULL){
-        ft->evalspace3 = calloc_double(maxrank*maxrank);
-    }
+    size_t maxrank;
+    double *t1=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,1);   
     if (ft->evaldd1 == NULL){
         ft->evaldd1 = malloc_dd(dim);
         for (size_t ii = 0; ii < dim; ii++){
@@ -1359,35 +1399,35 @@ double function_train_eval_co_perturb_ind(struct FunctionTrain * ft,
 
         generic_function_1darray_eval2_ind(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii], ft->evalspace1);
+            ft->cores[ii]->funcs, pert[2*ii], t1);
         generic_function_1darray_eval2_ind(
             ft->cores[ii]->nrows * ft->cores[ii]->ncols,
-            ft->cores[ii]->funcs, pert[2*ii+1], ft->evalspace2);
+            ft->cores[ii]->funcs, pert[2*ii+1], t2);
         if (ii == 0){
-            vals[ii] = cblas_ddot(ft->ranks[1],ft->evalspace1,1,bprod[1],1);
-            vals[ii+1] = cblas_ddot(ft->ranks[1],ft->evalspace2,1,bprod[1],1);
+            vals[ii] = cblas_ddot(ft->ranks[1],t1,1,bprod[1],1);
+            vals[ii+1] = cblas_ddot(ft->ranks[1],t2,1,bprod[1],1);
         }
         else if (ii == dim-1){
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace1,1,
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],t1,1,
                                     fprod[dim-2],1);
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace2,
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],t2,
                                       1,fprod[dim-2],1);
         }
         else{
             /* double * temp = calloc_double(ft->ranks[ii] * ft->ranks[ii+1]); */
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        ft->evalspace1, ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
-            vals[2*ii] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+                        t1, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, t3, 1);
+            vals[2*ii] = cblas_ddot(ft->ranks[ii],t3,1,
                                     fprod[ii-1],1);
 
             cblas_dgemv(CblasColMajor,CblasNoTrans,
                         ft->ranks[ii], ft->ranks[ii+1], 1.0,
-                        ft->evalspace2, ft->ranks[ii],
-                        bprod[ii+1], 1, 0.0, ft->evalspace3, 1);
+                        t2, ft->ranks[ii],
+                        bprod[ii+1], 1, 0.0, t3, 1);
 
-            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],ft->evalspace3,1,
+            vals[2*ii+1] = cblas_ddot(ft->ranks[ii],t3,1,
                                       fprod[ii-1],1);
             /* free(temp); temp = NULL; */
         }

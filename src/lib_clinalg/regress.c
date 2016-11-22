@@ -177,20 +177,15 @@ void regress_als_free(struct RegressALS * als)
 {
     if (als != NULL){
 
-        printf("weird\n");
-        iprint_sz(als->dim,als->nparams);
         free(als->nparams);  als->nparams    = NULL;
 
-        printf("why?!\n");
         reg_mem_space_free(als->prev_eval); als->prev_eval = NULL;
         reg_mem_space_free(als->post_eval); als->post_eval = NULL;
         reg_mem_space_free(als->curr_eval); als->curr_eval = NULL;
 
-        printf("ok?!\n");
         reg_mem_space_free(als->grad_space);      als->grad_space      = NULL;
         reg_mem_space_free(als->grad_core_space); als->grad_core_space = NULL;
         reg_mem_space_free(als->fparam_space);    als->fparam_space    = NULL;
-        printf("no?!\n");
         
         reg_mem_space_free(als->evals); als->evals = NULL;
 
@@ -316,6 +311,7 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     }
     double out=0.0, resid;
     if (grad != NULL){
+        /* printf("evaluate\n"); */
         function_train_core_param_grad_eval(
             als->ft,
             als->N, als->x, als->core, nparam,
@@ -326,7 +322,8 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
             als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
             als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
             als->evals->vals);
-        
+
+        /* printf("done with evaluations\n"); */
         for (size_t ii = 0; ii < als->N; ii++){
             /* eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d, */
             /*                                            core, nparam, */

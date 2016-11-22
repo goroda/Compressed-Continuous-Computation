@@ -43,6 +43,8 @@
 #include "qmarray.h"
 #include "indmanage.h"
 
+struct FTMemSpace;
+
 /** \struct FunctionTrain
  * \brief Functrain train
  * \var FunctionTrain::dim
@@ -57,9 +59,13 @@ struct FunctionTrain {
     size_t * ranks;
     struct Qmarray ** cores;
     
-    double * evalspace1;
-    double * evalspace2;
-    double * evalspace3;
+    /* double * evalspace1; */
+    /* double * evalspace2; */
+    /* double * evalspace3; */
+
+    struct FTMemSpace * evalspace1;
+    struct FTMemSpace * evalspace2;
+    struct FTMemSpace * evalspace3;
 
     double ** evaldd1;
     double ** evaldd2;
