@@ -1701,6 +1701,28 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
     return out;
 }
 
+/********************************************************//**
+*   Evaluate a polynomial expansion consisting of sequentially increasing 
+*   order polynomials from the same family.
+*
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y*
+*
+*   \note Currently just calls the single evaluation code
+*         Note sure if this is optimal, cache-wise
+*************************************************************/
+void orth_poly_expansion_evalN(struct OrthPolyExpansion * poly, size_t N,
+                               const double * x, size_t incx, double * y, size_t incy)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        y[ii*incy] = orth_poly_expansion_eval(poly,x[ii*incx]);
+    }
+}
+
 /********************************************************//*
 *   Evaluate the gradient of an orthonormal polynomial expansion 
 *   with respect to the parameters

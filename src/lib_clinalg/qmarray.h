@@ -184,7 +184,11 @@ void qmarray_eval(struct Qmarray *, double, double *);
 size_t qmarray_get_nparams(const struct Qmarray *,size_t *);
 size_t qmarray_get_params(struct Qmarray *,double *);
 void qmarray_update_params(struct Qmarray *, size_t, const double *);
-void qmarray_param_grad_eval(struct Qmarray *, double, double *, double *, double *);
+void qmarray_param_grad_eval(struct Qmarray *, size_t,
+                             const double *, size_t,
+                             double *, size_t,
+                             double *, size_t,
+                             double *);
 struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 
 

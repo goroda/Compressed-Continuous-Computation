@@ -44,6 +44,41 @@
 /* #include "regress.h" */
 #include "lib_linalg.h"
 
+struct RegMemSpace
+{
+
+    size_t ndata;
+    size_t one_data_size;
+    double * vals;
+};
+
+struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
+{
+    struct RegMemSpace * mem = malloc(sizeof(struct RegMemSpace));
+    if (mem == NULL){
+        fprintf(stderr, "Failure to allocate memmory of regression\n");
+        return NULL;
+    }
+
+    mem->ndata = ndata;
+    mem->one_data_size = one_data_size;
+    mem->vals = calloc_double(ndata * one_data_size);
+    return mem;
+}
+
+void reg_mem_space_free(struct RegMemSpace * rmem)
+{
+    if (rmem != NULL){
+        free(rmem->vals); rmem->vals = NULL;
+        free(rmem); rmem = NULL;
+    }
+}
+
+size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
+{
+    assert (rmem != NULL);
+    return rmem->one_data_size;
+}
 
 /** \struct RegressALS
  *  \brief Alternating least squares regression
@@ -69,6 +104,8 @@
  *  space for evaluation of the gradient of the core with respect to every param
  * \var RegressALS::fparam_space
  *  space for evaluation of gradient of params for a given function in a core
+ * \var RegressALS::evals
+ *  space for evaluation of cost function
  * \var RegressALS::ft
  *  function_train
  * \var RegressALS::ft_param
@@ -84,13 +121,15 @@ struct RegressALS
     const double * x;
     
     size_t core;
-    double * prev_eval;
-    double * post_eval;
-    double * curr_eval;
+    struct RegMemSpace * prev_eval;
+    struct RegMemSpace * post_eval;
+    struct RegMemSpace * curr_eval;
+    
+    struct RegMemSpace * grad_space;
+    struct RegMemSpace * grad_core_space;
+    struct RegMemSpace * fparam_space;
 
-    double * grad_space;
-    double * grad_core_space;
-    double * fparam_space;
+    struct RegMemSpace * evals;
 
     struct FunctionTrain * ft;
     double * ft_param;
@@ -109,7 +148,8 @@ struct RegressALS * regress_als_alloc(size_t dim)
     
     als->dim = dim;
     als->nparams = calloc_size_t(dim);
-    
+
+    als->N = 0;
     als->y = NULL;
     als->x = NULL;
 
@@ -121,6 +161,9 @@ struct RegressALS * regress_als_alloc(size_t dim)
     als->grad_core_space = NULL;
     als->fparam_space    = NULL;
 
+    als->evals = NULL;
+    
+    
     als->ft = NULL;
     als->ft_param = NULL;
     
@@ -135,14 +178,17 @@ void regress_als_free(struct RegressALS * als)
     if (als != NULL){
 
         free(als->nparams);  als->nparams    = NULL;
-        
-        free(als->prev_eval); als->prev_eval = NULL;
-        free(als->post_eval); als->post_eval = NULL;
-        free(als->curr_eval); als->curr_eval = NULL;
 
-        free(als->grad_space);      als->grad_space      = NULL;
-        free(als->grad_core_space); als->grad_core_space = NULL;
-        free(als->fparam_space);    als->fparam_space    = NULL;
+        
+        reg_mem_space_free(als->prev_eval); als->prev_eval = NULL;
+        reg_mem_space_free(als->post_eval); als->post_eval = NULL;
+        reg_mem_space_free(als->curr_eval); als->curr_eval = NULL;
+
+        reg_mem_space_free(als->grad_space);      als->grad_space      = NULL;
+        reg_mem_space_free(als->grad_core_space); als->grad_core_space = NULL;
+        reg_mem_space_free(als->fparam_space);    als->fparam_space    = NULL;
+
+        reg_mem_space_free(als->evals); als->evals = NULL;
 
         function_train_free(als->ft); als->ft = NULL;
         free(als->ft_param);          als->ft_param = NULL;
@@ -161,11 +207,10 @@ void regress_als_add_data(struct RegressALS * als, size_t N, const double * x, c
     als->y = y;
 }
 
-
 /***********************************************************//**
     Prepare memmory
 ***************************************************************/
-void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
+void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft, int how)
 {
     assert (als != NULL);
     assert (ft != NULL);
@@ -176,34 +221,54 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft)
     
     size_t maxrank = function_train_get_maxrank(ft);
 
-    size_t maxparamfunc = 0;
-    size_t nparamfunc = 0;
-    size_t max_core_params = 0;
-    size_t ntotparams = 0;
+    size_t max_param_within_func = 0;
+    size_t num_param_within_func = 0;
+    size_t max_num_param_within_core = 0;
+    size_t num_totparams = 0;
     for (size_t ii = 0; ii < ft->dim; ii++){
-        nparamfunc = 0;
-        als->nparams[ii] = function_train_core_get_nparams(ft,ii,&nparamfunc);
-        if (nparamfunc > maxparamfunc){
-            maxparamfunc = nparamfunc;
+        num_param_within_func = 0;
+        als->nparams[ii] = function_train_core_get_nparams(ft,ii,&num_param_within_func);
+        if (num_param_within_func > max_param_within_func){
+            max_param_within_func = num_param_within_func;
         }
-        if (als->nparams[ii] > max_core_params){
-            max_core_params = als->nparams[ii];
+        if (als->nparams[ii] > max_num_param_within_core){
+            max_num_param_within_core = als->nparams[ii];
         }
-        ntotparams += als->nparams[ii];
+        num_totparams += als->nparams[ii];
     }
 
-    als->prev_eval = calloc_double(maxrank);
-    als->post_eval = calloc_double(maxrank);
-    als->curr_eval = calloc_double(maxrank*maxrank);
-    /* max_core_params = 1000; */
-    /* printf("grad_core_space allocated = %zu\n",max_core_params*maxrank*maxrank); */
-    /* printf("max paramfunc = %zu\n",max_core_params); */
-    als->grad_space      = calloc_double(max_core_params);
-    als->grad_core_space = calloc_double(max_core_params * maxrank * maxrank);
-    als->fparam_space    = calloc_double(maxparamfunc);
+    if (how == 0){
+        als->prev_eval = reg_mem_space_alloc(1,maxrank);
+        als->post_eval = reg_mem_space_alloc(1,maxrank);
+        als->curr_eval = reg_mem_space_alloc(1,maxrank * maxrank);
+        
+        als->grad_space      = reg_mem_space_alloc(1,max_num_param_within_core);
+        als->grad_core_space = reg_mem_space_alloc(1,max_num_param_within_core * maxrank * maxrank);
 
-    als->ft = function_train_copy(ft);
-    als->ft_param = calloc_double(ntotparams);
+        als->evals = reg_mem_space_alloc(1,1);
+    }
+    else if (how == 1){
+        if (als->N == 0){
+            fprintf(stderr, "Must add data before prepping memory with option 1\n");
+            exit(1);
+        }
+        als->prev_eval = reg_mem_space_alloc(als->N,maxrank);
+        als->post_eval = reg_mem_space_alloc(als->N,maxrank);
+        als->curr_eval = reg_mem_space_alloc(als->N,maxrank * maxrank);
+
+        als->grad_space      = reg_mem_space_alloc(als->N,max_num_param_within_core);
+        als->grad_core_space = reg_mem_space_alloc(als->N, max_num_param_within_core * maxrank * maxrank);
+
+        als->evals = reg_mem_space_alloc(als->N,1);
+    }
+    else{
+        fprintf(stderr, "Memory prepping with option %d is undefined\n",how);
+        exit(1);
+    }
+    als->fparam_space = reg_mem_space_alloc(1,max_param_within_func);
+    
+    als->ft       = function_train_copy(ft);
+    als->ft_param = calloc_double(num_totparams);
 
     size_t running = 0, incr;
     for (size_t ii = 0; ii < ft->dim; ii++){
@@ -245,28 +310,39 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
             grad[ii] = 0.0;
         }
     }
-    double out=0.0, eval,resid;
+    double out=0.0, resid;
     if (grad != NULL){
+        function_train_core_param_grad_eval(
+            als->ft,
+            als->N, als->x, als->core, nparam,
+            als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
+            als->fparam_space->vals,
+            als->grad_space->vals,
+            als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
+            als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
+            als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
+            als->evals->vals);
+        
         for (size_t ii = 0; ii < als->N; ii++){
-            eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d,
-                                                       core, nparam,
-                                                       als->grad_core_space,
-                                                       als->fparam_space,
-                                                       als->grad_space,
-                                                       als->prev_eval,
-                                                       als->curr_eval,
-                                                       als->post_eval);
+            /* eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d, */
+            /*                                            core, nparam, */
+            /*                                            als->grad_core_space, */
+            /*                                            als->fparam_space, */
+            /*                                            als->grad_space, */
+            /*                                            als->prev_eval, */
+            /*                                            als->curr_eval, */
+            /*                                            als->post_eval); */
 
-            resid = als->y[ii]-eval;
+            resid = als->y[ii]-als->evals->vals[ii];
             out += 0.5*resid*resid;
-            cblas_daxpy(nparam,-resid,als->grad_space,1,grad,1);
+            cblas_daxpy(nparam,-resid,als->grad_space->vals + ii * nparam,1,grad,1);
         }
     }
     else{
         for (size_t ii = 0; ii < als->N; ii++){
             /* dprint(d,als->x+ii*d); */
-            eval = function_train_eval(als->ft, als->x+ii*d);
-            resid = als->y[ii]-eval;
+            als->evals->vals[ii] = function_train_eval(als->ft, als->x+ii*d);
+            resid = als->y[ii]-als->evals->vals[ii];
             out += 0.5*resid*resid;
         }
     }
@@ -316,7 +392,7 @@ void regress_als_step_right(struct RegressALS * als)
 /********************************************************//**
     Left-right sweep
 ************************************************************/
-void regress_als_sweep_lr(struct RegressALS * als, struct c3Opt ** optimizers, int skip_first)
+double regress_als_sweep_lr(struct RegressALS * als, struct c3Opt ** optimizers, int skip_first)
 {
     
     assert (als != NULL);
@@ -329,20 +405,20 @@ void regress_als_sweep_lr(struct RegressALS * als, struct c3Opt ** optimizers, i
         start = 1;
         als->core = 1;
     }
-    int res;
+    /* int res; */
     double val;
     for (size_t ii = start; ii < als->dim; ii++){
-        res = regress_als_run_core(als,optimizers[als->core],&val);
-        printf("Core:%zu, Residual=%G\n",als->core,val);
+        regress_als_run_core(als,optimizers[als->core],&val);
+        printf("Core:%zu, Objective=%G\n",als->core,val);
         als->core++;
     }
-    
+    return val;
 }
 
 /********************************************************//**
     Left-right sweep
 ************************************************************/
-void regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,int skip_first)
+double regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,int skip_first)
 {
     
     assert (als != NULL);
@@ -356,13 +432,14 @@ void regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,in
         start = 1;
         als->core = als->dim-2;
     }
-    int res;
+    /* int res; */
     double val;
     for (size_t ii = start; ii < als->dim; ii++){
-        res = regress_als_run_core(als,optimizers[als->core],&val);
-        printf("\t Core:%zu, Residual=%G\n",als->core,val);
+        regress_als_run_core(als,optimizers[als->core],&val);
+        printf("\t Core:%zu, Objective=%G\n",als->core,val);
         als->core--;
     }
+    return val;
     
 }
 

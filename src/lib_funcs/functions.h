@@ -152,6 +152,8 @@ void generic_function_roundt(struct GenericFunction **, double);
 
 
 double generic_function_1d_eval(const struct GenericFunction *, double);
+void generic_function_1d_evalN(const struct GenericFunction *, size_t,
+                               const double *, size_t, double *, size_t);
 double generic_function_1d_eval_ind(const struct GenericFunction *, size_t);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
@@ -159,8 +161,14 @@ double * generic_function_1darray_eval(size_t,
 double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
                                          struct Pivot * piv);
 void generic_function_1darray_eval2(size_t, 
-                                    struct GenericFunction **, 
+                                    struct GenericFunction **,
                                     double,double *);
+void
+generic_function_1darray_eval2N(size_t, 
+                                struct GenericFunction **,
+                                size_t, const double *, size_t,
+                                double *, size_t);
+
 void
 generic_function_1darray_eval2_ind(size_t, 
                                    struct GenericFunction **, 
