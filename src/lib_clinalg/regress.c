@@ -171,23 +171,27 @@ struct RegressALS * regress_als_alloc(size_t dim)
 }
 
 /***********************************************************//**
-    Free ALS regression options
+    Free ALS regression opntions
 ***************************************************************/
 void regress_als_free(struct RegressALS * als)
 {
     if (als != NULL){
 
+        printf("weird\n");
+        iprint_sz(als->dim,als->nparams);
         free(als->nparams);  als->nparams    = NULL;
 
-        
+        printf("why?!\n");
         reg_mem_space_free(als->prev_eval); als->prev_eval = NULL;
         reg_mem_space_free(als->post_eval); als->post_eval = NULL;
         reg_mem_space_free(als->curr_eval); als->curr_eval = NULL;
 
+        printf("ok?!\n");
         reg_mem_space_free(als->grad_space);      als->grad_space      = NULL;
         reg_mem_space_free(als->grad_core_space); als->grad_core_space = NULL;
         reg_mem_space_free(als->fparam_space);    als->fparam_space    = NULL;
-
+        printf("no?!\n");
+        
         reg_mem_space_free(als->evals); als->evals = NULL;
 
         function_train_free(als->ft); als->ft = NULL;

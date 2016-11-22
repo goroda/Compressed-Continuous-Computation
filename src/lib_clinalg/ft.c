@@ -615,15 +615,15 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
             onsol=1;
         }
 
-        /* if (ii == dim-1){ */
-        /*     if (onsol == 2){ */
-        /*         printf("pre_eval = "); dprint(2,t1); */
-        /*     } */
-        /*     else{ */
-        /*         printf("pre_eval = "); dprint(2,t3); */
-        /*     } */
-        /*     printf("last_core_eval = "); dprint(2,t2); */
-        /* } */
+        if (ii == dim-1){
+            if (onsol == 2){
+                printf("pre_eval = "); dprint(2,t1);
+            }
+            else{
+                printf("pre_eval = "); dprint(2,t3);
+            }
+            printf("last_core_eval = "); dprint(2,t2);
+        }
     }
     
     double out;// = 0.123456789;
@@ -809,9 +809,8 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n, co
         size_t r2 = ft->cores[core]->ncols;
         for (size_t jj = 0; jj < n; jj++){
             for (size_t kk = 0; kk < nparam; kk++){
-                grad[kk + jj*n] = cblas_ddot(r2,grad_core_space1 + kk*r1*r2 + jj*inc_grad,1,post + jj*inc_post,1);
+                grad[kk + jj*nparam] = cblas_ddot(r2,grad_core_space1 + kk*r1*r2 + jj*inc_grad,1,post + jj*inc_post,1);
             }
-            /* printf("post1 = "); dprint(r2,post+jj*inc_post); */
             val[jj] = cblas_ddot(r2,cur + jj * inc_cur,1,post + jj * inc_post,1);
         }
 
@@ -821,9 +820,10 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n, co
         size_t r2 = ft->cores[core]->ncols;
         for (size_t jj = 0; jj < n; jj++){
             for (size_t kk = 0; kk < nparam; kk++){
-                grad[kk + jj*n] = cblas_ddot(r1,grad_core_space1 + kk*r1*r2 + jj*inc_grad,1,pre + jj*inc_pre,1);
+                grad[kk + jj*nparam] = cblas_ddot(r1,grad_core_space1 + kk*r1*r2 + jj*inc_grad,1,pre + jj*inc_pre,1);
             }
-            val[jj] = cblas_ddot(r2,cur + inc_cur,1,pre + jj * inc_pre,1);
+            printf("pre1 = "); dprint(r1,pre+jj*inc_pre);
+            val[jj] = cblas_ddot(r1,cur + jj * inc_cur,1,pre + jj * inc_pre,1);
         }
     }
     else{ 
@@ -836,7 +836,7 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n, co
                             grad_core_space1 + kk*r1*r2 + jj * inc_grad, ft->ranks[core],
                             pre + jj*inc_pre, 1, 0.0, t1, 1);
             
-                grad[kk + jj*n] = cblas_ddot(r2,t1,1,post + jj*inc_post,1);
+                grad[kk + jj*nparam] = cblas_ddot(r2,t1,1,post + jj*inc_post,1);
             }
 
             cblas_dgemv(CblasColMajor,CblasTrans,
