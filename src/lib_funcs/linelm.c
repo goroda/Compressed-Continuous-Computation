@@ -551,6 +551,23 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
     double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
     return value;
 }
+/********************************************************//**
+*   Evaluate the lin elem expansion
+*
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y
+************************************************************/
+void lin_elem_exp_evalN(const struct LinElemExp * poly, size_t N,
+                        const double * x, size_t incx, double * y, size_t incy)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        y[ii*incy] = lin_elem_exp_eval(poly,x[ii*incx]);
+    }
+}
 
 
 

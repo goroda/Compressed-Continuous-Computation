@@ -1181,6 +1181,31 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  }
 
  /********************************************************//**
+ *   Evaluate a generic function at multiple locations
+ *
+ *   \param[in]     f    - function
+ *   \param[in]     N    - number of evaluations
+ *   \param[in]     x    - location at which to evaluate
+ *   \param[in]     incx - increment of x
+ *   \param[in,out] y    - allocated space for evaluations
+ *   \param[in]     incy - increment of y
+ ************************************************************/
+void generic_function_1d_evalN(const struct GenericFunction * f, size_t N,
+                               const double * x, size_t incx, double * y, size_t incy)
+{
+     assert (f != NULL);
+     assert (f->f != NULL);
+     switch (f->fc){
+     case CONSTANT:   assert(1 == 0);                                  break;
+     case PIECEWISE:  piecewise_poly_evalN(f->f,N,x,incx,y,incy);      break;
+     case POLYNOMIAL: orth_poly_expansion_evalN(f->f,N,x,incx,y,incy); break;
+     case LINELM:     lin_elem_exp_evalN(f->f,N,x,incx,y,incy);         break;
+     case RATIONAL:                                                    break;
+     case KERNEL:                                                      break;
+     }
+ }
+
+ /********************************************************//**
  *   Evaluate a generic function consisting of nodal
  *   basis functions at some node
  *
@@ -1613,6 +1638,33 @@ generic_function_1darray_eval2(size_t n,
         }
     }
 }
+
+/********************************************************//**
+*   Evaluate an array of functions at an array of points
+*
+*   \param[in]     n    - number of functions
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y*
+*
+*   \note Currently just calls the single evaluation code
+*         Note sure if this is optimal, cache-wise
+*************************************************************/
+void
+generic_function_1darray_eval2N(size_t n, 
+                               struct GenericFunction ** f,
+                               size_t N, const double * x, size_t incx,
+                               double * y, size_t incy)
+{
+
+    for (size_t ii = 0; ii < N; ii++){
+        generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+    }
+}
+
 
 /********************************************************//**
 *   Evaluate an array of generic functions which should be

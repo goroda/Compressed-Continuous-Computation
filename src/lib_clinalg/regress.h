@@ -44,12 +44,12 @@ struct RegressALS;
 struct RegressALS * regress_als_alloc(size_t);
 void regress_als_free(struct RegressALS *);
 void regress_als_add_data(struct RegressALS *,size_t,const double *,const double *);
-void regress_als_prep_memory(struct RegressALS *, struct FunctionTrain *);
+void regress_als_prep_memory(struct RegressALS *, struct FunctionTrain *,int);
 void regress_als_set_core(struct RegressALS *, size_t);
 double regress_core_LS(size_t, const double *, double *, void *);
 int regress_als_run_core(struct RegressALS *, struct c3Opt *, double *);
-void regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
-void regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
+double regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
+double regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
 #endif
 
 
