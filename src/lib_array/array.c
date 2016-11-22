@@ -591,9 +591,9 @@ darray_save(size_t rows, size_t cols, double * arr, char * filename, int type)
 /***********************************************************//**
     Load an array to file
     
-    \param filename [in] - filename
-    \param type [in] - 0 not human readable (fast)
-                     - 1 human readable (slow)
+    \param[in] filename - filename
+    \param[in] type     - 0 not human readable (fast)
+                        - 1 human readable (slow)
 
     \return array
 ***************************************************************/

@@ -46,7 +46,6 @@
 
 struct RegMemSpace
 {
-
     size_t ndata;
     size_t one_data_size;
     double * vals;
@@ -110,6 +109,8 @@ size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
  *  function_train
  * \var RegressALS::ft_param
  *  flattened array of function train parameters
+ * \var RegressALS::reset
+ *  internal parameter for specfying when I need to reset some parameters
  */
 struct RegressALS
 {
@@ -133,6 +134,9 @@ struct RegressALS
 
     struct FunctionTrain * ft;
     double * ft_param;
+
+    // Even more internal
+    int reset;
 };
 
 /***********************************************************//**
@@ -162,10 +166,14 @@ struct RegressALS * regress_als_alloc(size_t dim)
     als->fparam_space    = NULL;
 
     als->evals = NULL;
-    
-    
+
+
     als->ft = NULL;
     als->ft_param = NULL;
+
+
+    // extra stuff
+    als->reset = 1;
     
     return als;
 }
@@ -256,7 +264,7 @@ void regress_als_prep_memory(struct RegressALS * als, struct FunctionTrain * ft,
         als->curr_eval = reg_mem_space_alloc(als->N,maxrank * maxrank);
 
         als->grad_space      = reg_mem_space_alloc(als->N,max_num_param_within_core);
-        als->grad_core_space = reg_mem_space_alloc(als->N, max_num_param_within_core * maxrank * maxrank);
+        als->grad_core_space = reg_mem_space_alloc(als->N,max_num_param_within_core * maxrank * maxrank);
 
         als->evals = reg_mem_space_alloc(als->N,1);
     }
@@ -287,22 +295,26 @@ void regress_als_set_core(struct RegressALS * als, size_t core)
 }
 
 /********************************************************//**
+    Do things to reset memory and algorithms
+************************************************************/
+void regress_als_reset(struct RegressALS * als)
+{
+    assert (als != NULL);
+    als->reset = 1;
+}
+
+/********************************************************//**
     LS regression objective function
 ************************************************************/
 double regress_core_LS(size_t nparam, const double * param, double * grad, void * arg)
 {
 
     struct RegressALS * als = arg;
-    size_t d      = als->dim;
+    /* size_t d      = als->dim; */
     size_t core   = als->core;
     assert( nparam == als->nparams[core]);
 
-    /* printf("N=%zu, d= %zu\n",als->N,d); */
-    /* printf("data = \n"); */
-    /* dprint2d_col(d,als->N,als->x); */
-    /* printf("update core params\n"); */
     function_train_core_update_params(als->ft,core,nparam,param);
-    /* printf("updated core params\n"); */
 
     if (grad != NULL){
         for (size_t ii = 0; ii < nparam; ii++){
@@ -312,39 +324,59 @@ double regress_core_LS(size_t nparam, const double * param, double * grad, void 
     double out=0.0, resid;
     if (grad != NULL){
         /* printf("evaluate\n"); */
-        function_train_core_param_grad_eval(
-            als->ft,
-            als->N, als->x, als->core, nparam,
-            als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
-            als->fparam_space->vals,
-            als->grad_space->vals,
-            als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
-            als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
-            als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
-            als->evals->vals);
-
+        if (als->reset == 1){
+            function_train_core_param_grad_eval(
+                als->ft,
+                als->N, als->x, als->core, nparam,
+                als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
+                als->fparam_space->vals,
+                als->grad_space->vals,
+                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
+                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
+                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
+                als->evals->vals);
+            // turn off the reset since this is in the middle of optimization
+            als->reset = 0;
+        }
+        else{
+            function_train_core_param_grad_eval_single(
+                als->ft,als->N,als->x,als->core,
+                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
+                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
+                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
+                als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
+                als->fparam_space->vals,
+                als->evals->vals,als->grad_space->vals,nparam);                
+        }
+            
         /* printf("done with evaluations\n"); */
         for (size_t ii = 0; ii < als->N; ii++){
-            /* eval = function_train_core_param_grad_eval(als->ft, als->x+ii*d, */
-            /*                                            core, nparam, */
-            /*                                            als->grad_core_space, */
-            /*                                            als->fparam_space, */
-            /*                                            als->grad_space, */
-            /*                                            als->prev_eval, */
-            /*                                            als->curr_eval, */
-            /*                                            als->post_eval); */
-
             resid = als->y[ii]-als->evals->vals[ii];
             out += 0.5*resid*resid;
             cblas_daxpy(nparam,-resid,als->grad_space->vals + ii * nparam,1,grad,1);
         }
     }
     else{
-        for (size_t ii = 0; ii < als->N; ii++){
-            /* dprint(d,als->x+ii*d); */
-            als->evals->vals[ii] = function_train_eval(als->ft, als->x+ii*d);
-            resid = als->y[ii]-als->evals->vals[ii];
-            out += 0.5*resid*resid;
+        if (als->reset == 1){
+            for (size_t ii = 0; ii < als->N; ii++){
+                /* dprint(d,als->x+ii*d); */
+                als->evals->vals[ii] = function_train_eval(als->ft, als->x+ii*als->dim);
+                resid = als->y[ii]-als->evals->vals[ii];
+                out += 0.5*resid*resid;
+            }
+        }
+        else{
+            function_train_core_param_grad_eval_single(
+                als->ft,als->N,als->x,als->core,
+                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
+                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
+                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
+                NULL,0,NULL,als->evals->vals,NULL,0);
+            for (size_t ii = 0; ii < als->N; ii++){
+                /* dprint(d,als->x+ii*d); */
+                resid = als->y[ii]-als->evals->vals[ii];
+                out += 0.5*resid*resid;
+            }
         }
     }
 
@@ -360,6 +392,9 @@ int regress_als_run_core(struct RegressALS * als, struct c3Opt * optimizer, doub
     assert (als != NULL);
     assert (als->ft != NULL);
 
+    // reset core before running it
+    regress_als_reset(als);
+    
     size_t core = als->core;
     size_t nparambefore = 0;
     for (size_t ii = 0; ii < core; ii++){
@@ -373,7 +408,6 @@ int regress_als_run_core(struct RegressALS * als, struct c3Opt * optimizer, doub
     function_train_core_update_params(als->ft,core,als->nparams[core],als->ft_param + nparambefore);
     return info;
 }
-
 
 /********************************************************//**
     Advance to the right
@@ -446,3 +480,91 @@ double regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,
 
 
 
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+//////////////////                       //////////////////////
+////////////////// All in one regression //////////////////////
+//////////////////                       //////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+struct CoreData
+{
+    struct RegMemSpace * evaluations;
+    struct RegMemSpace * gradients;
+};
+
+struct CoreData * core_data_alloc()
+{
+    struct CoreData * mem = malloc(sizeof(struct CoreData));
+    if (mem == NULL){
+        fprintf(stderr, "Failure to allocate memory of core data\n");
+        return NULL;
+    }
+
+    mem->evaluations = NULL;
+    mem->gradients   = NULL;
+    return mem;
+}
+
+void core_data_free(struct CoreData * data)
+{
+    if (data != NULL){
+        reg_mem_space_free(data->evaluations); data->evaluations = NULL;
+        reg_mem_space_free(data->gradients);   data->gradients   = NULL;
+        free(data); data = NULL;
+    }
+}
+    
+/** \struct RegressAIO
+ *  \brief Regress all in one
+ *  \var RegressAIO::dim
+ *  dimension of approximation
+ *  \var RegressAIO::nparams
+ *  number of params in each core
+ *  \var RegressAIO::nparams
+ *  total number of parameters
+ *  \var RegressAIO::N
+ *  number of data points
+ *  \var RegressAIO::y
+ *  evaluations
+ *  \var RegressAIO::x
+ *  input locations
+ * \var RegressAIO:grad_space
+ *  spare space for gradient evaluations
+ * \var RegressAIO::evals
+ *  space for evaluation of cost function
+ * \var RegressAIO::ft
+ *  function_train
+ * \var RegressAIO::ft_param
+ *  flattened array of function train parameters
+ * \var RegressAIO::reset
+ *  internal parameter for specfying when I need to reset some parameters
+ */
+struct RegressAIO
+{
+    size_t dim;
+    size_t * nparams;
+    size_t nparams_sum;
+    struct CoreData ** cores;
+
+    size_t N; 
+    const double * y;
+    const double * x;
+    
+
+    struct RegMemSpace * evals;
+    struct RegMemSpace * grad;
+    
+    struct FunctionTrain * ft;
+    double * ft_param;
+
+    // Even more internal
+    int reset;
+};
+ 

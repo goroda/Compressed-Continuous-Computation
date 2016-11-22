@@ -104,10 +104,27 @@ size_t function_train_core_get_params(const struct FunctionTrain *,size_t,double
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
 
+void function_train_combine_cores(struct FunctionTrain *, size_t,
+                                  size_t, 
+                                  const double *, size_t,
+                                  const double *, size_t,
+                                  const double *, size_t,
+                                  const double *, size_t,
+                                  double *,
+                                  double *, double *, size_t);
 void
 function_train_core_param_grad_eval(struct FunctionTrain *,size_t, const double *, size_t,
                                     size_t, double *, size_t, double *,
                                     double *, double *, size_t, double *, size_t, double *, size_t, double *);
+
+void function_train_core_param_grad_eval_single(struct FunctionTrain *, size_t,
+                                                const double *, size_t,
+                                                const double *, size_t,
+                                                double *, size_t,
+                                                const double *, size_t,
+                                                double *, size_t,
+                                                double *,
+                                                double *, double *, size_t);
 
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
