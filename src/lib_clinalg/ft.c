@@ -652,14 +652,24 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
         ft->cores[ii]->nrows * ft->cores[ii]->ncols,
         ft->cores[ii]->funcs, x[ii],t1);
     int onsol = 1;
+    /* printf("Start running eval: "); */
+    /* dprint(ft->ranks[ii+1],t1); */
     for (ii = 1; ii < dim; ii++){
         if (ii%2 == 1){
             function_train_eval_next_core(ft,ii,1,x+ii,0,t1,0,t2,0,t3,0); // zero because 1 data pint
             onsol = 2;
+            /* printf("new eval = \n"); */
+            /* dprint2d_col(ft->ranks[ii],ft->ranks[ii+1],t2); */
+            /* printf("\t running eval: "); */
+            /* dprint(ft->ranks[ii+1],t3); */
         }
         else{
             function_train_eval_next_core(ft,ii,1,x+ii,0,t3,0,t2,0,t1,0);
             onsol=1;
+            /* printf("new eval = \n"); */
+            /* dprint2d_col(ft->ranks[ii],ft->ranks[ii+1],t2); */
+            /* printf("\t running eval: "); */
+            /* dprint(ft->ranks[ii+1],t1); */
         }
 
         /* if (ii == dim-1){ */
@@ -986,23 +996,332 @@ void function_train_core_param_grad_eval_single(struct FunctionTrain * ft, size_
 
 }
 
-
-// modify with running eval
-void function_train_prev_times_cur(size_t N, size_t r1, size_t r2,
-                                   double * prev_eval, size_t inc_prev,
-                                   double * cur_eval, size_t inc_cur, double * out,size_t inc_out)
+/** \struct RunningCoreTotal
+ * \brief Manages evaluations of function train
+ * \var RunningCoreTotal::r2
+ * size of running total
+ * \var RunningCoreTotal::N
+ * number of evaluations
+ * \var RunningCoreTotal::No
+ * number of outputs (useful for gradients with respect to parameters)
+ * \var RunningCoreTotal::size_val
+ * size of allocated arrays
+ * \var RunningCoreTotal::vals1
+ * first allocated array
+ * \var RunningCoreTotal::vals2
+ * second allocated array
+ * \var RunningCoreTotal::onval
+ * specifies which val is active
+ */
+struct RunningCoreTotal
 {
+    size_t r2;
+    size_t N; // number of data
+    size_t No; // number of ouputs per data (1 for eval, Nparam for gradients etc)
 
-    for (size_t jj = 0; jj < N; jj++){
-        cblas_dgemv(CblasColMajor,CblasTrans,
-                    r1,r2,1.0,
-                    cur_eval + jj * inc_cur, r1,
-                    prev_eval + jj * inc_prev, 1, 0.0, out, inc_out);
+    size_t size_val;
+    double * vals1;
+    double * vals2;
+    size_t onval; 
+};
+
+/***********************************************************//**
+    Allocate the struct
+***************************************************************/
+struct RunningCoreTotal * running_core_total_alloc(size_t size_val)
+{
+    struct RunningCoreTotal * rct = malloc(sizeof(struct RunningCoreTotal));
+    if (rct == NULL){
+        fprintf(stderr, "Failed to allocate memory for RunningCoreTotal\n");
+        exit(1);
+    }
+
+    rct->r2 = 0;
+    rct->N  = 1;
+    rct->No = 1;
+
+    rct->size_val = size_val;
+    rct->vals1 = calloc_double(size_val);
+    rct->vals2 = calloc_double(size_val);
+    rct->onval = 1;
+
+    return rct;
+}
+
+/***********************************************************//**
+    Make sure have allocated enough memory
+***************************************************************/
+void running_core_total_check_size(struct RunningCoreTotal * rct, size_t size_val)
+{
+    if (rct->size_val < size_val){
+        double * temp = calloc_double(rct->size_val);
+
+        // do vals 1
+        memmove(temp, rct->vals1, rct->size_val * sizeof(double));
+        free(rct->vals1); rct->vals1 = NULL;
+        rct->vals1 = calloc_double(size_val);
+        memmove(rct->vals1, temp, rct->size_val * sizeof(double));
+
+        memmove(temp, rct->vals2, rct->size_val * sizeof(double));
+        free(rct->vals2); rct->vals2 = NULL;
+        rct->vals2 = calloc_double(size_val);
+        memmove(rct->vals2, temp, rct->size_val * sizeof(double));
+
+        rct->size_val = size_val;
+        free(temp); temp = NULL;
     }
 }
 
+/***********************************************************//**
+    Free the struct
+***************************************************************/
+void running_core_total_free(struct RunningCoreTotal * rct)
+{
+    if (rct != NULL){
+        free(rct->vals1); rct->vals1 = NULL;
+        free(rct->vals2); rct->vals2 = NULL;
+        free(rct);        rct        = NULL;
+    }
+}
+
+/***********************************************************//**
+    Allocate an array of running totals
+***************************************************************/
+struct RunningCoreTotal ** running_core_total_arr_alloc(size_t N, size_t size_val)
+{
+    struct RunningCoreTotal ** rct = malloc(N * sizeof(struct RunningCoreTotal *));
+    if (rct == NULL){
+        fprintf(stderr, "Failed to allocate memory for an array of RunningCoreTotal\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < N; ii++){
+        rct[ii] = running_core_total_alloc(size_val);
+    }
+
+    return rct;
+}
+
+/***********************************************************//**
+    Free an array of running totals
+***************************************************************/
+void running_core_total_arr_free(size_t N, struct RunningCoreTotal ** rct)
+{
+    if (rct != NULL){
+        for (size_t ii = 0; ii < N; ii++){
+            free(rct[ii]->vals1); rct[ii]->vals1 = NULL;
+            free(rct[ii]->vals2); rct[ii]->vals2 = NULL;
+            free(rct[ii]);        rct[ii]        = NULL;
+        }
+        free(rct); rct = NULL;
+    }
+}
+
+/***********************************************************//**
+    Copy values into output
+***************************************************************/
+void running_core_copy_vals(struct RunningCoreTotal * rct, size_t N, size_t No, double * out, size_t inc_out)
+{
+    assert (rct->N == N);
+    assert (rct->No == No);
+    assert (rct->r2 == 1);
+    if (rct->onval == 1){
+        for (size_t ii = 0; ii < N; ii++){
+            memmove(out + ii * inc_out, rct->vals1 + ii * rct->No, rct->No * sizeof(double));
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < N; ii++){
+            memmove(out + ii * inc_out, rct->vals2 + ii * rct->No, rct->No * sizeof(double));
+        }
+    }
+    
+}
+
+/***********************************************************//**
+    Update the running core total by multiplying with a new
+    core from the right
+
+    \param[in,out] rct      - running core total
+    \param[in]     n        - number of evaluations
+    \param[in]     r1new    - number of rows in the new core
+    \param[in]     r2new    - number of columns in the new core
+    \param[in]     new_eval - new evaluation of the cores
+    \param[in]     inc_new  - increment between evaluations of the core
+***************************************************************/
+void running_core_total_update(struct RunningCoreTotal * rct, size_t n, size_t r1new, size_t r2new,
+                               const double * new_eval, size_t inc_new)
+{
+
+    // only updates from left to right
+    if ((rct->N != n) && (rct->r2 != 0)){
+        fprintf(stderr, "Number of evaluations of the running core does not match with previous values\n");
+        fprintf(stderr, "\t prev number = %zu, requested number = %zu\n",rct->N,n);
+        exit(1);
+    }
+    else if ((r1new != rct->r2) && (rct->r2 != 0)){
+        fprintf(stderr, "Dimensions within core update do not match\n");
+        exit(1);
+    }
+
+    running_core_total_check_size(rct,n*r2new*rct->No);
+
+    if (rct->r2 == 0){
+        if (r1new > 1){
+            fprintf(stderr,"Adding first core to running core total, number of rows must be 1\n");
+            exit(1);
+        }
+        rct->r2 = r2new;
+        for (size_t ii = 0; ii < n; ii++){
+            memmove(rct->vals1 + ii * r2new, new_eval + ii * inc_new, r2new * sizeof(double));
+        }
+        rct->onval = 1;
+        rct->N = n;
+    }
+    else if (rct->No == 1){
+        if (rct->onval == 1){ // rct->vals2 is getting updated
+            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals1,rct->r2,new_eval,inc_new,rct->vals2,r2new);
+            rct->onval = 2;
+        }
+        else{ // rct->vals1 is getting updated
+            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals2,rct->r2,new_eval,inc_new,rct->vals1,r2new);
+            rct->onval = 1;
+        }
+    }
+    else{
+        size_t incvals = rct->r2 * rct->No;
+        if (rct->onval == 1){ // rct->vals2 is getting updated
+            for (size_t ii = 0; ii < n; ii++){
+                c3linalg_multiple_vec_mat(rct->No,r1new,r2new,rct->vals1 + ii * incvals,rct->r2,
+                                          new_eval + ii * inc_new,0,rct->vals2 + ii * r2new * rct->No,r2new);
+            }
+            rct->onval = 2;
+        }
+        else{ // rct->vals1 is getting updated
+            
+            for (size_t ii = 0; ii < n; ii++){
+                c3linalg_multiple_vec_mat(rct->No,r1new,r2new,rct->vals2 + ii * incvals,rct->r2,
+                                          new_eval + ii * inc_new, 0, rct->vals1 + ii * r2new * rct->No,r2new);
+            }
+            rct->onval = 1;
+        }
+    }
+    rct->r2 = r2new;
+}
+
+/***********************************************************//**
+    Update the running core total by multiplying with multiple new
+    cores from the right
+
+    \param[in,out] rct         - running core total
+    \param[in]     n           - number of evaluations
+    \param[in]     ng          - number of cores
+    \param[in]     r1new       - number of rows in the new core
+    \param[in]     r2new       - number of columns in the new core
+    \param[in]     new_eval    - new evaluation of the cores
+    \param[in]     inc_new_ng  - increment between cores for a fixed evaluation (at least r1new * r2new)
+    \param[in]     inc_new_n   - increment between evaluations (at least inc_new_ng * ng)
+***************************************************************/
+void
+running_core_total_update_multiple(struct RunningCoreTotal * rct, size_t n, size_t ng,
+                                   size_t r1new, size_t r2new,
+                                   double * new_eval, size_t inc_new_ng,
+                                   size_t inc_new_n)
+{
+    // only updates from left to right
+    if ((rct->N != n) && (rct->r2 != 0)){
+        fprintf(stderr, "Number of evaluations of the running core does not match with previous values\n");
+        exit(1);
+    }
+    else if ((r1new != rct->r2) && (rct->r2 != 0)){
+        fprintf(stderr, "Dimensions within core update do not match\n");
+        exit(1);
+    }
+    if (rct->No > 1){
+        fprintf(stderr, "Cannot update with multiple outputs because multiple outputs already exists\n");
+        exit(1);
+    }
+
+    rct->No = ng;
+    running_core_total_check_size(rct,n * r2new * rct->No);
+
+    if (rct->r2 == 0){
+        if (r1new > 1){
+            fprintf(stderr,"Adding first core to running core total, number of rows must be 1\n");
+            exit(1);
+        }
+        rct->r2 = r2new;
+        for (size_t ii = 0; ii < n; ii++){
+            for (size_t jj = 0; jj < ng; jj++){
+                for (size_t kk = 0; kk < r2new; kk++){
+                    rct->vals1[ii * ng * r2new + jj * r2new + kk] = new_eval[ii * inc_new_n + jj * r2new + kk];
+                }
+            }
+        }
+        rct->onval = 1;
+        rct->N = n;
+    }
+    else if (rct->onval == 1){ // rct->vals2 is getting updatedl
+        for (size_t ii = 0; ii < n; ii++){
+            c3linalg_multiple_vec_mat(ng,r1new,r2new,
+                                      rct->vals1 + ii * rct->r2, 0,
+                                      new_eval + ii * inc_new_n, inc_new_ng,
+                                      rct->vals2 + ii * r2new * ng, r2new);
+        }
+        rct->onval = 2;
+    }
+    else{ // rct->vals1 is getting updated
+        for (size_t ii = 0; ii < n; ii++){
+            c3linalg_multiple_vec_mat(ng,r1new,r2new,
+                                      rct->vals2 + ii * rct->r2, 0,
+                                      new_eval + ii * inc_new_n, inc_new_ng,
+                                      rct->vals1 + ii * r2new * ng, r2new);
+        }
+        rct->onval = 1;
+    }
+    rct->r2 = r2new;
+}
+
+/***********************************************************//**
+    Initialize a running core total from a functiontrain
+***************************************************************/
+struct RunningCoreTotal * ftutil_running_tot_space(struct FunctionTrain * ft)
+{
+    size_t maxrank = function_train_get_maxrank(ft);
+    return running_core_total_alloc(maxrank*maxrank);
+}
+
+/***********************************************************//**
+    Initialize an array of running core totals from a functiontrain
+***************************************************************/
+struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain * ft)
+{
+    size_t maxrank = function_train_get_maxrank(ft);
+    return running_core_total_arr_alloc(ft->dim,maxrank*maxrank);
+}
+
+/***********************************************************//**
+    Evaluate a function train and gradients with respect to
+    FT parameters at a set of inputs
+
+    \param[in]     ft                   - function train
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in]     evals                - structure for storing running evaluations
+    \param[in]     grads                - structure for storing running totals of gradients
+    \param[in]     nparam               - number of parameters expected per core
+    \param[in,out] out                  - evaluations
+    \param[in,out] grad                 - gradient at every evaluation (could be NULL to not compute)
+    \param[in,out] core_grad_space      - space for evaluating gradients of cores
+    \param[in]     inc_grad_n           - increment between gradient evaluations for different inputs
+    \param[in,out] max_func_param_space - allocated space for evaluating the gradient of a single
+                                          function within a core
+***************************************************************/
 void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
-                                    const double * x)
+                                    const double * x, struct RunningCoreTotal * evals,
+                                    struct RunningCoreTotal ** grads, size_t * nparam,
+                                    double * out, double * grad,
+                                    double * core_grad_space,
+                                    size_t inc_grad_n, double * max_func_param_space)
 {
 
     size_t dim = ft->dim;
@@ -1010,30 +1329,49 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
     assert(ft->ranks[dim] == 1);
 
     size_t maxrank;
-    double *t1=NULL, *t2=NULL, *t3=NULL;
-    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,n);
+    double *core_eval=NULL, *t2=NULL, *t3=NULL;
+    function_train_pre_eval(ft,&maxrank,&core_eval,&t2,&t3,n);
     size_t mr2 = maxrank * maxrank; // space allocated for the evaluation of each function
     
-    size_t onsol = 1;
     for (size_t ii = 0; ii < dim; ii++){
         // core evaluation is stored in t1, core gradient is stored in t2
-        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,t1,mr2,t2,mr2,max_func_param_space);
+        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,core_eval,mr2,core_grad_space,
+                                inc_grad_n,max_func_param_space);
 
         size_t r1 = ft->cores[ii]->nrows;
         size_t r2 = ft->cores[ii]->ncols;
-        if (onsol == 1){
-            function_train_prev_times_cur(n,r1,r2,running_e1,inc_re1,t1,mr2,running_e2,inc_re2);
-            onsol = 2;
+
+        // update evaluation
+        running_core_total_update(evals,n,r1,r2,core_eval,mr2);
+
+        if (grad != NULL){
+            // Running costs for gradients for prior core parameters
+            for (size_t jj = 0; jj < ii; jj++){
+                running_core_total_update(grads[jj],n,r1,r2,core_eval,mr2);
+            }
+
+            running_core_total_update_multiple(grads[ii],n,nparam[ii],r1,r2,core_grad_space,r1*r2,inc_grad_n);
+
+            /* // Running costs for gradients for later core parameters */
+            /* // NOTE HERE I SHOULD ACTUALLY USE EVALS TO UPDATE since it is the same for all of them!!!! */
+            for (size_t jj = ii+1; jj < dim; jj++){
+                running_core_total_update(grads[jj],n,r1,r2,core_eval,mr2);
+            }
         }
-        else{
-            function_train_prev_times_cur(n,r1,r2,running_e2,inc_re2,t1,mr2,running_e1,inc_re1);
+    }
+
+    running_core_copy_vals(evals,n,1,out,1);
+
+    if (grad != NULL){
+        size_t totparam = 0;
+        for (size_t ii = 0; ii < dim; ii++){
+            totparam += nparam[ii];
         }
-        
-        for (size_t jj = 0; jj < ii; jj++){
-            // Have running costs for gradients
+        size_t runparam = 0;
+        for (size_t ii = 0; ii < dim; ii++){
+            running_core_copy_vals(grads[ii],n,nparam[ii],grad + runparam,totparam);
+            runparam += nparam[ii];
         }
-        
-        
     }
 }
 

@@ -126,6 +126,18 @@ void function_train_core_param_grad_eval_single(struct FunctionTrain *, size_t,
                                                 double *,
                                                 double *, double *, size_t);
 
+struct RunningCoreTotal;
+void running_core_total_free(struct RunningCoreTotal *);
+void running_core_total_arr_free(size_t, struct RunningCoreTotal **);
+struct RunningCoreTotal * ftutil_running_tot_space(struct FunctionTrain *);
+struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain *);
+void function_train_param_grad_eval(struct FunctionTrain *, size_t,
+                                    const double *, struct RunningCoreTotal *,
+                                    struct RunningCoreTotal **, size_t *,
+                                    double *, double *,
+                                    double *,
+                                    size_t, double *);
+
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
                                       const double *, const double *, 

@@ -586,14 +586,147 @@ void Test_LS_ALS_sweep_lr2(CuTest * tc)
 }
 
 
+//////////////////////////////////////////////////////////////
+/// All in one testing
+/////////////////////////////////////////////////////////////
+void Test_function_train_param_grad_eval(CuTest * tc)
+{
+    printf("Testing Function: function_train_param_grad_eval \n");
+
+    size_t dim = 4;    
+    
+    size_t ranks[5] = {1,2,3,8,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 10;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    struct RunningCoreTotal *  runeval = ftutil_running_tot_space(a);
+    struct RunningCoreTotal ** rungrad = ftutil_running_tot_space_eachdim(a);
+
+    size_t nparam[4];
+    size_t max_param_within_func=0, temp_nparam;
+    size_t totparam = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        nparam[ii] = function_train_core_get_nparams(a,ii,&temp_nparam);
+        if (temp_nparam > max_param_within_func){
+            max_param_within_func = temp_nparam;
+        }
+        CuAssertIntEquals(tc,(maxorder+1)*ranks[ii]*ranks[ii+1],nparam[ii]);
+        totparam += nparam[ii];
+    }
+    CuAssertIntEquals(tc,(maxorder+1),max_param_within_func);
+
+    size_t core_space_size = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        if (nparam[ii] * ranks[ii] * ranks[ii+1] > core_space_size){
+            core_space_size = nparam[ii] * ranks[ii] * ranks[ii+1];
+        }
+    }
+    double * core_grad_space = calloc_double(core_space_size * ndata);
+    double * max_func_param_space = calloc_double(max_param_within_func);
+
+    double * vals = calloc_double(ndata);
+    double * grad = calloc_double(ndata*totparam);
+
+    double * guess = calloc_double(totparam);
+    size_t runtot = 0;
+    size_t running = 0;
+    for (size_t zz = 0; zz < dim; zz++){
+        /* printf("nparam[%zu] = %zu\n",zz,nparam[zz]); */
+        for (size_t jj = 0; jj < nparam[zz]; jj++){
+            guess[running+jj] = randn();
+            /* printf("guess[%zu] = %G\n",runtot,guess[runtot]); */
+            runtot++;
+        }
+        function_train_core_update_params(a,zz,nparam[zz],guess+running);
+        running+=nparam[zz];
+    }
+
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        y[ii] = function_train_eval(a,x+ii*dim);
+    }
+
+    /* printf("x = \n"); */
+    /* dprint2d_col(dim,ndata,x); */
+    /* printf("y = "); */
+    /* dprint(ndata,y); */
+
+    
+    printf("\t Testing Evaluation\n");
+    function_train_param_grad_eval(a,ndata,x,runeval,NULL,nparam,vals,NULL,
+                                   core_grad_space,core_space_size,max_func_param_space);
+
+    for (size_t ii = 0; ii < ndata; ii++){
+        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
+    }
+
+
+    printf("\t Testing Gradient\n");
+    function_train_param_grad_eval(a,ndata,x,runeval,rungrad,nparam,vals,grad,
+                                   core_grad_space,core_space_size,max_func_param_space);
+
+
+    /* printf("grad = "); dprint(totparam,grad); */
+    for (size_t zz = 0; zz < ndata; zz++){
+        running = 0;
+        double h = 1e-8;
+        for (size_t ii = 0; ii < dim; ii++){
+            /* printf("ii = %zu\n",ii); */
+            for (size_t jj = 0; jj < nparam[ii]; jj++){
+                /* printf("\t jj = %zu\n", jj); */
+                guess[running+jj] += h;
+                function_train_core_update_params(a,ii,nparam[ii],guess + running);
+            
+                double val2 = function_train_eval(a,x+zz*dim);
+                double fd = (val2-y[zz])/h;
+                /* printf("val2=%G, y[0]=%G\n",val2,y[0]); */
+                /* printf("fd = %3.15G, calc is %3.15G\n",fd,grad[running+jj + zz * totparam]); */
+                CuAssertDblEquals(tc,fd,grad[running+jj + zz * totparam],1e-5);
+                guess[running+jj] -= h;
+                function_train_core_update_params(a,ii,nparam[ii],guess + running);
+            }
+            running += nparam[ii];
+        }
+    }
+
+
+
+    free(guess); guess = NULL;
+    
+    free(vals); vals = NULL;
+    free(grad); grad = NULL;
+    
+    free(core_grad_space);      core_grad_space = NULL;
+    free(max_func_param_space); max_func_param_space = NULL;
+        
+    running_core_total_free(runeval); runeval = NULL;
+    running_core_total_arr_free(dim,rungrad); rungrad = NULL;
+    
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(a); a   = NULL;
+    free(x);                x   = NULL;
+    free(y);                y   = NULL;
+}
+
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad1);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad2);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad3);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad3); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr); */
-    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     return suite;
 }
