@@ -29,8 +29,8 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
-    set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
+    # set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
+    # set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 else ()
 
     set(compiler_flags "-g -Wall -Wextra -O2 -std=c99")

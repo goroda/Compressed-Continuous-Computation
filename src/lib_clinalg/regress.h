@@ -50,6 +50,16 @@ double regress_core_LS(size_t, const double *, double *, void *);
 int regress_als_run_core(struct RegressALS *, struct c3Opt *, double *);
 double regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
 double regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
+
+
+struct RegressAIO;
+struct RegressAIO * regress_aio_alloc(size_t);
+void regress_aio_free(struct RegressAIO *);
+struct FunctionTrain * regress_aio_get_ft(const struct RegressAIO *);
+void regress_aio_add_data(struct RegressAIO *, size_t, const double *, const double *);
+size_t regress_aio_get_num_params(const struct RegressAIO *);
+void regress_aio_prep_memory(struct RegressAIO *, struct FunctionTrain *, int);
+double regress_aio_LS(size_t, const double *, double *, void *);
 #endif
 
 

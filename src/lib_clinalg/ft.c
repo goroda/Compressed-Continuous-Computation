@@ -832,8 +832,10 @@ void function_train_combine_cores(struct FunctionTrain * ft, size_t K,
     \param[in]     nparam           - total number of parameters in the core
     \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, 
                                       where r1,r2 are the size of the core
-    \param[in]     inc_grad         - increment between gradient evaluations for different locations
-    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params of any 
+    \param[in]     inc_grad         - increment between gradient evaluations for 
+                                      different locations
+    \param[in,out] grad_core_space2 - space that is at least as big as the max num of 
+                                      params of any 
                                       function making up the core
     \param[in,out] grad             - gradient of the function (nparam * n)
     \param[in,out] pre              - vector of evaluation of all cores prior to *core* r1 * n
@@ -958,10 +960,14 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n,
     \parma[in]     inc_post         - increment between data for evaluations after current core
     \param[in]     nparam           - total number of parameters in the core
     \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, 
-                                      where r1,r2 are the size of the core (should be NULL to not compute gradient)
-    \param[in]     inc_grad         - increment between gradient evaluations for different locations
-    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params of any 
-                                      function making up the core (should be NULL to not compute gradient)
+                                      where r1,r2 are the size of the core (should be NULL
+                                      to not compute gradient)
+    \param[in]     inc_grad         - increment between gradient evaluations for different 
+                                      locations
+    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params 
+                                      of any 
+                                      function making up the core (should be NULL to not 
+                                      compute gradient)
     \param[in,out] val              - evaluation
     \param[in,out] grad             - gradient of the function (nparam * n), NULL to not compute
     \param[in]                      - number of parameters in the gradient
@@ -1046,6 +1052,28 @@ struct RunningCoreTotal * running_core_total_alloc(size_t size_val)
     rct->onval = 1;
 
     return rct;
+}
+
+
+/***********************************************************//**
+    Restart the running core
+***************************************************************/
+void running_core_total_restart(struct RunningCoreTotal * rct)
+{
+    rct->r2 = 0;
+    rct->N = 1;
+    rct->No = 1;
+    rct->onval = 1;
+}
+
+/***********************************************************//**
+    Restart an array of runnign cores
+***************************************************************/
+void running_core_total_arr_restart(size_t N, struct RunningCoreTotal ** rct)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        running_core_total_restart(rct[ii]);
+    }
 }
 
 /***********************************************************//**
@@ -1179,11 +1207,13 @@ void running_core_total_update(struct RunningCoreTotal * rct, size_t n, size_t r
     }
     else if (rct->No == 1){
         if (rct->onval == 1){ // rct->vals2 is getting updated
-            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals1,rct->r2,new_eval,inc_new,rct->vals2,r2new);
+            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals1,rct->r2,
+                                      new_eval,inc_new,rct->vals2,r2new);
             rct->onval = 2;
         }
         else{ // rct->vals1 is getting updated
-            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals2,rct->r2,new_eval,inc_new,rct->vals1,r2new);
+            c3linalg_multiple_vec_mat(n,r1new,r2new,rct->vals2,rct->r2,
+                                      new_eval,inc_new,rct->vals1,r2new);
             rct->onval = 1;
         }
     }
@@ -1192,7 +1222,8 @@ void running_core_total_update(struct RunningCoreTotal * rct, size_t n, size_t r
         if (rct->onval == 1){ // rct->vals2 is getting updated
             for (size_t ii = 0; ii < n; ii++){
                 c3linalg_multiple_vec_mat(rct->No,r1new,r2new,rct->vals1 + ii * incvals,rct->r2,
-                                          new_eval + ii * inc_new,0,rct->vals2 + ii * r2new * rct->No,r2new);
+                                          new_eval + ii * inc_new, 0,
+                                          rct->vals2 + ii * r2new * rct->No,r2new);
             }
             rct->onval = 2;
         }
@@ -1200,7 +1231,8 @@ void running_core_total_update(struct RunningCoreTotal * rct, size_t n, size_t r
             
             for (size_t ii = 0; ii < n; ii++){
                 c3linalg_multiple_vec_mat(rct->No,r1new,r2new,rct->vals2 + ii * incvals,rct->r2,
-                                          new_eval + ii * inc_new, 0, rct->vals1 + ii * r2new * rct->No,r2new);
+                                          new_eval + ii * inc_new, 0,
+                                          rct->vals1 + ii * r2new * rct->No,r2new);
             }
             rct->onval = 1;
         }
@@ -1236,7 +1268,7 @@ running_core_total_update_multiple(struct RunningCoreTotal * rct, size_t n, size
         fprintf(stderr, "Dimensions within core update do not match\n");
         exit(1);
     }
-    if (rct->No > 1){
+    if ((rct->No > 1) && (rct->No != ng)){
         fprintf(stderr, "Cannot update with multiple outputs because multiple outputs already exists\n");
         exit(1);
     }
@@ -1253,7 +1285,8 @@ running_core_total_update_multiple(struct RunningCoreTotal * rct, size_t n, size
         for (size_t ii = 0; ii < n; ii++){
             for (size_t jj = 0; jj < ng; jj++){
                 for (size_t kk = 0; kk < r2new; kk++){
-                    rct->vals1[ii * ng * r2new + jj * r2new + kk] = new_eval[ii * inc_new_n + jj * r2new + kk];
+                    rct->vals1[ii * ng * r2new + jj * r2new + kk] =
+                        new_eval[ii * inc_new_n + jj * r2new + kk];
                 }
             }
         }
@@ -1310,11 +1343,19 @@ struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain
     \param[in]     grads                - structure for storing running totals of gradients
     \param[in]     nparam               - number of parameters expected per core
     \param[in,out] out                  - evaluations
-    \param[in,out] grad                 - gradient at every evaluation (could be NULL to not compute)
+    \param[in,out] grad                 - gradient at every evaluation 
+                                          (could be NULL to not compute)
     \param[in,out] core_grad_space      - space for evaluating gradients of cores
-    \param[in]     inc_grad_n           - increment between gradient evaluations for different inputs
+    \param[in]     inc_grad_n           - increment between gradient evaluations for 
+                                          different inputs
     \param[in,out] max_func_param_space - allocated space for evaluating the gradient of a single
                                           function within a core
+
+    \note
+    This algorithm should be improved. If I compute the running totals
+    backwards and forwards for every dimension, then I can reuse
+    all that computation for each gradient. As of now, I am computing the running
+    totals for each dimension separately
 ***************************************************************/
 void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
                                     const double * x, struct RunningCoreTotal * evals,
@@ -1350,10 +1391,12 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
                 running_core_total_update(grads[jj],n,r1,r2,core_eval,mr2);
             }
 
-            running_core_total_update_multiple(grads[ii],n,nparam[ii],r1,r2,core_grad_space,r1*r2,inc_grad_n);
+            running_core_total_update_multiple(grads[ii],n,nparam[ii],r1,r2,
+                                               core_grad_space,r1*r2,inc_grad_n);
 
-            /* // Running costs for gradients for later core parameters */
-            /* // NOTE HERE I SHOULD ACTUALLY USE EVALS TO UPDATE since it is the same for all of them!!!! */
+            // Running costs for gradients for later core parameters
+            /* NOTE HERE I SHOULD ACTUALLY USE EVALS TO UPDATE since it  */
+            /* is the same for all of them!!!! */
             for (size_t jj = ii+1; jj < dim; jj++){
                 running_core_total_update(grads[jj],n,r1,r2,core_eval,mr2);
             }
