@@ -298,6 +298,68 @@ void Test_serialize_doublep(CuTest * tc){
 }
 
 
+void Test_readtxt_double_array(CuTest * tc)
+{
+    printf("Testing function: readtxt_double_array\n");
+
+    char line[] = "1e-0 0.21 2.134 3000\n 021.32 0.1124 0.3128 0.987";
+
+    size_t nrows,ncols;
+    double * data = NULL;
+
+    data = readtxt_double_array(line,&nrows,&ncols);
+    CuAssertIntEquals(tc,2,nrows);
+    CuAssertIntEquals(tc,4,ncols);
+
+    CuAssertDblEquals(tc,1,data[0],1e-15);
+    CuAssertDblEquals(tc,0.21,data[1],1e-15);
+    CuAssertDblEquals(tc,2.134,data[2],1e-15);
+    CuAssertDblEquals(tc,3000.0,data[3],1e-15);
+
+    CuAssertDblEquals(tc,21.32,data[4],1e-15);
+    CuAssertDblEquals(tc,0.1124,data[5],1e-15);
+    CuAssertDblEquals(tc,0.3128,data[6],1e-15);
+    CuAssertDblEquals(tc,0.987,data[7],1e-15);
+
+    free(data); data = NULL;
+
+}
+
+void Test_readfile_double_array(CuTest * tc)
+{
+    printf("Testing function: readfile_double_array\n");
+
+    char fileout[] = "readarr.txt";
+    FILE * fp = fopen(fileout,"wt");
+    fprintf(fp, "1e-0 0.21 2.134 3000\n");
+    fprintf(fp, "021.32 0.1124 0.3128 0.987\n");
+    fclose(fp);
+
+    fp = fopen(fileout,"rt");
+    
+    size_t nrows,ncols;
+    double * data = NULL;
+
+    data = readfile_double_array(fp,&nrows,&ncols);
+
+    CuAssertIntEquals(tc,2,nrows);
+    CuAssertIntEquals(tc,4,ncols);
+
+    CuAssertDblEquals(tc,1,data[0],1e-15);
+    CuAssertDblEquals(tc,0.21,data[1],1e-15);
+    CuAssertDblEquals(tc,2.134,data[2],1e-15);
+    CuAssertDblEquals(tc,3000.0,data[3],1e-15);
+
+    CuAssertDblEquals(tc,21.32,data[4],1e-15);
+    CuAssertDblEquals(tc,0.1124,data[5],1e-15);
+    CuAssertDblEquals(tc,0.3128,data[6],1e-15);
+    CuAssertDblEquals(tc,0.987,data[7],1e-15);
+
+    free(data); data = NULL;
+
+    fclose(fp);
+}
+
 CuSuite * StringUtilGetSuite(){
     //printf("Generating Suite: VectorUtil\n");
     //printf("----------------------------\n");
@@ -315,6 +377,8 @@ CuSuite * StringUtilGetSuite(){
     SUITE_ADD_TEST(suite, Test_serialize_sizet);
     SUITE_ADD_TEST(suite, Test_serialize_double);
     SUITE_ADD_TEST(suite, Test_serialize_doublep);
+    SUITE_ADD_TEST(suite, Test_readtxt_double_array);
+    SUITE_ADD_TEST(suite, Test_readfile_double_array);
 
     return suite;
 }

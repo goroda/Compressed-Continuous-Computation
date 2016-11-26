@@ -37,6 +37,8 @@
 #ifndef STRINGMANIP_H
 #define STRINGMANIP_H
 
+#include <stdio.h>
+
 void strip_ends(char * strin, char, char);
 void strip_blank_ends(char *);
 char * bite_string(char *, char);
@@ -59,5 +61,8 @@ unsigned char * serialize_double(unsigned char *, double);
 unsigned char * deserialize_double(unsigned char *, double *);
 unsigned char * serialize_doublep(unsigned char *, double *, size_t);
 unsigned char * deserialize_doublep(unsigned char *, double **, size_t *);
+
+double * readtxt_double_array(char *,size_t *, size_t *);
+double * readfile_double_array(FILE *, size_t *, size_t *);
 
 #endif

@@ -305,6 +305,77 @@ deserialize_doublep(unsigned char * buffer, double ** value, size_t * N)
     return ptr + nBytes;
 }
 
+/////////////////////////////////////
+/////////////////////////////////////
+////  Parsing  strings for data /////
+/////////////////////////////////////
+/////////////////////////////////////
 
+double * readtxt_double_array(char * str,size_t *nrows, size_t *ncols)
+{
+    char * token;
+    char * str2 = strdup(str);
+    char * str3 = strdup(str);
 
+    char *save1,*save2,*save3;;
+    
+    token = strtok_r(str,"\t ,\n",&save1);
+    size_t ntot = 0;
+    while (token != NULL){
+        token = strtok_r(NULL,"\t ,\n",&save1);
+        ntot++;
+    }
+    /* printf("total = %zu\n",ntot); */
+    
+    double * data = calloc(ntot,sizeof(double));
+    if (data == NULL){
+        fprintf(stderr, "Cannot allocate data for parsing array\n");
+        exit(1);
+    }
 
+    token = strtok_r(str2,"\n",&save2);
+    *nrows = 0;
+    while (token != NULL){
+        token = strtok_r(NULL,"\n",&save2);
+        *nrows = *nrows + 1;
+    }
+    *ncols = ntot / *nrows;
+    
+    /* printf("number of rows = %zu\n",*nrows); */
+    /* printf("number of cols = %zu\n",*ncols); */
+
+    token = strtok_r(str3," ,\n",&save3);
+    size_t ind = 0;
+    /* printf("%s %zu \n",token,ind); */
+    while (token != NULL){
+        data[ind] = atof(token);
+        ind++;
+        token = strtok_r(NULL," ,\n",&save3);
+        /* printf("%s %zu\n",token,ind); */
+    }
+
+    free(str2); str2 = NULL;
+    free(str3); str3 = NULL;
+    return data;
+}
+
+double * readfile_double_array(FILE * fp, size_t *nrows, size_t *ncols)
+{
+    fseek(fp, 0L, SEEK_END);  /* Position to end of file */
+    size_t lFileLen = ftell(fp);     /* Get file length */
+    rewind(fp);
+
+    char * cFile = calloc(lFileLen + 1, sizeof(char));
+
+    if(cFile == NULL )
+    {
+        printf("\nInsufficient memory to read file.\n");
+        return 0;
+    }
+
+    fread(cFile, lFileLen, 1, fp); /* Read the entire file into cFile */
+
+    double * vals = readtxt_double_array(cFile,nrows,ncols);
+
+    return vals;
+}
