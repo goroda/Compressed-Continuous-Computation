@@ -50,7 +50,8 @@
 #include "lib_optimization.h"
 
 
-void Test_Machinery_For_Parameterization(CuTest * tc, struct FunctionTrain * a, size_t core, double * guess,
+void Test_Machinery_For_Parameterization(CuTest * tc, struct FunctionTrain * a, size_t core,
+                                         double * guess,
                                          size_t r1, size_t r2, size_t totparam, size_t maxparam,
                                          size_t ndata, double * x, size_t dim, size_t * ranks)
 {

@@ -703,7 +703,6 @@ void c3vector_array_free(size_t N, struct c3Vector ** c3v)
 }
 
 // UTILITIES
-
 //random numbers
 
 // uniform in 0, 1
