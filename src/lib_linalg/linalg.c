@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia National Laboratories
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -101,7 +102,7 @@ void getrows(const double * A, double * top, size_t * rows, size_t arows, size_t
 
     \note
     \f[
-        C[j,:] = B[j,:]A[:,:,j]
+        C[j,:] = A[j,:]B[:,:,j]
     \f]
 ***************************************************************/
 void c3linalg_multiple_vec_mat(size_t N, size_t r1, size_t r2,
@@ -115,6 +116,36 @@ void c3linalg_multiple_vec_mat(size_t N, size_t r1, size_t r2,
                     A + jj * inca, 1, 0.0, C + jj*incc,1);
     }
 }
+
+/***********************************************************//**
+    Computes *N* matrix-vector multiplications
+
+    \param[in]     N    - number of evaluations
+    \param[in]     r1   - number of rows
+    \param[in]     r2   - number of columns
+    \param[in]     A    - an N x r2 matrix
+    \param[in]     inca - increment between rows of *A*
+    \param[in]     B    - an r1 x r2 x N multidimensional array
+    \param[in]     incb - increment between the beginning of matrices (r1 x r2, if compact)
+    \param[in,out] C    - an N x r1 matrix
+    \param[in]     incc - increment between rows of output
+
+    \note
+    \f[
+        (C[j,:])^T = B[:,:,j](A[j,:])^T
+    \f]
+***************************************************************/
+void c3linalg_multiple_mat_vec(size_t N, size_t r1, size_t r2,
+                               const double * A, size_t inca,
+                               const double * B, size_t incb, double * C,size_t incc)
+{
+    for (size_t jj = 0; jj < N; jj++){
+        cblas_dgemv(CblasColMajor,CblasNoTrans,
+                    r1, r2, 1.0, B + jj * inca, r1,
+                    A + jj * incb,  1, 0.0, C + jj * incc, 1);
+    }
+}
+
 
 /***********************************************************//*
     Function qr

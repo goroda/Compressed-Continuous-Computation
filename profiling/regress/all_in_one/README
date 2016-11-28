@@ -1,0 +1,2 @@
+First.svg : working regression code, unoptimized, DIM=5,FUNC=3,NSAMPLE=1000
+          : times = 59.576s 58.443s 54.347s (on work machine)

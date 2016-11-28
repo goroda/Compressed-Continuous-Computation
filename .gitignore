@@ -12,6 +12,7 @@ lib/*
 *.aux
 *.#*
 *.c3
+*.svg
 
 doc/html/*
 doc/latex/*

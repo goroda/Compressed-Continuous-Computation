@@ -185,6 +185,8 @@
 
 void c3linalg_multiple_vec_mat(size_t, size_t, size_t, const double *, size_t,
                                const double *, size_t, double *,size_t);
+void c3linalg_multiple_mat_vec(size_t, size_t, size_t, const double *, size_t,
+                               const double *, size_t, double *,size_t);
 int qr(size_t, size_t, double *, size_t);
 void rq_with_rmult(size_t, size_t, double *, size_t, size_t, size_t, double *, size_t);
 void svd(size_t, size_t, size_t, double *, double *, double *, double *);

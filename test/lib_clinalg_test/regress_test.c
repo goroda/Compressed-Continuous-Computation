@@ -1,3 +1,5 @@
+// Copyright (c) 2016, Sandia National Laboratories
+// 
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -794,6 +796,7 @@ void Test_LS_AIO(CuTest * tc)
     
     double obj;
     int res = c3opt_minimize(optimizer,guess,&obj);
+    CuAssertIntEquals(tc,1,res>-1);
     /* CuAssertDblEquals(tc,0.0,obj,1e-6); */
 
     struct FunctionTrain * ft_final = regress_aio_get_ft(aio);
@@ -861,6 +864,7 @@ void Test_LS_AIO2(CuTest * tc)
 
     double obj;
     int res = c3opt_minimize(optimizer,guess,&obj);
+    CuAssertIntEquals(tc,1,res>-1);
     /* CuAssertDblEquals(tc,0.0,obj,1e-6); */
 
     struct FunctionTrain * ft_final = regress_aio_get_ft(aio);
@@ -929,6 +933,7 @@ void Test_LS_AIO3(CuTest * tc)
      
     double obj;
     int res = c3opt_minimize(optimizer,guess,&obj);
+    CuAssertIntEquals(tc,1,res>-1);
     /* CuAssertDblEquals(tc,0.0,obj,1e-6); */
 
     struct FunctionTrain * ft_final = regress_aio_get_ft(aio);

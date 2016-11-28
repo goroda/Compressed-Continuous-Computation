@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2015, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia National Laboratories
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -310,19 +311,26 @@ deserialize_doublep(unsigned char * buffer, double ** value, size_t * N)
 ////  Parsing  strings for data /////
 /////////////////////////////////////
 /////////////////////////////////////
+char * mystrdup(char * str)
+{
+    size_t len = strlen(str)+1;
+    char *p = malloc(len);
+    return p ? memcpy(p, str, len) : NULL;
+}
 
 double * readtxt_double_array(char * str,size_t *nrows, size_t *ncols)
 {
     char * token;
-    char * str2 = strdup(str);
-    char * str3 = strdup(str);
-
-    char *save1,*save2,*save3;;
     
-    token = strtok_r(str,"\t ,\n",&save1);
+    char * str2 = mystrdup(str);
+    char * str3 = mystrdup(str);
+
+    /* char *save1,*save2,*save3;; */
+    
+    token = strtok(str,"\t ,\n");
     size_t ntot = 0;
     while (token != NULL){
-        token = strtok_r(NULL,"\t ,\n",&save1);
+        token = strtok(NULL,"\t ,\n");
         ntot++;
     }
     /* printf("total = %zu\n",ntot); */
@@ -333,10 +341,10 @@ double * readtxt_double_array(char * str,size_t *nrows, size_t *ncols)
         exit(1);
     }
 
-    token = strtok_r(str2,"\n",&save2);
+    token = strtok(str2,"\n");
     *nrows = 0;
     while (token != NULL){
-        token = strtok_r(NULL,"\n",&save2);
+        token = strtok(NULL,"\n");
         *nrows = *nrows + 1;
     }
     *ncols = ntot / *nrows;
@@ -344,13 +352,13 @@ double * readtxt_double_array(char * str,size_t *nrows, size_t *ncols)
     /* printf("number of rows = %zu\n",*nrows); */
     /* printf("number of cols = %zu\n",*ncols); */
 
-    token = strtok_r(str3," ,\n",&save3);
+    token = strtok(str3," ,\n");
     size_t ind = 0;
     /* printf("%s %zu \n",token,ind); */
     while (token != NULL){
         data[ind] = atof(token);
         ind++;
-        token = strtok_r(NULL," ,\n",&save3);
+        token = strtok(NULL," ,\n");
         /* printf("%s %zu\n",token,ind); */
     }
 
@@ -370,12 +378,16 @@ double * readfile_double_array(FILE * fp, size_t *nrows, size_t *ncols)
     if(cFile == NULL )
     {
         printf("\nInsufficient memory to read file.\n");
-        return 0;
+        return NULL;
     }
 
-    fread(cFile, lFileLen, 1, fp); /* Read the entire file into cFile */
-
+    size_t ret = fread(cFile, lFileLen, 1, fp); /* Read the entire file into cFile */
+    if (ret != 1){
+        fprintf(stderr, "Error reading file containing double array\n");
+        free(cFile); cFile = NULL;
+        return NULL;
+    }
     double * vals = readtxt_double_array(cFile,nrows,ncols);
-
+    free(cFile); cFile = NULL;
     return vals;
 }

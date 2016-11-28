@@ -1,20 +1,21 @@
-C3HOME=~/Documents/c3
+#C3HOME=~/Documents/c3
+C3HOME=~/Software/c3
 
 ######################################
 # Function Information
 ######################################
 RVTYPE=uniform
-DIM=2
-LB=-2.0
-UB=2.0
-FUNC=1
+DIM=5
+LB=0.0
+UB=1.0
+FUNC=3
 
 ######################################
 # Generate Training Data
 ######################################
 
 # Sample training data
-NSAMPLE=70
+NSAMPLE=1000
 FILENAME="trainingx.dat"
 GENSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE -t $RVTYPE -c $DIM -l $LB -u $UB"
 
@@ -67,5 +68,12 @@ $TESTVALSFUNC
 EVALFT="$C3HOME/bin/ftstats -x $XFILE_TEST -i $FTFILE"
 echo $EVALFT
 $EVALFT > ftevals.dat
+
+######################################
+# Get Squared Error
+######################################
+awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2;}; 
+  END { print sum/FNR; }' test_y.dat ftevals.dat
+
 
 
