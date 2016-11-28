@@ -11,6 +11,7 @@ lib/*
 *.log
 *.aux
 *.#*
+*.c3
 
 doc/html/*
 doc/latex/*
