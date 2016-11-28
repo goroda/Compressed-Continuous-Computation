@@ -121,7 +121,7 @@ int main(int argc, char * argv[])
     
     size_t nrows,ncols;
     double * xin = NULL;
-    double * x;
+    double * x = calloc_double(num * dim);
     if (infile != NULL){
         FILE * fp = fopen(infile, "rt");
         if (fp == NULL){
@@ -161,7 +161,6 @@ int main(int argc, char * argv[])
         fprintf(stderr,"Cannot open %s for writing data\n",outfile);
         return 1;
     }
-
 
     // evaluate functions
     double * vals = calloc_double(num);

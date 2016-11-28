@@ -20,9 +20,10 @@ void print_code_usage (FILE * stream, int exit_code)
 
     fprintf(stream, "Usage: %s options \n", program_name);
     fprintf(stream,
-            " -h --help      Display this usage information.\n"
-            " -i --input     Input file\n"
-            " -v --verbose   Output words (default 0)\n"
+            " -h --help     Display this usage information.\n"
+            " -x --xtrain   Input file containing training locations (required) \n"
+            " -y --ytrain   Input file containing training evaluations (required) \n"
+            " -v --verbose  Output words (default 0)\n"
         );
     exit (exit_code);
 }
@@ -54,19 +55,21 @@ void get_regression_data_from_file(FILE * fp, size_t * ndata, size_t * dim,
 
 int main(int argc, char * argv[])
 {
-    int seed = 4;
+    int seed = 3;
     srand(seed);
     
     int next_option;
-    const char * const short_options = "hi:v:";
+    const char * const short_options = "hx:y:v:";
     const struct option long_options[] = {
         { "help"    , 0, NULL, 'h' },
-        { "input"   , 1, NULL, 'i' },
+        { "xtrain"  , 1, NULL, 'x' },
+        { "ytrain"  , 1, NULL, 'y' },
         { "verbose" , 1, NULL, 'v' },
         { NULL      , 0, NULL, 0   }
     };
 
-    char * infile = "data.dat";
+    char * xfile = NULL;
+    char * yfile = NULL;
     program_name = argv[0];
     int verbose = 0;
     do {
@@ -75,8 +78,11 @@ int main(int argc, char * argv[])
         {
             case 'h': 
                 print_code_usage(stdout, 0);
-            case 'i':
-                infile = optarg;
+            case 'x':
+                xfile = optarg;
+                break;
+            case 'y':
+                yfile = optarg;
                 break;
             case 'v':
                 verbose = strtol(optarg,NULL,10);
@@ -91,20 +97,38 @@ int main(int argc, char * argv[])
 
     } while (next_option != -1);
 
-    FILE * fp = fopen(infile, "rt");
-    if (fp == NULL){
-        fprintf(stderr,"Cannot open %s for reading data\n",infile);
+    if ( (xfile == NULL) || (yfile == NULL)){
+        fprintf(stderr, "Error: missing data files\n\n");
+        print_code_usage(stderr,1);
+    }
+    
+    FILE * fpx = fopen(xfile, "rt");
+    if (fpx == NULL){
+        fprintf(stderr,"Cannot open %s for reading data\n",xfile);
         return 1;
     }
 
-    size_t ndata, dim;
-    double * x = NULL;
-    double * y = NULL;
-    get_regression_data_from_file(fp,&ndata,&dim,&x,&y);
+    FILE * fpy = fopen(yfile, "rt");
+    if (fpy == NULL){
+        fprintf(stderr,"Cannot open %s for reading data\n",yfile);
+        return 1;
+    }
+
     
+    size_t ndata, dim, trash;
+    double * x = readfile_double_array(fpx,&ndata,&dim);
+    double * y = readfile_double_array(fpy,&ndata,&trash);
+    
+    fclose(fpx);
+    fclose(fpy);
+
     double lb = -1.0;
     double ub = 1.0;
-    size_t ranks[6] = {1,2,2,2,2,1};
+    size_t * ranks = calloc_size_t(dim+1);
+    for (size_t ii = 0; ii < dim+1; ii++){ ranks[ii] = 4; }
+    ranks[0] = 1;
+    ranks[dim] = 1;
+    
     size_t maxorder = 10;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
@@ -126,6 +150,18 @@ int main(int argc, char * argv[])
     double obj;
     int res = c3opt_minimize(optimizer,guess,&obj);
 
+    double diff;
+    double err;
+    double norm = 0.0;
+    struct FunctionTrain * ft = regress_aio_get_ft(aio);
+    for (size_t ii = 0; ii < ndata; ii++){
+        diff = y[ii] - function_train_eval(ft,x+ii*dim);
+        err += diff*diff;
+        norm += y[ii]*y[ii];
+    }
+
+    printf("Relative error on training samples = %G\n",err/norm);
+    
     free(x); x = NULL;
     free(y); y = NULL;
     function_train_free(a); a = NULL;
