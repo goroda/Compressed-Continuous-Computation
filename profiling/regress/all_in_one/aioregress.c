@@ -111,7 +111,7 @@ int main(int argc, char * argv[])
     ranks[0] = 1;
     ranks[dim] = 1;
     
-    size_t maxorder = 10;
+    size_t maxorder = 5;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 

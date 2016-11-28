@@ -21,10 +21,8 @@ void print_code_usage (FILE * stream, int exit_code)
     fprintf(stream, "Usage: %s options \n", program_name);
     fprintf(stream,
             " -h --help     Display this usage information.\n"
-            " -x --xtest    Input file containing testing data (required) \n"
-            " -y --ytrain   Input file containing training evaluations (required) \n"
-            " -o --outfile  File to which to save the resulting function train \n"
-            "               Does not save if this file is not specified\n"
+            " -i --input    Input file contianing saved function train (required) \n"
+            " -x --xtest    Input file containing testing data  \n"
             " -v --verbose  Output words (default 0)\n"
         );
     exit (exit_code);
@@ -32,22 +30,19 @@ void print_code_usage (FILE * stream, int exit_code)
 
 int main(int argc, char * argv[])
 {
-    int seed = 3;
-    srand(seed);
-    
+
     int next_option;
-    const char * const short_options = "hx:y:o:v:";
+    const char * const short_options = "hi:x:o:v:";
     const struct option long_options[] = {
         { "help"    , 0, NULL, 'h' },
-        { "xtrain"  , 1, NULL, 'x' },
-        { "ytrain"  , 1, NULL, 'y' },
-        { "outfile" , 1, NULL, 'o' },
+        { "input"   , 1, NULL, 'i' },
+        { "xtest"   , 1, NULL, 'x' },
         { "verbose" , 1, NULL, 'v' },
         { NULL      , 0, NULL, 0   }
     };
 
+    char * infile = NULL;
     char * xfile = NULL;
-    char * yfile = NULL;
     char * outfile = NULL;
     program_name = argv[0];
     int verbose = 0;
@@ -60,8 +55,8 @@ int main(int argc, char * argv[])
             case 'x':
                 xfile = optarg;
                 break;
-            case 'y':
-                yfile = optarg;
+            case 'i':
+                infile = optarg;
                 break;
             case 'o':
                 outfile = optarg;
@@ -78,3 +73,40 @@ int main(int argc, char * argv[])
         }
 
     } while (next_option != -1);
+
+    if (infile == NULL){
+        fprintf(stderr, "Error: Missing FT input file\n\n");
+        print_code_usage(stderr,1);
+    }
+
+    struct FunctionTrain * ft = function_train_load(infile);
+    if (ft == NULL){
+        fprintf(stderr, "Failure loading %s\n",infile);
+        return 1;
+    }
+
+    double * xtest = NULL;
+    size_t ntest, dtest;
+    if (xfile != NULL){
+        FILE * fp = fopen(xfile,"rt");
+        if (fp == NULL){
+            fprintf(stderr, "Could not open file %s\n",xfile);
+            return 1;
+        }
+        xtest = readfile_double_array(fp,&ntest,&dtest);
+        if (dtest != ft->dim){
+            fprintf(stderr,"Number of columns of testing points is not the same as the\n");
+            fprintf(stderr,"dimension of the function train\n");
+            return 1;
+        }
+        fclose(fp);
+
+        for (size_t ii = 0; ii < ntest; ii++){
+            double val = function_train_eval(ft,xtest+ii*ft->dim);
+            fprintf(stdout,"%3.15G\n",val);
+        }
+    }
+
+    function_train_free(ft); ft = NULL;
+    return 0;
+}

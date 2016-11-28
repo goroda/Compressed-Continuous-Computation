@@ -56,6 +56,19 @@ void sin_sum2d(size_t N, const double * x, double * out, void * arg)
     }
 }
 
+void sin_sum5d(size_t N, const double * x, double * out, void * arg)
+{
+
+    (void)(arg);
+    for (size_t ii = 0; ii < N; ii++){
+        double temp = 0.0;
+        for (size_t jj = 0; jj < 5; jj++){
+            temp += x[ii*5+jj];
+        }
+        out[ii] = sin(temp);
+    }
+}
+
 void sin_sum10d(size_t N, const double * x, double * out, void * arg)
 {
 
@@ -87,13 +100,16 @@ struct Function funcs[34];
 size_t num_funcs;
 void create_functions()
 {
-    num_funcs = 3;
+    num_funcs = 4;
     funcs[0].dim = 2;
     funcs[0].eval = rosen_brock_func;
 
     funcs[1].dim = 2;
     funcs[1].eval = sin_sum2d;
 
-    funcs[2].dim = 10;
-    funcs[2].eval = sin_sum10d;
+    funcs[2].dim = 5;
+    funcs[2].eval = sin_sum5d;
+
+    funcs[3].dim = 10;
+    funcs[3].eval = sin_sum10d;
 }
