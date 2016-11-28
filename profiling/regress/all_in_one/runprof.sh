@@ -18,7 +18,7 @@ NSAMPLE=70
 FILENAME="trainingx.dat"
 GENSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE -t $RVTYPE -c $DIM -l $LB -u $UB"
 
-echo $GENSAMPLES
+echo "$GENSAMPLES > $FILENAME"
 $GENSAMPLES > $FILENAME
 
 # Function Evaluation
@@ -31,7 +31,7 @@ $EVALFUNC
 ######################################
 # Perform Regression
 ######################################
-VERBOSE=2
+VERBOSE=1
 FTFILE="trainedft.c3"
 REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -v $VERBOSE -o $FTFILE"
 
@@ -50,7 +50,7 @@ NSAMPLE_TEST=10000
 XFILE_TEST="test_x.dat"
 GENTESTSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE_TEST -t $RVTYPE -c $DIM -l $LB -u $UB"
 
-echo $GENTESTSAMPLES
+echo "$GENTESTSAMPLES > $XFILE_TEST"
 $GENTESTSAMPLES > $XFILE_TEST
 
 ######################################
@@ -67,3 +67,5 @@ $TESTVALSFUNC
 EVALFT="$C3HOME/bin/ftstats -x $XFILE_TEST -i $FTFILE"
 echo $EVALFT
 $EVALFT > ftevals.dat
+
+
