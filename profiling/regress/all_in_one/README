@@ -1,2 +1,11 @@
+Notes:
+1) maxorder = 5; ranks = 4
+2) training data on cube of [0,1] but polynomials defined on [-1,1] (for first.svg and second.svg) (should fix)
+
+
 First.svg : working regression code, unoptimized, DIM=5,FUNC=3,NSAMPLE=1000
           : times = 59.576s 58.443s 54.347s (on work machine)
+
+Second.svg : increased memory requirement and reduced computation by creating a forward
+             and backward sweep, storing all evaluations for each core required, DIM=5,FUNC=3,NSAMPLE=1000
+           : times = 39.936s 40.268s 38.650s (on work machine)

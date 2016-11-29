@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
 {
 
     int next_option;
-    const char * const short_options = "hi:x:o:v:";
+    const char * const short_options = "hi:x:v:";
     const struct option long_options[] = {
         { "help"    , 0, NULL, 'h' },
         { "input"   , 1, NULL, 'i' },
@@ -43,7 +43,7 @@ int main(int argc, char * argv[])
 
     char * infile = NULL;
     char * xfile = NULL;
-    char * outfile = NULL;
+    /* char * outfile = NULL; */
     program_name = argv[0];
     int verbose = 0;
     do {
@@ -58,9 +58,9 @@ int main(int argc, char * argv[])
             case 'i':
                 infile = optarg;
                 break;
-            case 'o':
-                outfile = optarg;
-                break;
+            /* case 'o': */
+            /*     outfile = optarg; */
+            /*     break; */
             case 'v':
                 verbose = strtol(optarg,NULL,10);
                 break;
@@ -74,6 +74,10 @@ int main(int argc, char * argv[])
 
     } while (next_option != -1);
 
+    if (verbose > 0){
+        fprintf(stderr,"Cool\n");
+    }
+    
     if (infile == NULL){
         fprintf(stderr, "Error: Missing FT input file\n\n");
         print_code_usage(stderr,1);

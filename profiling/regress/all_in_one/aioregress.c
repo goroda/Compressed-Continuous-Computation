@@ -131,11 +131,17 @@ int main(int argc, char * argv[])
 
     double obj;
     int res = c3opt_minimize(optimizer,guess,&obj);
+    if (verbose > 0){
+        if (res < 0){
+            printf("Warning: optimization did not terminate successfully (may not have reached a local minimum)\n");
+        }
+    }
     
+    /* struct FunctionTrain * ft = function_train_round(regress_aio_get_ft(aio),1e-7,NULL); */
     struct FunctionTrain * ft = regress_aio_get_ft(aio);
     if (verbose > 0){
         double diff;
-        double err;
+        double err = 0.0;
         double norm = 0.0;
 
         for (size_t ii = 0; ii < ndata; ii++){
@@ -144,6 +150,7 @@ int main(int argc, char * argv[])
             norm += y[ii]*y[ii];
         }
 
+        /* printf("rounded FT ranks are ");iprint_sz(dim+1,function_train_get_ranks(ft)); */
         printf("Relative error on training samples = %G\n",err/norm);
     }
     if (outfile != NULL){
@@ -155,6 +162,7 @@ int main(int argc, char * argv[])
     
     free(x); x = NULL;
     free(y); y = NULL;
+    /* function_train_free(ft); ft = NULL; */
     function_train_free(a); a = NULL;
     bounding_box_free(bds); bds = NULL;
     regress_aio_free(aio); aio = NULL;

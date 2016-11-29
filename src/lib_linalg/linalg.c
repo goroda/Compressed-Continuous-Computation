@@ -1,5 +1,10 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016, Sandia National Laboratories
+
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -141,8 +146,8 @@ void c3linalg_multiple_mat_vec(size_t N, size_t r1, size_t r2,
 {
     for (size_t jj = 0; jj < N; jj++){
         cblas_dgemv(CblasColMajor,CblasNoTrans,
-                    r1, r2, 1.0, B + jj * inca, r1,
-                    A + jj * incb,  1, 0.0, C + jj * incc, 1);
+                    r1, r2, 1.0, B + jj * incb, r1,
+                    A + jj * inca,  1, 0.0, C + jj * incc, 1);
     }
 }
 

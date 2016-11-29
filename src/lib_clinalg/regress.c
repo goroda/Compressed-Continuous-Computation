@@ -1,3 +1,9 @@
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
+
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -528,7 +534,8 @@ struct RegressAIO
     const double * y;
     const double * x;
 
-    struct RunningCoreTotal * running_evals;
+    struct RunningCoreTotal * running_evals_lr;
+    struct RunningCoreTotal * running_evals_rl;
     struct RunningCoreTotal ** running_grad;
     struct RegMemSpace * evals;
     struct RegMemSpace * grad;
@@ -561,10 +568,11 @@ struct RegressAIO * regress_aio_alloc(size_t dim)
     aio->y = NULL;
     aio->x = NULL;
 
-    aio->running_evals = NULL;
+    aio->running_evals_lr = NULL;
+    aio->running_evals_rl = NULL;
     aio->running_grad  = NULL;
 
-    aio->evals         = NULL;
+    aio->evals      = NULL;
     aio->grad          = NULL;
     aio->grad_space    = NULL;
     aio->fparam_space  = NULL;
@@ -589,7 +597,8 @@ void regress_aio_free(struct RegressAIO * aio)
         reg_mem_space_free(aio->evals); aio->evals = NULL;
         reg_mem_space_free(aio->grad);  aio->grad = NULL;
 
-        running_core_total_free(aio->running_evals);
+        running_core_total_free(aio->running_evals_lr);
+        running_core_total_free(aio->running_evals_rl);
         running_core_total_arr_free(aio->dim,aio->running_grad);
         
         function_train_free(aio->ft); aio->ft = NULL;
@@ -680,7 +689,8 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
     }
     aio->fparam_space = reg_mem_space_alloc(1,max_param_within_func);
 
-    aio->running_evals = ftutil_running_tot_space(ft);
+    aio->running_evals_lr = ftutil_running_tot_space(ft);
+    aio->running_evals_rl = ftutil_running_tot_space(ft);
     aio->running_grad  = ftutil_running_tot_space_eachdim(ft);
     
     aio->ft       = function_train_copy(ft);
@@ -708,15 +718,16 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
         running += aio->nparams[ii];
     }
     assert (running == nparam);
-    
-    running_core_total_restart(aio->running_evals);
+
+    running_core_total_restart(aio->running_evals_lr);
+    running_core_total_restart(aio->running_evals_rl);
     running_core_total_arr_restart(aio->dim, aio->running_grad);
     
     double out=0.0, resid;
     if (grad != NULL){
         function_train_param_grad_eval(
             aio->ft, aio->N,
-            aio->x, aio->running_evals, aio->running_grad,
+            aio->x, aio->running_evals_lr, aio->running_evals_rl, aio->running_grad,
             aio->nparams, aio->evals->vals, aio->grad->vals,
             aio->grad_space->vals, reg_mem_space_get_data_inc(aio->grad_space),
             aio->fparam_space->vals
@@ -737,7 +748,7 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
     else{
         function_train_param_grad_eval(
             aio->ft, aio->N,
-            aio->x, aio->running_evals,NULL,
+            aio->x, aio->running_evals_lr,NULL,NULL,
             aio->nparams, aio->evals->vals, NULL,NULL,0,NULL);
         for (size_t ii = 0; ii < aio->N; ii++){
             resid = aio->y[ii] - aio->evals->vals[ii];

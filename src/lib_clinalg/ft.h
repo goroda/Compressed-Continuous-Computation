@@ -1,5 +1,10 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016, Sandia National Laboratories
+
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -68,6 +73,8 @@ struct FunctionTrain {
     struct FTMemSpace * evalspace2;
     struct FTMemSpace * evalspace3;
 
+    struct FTMemSpace ** evalspace4;
+
     double ** evaldd1;
     double ** evaldd2;
     double ** evaldd3;
@@ -135,7 +142,9 @@ void running_core_total_arr_restart(size_t, struct RunningCoreTotal **);
 struct RunningCoreTotal * ftutil_running_tot_space(struct FunctionTrain *);
 struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain *);
 void function_train_param_grad_eval(struct FunctionTrain *, size_t,
-                                    const double *, struct RunningCoreTotal *,
+                                    const double *,
+                                    struct RunningCoreTotal *,
+                                    struct RunningCoreTotal *,
                                     struct RunningCoreTotal **, size_t *,
                                     double *, double *,
                                     double *,

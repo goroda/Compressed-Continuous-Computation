@@ -15,7 +15,7 @@ FUNC=3
 ######################################
 
 # Sample training data
-NSAMPLE=1000
+NSAMPLE=100
 FILENAME="trainingx.dat"
 GENSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE -t $RVTYPE -c $DIM -l $LB -u $UB"
 
