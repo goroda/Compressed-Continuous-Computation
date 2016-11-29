@@ -983,12 +983,12 @@ void Test_LS_AIO3(CuTest * tc)
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad1); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad3); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
+    SUITE_ADD_TEST(suite, Test_LS_ALS_grad);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_grad1);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_grad2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_grad3);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2);
 
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     SUITE_ADD_TEST(suite, Test_LS_AIO);

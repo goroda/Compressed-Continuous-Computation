@@ -1543,6 +1543,87 @@ int legendre_poly_expansion_arr_eval(size_t n,
 }
 
 /********************************************************//**
+*   Evaluate each orthonormal polynomial expansion that is in an 
+*   array of generic functions at an array of points
+*
+*   \param[in]     n          - number of polynomials
+*   \param[in]     parr       - polynomial expansions
+*   \param[in]     N          - number of evaluations
+*   \param[in]     x          - locations at which to evaluate
+*   \param[in]     incx       - increment between locations
+*   \param[in,out] y          - evaluations
+*   \param[in]     incy       - increment between evaluations of array (at least n)
+*   \param[in,out] workspace  - workspace 
+*
+*   \return 0 - successful
+*           1 - not all legendre polynomials
+*
+*   \note
+*   Assumes all functions have the same bounds
+*************************************************************/
+int legendre_poly_expansion_arr_evalN(size_t n,
+                                      struct OrthPolyExpansion ** parr,
+                                      size_t N,
+                                      const double * x, size_t incx,
+                                      double * y, size_t incy)
+{
+    
+    size_t maxpoly = 0;
+    for (size_t ii = 0; ii < n; ii++){
+        if (parr[ii]->p->ptype != LEGENDRE){
+            return 1;
+        }
+        if (parr[ii]->num_poly > maxpoly){
+            maxpoly = parr[ii]->num_poly;
+        }
+    }
+
+    double m = (parr[0]->p->upper - parr[0]->p->lower) / 
+        (parr[0]->upper_bound- parr[0]->lower_bound);
+    double off = parr[0]->p->upper - m * parr[0]->upper_bound;
+
+    for (size_t jj = 0; jj < N; jj++){
+        for (size_t ii = 0; ii < n; ii++){
+            y[ii + jj * incy] = 0.0;
+        }
+    }
+
+    for (size_t jj = 0; jj < N; jj++){
+        double x_norm =  m * x[jj*incx] + off;
+        double p[2];
+        double pnew;
+        p[0] = 1.0;
+        size_t iter = 0;
+        size_t incyy = jj * incy;
+        for (size_t ii = 0; ii < n; ii++){
+            y[ii + incyy] += p[0] * parr[ii]->coeff[iter];
+        }
+        iter++;
+        p[1] = x_norm;
+        for (size_t ii = 0; ii < n; ii++){
+            if (parr[ii]->num_poly > iter){
+                y[ii + incyy] += p[1] * parr[ii]->coeff[iter];
+            }
+        }
+        iter++;
+        for (iter = 2; iter < maxpoly; iter++){
+            pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
+            pnew /= (double) iter;
+            for (size_t ii = 0; ii < n; ii++){
+                if (parr[ii]->num_poly > iter){
+                    y[ii + incyy] += parr[ii]->coeff[iter] * pnew;
+                }
+            }
+            p[0] = p[1];
+            p[1] = pnew;
+        }
+    }
+    
+    return 0;
+}
+
+
+/********************************************************//**
 *   Gradients with respect to parameters of an orthonormal polynomial
 *   expansion
 *

@@ -249,6 +249,11 @@ double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
 int legendre_poly_expansion_arr_eval(size_t,
                                      struct OrthPolyExpansion **, 
                                      double, double *);
+int legendre_poly_expansion_arr_evalN(size_t,
+                                      struct OrthPolyExpansion **,
+                                      size_t,
+                                      const double *, size_t,
+                                      double *, size_t);
 int legendre_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion *, double, double *, size_t);
     

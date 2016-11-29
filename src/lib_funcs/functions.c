@@ -1661,13 +1661,33 @@ generic_function_1darray_eval2(size_t n,
 *************************************************************/
 void
 generic_function_1darray_eval2N(size_t n, 
-                               struct GenericFunction ** f,
-                               size_t N, const double * x, size_t incx,
-                               double * y, size_t incy)
+                                struct GenericFunction ** f,
+                                size_t N, const double * x, size_t incx,
+                                double * y, size_t incy)
 {
 
-    for (size_t ii = 0; ii < N; ii++){
-        generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+    int allpoly = 1;
+    struct OrthPolyExpansion * parr[1000];
+    for (size_t ii = 0; ii < n; ii++){
+        if (f[ii]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+        parr[ii] = f[ii]->f;
+    }
+    if ((allpoly == 1) && (n <= 1000)){
+        int res = legendre_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        if (res == 1){ //something when wrong
+            size_t ii;
+            for (ii = 0; ii < n; ii++){
+                generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+            }
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < N; ii++){
+            generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+        }
     }
 }
 

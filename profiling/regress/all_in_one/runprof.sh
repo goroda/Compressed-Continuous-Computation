@@ -1,5 +1,5 @@
 #C3HOME=~/Documents/c3
-C3HOME=~/Software/c3
+export C3HOME=~/Software/c3
 
 ######################################
 # Function Information
@@ -15,7 +15,7 @@ FUNC=3
 ######################################
 
 # Sample training data
-NSAMPLE=100
+NSAMPLE=1000
 FILENAME="trainingx.dat"
 GENSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE -t $RVTYPE -c $DIM -l $LB -u $UB"
 

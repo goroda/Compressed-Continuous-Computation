@@ -1,5 +1,10 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016, Sandia National Laboratories
+
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 //
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
@@ -3125,12 +3130,8 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     /* printf("\t cmoooonn\n"); */
     size_t size = qma->nrows*qma->ncols;
     /* printf("\t evaluate! size=%zu\n",size); */
-    for (size_t jj = 0; jj < N; jj++){
-        for (ii = 0; ii < size; ii++){
-            out[ii + jj*incout] = generic_function_1d_eval(qma->funcs[ii],x[jj*incx]);
-        }
-    }
-    /* printf("\t grad==NULL=%d \n",grad==NULL); */
+    generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+
     if (grad != NULL){
         for (size_t jj = 0; jj < N; jj++){
             size_t onparam = 0;
