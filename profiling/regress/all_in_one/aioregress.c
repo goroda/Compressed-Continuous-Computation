@@ -25,6 +25,10 @@ void print_code_usage (FILE * stream, int exit_code)
             " -y --ytrain   Input file containing training evaluations (required) \n"
             " -o --outfile  File to which to save the resulting function train \n"
             "               Does not save if this file is not specified\n"
+            " -l --lower    Lower bound, same for every dimension (default -1.0)\n"
+            " -u --upper    Upper bound, same for every dimension (default  1.0)\n"
+            " -m --maxorder Maximum number of params in univariate approx (default 5)\n"
+            " -r --rank     Starting rank for approximation (default 4)\n"
             " -v --verbose  Output words (default 0)\n"
         );
     exit (exit_code);
@@ -36,12 +40,16 @@ int main(int argc, char * argv[])
     srand(seed);
     
     int next_option;
-    const char * const short_options = "hx:y:o:v:";
+    const char * const short_options = "hx:y:o:l:u:m:r:v:";
     const struct option long_options[] = {
         { "help"    , 0, NULL, 'h' },
         { "xtrain"  , 1, NULL, 'x' },
         { "ytrain"  , 1, NULL, 'y' },
         { "outfile" , 1, NULL, 'o' },
+        { "lower"   , 1, NULL, 'l' },
+        { "upper"   , 1, NULL, 'u' },
+        { "maxorder", 1, NULL, 'm' },
+        { "rank"    , 1, NULL, 'r' },
         { "verbose" , 1, NULL, 'v' },
         { NULL      , 0, NULL, 0   }
     };
@@ -50,6 +58,10 @@ int main(int argc, char * argv[])
     char * yfile = NULL;
     char * outfile = NULL;
     program_name = argv[0];
+    double lower = -1.0;
+    double upper = 1.0;
+    size_t maxorder = 5;
+    size_t rank = 4;
     int verbose = 0;
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -65,6 +77,18 @@ int main(int argc, char * argv[])
                 break;
             case 'o':
                 outfile = optarg;
+                break;
+            case 'l':
+                lower = atof(optarg);
+                break;
+            case 'u':
+                upper = atof(optarg);
+                break;
+            case 'm':
+                maxorder = strtol(optarg,NULL,10);
+                break;
+            case 'r':
+                rank = strtol(optarg,NULL,10);
                 break;
             case 'v':
                 verbose = strtol(optarg,NULL,10);
@@ -104,15 +128,13 @@ int main(int argc, char * argv[])
     fclose(fpx);
     fclose(fpy);
 
-    double lb = -1.0;
-    double ub = 1.0;
+
     size_t * ranks = calloc_size_t(dim+1);
-    for (size_t ii = 0; ii < dim+1; ii++){ ranks[ii] = 4; }
+    for (size_t ii = 0; ii < dim+1; ii++){ ranks[ii] = rank; }
     ranks[0] = 1;
     ranks[dim] = 1;
-    
-    size_t maxorder = 5;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+
+    struct BoundingBox * bds = bounding_box_init(dim,lower,upper);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     struct RegressAIO * aio = regress_aio_alloc(dim);

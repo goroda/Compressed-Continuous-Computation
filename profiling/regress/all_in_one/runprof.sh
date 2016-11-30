@@ -5,13 +5,21 @@ export C3HOME=~/Software/c3
 # Function Information
 ######################################
 RVTYPE=uniform
-DIM=5
+DIM=2
 LB=0.0
 UB=1.0
-FUNC=3
+FUNC=2
 
 ######################################
-# Generate Training Data
+# Regression options (order=5,rank=4 for profile data)
+######################################
+MAXORDER=4
+RANK=2
+VERBOSE=1
+FTFILE="trainedft.c3"
+
+######################################
+# Generate Training Data (1000 for profile data)
 ######################################
 
 # Sample training data
@@ -32,10 +40,7 @@ $EVALFUNC
 ######################################
 # Perform Regression
 ######################################
-VERBOSE=1
-FTFILE="trainedft.c3"
-REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -v $VERBOSE -o $FTFILE"
-
+REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -m $MAXORDER -r $RANK -v $VERBOSE -o $FTFILE"
 echo $REGRESS
 $REGRESS # Just generate regression
 
@@ -72,8 +77,9 @@ $EVALFT > ftevals.dat
 ######################################
 # Get Squared Error
 ######################################
-awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2;}; 
-  END { print sum/FNR; }' test_y.dat ftevals.dat
+error=$(awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2;}; 
+  END { print sum/FNR; }' test_y.dat ftevals.dat)
+echo "Relative Error: $error"
 
 
 
