@@ -88,7 +88,6 @@ void RunAllTests(void) {
     CuSuiteDelete(fta);
     CuSuiteDelete(dmrg);
     CuSuiteDelete(diff);
-
     CuSuiteDelete(regress);
     
     CuStringDelete(output);

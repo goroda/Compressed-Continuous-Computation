@@ -317,6 +317,19 @@ void pw_poly_opts_set_tol(struct PwPolyOpts * pw, double tol)
     pw->epsilon = tol;
 }
 
+
+/********************************************************//**
+*   Get number of free parameters
+*************************************************************/
+size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
+{
+    assert (opts != NULL);
+    fprintf(stderr, "Error: Cannot yet get number of free parameters from pw poly opts\n");
+    assert (1 == 0);
+    return 0;
+}
+
+
 //////////////////////////////////////////////////////////////////
 
 /********************************************************//**

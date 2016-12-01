@@ -60,12 +60,15 @@ struct LinElemExpAopts *
 lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts **);
-size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
 void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
                                   size_t, double *);
+
 void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
 void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
 void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
+
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
+size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts *);
 
 /////////////////////////////////////////////////////////////////////
 
@@ -144,6 +147,8 @@ lin_elem_exp_approx(struct LinElemExpAopts *, struct Fwrap *);
 void lin_elem_exp_scale(double, struct LinElemExp *);
 void lin_elem_exp_flip_sign(struct LinElemExp *);
 void lin_elem_exp_orth_basis(size_t,struct LinElemExp **, struct LinElemExpAopts *);
+struct LinElemExp * 
+lin_elem_exp_zero(const struct LinElemExpAopts *, int);
 struct LinElemExp *
 lin_elem_exp_constant(double,
                       const struct LinElemExpAopts *);

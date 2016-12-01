@@ -76,6 +76,7 @@ void ope_opts_set_ub(struct OpeOpts *, double);
 double ope_opts_get_ub(const struct OpeOpts *);
 void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
 enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
+size_t ope_opts_get_nparams(const struct OpeOpts *);
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis
@@ -210,6 +211,9 @@ orth_poly_expansion_copy(struct OrthPolyExpansion *);
 enum poly_type 
 orth_poly_expansion_get_ptype(const struct OrthPolyExpansion *);
 
+struct OrthPolyExpansion * 
+orth_poly_expansion_zero(struct OpeOpts *, int);
+    
 struct OrthPolyExpansion * 
 orth_poly_expansion_constant(double, struct OpeOpts *);
 

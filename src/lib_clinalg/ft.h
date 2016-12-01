@@ -172,6 +172,8 @@ function_train_rankone(struct MultiApproxOpts *, struct Fwrap *);
 struct FunctionTrain *
 function_train_initsum(struct MultiApproxOpts *, struct Fwrap *);
 struct FunctionTrain *
+function_train_zeros(struct MultiApproxOpts *, const size_t *);
+struct FunctionTrain *
 function_train_constant(double a, struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_linear(const double *, size_t, const double *, size_t,

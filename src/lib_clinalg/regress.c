@@ -42,13 +42,14 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <math.h>
 
-#include "array.h"
-#include "ft.h"
-/* #include "regress.h" */
+/* #include "array.h" */
+/* #include "ft.h" */
 #include "lib_linalg.h"
+#include "regress.h"
 
 struct RegMemSpace
 {
@@ -210,6 +211,26 @@ void regress_als_free(struct RegressALS * als)
 }
 
 /***********************************************************//**
+    Get the current function train from the regression struct.
+***************************************************************/
+struct FunctionTrain * regress_als_get_ft(const struct RegressALS * als)
+{
+    assert (als != NULL);
+    return als->ft;
+}
+
+/***********************************************************//**
+    Get the current ftparam stored in the struct
+***************************************************************/
+double * regress_als_get_ftparam(const struct RegressALS * als)
+{
+    assert (als != NULL);
+    assert (als->ft_param != NULL);
+    return als->ft_param;
+}
+
+
+/***********************************************************//**
     Add data to ALS
 ***************************************************************/
 void regress_als_add_data(struct RegressALS * als, size_t N, const double * x, const double * y)
@@ -218,6 +239,20 @@ void regress_als_add_data(struct RegressALS * als, size_t N, const double * x, c
     als->N = N;
     als->x = x;
     als->y = y;
+}
+
+/***********************************************************//**
+    Get number of parameters
+***************************************************************/
+size_t regress_als_get_num_params(const struct RegressALS * als)
+{
+    assert (als != NULL);
+    assert (als->nparams != NULL);
+    size_t totnum = 0;
+    for (size_t ii = 0; ii < als->dim; ii++){
+        totnum += als->nparams[ii];
+    }
+    return totnum;
 }
 
 /***********************************************************//**
@@ -617,6 +652,16 @@ struct FunctionTrain * regress_aio_get_ft(const struct RegressAIO * aio)
 }
 
 /***********************************************************//**
+    Get the current ftparam stored in the struct
+***************************************************************/
+double * regress_aio_get_ftparam(const struct RegressAIO * aio)
+{
+    assert (aio != NULL);
+    assert (aio->ft_param != NULL);
+    return aio->ft_param;
+}
+
+/***********************************************************//**
     Add data to AIO
 ***************************************************************/
 void regress_aio_add_data(struct RegressAIO * aio, size_t N, const double * x, const double * y)
@@ -627,6 +672,9 @@ void regress_aio_add_data(struct RegressAIO * aio, size_t N, const double * x, c
     aio->y = y;
 }
 
+/***********************************************************//**
+    Get number of parameters
+***************************************************************/
 size_t regress_aio_get_num_params(const struct RegressAIO * aio)
 {
     assert (aio != NULL);
@@ -757,4 +805,202 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
     }
 
     return out;
+}
+
+
+////////////////////////////////////
+// Common Interface
+////////////////////////////////////
+
+struct FTRegress
+{
+    enum REGTYPE type;
+    size_t dim;
+    size_t ntotparam;
+    union {
+        struct RegressALS * als;
+        struct RegressAIO * aio;
+    } reg;
+
+    struct c3Opt * optimizer;
+    size_t * start_ranks;
+};
+
+/***********************************************************//**
+    Allocate function train regression structure
+***************************************************************/
+struct FTRegress * ft_regress_alloc(size_t dim)
+{
+    struct FTRegress * ftr = malloc(sizeof(struct FTRegress));
+    if (ftr == NULL){
+        fprintf(stderr, "Cannot allocate FTRegress structure\n");
+        exit(1);
+    }
+    ftr->type = REGNONE;
+    ftr->dim = dim;
+    ftr->ntotparam = 0;
+    ftr->optimizer = NULL;
+    ftr->start_ranks = NULL;
+    return ftr;
+}
+    
+/***********************************************************//**
+    Free FT regress structure
+***************************************************************/
+void ft_regress_free(struct FTRegress * ftr)
+{
+    if (ftr != NULL){
+        if (ftr->type == ALS){
+            regress_als_free(ftr->reg.als); ftr->reg.als = NULL;
+        }
+        else if (ftr->type == AIO){
+            regress_aio_free(ftr->reg.aio); ftr->reg.aio = NULL;
+        }
+
+        c3opt_free(ftr->optimizer); ftr->optimizer = NULL;
+        free(ftr->start_ranks); ftr->start_ranks = NULL;
+        
+        free(ftr); ftr = NULL;
+    }
+}
+
+/***********************************************************//**
+    Set regression type
+***************************************************************/
+void ft_regress_set_type(struct FTRegress * ftr, enum REGTYPE type)
+{
+    assert (ftr != NULL);
+    if (ftr->type != REGNONE){
+        fprintf(stdout,"Warning: respecfiying type of regression may lead to memory problems");
+        fprintf(stdout,"Use function ft_regress_reset_type instead\n");
+    }
+    ftr->type = type;
+    if (type == ALS){
+        ftr->reg.als = regress_als_alloc(ftr->dim);
+    }
+    else if (type == AIO){
+        ftr->reg.aio = regress_aio_alloc(ftr->dim);
+    }
+    else{
+        fprintf(stderr,"Error: Regularization type %d not available. Options include\n",type);
+        fprintf(stderr,"       ALS = 0\n");
+        fprintf(stderr,"       AIO = 1\n");
+    }
+}
+
+
+/***********************************************************//**
+    Set regression type
+***************************************************************/
+void ft_regress_set_start_ranks(struct FTRegress * ftr, const size_t * ranks)
+{
+    assert (ftr != NULL);
+    ftr->start_ranks = calloc_size_t(ftr->dim+1);
+    memmove(ftr->start_ranks,ranks,(ftr->dim+1)*sizeof(size_t));
+}
+
+/***********************************************************//**
+    Add data
+***************************************************************/
+void ft_regress_set_data(struct FTRegress * ftr, size_t N,
+                         const double * x, size_t incx,
+                         const double * y, size_t incy)
+{
+
+    assert (ftr != NULL);
+    assert (incx == 1);
+    assert (incy == 1);
+
+    enum REGTYPE type = ftr->type;
+    if (type == ALS){
+        regress_als_add_data(ftr->reg.als,N,x,y);
+    }
+    else if (type == AIO){
+        regress_aio_add_data(ftr->reg.aio,N,x,y);
+    }
+    else{
+        fprintf(stderr,"Must set regression type before setting data\n");
+    }
+
+}
+
+/***********************************************************//**
+    Set regression type
+***************************************************************/
+void ft_regress_prep_memory(struct FTRegress * ftr, struct FunctionTrain * ft, int how)
+{
+
+    assert (ftr != NULL);
+    enum REGTYPE type = ftr->type;
+    if (type == ALS){
+        regress_als_prep_memory(ftr->reg.als,ft,how);
+        ftr->ntotparam = regress_als_get_num_params(ftr->reg.als);
+    }
+    else if (type == AIO){
+        regress_aio_prep_memory(ftr->reg.aio,ft,how);
+        ftr->ntotparam = regress_aio_get_num_params(ftr->reg.aio);
+    }
+    else{
+        fprintf(stderr,"Must set regression type before calling prep_memory\n");
+        exit(1);
+    }
+
+    /* printf("Number of total parameters = %zu\n",ftr->ntotparam); */
+    ftr->optimizer = c3opt_alloc(BFGS,ftr->ntotparam);
+    c3opt_set_maxiter(ftr->optimizer,10000);
+}
+
+/***********************************************************//**
+    Run the regression
+***************************************************************/
+struct FunctionTrain * ft_regress_run(struct FTRegress * ftr, enum REGOBJ obj)
+{
+    assert (ftr != NULL);
+    assert (ftr->ntotparam > 0);
+    assert (ftr->optimizer != NULL);
+    enum REGTYPE type = ftr->type;
+
+    /* double * guess = NULL; */
+    if (obj == FTLS){
+        if (type == ALS){
+            fprintf(stderr, "Cannot yet run ALS, not complete!\n");
+            exit(1);
+            /* c3opt_add_objective(ftr->optimizer,regress_als_LS,ftr->reg.als); */
+            /* guess = regress_als_get_ftparam(ftr->reg.als); */
+        }
+        else if (type == AIO){
+            c3opt_add_objective(ftr->optimizer,regress_aio_LS,ftr->reg.aio);
+            /* guess = regress_aio_get_ftparam(ftr->reg.aio); */
+        }
+    }
+    else{
+        fprintf(stderr,"Must call prep_memory before regress_run \n");
+        exit(1);
+    }
+
+    /* printf("initial guess\n"); */
+    /* dprint(ftr->ntotparam,guess); */
+    /* exit(1); */
+    double * guess = calloc_double(ftr->ntotparam);
+    for (size_t ii = 0; ii < ftr->ntotparam; ii++){
+        guess[ii] = randn();
+    }
+    assert (guess != NULL);
+    double val;
+    c3opt_set_verbose(ftr->optimizer,0);
+    int res = c3opt_minimize(ftr->optimizer,guess,&val);
+    if (res < 0){
+        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
+    }
+
+    struct FunctionTrain * ft_final = NULL;
+    if (type == ALS){
+        ft_final = regress_als_get_ft(ftr->reg.als);
+    }
+    else if (type == AIO){
+        ft_final = regress_aio_get_ft(ftr->reg.aio);
+    }
+    free(guess); guess = NULL;
+    
+    return ft_final;
 }

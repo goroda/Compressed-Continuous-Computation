@@ -103,7 +103,7 @@ struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
         fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
         exit(1);
     }
-    aopts->num_nodes= N;
+    aopts->num_nodes = N;
     aopts->node_alloc = 0;
     aopts->nodes = x;
     aopts->lb = x[0];
@@ -269,12 +269,24 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts * aopts, double hmin)
     aopts->hmin = hmin;
 }
 
+
 ///////////////////////////////////////////////
 
 /********************************************************//**
     Get number of nodes
 *************************************************************/
 size_t lin_elem_exp_get_num_nodes(const struct LinElemExp * lexp)
+{
+    assert (lexp != NULL);
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
+*   Get number of free parameters
+*
+*   \note Can change this later to include knot locations
+*************************************************************/
+size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts* lexp)
 {
     assert (lexp != NULL);
     return lexp->num_nodes;
@@ -1557,6 +1569,44 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
     assert (lexp->num_nodes != 0);
     return lexp;
 }
+
+/********************************************************//**
+    Return a zero function
+
+    \param[in] opts         - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return p - zero function
+************************************************************/
+struct LinElemExp * 
+lin_elem_exp_zero(const struct LinElemExpAopts * opts, int force_param)
+{
+
+    struct LinElemExp * lexp = NULL;
+    if (force_param == 0){
+        lexp = lin_elem_exp_constant(0.0,opts);
+    }
+    else{
+        lexp = lin_elem_exp_alloc();    
+        if (opts->num_nodes == 0){
+            lexp->num_nodes = 2;
+            lexp->nodes = linspace(opts->lb,opts->ub,2);
+        }
+        else{
+            lexp->num_nodes = opts->num_nodes;
+            lexp->nodes = calloc_double(opts->num_nodes);
+            memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
+        }
+        lexp->coeff = calloc_double(lexp->num_nodes);
+        for (size_t ii = 0; ii < lexp->num_nodes; ii++){
+            lexp->coeff[ii] = 0.0;
+        }
+    }
+    return lexp;
+}
+
 
 /********************************************************//**
     Create a constant function

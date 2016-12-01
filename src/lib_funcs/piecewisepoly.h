@@ -63,10 +63,12 @@ enum poly_type pw_poly_opts_get_ptype(const struct PwPolyOpts *);
 void pw_poly_opts_set_minsize(struct PwPolyOpts *,double);
 void pw_poly_opts_set_maxorder(struct PwPolyOpts *, size_t);
 void pw_poly_opts_set_maxnum(struct PwPolyOpts *, size_t);
-void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
-void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
 void pw_poly_opts_set_nregions(struct PwPolyOpts *, size_t);
 void pw_poly_opts_set_pts(struct PwPolyOpts *, size_t, double *);
+void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
+void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
+
+size_t pw_poly_opts_get_nparams(const struct PwPolyOpts*);
 
 
 /** \struct PiecewisePoly

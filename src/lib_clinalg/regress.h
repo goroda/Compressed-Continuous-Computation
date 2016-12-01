@@ -1,3 +1,8 @@
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -43,7 +48,10 @@
 struct RegressALS;
 struct RegressALS * regress_als_alloc(size_t);
 void regress_als_free(struct RegressALS *);
+struct FunctionTrain * regress_als_get_ft(const struct RegressALS *);
+double * regress_als_get_ftparam(const struct RegressALS *);
 void regress_als_add_data(struct RegressALS *,size_t,const double *,const double *);
+size_t regress_als_get_num_params(const struct RegressALS *);
 void regress_als_prep_memory(struct RegressALS *, struct FunctionTrain *,int);
 void regress_als_set_core(struct RegressALS *, size_t);
 double regress_core_LS(size_t, const double *, double *, void *);
@@ -51,15 +59,28 @@ int regress_als_run_core(struct RegressALS *, struct c3Opt *, double *);
 double regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
 double regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
 
-
 struct RegressAIO;
 struct RegressAIO * regress_aio_alloc(size_t);
 void regress_aio_free(struct RegressAIO *);
 struct FunctionTrain * regress_aio_get_ft(const struct RegressAIO *);
+double * regress_aio_get_ftparam(const struct RegressAIO *);
 void regress_aio_add_data(struct RegressAIO *, size_t, const double *, const double *);
 size_t regress_aio_get_num_params(const struct RegressAIO *);
 void regress_aio_prep_memory(struct RegressAIO *, struct FunctionTrain *, int);
 double regress_aio_LS(size_t, const double *, double *, void *);
+
+enum REGTYPE {ALS,AIO,REGNONE};
+enum REGOBJ  {FTLS};
+struct FTRegress;
+struct FTRegress * ft_regress_alloc(size_t);
+void ft_regress_free(struct FTRegress *);
+void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
+void ft_regress_set_start_ranks(struct FTRegress *, const size_t * );
+void ft_regress_set_data(struct FTRegress *, size_t, const double *, size_t,
+                         const double *, size_t);
+void ft_regress_prep_memory(struct FTRegress *, struct FunctionTrain *, int);
+struct FunctionTrain * ft_regress_run(struct FTRegress *, enum REGOBJ);
+
 #endif
 
 

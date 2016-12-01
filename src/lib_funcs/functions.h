@@ -121,6 +121,8 @@ deserialize_generic_function(unsigned char *, struct GenericFunction ** );
 
 // special initializers
 struct GenericFunction * 
+generic_function_zero(enum function_class, void *, int);
+struct GenericFunction * 
 generic_function_constant(double, enum function_class,void *);
 struct GenericFunction * 
 generic_function_linear(double, double,enum function_class, void *);

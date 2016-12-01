@@ -314,6 +314,16 @@ enum poly_type ope_opts_get_ptype(const struct OpeOpts * ope)
 
 
 /********************************************************//**
+*   Get number of free parameters
+*************************************************************/
+size_t ope_opts_get_nparams(const struct OpeOpts * opts)
+{
+    assert (opts != NULL);
+    return opts->start_num;
+}
+
+
+/********************************************************//**
 *   Initialize a standard basis polynomial
 *
 *   \param[in] num_poly - number of basis
@@ -945,6 +955,38 @@ orth_poly_expansion_get_ptype(const struct OrthPolyExpansion * ope)
     assert (ope != NULL);
     return ope->p->ptype;
 }
+
+/********************************************************//**
+    Return a zero function
+
+    \param[in] opts         - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return p - zero function
+************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_zero(struct OpeOpts * opts, int force_nparam)
+{
+
+    assert (opts != NULL);
+    struct OrthPolyExpansion * p = NULL;
+    if (force_nparam == 0){
+        p = orth_poly_expansion_init(opts->ptype,1,opts->lb,opts->ub);
+        p->coeff[0] = 0.0;
+    }
+    else{
+        size_t nparams = ope_opts_get_nparams(opts);
+        p = orth_poly_expansion_init(opts->ptype,nparams,opts->lb,opts->ub);
+        for (size_t ii = 0; ii < nparams; ii++){
+            p->coeff[ii] = 0.0;
+        }
+    }
+
+    return p;
+}
+
 
 /********************************************************//**
 *   Generate a constant orthonormal polynomial expansion

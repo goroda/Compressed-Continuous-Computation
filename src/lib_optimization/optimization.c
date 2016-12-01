@@ -1354,7 +1354,10 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                                        x,fval,&res);
         }
         /* assert (*fval < fvaltemp); */
-        assert (res > -1);
+        if (res < 0){
+            fprintf(stderr,"Warning: line search returns %d\n",res);
+        }
+        /* assert (res > -1); */
 
         opt->prev_eval = fvaltemp;
         double * s = workspace+d;

@@ -301,6 +301,46 @@ deserialize_generic_function(unsigned char * ser,
 // Various Initializers
 
 /********************************************************//**
+    Return a zero function
+
+    \param[in] fc           - function class
+    \param[in] aopts        - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return gf - zero function
+************************************************************/
+struct GenericFunction * 
+generic_function_zero(enum function_class fc, void * aopts, int force_nparam)
+{   
+    
+    struct GenericFunction * gf = generic_function_alloc(1,fc);
+    if (force_nparam == 0){
+        switch (fc){
+        case CONSTANT:                                                  break;
+        case PIECEWISE:  gf->f = piecewise_poly_constant(0,aopts);      break;
+        case POLYNOMIAL: gf->f = orth_poly_expansion_constant(0,aopts); break;
+        case LINELM:     gf->f = lin_elem_exp_constant(0,aopts);        break;
+        case RATIONAL:                                                  break;
+        case KERNEL:                                                    break;
+        }
+    }
+    else{
+        switch (fc){
+        case CONSTANT:                                                break;
+        case PIECEWISE:  assert(1 == 0);                              break;
+        case POLYNOMIAL: gf->f = orth_poly_expansion_zero(aopts,1); break;
+        case LINELM:     gf->f = lin_elem_exp_zero(aopts,1);        break;
+        case RATIONAL:                                                break;
+        case KERNEL:                                                  break;
+        }
+    }
+    return gf;
+}
+
+
+/********************************************************//**
     Return a constant function
 
     \param[in] a     - value of the function

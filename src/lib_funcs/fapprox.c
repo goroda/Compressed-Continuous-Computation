@@ -1,5 +1,10 @@
 // Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
+
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -93,49 +98,62 @@ void one_approx_opts_free(struct OneApproxOpts * oa)
 void one_approx_opts_free_deep(struct OneApproxOpts ** oa)
 {
     if (*oa != NULL){
-        //printf("before this oa==NULL=%d,%d\n",oa==NULL,*oa==NULL);
-        /* if ((*oa)->aopts != NULL){ */
-            /* printf("\ttrying to free options opts == NULL %d\n",(*oa)->aopts == NULL); */
-            if ((*oa)->fc == PIECEWISE){
-
-                struct PwPolyOpts * opts = (*oa)->aopts;
-                pw_poly_opts_free(opts); 
-                /* pw_poly_opts_free_deep(&opts); */
-                (*oa)->aopts = NULL;
-            }
-            else if ((*oa)->fc == POLYNOMIAL){
-                struct OpeOpts * opts = (*oa)->aopts;
-                ope_opts_free_deep(&opts); (*oa)->aopts = NULL;
-                ope_opts_free(opts);
-                (*oa)->aopts = NULL;
-            }
-            else if ((*oa)->fc == LINELM){
+        if ((*oa)->fc == PIECEWISE){
+            struct PwPolyOpts * opts = (*oa)->aopts;
+            pw_poly_opts_free(opts); 
+            (*oa)->aopts = NULL;
+        }
+        else if ((*oa)->fc == POLYNOMIAL){
+            struct OpeOpts * opts = (*oa)->aopts;
+            ope_opts_free_deep(&opts); (*oa)->aopts = NULL;
+            ope_opts_free(opts);
+            (*oa)->aopts = NULL;
+        }
+        else if ((*oa)->fc == LINELM){
                 
-                struct LinElemExpAopts * opts = (*oa)->aopts;
-                /* lin_elem_exp_aopts_free_deep(&opts); */
-                lin_elem_exp_aopts_free(opts);
-                //printf("right here\n");
-                /* free((*oa)->aopts); */
-                //printf("right there\n");
-                (*oa)->aopts = NULL;
-            }
-            else{
-                fprintf(stderr,"Cannot free one_approx options of type %d\n",
-                        (*oa)->fc);
-            }
-        /* } */
-        //printf("right before this thing\n");
+            struct LinElemExpAopts * opts = (*oa)->aopts;
+            lin_elem_exp_aopts_free(opts);
+            (*oa)->aopts = NULL;
+        }
+        else{
+            fprintf(stderr,"Cannot free one_approx options of type %d\n",
+                    (*oa)->fc);
+        }
         free(*oa); *oa = NULL;
-        //printf("after this thing\n");
-
     }
 }
 
+
+/***********************************************************//**
+  Get the number of parametrs in the approximation optins
+***************************************************************/
+size_t one_approx_opts_get_nparams(const struct OneApproxOpts * oa)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    size_t nparams = 0;
+    if (oa->fc == POLYNOMIAL){
+        nparams = ope_opts_get_nparams(oa->aopts);
+    }
+    else if (oa->fc == PIECEWISE){
+        nparams = pw_poly_opts_get_nparams(oa->aopts);
+    }
+    else if (oa->fc == LINELM){
+        nparams = lin_elem_exp_aopts_get_nparams(oa->aopts);
+    }
+    else{
+        fprintf(stderr,"Cannot get number of parameters for one_approx options of type %d\n",
+                oa->fc);
+    }
+    return nparams;
+}
+
+
 //////////////////////////////////////////////////////
 /** \struct MultiApproxOpts
- * \brief Multidimensional approximation arguments
+ * \brief Stores approximation options for multiple one dimensional functions
  * \var MultiApproxOpts::dim
- * function dimension
+ * Number of functions
  * \var MultiApproxOpts::aopts
  * function approximation options
  */
@@ -180,11 +198,6 @@ struct MultiApproxOpts * multi_approx_opts_alloc(size_t dim)
 void multi_approx_opts_free(struct MultiApproxOpts * fargs)
 {
     if (fargs != NULL){
-        /* for (size_t ii = 0; ii < fargs->dim; ii++){ */
-        /*     one_approx_opts_free(fargs->aopts[ii]); */
-        /*     fargs->aopts[ii] = NULL; */
-        /* } */
-
         free(fargs->aopts); fargs->aopts = NULL;
         free(fargs); fargs = NULL;
     }
@@ -210,9 +223,6 @@ void multi_approx_opts_free_deep(struct MultiApproxOpts ** fargs)
             }
             printf("there\n");
 
-
-
-            /*     /\* one_approx_opts_free((*fargs)->aopts[ii]); *\/ */
             /*     free((*fargs)->aopts[ii]); */
             /*     (*fargs)->aopts[ii] = NULL; */
             /* } */
@@ -238,7 +248,7 @@ void multi_approx_opts_set_dim(struct MultiApproxOpts * fargs,
 }
 
 /***********************************************************//**
-    Set (by reference) approximation options for a particular dimension
+    Set (by reference) approximation options for a particular value
     \param[in,out] fargs - function train approximation arguments
     \param[in]     ind   - set approximation arguments for this dimension
     \param[in]     opts  - approximation arguments
@@ -300,6 +310,18 @@ void * multi_approx_opts_get_aopts(const struct MultiApproxOpts * fargs,
 {
     assert (fargs != NULL);
     return fargs->aopts[dim];
+}
+
+/***********************************************************//**
+    Get number of parameters requested by the approximation
+    
+    \param[in] f   - multi approx structure
+    \param[in] ind - which function to inquire about
+***************************************************************/
+size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts * f, size_t ind)
+{
+    assert (f != NULL);
+    return one_approx_opts_get_nparams(f->aopts[ind]);
 }
 
 /***********************************************************//**

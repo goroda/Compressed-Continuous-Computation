@@ -2494,7 +2494,7 @@ function_train_rankone(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
 }
 
 /***********************************************************//**
-    Compute a function train representation of \f$ f1 + f2 + ... + fd \f$
+    Compute a function train representation of \f$ f1(x_1) + f2(x_2) + ... + fd(x_d) \f$
 
     \param[in] ftargs - approximation options
     \param[in] fw     - wrapped functions
@@ -2508,7 +2508,6 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
     assert (fw != NULL);
     size_t dim = multi_approx_opts_get_dim(ftargs);
     struct OneApproxOpts * aopt;
-
 
     struct FunctionTrain * ft = function_train_alloc(dim);
 
@@ -2566,7 +2565,39 @@ function_train_initsum(struct MultiApproxOpts * ftargs, struct Fwrap * fw)
 
     return ft;
 }
- 
+
+/***********************************************************//**
+    Create a zeros function train
+
+    \param[in] aopts - approximation options
+    \param[in] ranks - ranks
+
+    \return function train
+
+    \note
+    Puts the constant into the first core
+***************************************************************/
+struct FunctionTrain *
+function_train_zeros(struct MultiApproxOpts * aopts, const size_t * ranks)
+{
+    assert (aopts != NULL);
+    
+    size_t dim = multi_approx_opts_get_dim(aopts);
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    memmove(ft->ranks,ranks,(dim+1) * sizeof(size_t));
+
+    struct OneApproxOpts * oneopt = NULL;
+    for (size_t onDim = 0; onDim < dim; onDim++){
+        oneopt = multi_approx_opts_get_aopts(aopts,onDim);
+        ft->cores[onDim] = qmarray_alloc(ranks[onDim],ranks[onDim+1]);
+        for (size_t jj = 0; jj < ranks[onDim] * ranks[onDim+1]; jj++){
+            ft->cores[onDim]->funcs[jj] =
+                generic_function_zero(oneopt->fc,oneopt->aopts,1);
+        }
+    }
+    return ft;
+}
+
 /***********************************************************//**
     Compute a function train representation of \f$ a \f$
 
@@ -2588,7 +2619,6 @@ function_train_constant(double a, struct MultiApproxOpts * aopts)
     size_t onDim = 0;
 
     struct OneApproxOpts * oneopt = multi_approx_opts_get_aopts(aopts,onDim);
-
     ft->ranks[onDim] = 1;
     ft->cores[onDim] = qmarray_alloc(1,1);
     ft->cores[onDim]->funcs[0] =

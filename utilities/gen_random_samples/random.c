@@ -1,3 +1,8 @@
+// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
+// DE-AC04-94AL85000, there is a non-exclusive license for use of this
+// work by or on behalf of the U.S. Government. Export of this program
+// may require a license from the United States Government
+
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -35,7 +40,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "array.h"
 
@@ -61,7 +66,9 @@ void print_code_usage (FILE * stream, int exit_code)
 
 int main(int argc, char * argv[])
 {
-    int seed = time(NULL);
+    struct timeval t1;
+    gettimeofday(&t1, NULL);
+    int seed = t1.tv_usec * t1.tv_sec;
     srand(seed);
     // sample randomly to "clean things out"
     // could be just an old-wives thing

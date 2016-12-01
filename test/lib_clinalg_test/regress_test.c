@@ -979,6 +979,63 @@ void Test_LS_AIO3(CuTest * tc)
     free(y); y = NULL;
 }
 
+void Test_LS_c3approx_interface(CuTest * tc)
+{
+    printf("Testing Function: c3approx_interface\n");
+    /* srand(seed); */
+    
+    size_t dim = 5;
+    size_t ranks[6] = {1,2,3,2,8,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 4;
+
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    
+    // create data
+    size_t ndata = 500;//dim * 8 * 8 * (maxorder+1);
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+    }
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,maxorder);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    /* printf("create approx\n"); */
+    struct C3Approx * c3a = c3approx_create(REGRESS,dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+    }
+    c3approx_set_regress_type(c3a,AIO);
+    c3approx_init_regress(c3a,b,ranks);
+    struct FunctionTrain * ft_final = c3approx_do_regress(c3a,ndata,x,1,y,1,FTLS);
+    /* printf("done!\n"); */
+    
+    double diff = function_train_relnorm2diff(ft_final,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-3);
+
+    bounding_box_free(bds); bds       = NULL;
+    function_train_free(a); a         = NULL;
+    function_train_free(b); b         = NULL;
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+}
+
 
 CuSuite * CLinalgRegressGetSuite()
 {
@@ -993,6 +1050,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_c3approx_interface);
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }
