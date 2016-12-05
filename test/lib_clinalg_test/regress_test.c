@@ -687,6 +687,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
         CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
     }
 
+    
     printf("\t Testing Gradient\n");
     //purposely doing so many evaluations to test restart!!
     running_core_total_restart(runeval_lr);
@@ -721,7 +722,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
         running = 0;
         double h = 1e-8;
         for (size_t ii = 0; ii < dim; ii++){
-            /* printf("ii = %zu\n",ii); */
+            /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
                 /* printf("\t jj = %zu\n", jj); */
                 guess[running+jj] += h;
@@ -731,7 +732,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
                 double fd = (val2-y[zz])/h;
                 /* printf("val2=%G, y[0]=%G\n",val2,y[0]); */
                 /* printf("fd = %3.15G, calc is %3.15G\n",fd,grad[running+jj + zz * totparam]); */
-                /* printf("fd[%zu,%zu] = %3.15G\n",jj,zz,fd); */
+                /* printf("\t fd[%zu,%zu] = %3.5G\n",jj,zz,fd); */
                 CuAssertDblEquals(tc,fd,grad[running+jj + zz * totparam],1e-5);
                 guess[running+jj] -= h;
                 function_train_core_update_params(a,ii,nparam[ii],guess + running);
@@ -1040,17 +1041,17 @@ void Test_LS_c3approx_interface(CuTest * tc)
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad1);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad2);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_grad3);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_grad3); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
 
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    SUITE_ADD_TEST(suite, Test_LS_c3approx_interface);
+    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }

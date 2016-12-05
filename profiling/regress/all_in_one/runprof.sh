@@ -5,16 +5,16 @@ C3HOME=~/Software/c3
 # Function Information
 ######################################
 RVTYPE=uniform
-DIM=2
+DIM=5
 LB=0.0
 UB=1.0
-FUNC=2
+FUNC=3
 
 ######################################
 # Regression options (order=5,rank=4 for profile data)
 ######################################
-MAXORDER=4
-RANK=2
+MAXORDER=5
+RANK=4
 VERBOSE=1
 FTFILE="trainedft.c3"
 
@@ -79,7 +79,7 @@ $EVALFT > ftevals.dat
 ######################################
 error=$(awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2;}; 
   END { print sum/FNR; }' test_y.dat ftevals.dat)
-echo "Relative Error: $error"
+echo "Absolute Error: $error"
 
 
 

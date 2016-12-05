@@ -66,13 +66,13 @@ void RunAllTests(void) {
 
     CuSuite * regress = CLinalgRegressGetSuite();
     
-    CuSuiteAddSuite(suite, clin);
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
+    /* CuSuiteAddSuite(suite, clin); */
+    /* CuSuiteAddSuite(suite, qma); */
+    /* CuSuiteAddSuite(suite, ftr); */
+    /* CuSuiteAddSuite(suite, cind); */
+    /* CuSuiteAddSuite(suite, fta); */
+    /* CuSuiteAddSuite(suite, dmrg); */
+    /* CuSuiteAddSuite(suite, diff); */
 
     CuSuiteAddSuite(suite, regress);
     

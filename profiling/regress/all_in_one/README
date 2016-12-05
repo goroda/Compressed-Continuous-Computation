@@ -1,16 +1,23 @@
 Notes:
-1) maxorder = 5; ranks = 4
+1) maxorder = 5; ranks = 4, DIM=5,FUNC=3,NSAMPLE=1000
 2) training data on cube of [0,1] but polynomials defined on [-1,1] (should fix)
-3) After third.svg - Can probably further increase speed by 10% by storing legendre polynomial evaluations
-                     but such an optimization is limited to legendre polynomials. At this point it might be
+3) After third.svg - Can probably further increase speed by 10% by storing legendre 
+	             polynomial evaluations
+                     but such an optimization is limited to legendre polynomials. 
+                     At this point it might be
                      worth exploring stochastic descent optimization algorithms
 
-first.svg : working regression code, unoptimized, DIM=5,FUNC=3,NSAMPLE=1000
+first.svg : working regression code, unoptimized, 
           : times = 59.576s 58.443s 54.347s (on work machine)
 
 second.svg : increased memory requirement and reduced computation by creating a forward
-             and backward sweep, storing all evaluations for each core required, DIM=5,FUNC=3,NSAMPLE=1000
+             and backward sweep, storing all evaluations for each core required, 
            : times = 39.936s 40.268s 38.650s (on work machine)
 
 third.svg  : improved vectorization in qmarray_param_grad_eval
            : times = 36.606s 37.964s 37.489s
+
+fourth.svg : first attempt taking advantage of sparsity of gradients of cores during the
+           : left to right multiplication (still need to do it for final multiplication with
+           : the cores on the the right
+           : times = 24.469s, 24.562s, 25.092s
