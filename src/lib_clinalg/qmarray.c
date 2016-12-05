@@ -3216,7 +3216,8 @@ void qmarray_param_grad_eval_sparse_mult(struct Qmarray * qma, size_t N,
                     // only need to update *ith* element 
                     for (size_t ll = 0; ll < nparamf; ll++){
                         size_t modelem = ll * qma->ncols + ii;
-                        mult_out[on_output + modelem] = grad[onnum + jj * incg + ll] * left[active_left];
+                        mult_out[on_output + modelem] =
+                            grad[onnum + jj * incg + ll] * left[active_left];
                     }
 
                     onnum += nparamf;

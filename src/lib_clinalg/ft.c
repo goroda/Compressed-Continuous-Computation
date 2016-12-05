@@ -1647,9 +1647,36 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
             }
             else{
                 post_vals = running_core_total_get_vals(evals_rl);
-                running_core_total_update(grads[backind],n,r2,1,post_vals,r2);
-                running_core_copy_vals(grads[backind],n,nparam[backind],
-                                       grad+runparam-nparam[backind],totparam);
+
+
+                // instead of these two lines need to take advantage of sparsity of
+                // gradient
+                /* running_core_total_update(grads[backind],n,r2,1,post_vals,r2); */
+                /* running_core_copy_vals(grads[backind],n,nparam[backind], */
+                /*                        grad+runparam-nparam[backind],totparam); */
+
+
+
+                double val;
+                for (size_t jj = 0; jj < n; jj++){
+                    size_t onnum = 0;
+                    for (size_t ii = 0; ii < r2; ii++){
+                        for (size_t kk = 0; kk < r1; kk++){
+                            size_t onfunc = kk  + ii * r1;
+                            struct GenericFunction * gf = ft->cores[backind]->funcs[onfunc];
+                            size_t nparamf = generic_function_get_num_params(gf);
+                            size_t on_output = onnum * r2 + jj * nparam[backind] * r2;
+                            for (size_t ll = 0; ll < nparamf; ll++){
+                                size_t modelem = ll * r2 + ii;
+                                val = grads[backind]->vals1[on_output + modelem]
+                                                * post_vals[ii + jj * r2];
+                                grad[jj*totparam + runparam-nparam[backind]+onnum+ll] = val;
+                                /* printf("val = %G\n",val); */
+                            }
+                            onnum += nparamf;
+                        }
+                    }
+                }
             }
 
             // update backwards

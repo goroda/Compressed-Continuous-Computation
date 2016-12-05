@@ -716,7 +716,6 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     function_train_param_grad_eval(a,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
                                    core_grad_space,core_space_size,max_func_param_space);
 
-
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
@@ -1051,7 +1050,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
+    SUITE_ADD_TEST(suite, Test_LS_c3approx_interface);
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }

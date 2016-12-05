@@ -42,12 +42,12 @@ $EVALFUNC
 ######################################
 REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -m $MAXORDER -r $RANK -v $VERBOSE -o $FTFILE"
 echo $REGRESS
-$REGRESS # Just generate regression
+# $REGRESS # Just generate regression
 
 # Do profiling
-# valgrind --tool=callgrind $REGRESS
-# python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
-# rm callgrind.out.*
+valgrind --tool=callgrind $REGRESS
+python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
+rm callgrind.out.*
 
 ######################################
 # Generate Testing Data
