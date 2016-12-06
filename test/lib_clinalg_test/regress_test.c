@@ -792,7 +792,7 @@ void Test_LS_AIO(CuTest * tc)
     
     struct RegressAIO * aio = regress_aio_alloc(dim);
     regress_aio_add_data(aio,ndata,x,y);
-    regress_aio_prep_memory(aio,b,1);
+    regress_aio_prep_memory(aio,b,2);
     size_t num_tot_params = regress_aio_get_num_params(aio);
 
     double * guess = calloc_double(num_tot_params);
@@ -1047,10 +1047,10 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
 
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
     SUITE_ADD_TEST(suite, Test_LS_AIO);
-    SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    SUITE_ADD_TEST(suite, Test_LS_c3approx_interface);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }

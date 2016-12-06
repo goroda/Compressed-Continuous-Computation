@@ -72,6 +72,20 @@ struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
     return mem;
 }
 
+struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t one_data_size)
+{
+    struct RegMemSpace ** mem = malloc(dim * sizeof(struct RegMemSpace * ));
+    if (mem == NULL){
+        fprintf(stderr, "Failure to allocate memmory of regression\n");
+        return NULL;
+    }
+    for (size_t ii = 0; ii < dim; ii++){
+        mem[ii] = reg_mem_space_alloc(ndata,one_data_size);
+    }
+
+    return mem;
+}
+
 void reg_mem_space_free(struct RegMemSpace * rmem)
 {
     if (rmem != NULL){
@@ -79,6 +93,17 @@ void reg_mem_space_free(struct RegMemSpace * rmem)
         free(rmem); rmem = NULL;
     }
 }
+
+void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
+{
+    if (rmem != NULL){
+        for (size_t ii = 0; ii < dim; ii++){
+            reg_mem_space_free(rmem[ii]); rmem[ii] = NULL;
+        }
+        free(rmem); rmem = NULL;
+    }
+}
+
 
 size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
 {
@@ -550,6 +575,8 @@ double regress_als_sweep_rl(struct RegressALS * als, struct c3Opt ** optimizers,
  *  input locations
  * \var RegressAIO:grad_space
  *  spare space for gradient evaluations
+ * \var RegressAIO:all_grads
+ *  spare space for gradient evaluations of each dimension
  * \var RegressAIO::evals
  *  space for evaluation of cost function
  * \var RegressAIO::ft
@@ -569,12 +596,15 @@ struct RegressAIO
     const double * y;
     const double * x;
 
+    int how;
+    
     struct RunningCoreTotal * running_evals_lr;
     struct RunningCoreTotal * running_evals_rl;
     struct RunningCoreTotal ** running_grad;
     struct RegMemSpace * evals;
     struct RegMemSpace * grad;
     struct RegMemSpace * grad_space;
+    struct RegMemSpace ** all_grads;
     struct RegMemSpace * fparam_space;
     
     struct FunctionTrain * ft;
@@ -607,9 +637,12 @@ struct RegressAIO * regress_aio_alloc(size_t dim)
     aio->running_evals_rl = NULL;
     aio->running_grad  = NULL;
 
-    aio->evals      = NULL;
+    aio->how = -1;
+    
+    aio->evals         = NULL;
     aio->grad          = NULL;
     aio->grad_space    = NULL;
+    aio->all_grads     = NULL;
     aio->fparam_space  = NULL;
 
     aio->ft = NULL;
@@ -629,8 +662,11 @@ void regress_aio_free(struct RegressAIO * aio)
 
         reg_mem_space_free(aio->grad_space);      aio->grad_space      = NULL;
         reg_mem_space_free(aio->fparam_space);    aio->fparam_space    = NULL;
-        reg_mem_space_free(aio->evals); aio->evals = NULL;
-        reg_mem_space_free(aio->grad);  aio->grad = NULL;
+        reg_mem_space_free(aio->evals);           aio->evals           = NULL;
+        reg_mem_space_free(aio->grad);            aio->grad            = NULL;
+
+        
+        reg_mem_space_arr_free(aio->dim,aio->all_grads);   aio->all_grads       = NULL;
 
         running_core_total_free(aio->running_evals_lr);
         running_core_total_free(aio->running_evals_rl);
@@ -687,7 +723,11 @@ size_t regress_aio_get_num_params(const struct RegressAIO * aio)
 }
 
 /***********************************************************//**
-    Prepare memmory
+    Prepare memory
+    
+    how=0 one at a time (not really implemented)
+    how=1 enough memory for storing info regarding all evals
+    how=2 store gradients for each core
 ***************************************************************/
 void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft, int how)
 {
@@ -697,7 +737,8 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
         fprintf(stderr, "AIO Regression dimension is not the same as FT dimension\n");
         assert (aio->dim == ft->dim);
     }
-    
+
+    aio->how = how;
     size_t maxrank = function_train_get_maxrank(ft);
     size_t max_param_within_func = 0;
     size_t num_param_within_func = 0;
@@ -715,6 +756,11 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
         num_tot_params += aio->nparams[ii];
     }
 
+    aio->fparam_space = reg_mem_space_alloc(1,max_param_within_func);
+    aio->running_evals_lr = ftutil_running_tot_space(ft);
+    aio->running_evals_rl = ftutil_running_tot_space(ft);
+    aio->running_grad  = ftutil_running_tot_space_eachdim(ft);
+    
     if (how == 0){
         aio->grad_space = reg_mem_space_alloc(1,max_num_param_within_core * maxrank * maxrank);
         aio->grad       = reg_mem_space_alloc(1,num_tot_params);
@@ -731,15 +777,39 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
         aio->grad       = reg_mem_space_alloc(aio->N,num_tot_params);
         aio->evals      = reg_mem_space_alloc(aio->N,1);
     }
+    else if (how == 2){
+        if (aio->N == 0){
+            fprintf(stderr, "Must add data before prepping memory with option 1\n");
+            exit(1);
+        }
+        aio->all_grads = reg_mem_space_arr_alloc(ft->dim,aio->N,
+                                                 max_num_param_within_core * maxrank * maxrank);
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            if (ii == 0){
+                qmarray_param_grad_eval(ft->cores[ii],aio->N,aio->x + ii,ft->dim,
+                                        NULL, 0,
+                                        aio->all_grads[ii]->vals,
+                                        reg_mem_space_get_data_inc(aio->all_grads[ii]),
+                                        aio->fparam_space->vals);
+            }
+            else{
+                qmarray_param_grad_eval_sparse_mult(ft->cores[ii],aio->N,aio->x + ii,ft->dim,
+                                                    NULL, 0,
+                                                    aio->all_grads[ii]->vals,
+                                                    reg_mem_space_get_data_inc(aio->all_grads[ii]),
+                                                    NULL,NULL,0);
+            }
+        }
+        
+        aio->grad       = reg_mem_space_alloc(aio->N,num_tot_params);
+        aio->evals      = reg_mem_space_alloc(aio->N,1);
+    }
     else{
         fprintf(stderr, "Memory prepping with option %d is undefined\n",how);
         exit(1);
     }
-    aio->fparam_space = reg_mem_space_alloc(1,max_param_within_func);
 
-    aio->running_evals_lr = ftutil_running_tot_space(ft);
-    aio->running_evals_rl = ftutil_running_tot_space(ft);
-    aio->running_grad  = ftutil_running_tot_space_eachdim(ft);
+
     
     aio->ft       = function_train_copy(ft);
     aio->ft_param = calloc_double(num_tot_params);
@@ -750,7 +820,6 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
         running += incr;
     }
 }
-
 
 /********************************************************//**
     LS regression objective function
@@ -773,14 +842,31 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
     
     double out=0.0, resid;
     if (grad != NULL){
-        function_train_param_grad_eval(
-            aio->ft, aio->N,
-            aio->x, aio->running_evals_lr, aio->running_evals_rl, aio->running_grad,
-            aio->nparams, aio->evals->vals, aio->grad->vals,
-            aio->grad_space->vals, reg_mem_space_get_data_inc(aio->grad_space),
-            aio->fparam_space->vals
-            );
 
+        if (aio->how == 2){
+            assert (aio->dim < 1000);
+            double * vals[1000];
+            size_t inc[1000];
+            for (size_t ii = 0; ii < aio->dim; ii++){
+                vals[ii] = aio->all_grads[ii]->vals;
+                inc[ii]  = reg_mem_space_get_data_inc(aio->all_grads[ii]);
+            }
+
+            function_train_linparam_grad_eval(
+                aio->ft, aio->N,
+                aio->x, aio->running_evals_lr, aio->running_evals_rl, aio->running_grad,
+                aio->nparams, aio->evals->vals, aio->grad->vals,
+                vals,inc);
+        }
+        else{
+            function_train_param_grad_eval(
+                aio->ft, aio->N,
+                aio->x, aio->running_evals_lr, aio->running_evals_rl, aio->running_grad,
+                aio->nparams, aio->evals->vals, aio->grad->vals,
+                aio->grad_space->vals, reg_mem_space_get_data_inc(aio->grad_space),
+                aio->fparam_space->vals
+                );
+        }
 
         for (size_t ii = 0; ii < nparam; ii++){
             grad[ii] = 0.0;
@@ -799,6 +885,7 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
             aio->x, aio->running_evals_lr,NULL,NULL,
             aio->nparams, aio->evals->vals, NULL,NULL,0,NULL);
         for (size_t ii = 0; ii < aio->N; ii++){
+            /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
             resid = aio->y[ii] - aio->evals->vals[ii];
             out += 0.5 * resid * resid;
         }

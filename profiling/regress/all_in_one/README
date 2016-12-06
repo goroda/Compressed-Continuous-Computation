@@ -26,4 +26,7 @@ fourth.svg : first attempt taking advantage of sparsity of gradients of cores du
 
 fifth.svg  : take advantage of sparsity of gradients during right-to-left multiplication
            : times = 11.708s, 11.281s, 11.761s
+
+sixth.svg  : precompute gradients for linear parameters
+           : times = 9.438s, 9.875s, 9.486
            

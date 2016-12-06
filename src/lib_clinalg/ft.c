@@ -1622,12 +1622,205 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
         totparam+=nparam[ii];
         // update evaluation
         running_core_total_update(evals_lr,n,r1,r2,
-                                      ft->evalspace4[ii]->vals,
-                                      ft_mem_space_get_incr(ft->evalspace4[ii]));
+                                  ft->evalspace4[ii]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[ii]));
     }
 
     running_core_copy_vals(evals_lr,n,1,out,1);
-    
+
+    if (grad != NULL){
+        size_t backind, incr;
+        double * core_eval = NULL;
+        size_t runparam = totparam;
+        double * post_vals = NULL;
+        for (size_t ii = 0; ii < dim; ii++){
+            backind = dim-1-ii;
+
+            r1 = ft->cores[backind]->nrows;
+            r2 = ft->cores[backind]->ncols;
+
+            //update gradient
+            if (backind == dim-1){
+                running_core_copy_vals(grads[backind],n,nparam[backind],
+                                       grad+runparam-nparam[backind],totparam);
+            }
+            else{
+                post_vals = running_core_total_get_vals(evals_rl);
+
+
+                // instead of these two lines need to take advantage of sparsity of
+                // gradient
+                /* running_core_total_update(grads[backind],n,r2,1,post_vals,r2); */
+                /* running_core_copy_vals(grads[backind],n,nparam[backind], */
+                /*                        grad+runparam-nparam[backind],totparam); */
+
+
+
+                double val;
+                for (size_t jj = 0; jj < n; jj++){
+                    size_t onnum = 0;
+                    for (size_t ii = 0; ii < r2; ii++){
+                        for (size_t kk = 0; kk < r1; kk++){
+                            size_t onfunc = kk  + ii * r1;
+                            struct GenericFunction * gf = ft->cores[backind]->funcs[onfunc];
+                            size_t nparamf = generic_function_get_num_params(gf);
+                            size_t on_output = onnum * r2 + jj * nparam[backind] * r2;
+                            for (size_t ll = 0; ll < nparamf; ll++){
+                                size_t modelem = ll * r2 + ii;
+                                val = grads[backind]->vals1[on_output + modelem]
+                                                * post_vals[ii + jj * r2];
+                                grad[jj*totparam + runparam-nparam[backind]+onnum+ll] = val;
+                                /* printf("val = %G\n",val); */
+                            }
+                            onnum += nparamf;
+                        }
+                    }
+                }
+            }
+
+            // update backwards
+            core_eval = ft->evalspace4[backind]->vals;
+            incr = ft_mem_space_get_incr(ft->evalspace4[backind]);
+            running_core_total_update_rl(evals_rl,n,r1,r2,core_eval,incr);
+            runparam-=nparam[backind];
+            
+        }
+    }
+}
+
+/***********************************************************//**
+    Evaluate a function train and gradients with respect to parameter
+    for cores that have functions that are linear mappings from parameters
+    to outputs at a set of inputs
+
+    \param[in]     ft                   - function train
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in]     evals_lr             - structure for storing running evaluations 
+                                          (left to right)
+    \param[in]     evals_rl             - structure for storing running evaluations 
+                                          (right to left)
+    \param[in]     grads                - structure for storing running totals of gradients
+    \param[in]     nparam               - number of parameters expected per core
+    \param[in,out] out                  - evaluations
+    \param[in,out] grad                 - gradient at every evaluation 
+                                          (could be NULL to not compute)
+    \param[in] core_grad_space          - Evaluations of gradients
+    \param[in] inc_grad_n               - increment between gradient evaluations for 
+                                          different inputs
+
+    \note
+    This algorithm should be improved. If I compute the running totals
+    backwards and forwards for every dimension, then I can reuse
+    all that computation for each gradient. As of now, I am computing the running
+    totals for each dimension separately
+***************************************************************/
+void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
+                                       const double * x,
+                                       struct RunningCoreTotal * evals_lr,
+                                       struct RunningCoreTotal * evals_rl,
+                                       struct RunningCoreTotal ** grads, size_t * nparam,
+                                       double * out, double * grad,
+                                       double ** core_grad_space,
+                                       size_t * inc_grad_n)
+{
+
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t mr2 = maxrank * maxrank; // space allocated for the evaluation of each function
+    if (ft->evalspace4 == NULL){
+        ft->evalspace4 = ft_mem_space_arr_alloc(ft->dim,n,mr2);
+    }
+    else{
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            ft_mem_space_check(ft->evalspace4[ii],n,mr2);
+        }
+    }
+
+    /* printf("start run\n"); */
+    size_t r1,r2,totparam=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        // core evaluation is stored in t1, core gradient is stored in t2
+        r1 = ft->cores[ii]->nrows;
+        r2 = ft->cores[ii]->ncols;
+        
+        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
+                                ft->evalspace4[ii]->vals,
+                                ft_mem_space_get_incr(ft->evalspace4[ii]),
+                                NULL,0,NULL);
+        
+        if (grad != NULL){
+            // store gradient info
+            if (ii == 0){
+                running_core_total_update_multiple(grads[ii],n,nparam[ii],r1,r2,
+                                                   core_grad_space[ii],r1*r2,inc_grad_n[ii]);
+            }
+            else{
+                double * vals = running_core_total_get_vals(evals_lr);
+                /* size_t nvals = r1; */
+
+                grads[ii]->No = nparam[ii];
+                grads[ii]->N  = n;
+                // allocate proper size
+                running_core_total_check_size(grads[ii],n * nparam[ii] * r2);
+
+                
+                /* qmarray_param_grad_eval_sparse_mult(ft->cores[ii],n,x+ii,dim, */
+                /*                                     ft->evalspace4[ii]->vals, */
+                /*                                     ft_mem_space_get_incr(ft->evalspace4[ii]), */
+                /*                                     core_grad_space, inc_grad_n, */
+                /*                                     vals, */
+                /*                                     grads[ii]->vals1,nparam[ii]); */
+
+                size_t inc_out = nparam[ii] * r2;
+                for (size_t jj = 0; jj < n; jj++){
+                    // zero every output
+                    for (size_t ll = 0; ll < nparam[ii] * r2; ll++){
+                        grads[ii]->vals1[jj * inc_out + ll] = 0.0;
+                    }
+            
+                    size_t onnum = 0;
+                    for (size_t ll = 0; ll < r2; ll++){
+                        for (size_t kk = 0; kk < r1; kk++){
+                            size_t onfunc = kk + ll * r1;
+                            size_t nparamf = generic_function_get_num_params(ft->cores[ii]->funcs[onfunc]);
+                            /* generic_function_param_grad_eval(ft->cores[ii]->funcs[onfunc],1, */
+                            /*                                  x + ii + jj*dim, */
+                            /*                                  grad + onnum + jj * inc_grad_n[ii]); */
+
+                            /* printf("%zu,%zu,%zu\n",ii,kk,onnum); */
+                            size_t active_left = kk + jj * r1;
+
+                            // modifying onnum vector
+                            size_t on_output = onnum * r2 + jj * inc_out;
+
+                            // only need to update *ith* element 
+                            for (size_t zz = 0; zz < nparamf; zz++){
+                                size_t modelem = zz * r2 + ll;
+                                grads[ii]->vals1[on_output + modelem] =
+                                    core_grad_space[ii][onnum + jj * inc_grad_n[ii] + zz] * vals[active_left];
+                            }
+                            
+                            onnum += nparamf;
+                        }
+                    }
+                    assert (nparam[ii] == onnum);
+                }
+                grads[ii]->r2 = r2;
+            }                
+        }
+        
+        totparam+=nparam[ii];
+        // update evaluation
+        running_core_total_update(evals_lr,n,r1,r2,
+                                  ft->evalspace4[ii]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[ii]));
+    }
+
+    running_core_copy_vals(evals_lr,n,1,out,1);
 
     if (grad != NULL){
         size_t backind, incr;

@@ -189,6 +189,7 @@ struct OrthPolyExpansion{
     double * coeff;
 
     size_t nalloc; // number of coefficients allocated for efficiency
+
 };
 
 #define OPECALLOC 50;

@@ -3130,7 +3130,9 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     /* printf("\t cmoooonn\n"); */
     size_t size = qma->nrows*qma->ncols;
     /* printf("\t evaluate! size=%zu\n",size); */
-    generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    if (out != NULL){
+        generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    }
 
     if (grad != NULL){
         for (size_t jj = 0; jj < N; jj++){
@@ -3187,14 +3189,18 @@ void qmarray_param_grad_eval_sparse_mult(struct Qmarray * qma, size_t N,
     /* printf("\t cmoooonn\n"); */
     size_t size = qma->nrows*qma->ncols;
     /* printf("\t evaluate! size=%zu\n",size); */
-    generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    if (out != NULL){
+        generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    }
 
     if (grad != NULL){
         size_t inc_out = nparam * qma->ncols;
         for (size_t jj = 0; jj < N; jj++){
             // zero every output
-            for (size_t ii = 0; ii < nparam * qma->ncols; ii++){
-                mult_out[jj * inc_out + ii] = 0.0;
+            if (mult_out != NULL){
+                for (size_t ii = 0; ii < nparam * qma->ncols; ii++){
+                    mult_out[jj * inc_out + ii] = 0.0;
+                }
             }
             
             size_t onnum = 0;
@@ -3206,24 +3212,27 @@ void qmarray_param_grad_eval_sparse_mult(struct Qmarray * qma, size_t N,
                                                      x + jj*incx,
                                                      grad + onnum + jj * incg);
 
-                    /* printf("%zu,%zu,%zu\n",ii,kk,onnum); */
-                    size_t active_left = kk + jj * qma->nrows;
+                    if (left != NULL){
+                        /* printf("%zu,%zu,%zu\n",ii,kk,onnum); */
+                        size_t active_left = kk + jj * qma->nrows;
 
 
-                    // modifying onnum vector
-                    size_t on_output = onnum * qma->ncols + jj * inc_out;
+                        // modifying onnum vector
+                        size_t on_output = onnum * qma->ncols + jj * inc_out;
 
-                    // only need to update *ith* element 
-                    for (size_t ll = 0; ll < nparamf; ll++){
-                        size_t modelem = ll * qma->ncols + ii;
-                        mult_out[on_output + modelem] =
-                            grad[onnum + jj * incg + ll] * left[active_left];
+                        // only need to update *ith* element 
+                        for (size_t ll = 0; ll < nparamf; ll++){
+                            size_t modelem = ll * qma->ncols + ii;
+                            mult_out[on_output + modelem] =
+                                grad[onnum + jj * incg + ll] * left[active_left];
+                        }
                     }
-
                     onnum += nparamf;
                 }
             }
-            assert (nparam == onnum);
+            if (mult_out != NULL){
+                assert (nparam == onnum);
+            }
         }
     }
     /* printf("done there\n"); */

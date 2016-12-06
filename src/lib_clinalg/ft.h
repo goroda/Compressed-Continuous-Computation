@@ -149,6 +149,14 @@ void function_train_param_grad_eval(struct FunctionTrain *, size_t,
                                     double *, double *,
                                     double *,
                                     size_t, double *);
+void function_train_linparam_grad_eval(struct FunctionTrain *, size_t,
+                                       const double *,
+                                       struct RunningCoreTotal *,
+                                       struct RunningCoreTotal *,
+                                       struct RunningCoreTotal **, size_t *,
+                                       double *, double *,
+                                       double **,
+                                       size_t *);
 
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 

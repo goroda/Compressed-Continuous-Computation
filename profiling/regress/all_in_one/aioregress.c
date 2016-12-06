@@ -139,7 +139,8 @@ int main(int argc, char * argv[])
 
     struct RegressAIO * aio = regress_aio_alloc(dim);
     regress_aio_add_data(aio,ndata,x,y);
-    regress_aio_prep_memory(aio,a,1);
+    /* regress_aio_prep_memory(aio,a,1); */
+    regress_aio_prep_memory(aio,a,2); // linear parameters
     size_t num_tot_params = regress_aio_get_num_params(aio);
     
     struct c3Opt * optimizer = c3opt_alloc(BFGS,num_tot_params);
