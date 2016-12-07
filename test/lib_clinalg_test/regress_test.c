@@ -1078,7 +1078,7 @@ void Test_LS_cross_validation(CuTest * tc)
     }
 
     // Regression
-    size_t kfold = 6;
+    size_t kfold = 10;
     struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold);
 
     // Initialize Approximation Structure
@@ -1103,7 +1103,7 @@ void Test_LS_cross_validation(CuTest * tc)
 
     double err = cross_validate_run(cv,ftr);
 
-    printf("CV Error estimate = %G\n",err);
+    printf("\t CV Error estimate = %G\n",err);
 
     // Increase rank and order -> more sensitive so CV error should go up
 
@@ -1118,7 +1118,7 @@ void Test_LS_cross_validation(CuTest * tc)
 
     double err2 = cross_validate_run(cv,ftr);
 
-    /* printf("CV Error estimate = %G\n",err2); */
+    printf("\t CV Error estimate = %G\n",err2);
 
     CuAssertIntEquals(tc,err<err2,1);
 
@@ -1128,11 +1128,47 @@ void Test_LS_cross_validation(CuTest * tc)
     // set options for parameters
     size_t norder_ops = 6;
     size_t order_ops[6] = {1,2,3,4,5,6};
+    size_t nranks = 4;
+    size_t rank_ops[4] ={1,2,3,4};
+    size_t nmiters = 3;
+    size_t miter_ops[3]={500,1000,2000};
+
     cross_validate_add_discrete_param(cv,"num_param",norder_ops,order_ops);
-    cross_validate_opt(cv,ftr);
+    cross_validate_add_discrete_param(cv,"rank",nranks,rank_ops);
+    cross_validate_add_discrete_param(cv,"opt maxiter",nmiters,miter_ops);
+    cross_validate_opt(cv,ftr,1);
     
-    
-    
+    struct FunctionTrain * ft = ft_regress_run(ftr,FTLS);
+
+    // check to make sure options are set to optimal ones
+    size_t * ranks = function_train_get_ranks(ft);
+    /* iprint_sz(dim+1,ranks); */
+    for (size_t jj = 1; jj < dim; jj++){
+        CuAssertIntEquals(tc,3,ranks[jj]);
+
+        size_t nparams_per_func;
+        function_train_core_get_nparams(ft,jj,&nparams_per_func);
+        CuAssertIntEquals(tc,3,nparams_per_func);
+        
+    }
+
+    size_t ntest = 1000;
+    double norm = 0.0;
+    double err3 = 0.0;
+    double pt[5];
+    for (size_t ii = 0; ii < ntest; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+
+        double val = funccv(pt);
+        double val2 = function_train_eval(ft,pt);
+        double diff = val-val2;
+        err3 += diff*diff;
+        norm += val*val;
+    }
+
+    printf("error = %G\n",err3/norm);
     cross_validate_free(cv); cv = NULL;
     
     free(x); x = NULL;

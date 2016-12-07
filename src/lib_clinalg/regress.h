@@ -98,7 +98,7 @@ void cross_validate_add_discrete_param(struct CrossValidate *,
 double cross_validate_run(struct CrossValidate *,
                           struct FTRegress *);
 void cross_validate_opt(struct CrossValidate *,
-                        struct FTRegress *);
+                        struct FTRegress *,int);
 
 #endif
 

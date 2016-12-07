@@ -1628,7 +1628,8 @@ double cross_validate_run(struct CrossValidate * cv,
     double * xtest = calloc_double(cv->N * cv->dim);
     double * ytest = calloc_double(cv->N);
 
-
+    double erri = 0.0;
+    double norm = 0.0;
     for (size_t ii = 0; ii < cv->kfold; ii++){
 
         if (start_num + batch > cv->N){
@@ -1649,8 +1650,7 @@ double cross_validate_run(struct CrossValidate * cv,
         ft_regress_prep_memory(reg,2);
         struct FunctionTrain * ft = ft_regress_run(reg, FTLS);
 
-        double erri = 0.0;
-        double norm = 0.0;
+
         for (size_t jj = 0; jj < batch; jj++){
             double eval = function_train_eval(ft,xtest+jj*cv->dim);
             erri += (ytest[jj]-eval) * (ytest[jj]-eval);
@@ -1659,11 +1659,10 @@ double cross_validate_run(struct CrossValidate * cv,
         /* erri /= (double)(batch); */
 
         /* printf("Relative erri = %G\n",erri/norm); */
-
         start_num += batch;
-        err += erri/norm;
+    
     }
-
+    err = erri/norm;
     // do last back
 
     free(xtrain); xtrain = NULL;
@@ -1681,11 +1680,13 @@ double cross_validate_run(struct CrossValidate * cv,
    ONLY WORKS FOR DISCRETE OPTIONS
 ***************************************************************/
 void cross_validate_opt(struct CrossValidate * cv,
-                        struct FTRegress * ftr)
+                        struct FTRegress * ftr, int verbose)
 {
     if (cv->nparam == 1){
         size_t nopts = cv->params[0]->nops;
         char * name = cv->params[0]->name;
+        double minerr = 0;
+        size_t minval = 0;
         for (size_t ii = 0; ii < nopts; ii++){
             size_t val = cv->params[0]->discrete_ops[ii];
             ft_regress_set_discrete_parameter(ftr,name,val);
@@ -1694,9 +1695,148 @@ void cross_validate_opt(struct CrossValidate * cv,
             ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
             ft_regress_prep_memory(ftr,2);
             double err = cross_validate_run(cv,ftr);
-            printf("\"%s\", val=%zu, cv_err=%G\n",name,val,err);
-            
+            if (verbose > 1){
+                printf("\"%s\", val=%zu, cv_err=%G\n",name,val,err);
+            }
+
+            if (ii == 0){
+                minerr = err;
+                minval = val;
+            }
+            else{
+                if (err < minerr){
+                    minerr = err;
+                    minval = val;
+                }
+            }
         }
+
+        if (verbose > 0){
+            printf("Optimal CV params: ");
+            printf("\t \"%s\", val=%zu, cv_err=%G\n",name,minval,minerr);
+        }
+        ft_regress_set_discrete_parameter(ftr,name,minval);
+        ft_regress_process_parameters(ftr);
+        ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+        ft_regress_prep_memory(ftr,2);
+    }
+    else if (cv->nparam == 2){
+        size_t nopts = cv->params[0]->nops;
+        char * name = cv->params[0]->name;
+        size_t nopts2 = cv->params[1]->nops;
+        char * name2 = cv->params[1]->name;
+
+        double minerr = 0.0;;
+        size_t minval[2] = {0,0};
+        for (size_t ii = 0; ii < nopts; ii++){
+            size_t val = cv->params[0]->discrete_ops[ii];
+            ft_regress_set_discrete_parameter(ftr,name,val);
+
+            for (size_t jj = 0; jj < nopts2; jj++){
+
+                size_t val2 = cv->params[1]->discrete_ops[jj];
+                ft_regress_set_discrete_parameter(ftr,name2,val2);
+                ft_regress_process_parameters(ftr);
+            
+                // don't understand why this one is necessary
+                ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+                ft_regress_prep_memory(ftr,2);
+                double err = cross_validate_run(cv,ftr);
+                if (verbose > 1){
+                    printf("\"%s\":%zu, \"%s\":%zu, ",name,val,name2,val2);
+                    printf("cv_err=%G\n",err);
+                }
+                if ((ii==0) && (jj==0)){
+                    minerr = err;
+                    minval[0] = val;
+                    minval[1] = val2;
+                }
+                else{
+                    if (err < minerr){
+                        minerr = err;
+                        minval[0] = val;
+                        minval[1] = val2;
+                    }
+                }
+            }
+        }
+        if (verbose > 0){
+            printf("Optimal CV params: ");
+            printf("\"%s\":%zu, \"%s\":%zu, ",name,minval[0],name2,minval[1]);
+            printf("cv_err=%G\n",minerr);
+        }
+        ft_regress_set_discrete_parameter(ftr,name,minval[0]);
+        ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
+        ft_regress_process_parameters(ftr);
+        ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+        ft_regress_prep_memory(ftr,2);
+    }
+    else if (cv->nparam == 3){
+        size_t nopts = cv->params[0]->nops;
+        char * name = cv->params[0]->name;
+        size_t nopts2 = cv->params[1]->nops;
+        char * name2 = cv->params[1]->name;
+        size_t nopts3 = cv->params[2]->nops;
+        char * name3 = cv->params[2]->name;
+
+        double minerr = 0.0;
+        size_t minval[3] = {0,0,0};
+        for (size_t ii = 0; ii < nopts; ii++){
+            size_t val = cv->params[0]->discrete_ops[ii];
+            ft_regress_set_discrete_parameter(ftr,name,val);
+
+            for (size_t jj = 0; jj < nopts2; jj++){
+                size_t val2 = cv->params[1]->discrete_ops[jj];
+                ft_regress_set_discrete_parameter(ftr,name2,val2);
+                
+                for (size_t kk = 0; kk < nopts3; kk++){
+                    size_t val3 = cv->params[2]->discrete_ops[kk];
+                    ft_regress_set_discrete_parameter(ftr,name3,val3);
+
+                    ft_regress_process_parameters(ftr);
+            
+                    // don't understand why this one is necessary
+                    ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+                    ft_regress_prep_memory(ftr,2);
+                    double err = cross_validate_run(cv,ftr);
+                    if (verbose > 1){
+                        printf("\"%s\":%zu, \"%s\":%zu,",name,val,name2,val2);
+                        printf("\"%s\":%zu, cv_err=%G\n",name3,val3,err);
+                    }
+
+                    if ((ii==0) && (jj==0) && (kk == 0)){
+                        minerr = err;
+                        minval[0] = val;
+                        minval[1] = val2;
+                        minval[2] = val3;
+                    }
+                    else{
+                        if (err < minerr){
+                            minerr = err;
+                            minval[0] = val;
+                            minval[1] = val2;
+                            minval[2] = val3;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (verbose > 0){
+            printf("Optimal CV params: \n");
+            printf("\"%s\":%zu, \"%s\":%zu,",name,minval[0],name2,minval[1]);
+            printf("\"%s\":%zu, cv_err=%G\n",name3,minval[2],minerr);
+        }
+        ft_regress_set_discrete_parameter(ftr,name,minval[0]);
+        ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
+        ft_regress_set_discrete_parameter(ftr,name3,minval[2]);
+        ft_regress_process_parameters(ftr);
+        ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+        ft_regress_prep_memory(ftr,2);
+    }
+    else {
+        fprintf(stderr,"Cannot cross validate over arbitrary number of \n");
+        fprintf(stderr,"parameters yet.\n");
     }
 
 }
