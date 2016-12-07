@@ -292,6 +292,18 @@ size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts* lexp)
     return lexp->num_nodes;
 }
 
+/********************************************************//**
+*   Set number of free parameters
+*
+*   \note Can change this later to include knot locations
+*************************************************************/
+void lin_elem_exp_aopts_set_nparams(struct LinElemExpAopts* lexp, size_t num)
+{
+    assert (lexp != NULL);
+    lexp->num_nodes = num;
+    fprintf(stderr,"Warning: setting new nparams in linelem aopts. Do I need to adjust the node locations?\n");
+}
+
 
 /********************************************************//**
 *   Allocate a Linear Element Expansion

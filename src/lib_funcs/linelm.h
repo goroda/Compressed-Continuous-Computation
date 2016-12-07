@@ -69,6 +69,7 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
 
 size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
 size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts *);
+void   lin_elem_exp_aopts_set_nparams(struct LinElemExpAopts*, size_t);
 
 /////////////////////////////////////////////////////////////////////
 

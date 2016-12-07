@@ -72,14 +72,33 @@ double regress_aio_LS(size_t, const double *, double *, void *);
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS};
 struct FTRegress;
-struct FTRegress * ft_regress_alloc(size_t);
+struct FTRegress * ft_regress_alloc(size_t, struct MultiApproxOpts *);
 void ft_regress_free(struct FTRegress *);
 void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
-void ft_regress_set_start_ranks(struct FTRegress *, const size_t * );
+/* void ft_regress_set_start_ranks(struct FTRegress *, const size_t * ); */
+void ft_regress_set_discrete_parameter(struct FTRegress *, char *, size_t);
 void ft_regress_set_data(struct FTRegress *, size_t, const double *, size_t,
                          const double *, size_t);
-void ft_regress_prep_memory(struct FTRegress *, struct FunctionTrain *, int);
+void ft_regress_process_parameters(struct FTRegress *);
+void ft_regress_prep_memory(struct FTRegress *, int);
+/* void ft_regress_prep_memory(struct FTRegress *, struct FunctionTrain *, int); */
 struct FunctionTrain * ft_regress_run(struct FTRegress *, enum REGOBJ);
+
+
+
+struct CrossValidate;
+void cross_validate_free(struct CrossValidate *);
+struct CrossValidate * cross_validate_init(size_t, size_t,
+                                           const double *,
+                                           const double *,
+                                           size_t);
+void cross_validate_add_discrete_param(struct CrossValidate *,
+                                       char *, size_t,
+                                       size_t *);
+double cross_validate_run(struct CrossValidate *,
+                          struct FTRegress *);
+void cross_validate_opt(struct CrossValidate *,
+                        struct FTRegress *);
 
 #endif
 

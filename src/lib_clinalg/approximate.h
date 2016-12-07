@@ -73,8 +73,10 @@ struct FunctionTrain * c3approx_do_cross(struct C3Approx *,struct Fwrap *,int);
 // Regression
 ///////////////////////////////////////
 void c3approx_set_regress_type(struct C3Approx *, enum REGTYPE);
-void c3approx_set_regress_start_ranks(struct C3Approx *, const size_t *);
-void c3approx_init_regress(struct C3Approx *, struct FunctionTrain * ft, const size_t *);
+/* void c3approx_set_regress_start_ranks(struct C3Approx *, const size_t *); */
+void c3approx_set_regress_start_ranks(struct C3Approx *, size_t);
+void c3approx_set_regress_num_param_per_func(struct C3Approx *, size_t);
+void c3approx_init_regress(struct C3Approx *);
 struct FunctionTrain *
 c3approx_do_regress(struct C3Approx *, size_t,
                     const double *, size_t,

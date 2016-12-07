@@ -77,6 +77,7 @@ double ope_opts_get_ub(const struct OpeOpts *);
 void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
 enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
 size_t ope_opts_get_nparams(const struct OpeOpts *);
+void ope_opts_set_nparams(struct OpeOpts *, size_t);
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis

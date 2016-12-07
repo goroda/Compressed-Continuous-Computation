@@ -149,6 +149,29 @@ size_t one_approx_opts_get_nparams(const struct OneApproxOpts * oa)
 }
 
 
+/***********************************************************//**
+  Set the number of parametrs in the approximation optins
+***************************************************************/
+void one_approx_opts_set_nparams(struct OneApproxOpts * oa, size_t num)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    if (oa->fc == POLYNOMIAL){
+        ope_opts_set_nparams(oa->aopts,num);
+    }
+    else if (oa->fc == PIECEWISE){
+        pw_poly_opts_set_nparams(oa->aopts,num);
+    }
+    else if (oa->fc == LINELM){
+        lin_elem_exp_aopts_set_nparams(oa->aopts,num);
+    }
+    else{
+        fprintf(stderr,"Cannot set number of parameters for one_approx options of type %d\n",
+                oa->fc);
+    }
+}
+
+
 //////////////////////////////////////////////////////
 /** \struct MultiApproxOpts
  * \brief Stores approximation options for multiple one dimensional functions
@@ -323,6 +346,20 @@ size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts * f, size_
     assert (f != NULL);
     return one_approx_opts_get_nparams(f->aopts[ind]);
 }
+
+/***********************************************************//**
+    Set the number of parameters 
+    
+    \param[in,out] f   - multi approx structure
+    \param[in]     ind - which function to inquire about
+    \param[in]     val - new number of parameters
+***************************************************************/
+void multi_approx_opts_set_dim_nparams(struct MultiApproxOpts * f, size_t ind, size_t val)
+{
+    assert (f != NULL);
+    return one_approx_opts_set_nparams(f->aopts[ind],val);
+}
+
 
 /***********************************************************//**
     Get the dimension

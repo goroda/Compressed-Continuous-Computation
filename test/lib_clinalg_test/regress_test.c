@@ -985,17 +985,17 @@ void Test_LS_c3approx_interface(CuTest * tc)
     /* srand(seed); */
     
     size_t dim = 5;
-    size_t ranks[6] = {1,2,3,2,8,1};
+    size_t ranks[6] = {1,2,2,2,2,1};
+    size_t maxrank = 3;
     double lb = -1.0;
     double ub = 1.0;
-    size_t maxorder = 4;
+    size_t maxorder = 3;
 
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-    struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
     
     // create data
-    size_t ndata = 500;//dim * 8 * 8 * (maxorder+1);
+    size_t ndata = 1000;//dim * 8 * 8 * (maxorder+1);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -1007,19 +1007,26 @@ void Test_LS_c3approx_interface(CuTest * tc)
         y[ii] = function_train_eval(a,x+ii*dim);
     }
 
+
+    // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_start(opts,maxorder);
     ope_opts_set_lb(opts,lb);
     ope_opts_set_ub(opts,ub);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
-    /* printf("create approx\n"); */
     struct C3Approx * c3a = c3approx_create(REGRESS,dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
     }
+
+    // Set regression parameters
     c3approx_set_regress_type(c3a,AIO);
-    c3approx_init_regress(c3a,b,ranks);
+    c3approx_set_regress_start_ranks(c3a,maxrank);
+    c3approx_set_regress_num_param_per_func(c3a,maxorder+1);
+    c3approx_init_regress(c3a);
+
+    // Perform regression
     struct FunctionTrain * ft_final = c3approx_do_regress(c3a,ndata,x,1,y,1,FTLS);
+    
     /* printf("done!\n"); */
     
     double diff = function_train_relnorm2diff(ft_final,a);
@@ -1028,12 +1035,113 @@ void Test_LS_c3approx_interface(CuTest * tc)
 
     bounding_box_free(bds); bds       = NULL;
     function_train_free(a); a         = NULL;
-    function_train_free(b); b         = NULL;
     free(x); x = NULL;
     free(y); y = NULL;
 
     c3approx_destroy(c3a);
     one_approx_opts_free_deep(&qmopts);
+}
+
+
+double funccv(double * x)
+{
+    double ret = 0.0;
+    for (size_t ii = 0; ii < 5; ii++){
+        ret += x[ii]*x[ii];
+    }
+
+    return ret;
+}
+
+
+void Test_LS_cross_validation(CuTest * tc)
+{
+    printf("Testing Function: cross validation\n");
+    srand(seed);
+    
+    size_t dim = 5;
+    size_t maxrank = 2;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 2;
+
+    // create data
+    size_t ndata = 40;//dim * 8 * 8 * (maxorder+1);
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = funccv(x+ii*dim);
+    }
+
+    // Regression
+    size_t kfold = 6;
+    struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold);
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    ft_regress_set_type(ftr,AIO);
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_set_discrete_parameter(ftr,"rank",maxrank);
+    
+    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
+    ft_regress_set_discrete_parameter(ftr,"opt maxiter",500);
+    ft_regress_process_parameters(ftr);
+    ft_regress_prep_memory(ftr,2);
+
+    double err = cross_validate_run(cv,ftr);
+
+    printf("CV Error estimate = %G\n",err);
+
+    // Increase rank and order -> more sensitive so CV error should go up
+
+    ft_regress_set_discrete_parameter(ftr,"rank",maxrank+2);
+    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+2);
+    ft_regress_set_discrete_parameter(ftr,"opt maxiter",500);
+    ft_regress_process_parameters(ftr);
+
+    // I don't know why I need to set the data again
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_prep_memory(ftr,2);
+
+    double err2 = cross_validate_run(cv,ftr);
+
+    /* printf("CV Error estimate = %G\n",err2); */
+
+    CuAssertIntEquals(tc,err<err2,1);
+
+    // reset max rank
+    ft_regress_set_discrete_parameter(ftr,"rank",maxrank);
+
+    // set options for parameters
+    size_t norder_ops = 6;
+    size_t order_ops[6] = {1,2,3,4,5,6};
+    cross_validate_add_discrete_param(cv,"num_param",norder_ops,order_ops);
+    cross_validate_opt(cv,ftr);
+    
+    
+    
+    cross_validate_free(cv); cv = NULL;
+    
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_regress_free(ftr); ftr = NULL;
+    
 }
 
 
@@ -1048,9 +1156,10 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
 
     /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
-    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
     /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }

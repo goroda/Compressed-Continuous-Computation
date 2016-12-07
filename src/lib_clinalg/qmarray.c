@@ -3076,7 +3076,12 @@ size_t qmarray_get_params(struct Qmarray * qma, double * param)
      size_t onind = 0;
      size_t nparam;
      for (size_t ii = 0; ii < size; ii++){
-         nparam = generic_function_get_params(qma->funcs[ii],param+onind);
+         if (param == NULL){
+             nparam = generic_function_get_num_params(qma->funcs[ii]);
+         }
+         else{
+             nparam = generic_function_get_params(qma->funcs[ii],param+onind);
+         }
          onind += nparam;
      }
      return onind;

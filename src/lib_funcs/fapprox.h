@@ -63,6 +63,7 @@ one_approx_opts_ref(enum function_class, void **);
 void one_approx_opts_free(struct OneApproxOpts *);
 void one_approx_opts_free_deep(struct OneApproxOpts **);
 size_t one_approx_opts_get_nparams(const struct OneApproxOpts *);
+void   one_approx_opts_set_nparams(struct OneApproxOpts *, size_t);
 
 struct MultiApproxOpts;
 struct MultiApproxOpts * multi_approx_opts_alloc(size_t);
@@ -81,6 +82,7 @@ multi_approx_opts_get_fc(const struct MultiApproxOpts *, size_t);
 void * multi_approx_opts_get_aopts(const struct MultiApproxOpts *, size_t);
 size_t multi_approx_opts_get_dim(const struct MultiApproxOpts *);
 size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts *, size_t);
+void   multi_approx_opts_set_dim_nparams(struct MultiApproxOpts *, size_t, size_t);
 
 struct FiberOptArgs;
 struct FiberOptArgs * fiber_opt_args_alloc();

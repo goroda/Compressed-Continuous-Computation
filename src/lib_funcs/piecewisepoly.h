@@ -69,6 +69,7 @@ void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
 void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
 
 size_t pw_poly_opts_get_nparams(const struct PwPolyOpts*);
+void   pw_poly_opts_set_nparams(struct PwPolyOpts*, size_t);
 
 
 /** \struct PiecewisePoly

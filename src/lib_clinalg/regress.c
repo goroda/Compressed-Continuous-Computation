@@ -666,7 +666,7 @@ void regress_aio_free(struct RegressAIO * aio)
         reg_mem_space_free(aio->grad);            aio->grad            = NULL;
 
         
-        reg_mem_space_arr_free(aio->dim,aio->all_grads);   aio->all_grads       = NULL;
+        reg_mem_space_arr_free(aio->dim,aio->all_grads);   aio->all_grads = NULL;
 
         running_core_total_free(aio->running_evals_lr);
         running_core_total_free(aio->running_evals_rl);
@@ -722,6 +722,26 @@ size_t regress_aio_get_num_params(const struct RegressAIO * aio)
     return totnum;
 }
 
+void regress_aio_free_workspace_vars(struct RegressAIO * aio)
+{
+
+    reg_mem_space_free(aio->grad_space);      aio->grad_space      = NULL;
+    reg_mem_space_free(aio->fparam_space);    aio->fparam_space    = NULL;
+    reg_mem_space_free(aio->evals);           aio->evals           = NULL;
+    reg_mem_space_free(aio->grad);            aio->grad            = NULL;
+
+    reg_mem_space_arr_free(aio->dim,aio->all_grads);   aio->all_grads = NULL;
+
+    running_core_total_free(aio->running_evals_lr); aio->running_evals_lr = NULL;
+    running_core_total_free(aio->running_evals_rl); aio->running_evals_rl = NULL;
+    running_core_total_arr_free(aio->dim,aio->running_grad); aio->running_grad = NULL;
+        
+    function_train_free(aio->ft); aio->ft = NULL;
+    free(aio->ft_param);          aio->ft_param = NULL;
+
+}
+
+
 /***********************************************************//**
     Prepare memory
     
@@ -738,6 +758,8 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
         assert (aio->dim == ft->dim);
     }
 
+    regress_aio_free_workspace_vars(aio);
+    
     aio->how = how;
     size_t maxrank = function_train_get_maxrank(ft);
     size_t max_param_within_func = 0;
@@ -812,6 +834,138 @@ void regress_aio_prep_memory(struct RegressAIO * aio, struct FunctionTrain * ft,
 
     
     aio->ft       = function_train_copy(ft);
+    aio->ft_param = calloc_double(num_tot_params);
+
+    size_t running = 0, incr;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        incr = function_train_core_get_params(ft,ii,aio->ft_param + running);
+        running += incr;
+    }
+}
+
+
+
+/***********************************************************//**
+    Prepare memory
+    
+    how=0 one at a time (not really implemented)
+    how=1 enough memory for storing info regarding all evals
+    how=2 store gradients for each core
+***************************************************************/
+void regress_aio_prep_memory2(struct RegressAIO * aio,
+                              struct MultiApproxOpts * aopts,
+                              size_t * ranks, int how)
+{
+    assert (aio != NULL);
+    if (aio->N == 0){
+        fprintf(stderr, "Must added data before preparing memory\n");
+        exit(1);
+    }
+
+    regress_aio_free_workspace_vars(aio);
+    
+    aio->how = how;
+        
+    aio->ft = function_train_zeros(aopts,ranks);
+    double * g1 = calloc_double(10000);
+    for (size_t ii = 0; ii < aio->dim; ii++){
+
+        // same number of parameters for each dimension
+        size_t nparamf = multi_approx_opts_get_dim_nparams(aopts,ii);
+        /* printf("nparamf = %zu\n",nparamf); */
+        size_t nparamcore = ranks[ii]*ranks[ii+1]*nparamf;
+        if (nparamcore > 10000){
+            fprintf(stderr,"Did not allocate enough space for core parameters\n");
+            exit(1);
+        }
+        // random starting point
+        for (size_t jj = 0; jj < nparamcore; jj++){
+            g1[jj] = randn()*0.1;
+        }
+        /* dprint(nparamcore,guess); */
+        function_train_core_update_params(aio->ft,ii,nparamcore,g1);
+    }
+    free(g1); g1 = NULL;
+
+    
+    struct FunctionTrain * ft = aio->ft;
+    
+    size_t maxrank = function_train_get_maxrank(aio->ft);
+    size_t max_param_within_func = 0;
+    size_t num_param_within_func = 0;
+    size_t max_num_param_within_core = 0;
+    size_t num_tot_params = 0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        num_param_within_func = 0;
+        aio->nparams[ii] = function_train_core_get_nparams(ft,ii,&num_param_within_func);
+        /* printf("num param within func = %zu\n",num_param_within_func); */
+        if (num_param_within_func > max_param_within_func){
+            max_param_within_func = num_param_within_func;
+        }
+        if (aio->nparams[ii] > max_num_param_within_core){
+            max_num_param_within_core = aio->nparams[ii];
+        }
+        num_tot_params += aio->nparams[ii];
+    }
+
+
+    
+    aio->fparam_space = reg_mem_space_alloc(1,max_param_within_func);
+    aio->running_evals_lr = ftutil_running_tot_space(ft);
+    aio->running_evals_rl = ftutil_running_tot_space(ft);
+    aio->running_grad  = ftutil_running_tot_space_eachdim(ft);
+    
+    if (how == 0){
+        aio->grad_space = reg_mem_space_alloc(1,max_num_param_within_core * maxrank * maxrank);
+        aio->grad       = reg_mem_space_alloc(1,num_tot_params);
+        aio->evals = reg_mem_space_alloc(1,1);
+    }
+    else if (how == 1){
+        if (aio->N == 0){
+            fprintf(stderr, "Must add data before prepping memory with option 1\n");
+            exit(1);
+        }
+        aio->grad_space = reg_mem_space_alloc(aio->N,
+                                              max_num_param_within_core * maxrank * maxrank);
+        
+        aio->grad       = reg_mem_space_alloc(aio->N,num_tot_params);
+        aio->evals      = reg_mem_space_alloc(aio->N,1);
+    }
+    else if (how == 2){
+        if (aio->N == 0){
+            fprintf(stderr, "Must add data before prepping memory with option 1\n");
+            exit(1);
+        }
+        aio->all_grads = reg_mem_space_arr_alloc(ft->dim,aio->N,
+                                                 max_num_param_within_core * maxrank * maxrank);
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            if (ii == 0){
+                qmarray_param_grad_eval(ft->cores[ii],aio->N,aio->x + ii,ft->dim,
+                                        NULL, 0,
+                                        aio->all_grads[ii]->vals,
+                                        reg_mem_space_get_data_inc(aio->all_grads[ii]),
+                                        aio->fparam_space->vals);
+            }
+            else{
+                qmarray_param_grad_eval_sparse_mult(ft->cores[ii],aio->N,aio->x + ii,ft->dim,
+                                                    NULL, 0,
+                                                    aio->all_grads[ii]->vals,
+                                                    reg_mem_space_get_data_inc(aio->all_grads[ii]),
+                                                    NULL,NULL,0);
+            }
+        }
+        
+        aio->grad       = reg_mem_space_alloc(aio->N,num_tot_params);
+        aio->evals      = reg_mem_space_alloc(aio->N,1);
+    }
+    else{
+        fprintf(stderr, "Memory prepping with option %d is undefined\n",how);
+        exit(1);
+    }
+
+
+    
+    /* aio->ft       = function_train_copy(ft); */
     aio->ft_param = calloc_double(num_tot_params);
 
     size_t running = 0, incr;
@@ -896,8 +1050,130 @@ double regress_aio_LS(size_t nparam, const double * param, double * grad, void *
 
 
 ////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+// Top-level regression parameters
+// like regularization, rank,
+// poly order
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+
+enum REGPARAMTYPE {DISCRETE,CONTINUOUS};
+struct RegParameter
+{
+    char name[30];
+    enum REGPARAMTYPE type;
+
+    size_t nops;
+    size_t * discrete_ops;
+    size_t discval;
+    
+    double lbc;
+    double ubc;
+    double cval;
+};
+
+/***********************************************************//**
+    Allocate parameter
+***************************************************************/
+struct RegParameter * reg_param_alloc(char * name, enum REGPARAMTYPE type)
+{
+    struct RegParameter * rp = malloc(sizeof(struct RegParameter));
+    if (rp == NULL){
+        fprintf(stderr, "Cannot allocate RegParameter structure\n");
+        exit(1);
+    }
+    strcpy(rp->name,name);
+    rp->type = type;
+
+    rp->nops = 0;
+    rp->discrete_ops = NULL;
+
+    rp->lbc = -DBL_MAX;
+    rp->ubc = DBL_MAX;
+    
+    return rp;
+}
+
+
+/***********************************************************//**
+    Allocate parameter
+***************************************************************/
+struct RegParameter ** reg_param_array_alloc(size_t N)
+{
+    struct RegParameter ** rp = malloc(N * sizeof(struct RegParameter *));
+    if (rp == NULL){
+        fprintf(stderr, "Cannot allocate array of RegParameter structure\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < N; ii++){
+        rp[ii] = NULL;
+    }
+    return rp;
+}
+
+/***********************************************************//**
+    Free parameter
+***************************************************************/
+void reg_param_free(struct RegParameter * rp)
+{
+    if (rp != NULL){
+        free(rp->discrete_ops); rp->discrete_ops = NULL;
+        free(rp); rp = NULL;
+    }
+}
+
+/***********************************************************//**
+   Add Discrete parameter options                                                        
+***************************************************************/
+void reg_param_add_discrete_options(struct RegParameter * rp,
+                                    size_t nops, size_t * opts)
+{
+    assert (rp != NULL);
+    assert (rp->type == DISCRETE);
+    rp->nops = nops;
+
+    free(rp->discrete_ops);
+    rp->discrete_ops = calloc_size_t(nops);
+    memmove(rp->discrete_ops,opts, nops * sizeof(size_t));
+}
+
+/***********************************************************//**
+   Add Discrete parameter value
+***************************************************************/
+void reg_param_add_discrete_val(struct RegParameter * rp, size_t val)
+{
+    assert (rp != NULL);
+    assert (rp->type == DISCRETE);
+    rp->discval = val;
+}
+
+
+/***********************************************************//**
+   Get discrete value
+***************************************************************/
+size_t reg_param_get_discrete_val(const struct RegParameter * rp)
+{
+    assert (rp != NULL);
+    assert (rp->type == DISCRETE);
+    return rp->discval;
+}
+
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
 // Common Interface
 ////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+
+#define NRPARAM 3
+static char reg_param_opts[NRPARAM][30] = {"rank","num_param","opt maxiter"};
 
 struct FTRegress
 {
@@ -909,14 +1185,26 @@ struct FTRegress
         struct RegressAIO * aio;
     } reg;
 
+
+    struct MultiApproxOpts * approx_opts;
+    
+    // high level parameters
+    size_t nhlparam;
+    struct RegParameter * hlparam[NRPARAM];
+
+    size_t optmaxiter;
     struct c3Opt * optimizer;
     size_t * start_ranks;
+
+
+    // internal
+    size_t processed_param;
 };
 
 /***********************************************************//**
     Allocate function train regression structure
 ***************************************************************/
-struct FTRegress * ft_regress_alloc(size_t dim)
+struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
 {
     struct FTRegress * ftr = malloc(sizeof(struct FTRegress));
     if (ftr == NULL){
@@ -926,8 +1214,19 @@ struct FTRegress * ft_regress_alloc(size_t dim)
     ftr->type = REGNONE;
     ftr->dim = dim;
     ftr->ntotparam = 0;
+
+    ftr->approx_opts = aopts;
+    
+    ftr->nhlparam = 0;
+    for (size_t ii = 0; ii < NRPARAM; ii++){
+        ftr->hlparam[ii] = NULL;
+    }
+
+    ftr->optmaxiter = 1000;
     ftr->optimizer = NULL;
     ftr->start_ranks = NULL;
+
+    ftr->processed_param = 0;
     return ftr;
 }
     
@@ -944,11 +1243,27 @@ void ft_regress_free(struct FTRegress * ftr)
             regress_aio_free(ftr->reg.aio); ftr->reg.aio = NULL;
         }
 
+        for (size_t ii = 0; ii < ftr->nhlparam; ii++){
+            reg_param_free(ftr->hlparam[ii]); ftr->hlparam[ii] = NULL;
+        }
+
         c3opt_free(ftr->optimizer); ftr->optimizer = NULL;
         free(ftr->start_ranks); ftr->start_ranks = NULL;
         
         free(ftr); ftr = NULL;
     }
+}
+
+/***********************************************************//**
+    Clear memory, keep only dim
+***************************************************************/
+void ft_regress_reset(struct FTRegress ** ftr)
+{
+
+    size_t dim = (*ftr)->dim;
+    struct MultiApproxOpts * aopts = (*ftr)->approx_opts;
+    ft_regress_free(*ftr); *ftr = NULL;
+    *ftr = ft_regress_alloc(dim,aopts);
 }
 
 /***********************************************************//**
@@ -973,6 +1288,79 @@ void ft_regress_set_type(struct FTRegress * ftr, enum REGTYPE type)
         fprintf(stderr,"       ALS = 0\n");
         fprintf(stderr,"       AIO = 1\n");
     }
+}
+
+/***********************************************************//**
+    Set regression type
+***************************************************************/
+void ft_regress_set_discrete_parameter(struct FTRegress * ftr, char * name, size_t val)
+{
+
+    assert (ftr != NULL);
+
+    // check if allowed parameter
+    int match = 0;
+    for (size_t ii = 0; ii < NRPARAM; ii++){
+        if (strcmp(reg_param_opts[ii],name) == 0){
+            match = 1;
+            break;
+        }
+    }
+    if (match == 0){
+        fprintf(stderr,"Unknown regression parameter type %s\n",name);
+        exit(1);
+    }
+
+    // check if parameter exists
+    int exist = 0;
+    for (size_t ii = 0; ii < ftr->nhlparam; ii++){
+        if (strcmp(ftr->hlparam[ii]->name,name) == 0){
+            reg_param_add_discrete_val(ftr->hlparam[ii],val);
+            exist = 1;
+            break;
+        }
+    }
+
+    if (exist == 0){
+        ftr->hlparam[ftr->nhlparam] = reg_param_alloc(name,DISCRETE);
+        reg_param_add_discrete_val(ftr->hlparam[ftr->nhlparam],val);
+        ftr->nhlparam++;
+        assert (ftr->nhlparam <= NRPARAM);
+    }
+}
+
+
+/***********************************************************//**
+    Process all parameters
+***************************************************************/
+void ft_regress_process_parameters(struct FTRegress * ftr)
+{
+    
+    for (size_t ii = 0; ii < ftr->nhlparam; ii++){
+        if (strcmp(ftr->hlparam[ii]->name,"rank") == 0){
+            free(ftr->start_ranks); ftr->start_ranks = NULL;
+            ftr->start_ranks = calloc_size_t(ftr->dim+1);
+            for (size_t kk = 1; kk < ftr->dim; kk++){
+                ftr->start_ranks[kk] = reg_param_get_discrete_val(ftr->hlparam[ii]);
+            }
+            ftr->start_ranks[0] = 1;
+            ftr->start_ranks[ftr->dim] = 1;
+        }
+        else if (strcmp(ftr->hlparam[ii]->name,"num_param") == 0){
+            size_t val = reg_param_get_discrete_val(ftr->hlparam[ii]);
+            for (size_t kk = 0; kk < ftr->dim; kk++){
+                multi_approx_opts_set_dim_nparams(ftr->approx_opts,kk,val);
+            }
+            /* fprintf(stderr,"Cannot process nparam_func parameter yet\n"); */
+            /* exit(1); */
+        }
+        else if (strcmp(ftr->hlparam[ii]->name,"opt maxiter") == 0){
+            ftr->optmaxiter = reg_param_get_discrete_val(ftr->hlparam[ii]);
+        }
+    }
+
+    ftr->processed_param = 1;
+    
 }
 
 
@@ -1008,23 +1396,32 @@ void ft_regress_set_data(struct FTRegress * ftr, size_t N,
     else{
         fprintf(stderr,"Must set regression type before setting data\n");
     }
-
 }
 
 /***********************************************************//**
     Set regression type
 ***************************************************************/
-void ft_regress_prep_memory(struct FTRegress * ftr, struct FunctionTrain * ft, int how)
+/* void ft_regress_prep_memory(struct FTRegress * ftr, struct FunctionTrain * ft, int how) */
+void ft_regress_prep_memory(struct FTRegress * ftr, int how)
 {
 
     assert (ftr != NULL);
+    assert (ftr->start_ranks != NULL);
+    assert (ftr->approx_opts != NULL);
+
+    if (ftr->processed_param == 0){
+        fprintf(stderr, "Must call ft_regress_process_params before preparing memory\n");
+        exit(1);
+    }
+
     enum REGTYPE type = ftr->type;
     if (type == ALS){
-        regress_als_prep_memory(ftr->reg.als,ft,how);
-        ftr->ntotparam = regress_als_get_num_params(ftr->reg.als);
+        assert (1 == 0);
+        /* regress_als_prep_memory(ftr->reg.als,ft,how); */
+        /* ftr->ntotparam = regress_als_get_num_params(ftr->reg.als); */
     }
     else if (type == AIO){
-        regress_aio_prep_memory(ftr->reg.aio,ft,how);
+        regress_aio_prep_memory2(ftr->reg.aio,ftr->approx_opts,ftr->start_ranks,how);
         ftr->ntotparam = regress_aio_get_num_params(ftr->reg.aio);
     }
     else{
@@ -1033,8 +1430,9 @@ void ft_regress_prep_memory(struct FTRegress * ftr, struct FunctionTrain * ft, i
     }
 
     /* printf("Number of total parameters = %zu\n",ftr->ntotparam); */
+    c3opt_free(ftr->optimizer); ftr->optimizer = NULL;
     ftr->optimizer = c3opt_alloc(BFGS,ftr->ntotparam);
-    c3opt_set_maxiter(ftr->optimizer,10000);
+    c3opt_set_maxiter(ftr->optimizer,ftr->optmaxiter);
 }
 
 /***********************************************************//**
@@ -1070,13 +1468,13 @@ struct FunctionTrain * ft_regress_run(struct FTRegress * ftr, enum REGOBJ obj)
     /* exit(1); */
     double * guess = calloc_double(ftr->ntotparam);
     for (size_t ii = 0; ii < ftr->ntotparam; ii++){
-        guess[ii] = randn();
+        guess[ii] = randn()*0.1;
     }
     assert (guess != NULL);
     double val;
     c3opt_set_verbose(ftr->optimizer,0);
     int res = c3opt_minimize(ftr->optimizer,guess,&val);
-    if (res < 0){
+    if (res < -1){
         fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
     }
 
@@ -1090,4 +1488,215 @@ struct FunctionTrain * ft_regress_run(struct FTRegress * ftr, enum REGOBJ obj)
     free(guess); guess = NULL;
     
     return ft_final;
+}
+
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+// Cross validation
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+////////////////////////////////////
+
+struct CrossValidate
+{
+    size_t N;
+    size_t dim;
+    const double * x;
+    const double * y;
+
+    size_t kfold;
+
+    size_t nparam;
+    struct RegParameter * params[NRPARAM];
+};
+
+
+/***********************************************************//**
+   Allocate cross validation struct
+***************************************************************/
+struct CrossValidate * cross_validate_alloc()
+{
+    struct CrossValidate * cv = malloc(sizeof(struct CrossValidate));
+    if (cv == NULL){
+        fprintf(stderr, "Cannot allocate CrossValidate structure\n");
+        exit(1);
+    }
+    cv->N = 0;
+    cv->dim = 0;
+    cv->x = NULL;
+    cv->y = NULL;
+
+    cv->kfold = 0;
+    
+    cv->nparam = 0;
+    for (size_t ii = 0; ii < NRPARAM; ii++){
+        cv->params[ii] = NULL;
+    }
+    return cv;
+}
+
+
+/***********************************************************//**
+   Free cross validation struct
+***************************************************************/
+void cross_validate_free(struct CrossValidate * cv)
+{
+    if (cv != NULL){
+        for (size_t ii = 0; ii < cv->nparam; ii++){
+            reg_param_free(cv->params[ii]); cv->params[ii] = NULL;
+        }
+        free(cv); cv = NULL;
+    }
+}
+
+/***********************************************************//**
+   Initialize cross validation
+***************************************************************/
+struct CrossValidate * cross_validate_init(size_t N, size_t dim,
+                                           const double * x,
+                                           const double * y,
+                                           size_t kfold)
+{
+    struct CrossValidate * cv = cross_validate_alloc();
+    cv->N = N;
+    cv->dim = dim;
+    cv->x = x;
+    cv->y = y;
+
+    cv->kfold = kfold;
+    
+    return cv;
+}
+
+/***********************************************************//**
+   Add a discrete cross validation parameter
+***************************************************************/
+void cross_validate_add_discrete_param(struct CrossValidate * cv,
+                                       char * name, size_t nopts,
+                                       size_t * opts)
+{
+    assert (cv!= NULL);
+
+    cv->params[cv->nparam] = reg_param_alloc(name,DISCRETE);
+    reg_param_add_discrete_options(cv->params[cv->nparam],nopts,opts);
+    cv->nparam++;
+}
+
+/***********************************************************//**
+   Cross validation run
+***************************************************************/
+void extract_data(struct CrossValidate * cv, size_t start,
+                  size_t num_extract,
+                  double ** xtest, double ** ytest,
+                  double ** xtrain, double ** ytrain)
+{
+
+    memmove(*xtest,cv->x + start * cv->dim,
+            cv->dim * num_extract * sizeof(double));
+    memmove(*ytest,cv->y + start, num_extract * sizeof(double));
+        
+    memmove(*xtrain,cv->x, cv->dim * start * sizeof(double));
+    memmove(*ytrain,cv->y, start * sizeof(double));
+
+    memmove(*xtrain + start * cv->dim,
+            cv->x + (start+num_extract)*cv->dim,
+            cv->dim * (cv->N-start-num_extract) * sizeof(double));
+    memmove(*ytrain + start, cv->y + (start+num_extract),
+            (cv->N-start-num_extract) * sizeof(double));
+}
+
+
+
+/***********************************************************//**
+   Cross validation run
+***************************************************************/
+double cross_validate_run(struct CrossValidate * cv,
+                          struct FTRegress * reg)
+{
+
+    size_t batch = cv->N / cv->kfold;
+
+    /* printf("batch size = %zu\n",batch); */
+
+    double err = 0.0;
+    double start_num = 0;
+    double * xtrain = calloc_double(cv->N * cv->dim);
+    double * ytrain = calloc_double(cv->N);
+    double * xtest = calloc_double(cv->N * cv->dim);
+    double * ytest = calloc_double(cv->N);
+
+
+    for (size_t ii = 0; ii < cv->kfold; ii++){
+
+        if (start_num + batch > cv->N){
+            batch = cv->N-start_num;
+        }
+
+        /* printf("batch[%zu] = %zu\n",ii,batch); */
+        
+        extract_data(cv, start_num, batch, &xtest, &ytest,
+                     &xtrain, &ytrain);
+
+        // train with all but *ii*th batch
+        /* printf("ytrain = ");dprint(cv->N-batch,ytrain); */
+
+
+        // update date and reprep memmory
+        ft_regress_set_data(reg,cv->N-batch,xtrain,1,ytrain,1);
+        ft_regress_prep_memory(reg,2);
+        struct FunctionTrain * ft = ft_regress_run(reg, FTLS);
+
+        double erri = 0.0;
+        double norm = 0.0;
+        for (size_t jj = 0; jj < batch; jj++){
+            double eval = function_train_eval(ft,xtest+jj*cv->dim);
+            erri += (ytest[jj]-eval) * (ytest[jj]-eval);
+            norm += (ytest[jj]*ytest[jj]);
+        }
+        /* erri /= (double)(batch); */
+
+        /* printf("Relative erri = %G\n",erri/norm); */
+
+        start_num += batch;
+        err += erri/norm;
+    }
+
+    // do last back
+
+    free(xtrain); xtrain = NULL;
+    free(ytrain); ytrain = NULL;
+    free(xtest); xtest = NULL;
+    free(ytest); ytest = NULL;
+
+
+    return err;
+}
+
+
+/***********************************************************//**
+   Cross validation optimize         
+   ONLY WORKS FOR DISCRETE OPTIONS
+***************************************************************/
+void cross_validate_opt(struct CrossValidate * cv,
+                        struct FTRegress * ftr)
+{
+    if (cv->nparam == 1){
+        size_t nopts = cv->params[0]->nops;
+        char * name = cv->params[0]->name;
+        for (size_t ii = 0; ii < nopts; ii++){
+            size_t val = cv->params[0]->discrete_ops[ii];
+            ft_regress_set_discrete_parameter(ftr,name,val);
+            ft_regress_process_parameters(ftr);
+            // don't understand why this one is necessary
+            ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
+            ft_regress_prep_memory(ftr,2);
+            double err = cross_validate_run(cv,ftr);
+            printf("\"%s\", val=%zu, cv_err=%G\n",name,val,err);
+            
+        }
+    }
+
 }

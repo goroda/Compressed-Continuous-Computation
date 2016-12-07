@@ -77,9 +77,9 @@ $EVALFT > ftevals.dat
 ######################################
 # Get Squared Error
 ######################################
-error=$(awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2;}; 
-  END { print sum/FNR; }' test_y.dat ftevals.dat)
-echo "Absolute Error: $error"
+error=$(awk 'FNR==NR { file1[NR]=$1; next; }; { diff=$1-file1[FNR]; sum+=diff^2; den+=file1[FNR]^2}; 
+  END { print sum/den; }' test_y.dat ftevals.dat)
+echo "Relative Error: $error"
 
 
 

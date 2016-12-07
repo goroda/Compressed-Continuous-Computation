@@ -322,6 +322,15 @@ size_t ope_opts_get_nparams(const struct OpeOpts * opts)
     return opts->start_num;
 }
 
+/********************************************************//**
+*   Set number of free parameters
+*************************************************************/
+void ope_opts_set_nparams(struct OpeOpts * opts, size_t num)
+{
+    assert (opts != NULL);
+    opts->start_num = num;
+}
+
 
 /********************************************************//**
 *   Initialize a standard basis polynomial

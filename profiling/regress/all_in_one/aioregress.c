@@ -128,40 +128,22 @@ int main(int argc, char * argv[])
     fclose(fpx);
     fclose(fpy);
 
-
-    size_t * ranks = calloc_size_t(dim+1);
-    for (size_t ii = 0; ii < dim+1; ii++){ ranks[ii] = rank; }
-    ranks[0] = 1;
-    ranks[dim] = 1;
-
-    struct BoundingBox * bds = bounding_box_init(dim,lower,upper);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    struct RegressAIO * aio = regress_aio_alloc(dim);
-    regress_aio_add_data(aio,ndata,x,y);
-    /* regress_aio_prep_memory(aio,a,1); */
-    regress_aio_prep_memory(aio,a,2); // linear parameters
-    size_t num_tot_params = regress_aio_get_num_params(aio);
-    
-    struct c3Opt * optimizer = c3opt_alloc(BFGS,num_tot_params);
-    c3opt_set_verbose(optimizer,verbose-1);
-    c3opt_add_objective(optimizer,regress_aio_LS,aio);
-
-    double * guess = calloc_double(num_tot_params);
-    for (size_t ii = 0; ii < num_tot_params; ii++){
-        guess[ii] = randn();
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lower);
+    ope_opts_set_ub(opts,upper);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct C3Approx * c3a = c3approx_create(REGRESS,dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
     }
 
-    double obj;
-    int res = c3opt_minimize(optimizer,guess,&obj);
-    if (verbose > 0){
-        if (res < 0){
-            printf("Warning: optimization did not terminate successfully (may not have reached a local minimum)\n");
-        }
-    }
     
-    /* struct FunctionTrain * ft = function_train_round(regress_aio_get_ft(aio),1e-7,NULL); */
-    struct FunctionTrain * ft = regress_aio_get_ft(aio);
+    c3approx_set_regress_type(c3a,AIO);
+    c3approx_set_regress_start_ranks(c3a,rank);
+    c3approx_set_regress_num_param_per_func(c3a,maxorder+1);
+    c3approx_init_regress(c3a);
+    
+    struct FunctionTrain * ft = c3approx_do_regress(c3a,ndata,x,1,y,1,FTLS);
     if (verbose > 0){
         double diff;
         double err = 0.0;
@@ -185,12 +167,9 @@ int main(int argc, char * argv[])
     
     free(x); x = NULL;
     free(y); y = NULL;
-    /* function_train_free(ft); ft = NULL; */
-    function_train_free(a); a = NULL;
-    bounding_box_free(bds); bds = NULL;
-    regress_aio_free(aio); aio = NULL;
-    c3opt_free(optimizer); optimizer = NULL;
-    free(guess); guess = NULL;
+    /* free(ranks); ranks = NULL; */
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
     
     return 0;
 }

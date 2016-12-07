@@ -138,7 +138,7 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
         }
     }
     else if (type == REGRESS){
-        c3a->reg = ft_regress_alloc(dim);
+        c3a->reg = ft_regress_alloc(dim,c3a->fapp);
     }
     else{
         fprintf(stderr,"Unknown type %d for c3approx\n",type);
@@ -376,49 +376,35 @@ void c3approx_set_regress_type(struct C3Approx * c3a, enum REGTYPE rtype)
     ft_regress_set_type(c3a->reg,rtype);
 }
 
-void c3approx_set_regress_start_ranks(struct C3Approx * c3a, const size_t * ranks)
+void c3approx_set_regress_start_ranks(struct C3Approx * c3a, size_t rank)
 {
     assert (c3a != NULL);
-    assert (c3a -> type == REGRESS);
-    ft_regress_set_start_ranks(c3a->reg,ranks);
+    assert (c3a->type == REGRESS);
+    assert (c3a->fapp != NULL);
+    ft_regress_set_discrete_parameter(c3a->reg,"rank",rank);
+}
+
+void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num)
+{
+    assert (c3a != NULL);
+    assert (c3a->type == REGRESS);
+    assert (c3a->fapp != NULL);
+    ft_regress_set_discrete_parameter(c3a->reg,"num_param",num);
 }
 
 /***********************************************************//**
     Initialize regression (tests everything is set up correctly)
 
     \param[in,out] c3a   - approx structure
-    \param[in]     ranks - initial ranks
 ***************************************************************/
-void c3approx_init_regress(struct C3Approx * c3a,
-                           struct FunctionTrain * ft,
-                           const size_t * ranks)
+void c3approx_init_regress(struct C3Approx * c3a)
 {
     assert (c3a != NULL);
     assert (c3a->type == REGRESS);
     assert (c3a->fapp != NULL);
 
-    c3approx_set_regress_start_ranks(c3a,ranks);
-    c3a->ftref = function_train_copy(ft);
-    /* c3a->ftref = function_train_zeros(c3a->fapp,ranks); */
-    /* iprint_sz(c3a->dim+1,function_train_get_ranks(c3a->ftref)); */
-    /* size_t nparamf, nparamcore;; */
-    /* for (size_t ii = 0; ii < c3a->dim; ii++){ */
-    /*     nparamf = multi_approx_opts_get_dim_nparams(c3a->fapp,ii); */
-    /*     nparamcore = ranks[ii]*ranks[ii+1]*nparamf; */
-    /*     // random starting point */
-    /*     double * guess = calloc_double(nparamcore); */
-    /*     for (size_t jj = 0; jj < nparamcore; jj++){ */
-    /*         guess[jj] = randu()*2.0-1.0;; */
-    /*     } */
-    /*     /\* dprint(nparamcore,guess); *\/ */
-    /*     function_train_core_update_params(c3a->ftref,ii,nparamcore,guess); */
-    /*     size_t nparam = function_train_core_get_params(c3a->ftref,ii,guess); */
-    /*     dprint(nparamcore,guess); */
-    /*     printf("Nc1=%zu, Nc2=%zu\n",nparamcore,nparam); */
-
-    /*     free(guess); guess = NULL; */
-    /* } */
-    /* assert (1 == 0); */
+    // process parameters
+    ft_regress_process_parameters(c3a->reg);
 }
  
 /***********************************************************//**
@@ -433,10 +419,13 @@ c3approx_do_regress(struct C3Approx *c3a, size_t N,
     assert (c3a != NULL);
     assert (c3a->type == REGRESS);
     assert (c3a->reg != NULL);
-    assert (c3a->ftref != NULL);
+    /* assert (c3a->ftref != NULL); */
 
     ft_regress_set_data(c3a->reg,N,x,incx,y,incy);
-    ft_regress_prep_memory(c3a->reg,c3a->ftref,1);
+
+    // NOTE THIS IS FOR LINEAR!
+    /* ft_regress_prep_memory(c3a->reg,c3a->ftref,2); */
+    ft_regress_prep_memory(c3a->reg,2); 
 
     /* assert (1 == 0); */
     struct FunctionTrain * ft = ft_regress_run(c3a->reg,obj);

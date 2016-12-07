@@ -329,6 +329,16 @@ size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
     return 0;
 }
 
+/********************************************************//**
+*   Set number of free parameters
+*************************************************************/
+void pw_poly_opts_set_nparams(struct PwPolyOpts* opts, size_t num)
+{
+    assert (opts != NULL);
+    fprintf(stderr, "Error: Cannot yet set number of free parameters from pw poly opts\n");
+    assert (1 == 0);
+}
+
 
 //////////////////////////////////////////////////////////////////
 
