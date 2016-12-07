@@ -128,22 +128,28 @@ int main(int argc, char * argv[])
     fclose(fpx);
     fclose(fpy);
 
+
+    // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,lower);
     ope_opts_set_ub(opts,upper);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
-    struct C3Approx * c3a = c3approx_create(REGRESS,dim);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
     for (size_t ii = 0; ii < dim; ii++){
-        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
     }
 
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    ft_regress_set_type(ftr,AIO);
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_set_discrete_parameter(ftr,"rank",rank);
+    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
+    ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000);
+    ft_regress_process_parameters(ftr);
+    ft_regress_prep_memory(ftr,2);
+
+    struct FunctionTrain * ft = ft_regress_run(ftr,FTLS);
     
-    c3approx_set_regress_type(c3a,AIO);
-    c3approx_set_regress_start_ranks(c3a,rank);
-    c3approx_set_regress_num_param_per_func(c3a,maxorder+1);
-    c3approx_init_regress(c3a);
-    
-    struct FunctionTrain * ft = c3approx_do_regress(c3a,ndata,x,1,y,1,FTLS);
     if (verbose > 0){
         double diff;
         double err = 0.0;
@@ -168,8 +174,10 @@ int main(int argc, char * argv[])
     free(x); x = NULL;
     free(y); y = NULL;
     /* free(ranks); ranks = NULL; */
-    c3approx_destroy(c3a);
+    
     one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_regress_free(ftr); ftr = NULL;
     
     return 0;
 }
