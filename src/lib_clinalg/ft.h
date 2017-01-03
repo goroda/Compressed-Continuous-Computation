@@ -1,12 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -38,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 /** \file ft.h 
  Provides header files for ft.c 
@@ -104,11 +100,17 @@ size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
 
 // evaluators
-void function_train_eval_up_to_core(struct FunctionTrain *,size_t, const double *, double *, size_t *);
+void function_train_eval_up_to_core(struct FunctionTrain *,
+                                    size_t, const double *,
+                                    double *, size_t *);
 double function_train_eval(struct FunctionTrain *, const double *);
 
-size_t function_train_core_get_nparams(const struct FunctionTrain *,size_t,size_t *);
-size_t function_train_core_get_params(const struct FunctionTrain *,size_t,double *);
+size_t function_train_func_get_nparams(const struct FunctionTrain *,
+                                     size_t, size_t, size_t);
+size_t function_train_core_get_nparams(const struct FunctionTrain *,
+                                       size_t,size_t *);
+size_t function_train_core_get_params(const struct FunctionTrain *,
+                                      size_t,double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
 
@@ -135,6 +137,8 @@ void function_train_core_param_grad_eval_single(struct FunctionTrain *, size_t,
                                                 double *, double *, size_t);
 
 struct RunningCoreTotal;
+struct RunningCoreTotal * running_core_total_alloc(size_t);
+struct RunningCoreTotal ** running_core_total_arr_alloc(size_t,size_t);
 void running_core_total_free(struct RunningCoreTotal *);
 void running_core_total_arr_free(size_t, struct RunningCoreTotal **);
 void running_core_total_restart(struct RunningCoreTotal *);

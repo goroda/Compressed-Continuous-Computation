@@ -41,15 +41,28 @@ static char * program_name;
 void print_code_usage (FILE *, int) __attribute__ ((noreturn));
 void print_code_usage (FILE * stream, int exit_code)
 {
+    fprintf(stream, "A Library of Functions Useful for Testing Approximation Routines. \n\n");
     fprintf(stream, "Usage: %s options \n", program_name);
     fprintf(stream,
             " -h --help      Display this usage information.\n"
-            " -f --function  Which function to evaluate.\n"
+            " -f --function  Which function to evaluate. \n"
             " -i --input     Input file.\n"
             " -o --output    Output file.\n"
             " -n --number    Number of data points (default 100).\n"
             " -v --verbose   Output words (default 0).\n"
+            "                if -1 print the number of dimensions\n"
+            "                if -2 print the name of the function\n"
+            "                if -3 print the lower bound of input\n"
+            "                if -4 print the upper bound of input\n"
         );
+    fprintf(stream,
+            "\n\nFunction options include:\n");
+    for (size_t ii = 0; ii < num_funcs; ii++){
+        fprintf(stream, "Function: %zu\n\n",ii+1);
+        fprintf(stream, "%s",funcs[ii].message);
+
+        fprintf(stream, "************\n");
+    }
     exit (exit_code);
 }
 
@@ -118,6 +131,22 @@ int main(int argc, char * argv[])
         print_code_usage(stderr, 1);
     }
     size_t dim = function_get_dim(&(funcs[function-1]));
+    if (verbose == -1){
+        printf("%zu\n",dim);
+        exit(0);
+    }
+    else if (verbose == -2){
+        printf("%s\n",function_get_name(&funcs[function-1]));
+        exit(0);
+    }
+    else if (verbose == -3){
+        printf("%G\n",function_get_lower(&funcs[function-1]));
+        exit(0);
+    }
+    else if (verbose == -4){
+        printf("%G\n",function_get_upper(&funcs[function-1]));
+        exit(0);
+    }
     
     size_t nrows,ncols;
     double * xin = NULL;

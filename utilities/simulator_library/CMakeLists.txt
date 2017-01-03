@@ -7,5 +7,8 @@ target_link_libraries(simlib_util
     ${blas_lapack}
     -lm)
 
+install(TARGETS simlib_util EXPORT simlib_util DESTINATION "${bin_dest}")
+
+
 
 

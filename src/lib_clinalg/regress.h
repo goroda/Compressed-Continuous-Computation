@@ -1,9 +1,7 @@
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -35,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 /** \file regress.h
  * Provides header files for FT regression
@@ -99,6 +98,33 @@ double cross_validate_run(struct CrossValidate *,
                           struct FTRegress *);
 void cross_validate_opt(struct CrossValidate *,
                         struct FTRegress *,int);
+
+enum FTPARAM_ST {LINEAR_ST, NONE_ST};
+
+struct FTparam;
+struct FTparam *
+ft_param_alloc(size_t,struct MultiApproxOpts *,
+               double *, size_t *);
+void ft_param_free(struct FTparam *);
+size_t * ft_param_get_num_params_per_core(const struct FTparam *);
+struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
+void ft_param_update_params(struct FTparam *, const double *);
+
+struct RegressOpts;
+struct RegressOpts *
+regress_opts_create(enum REGTYPE, enum REGOBJ, size_t,
+                    size_t, const double *, const double *);
+void regress_opts_free(struct RegressOpts *);
+
+void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
+                                    size_t *, size_t,
+                                    enum FTPARAM_ST);
+
+double ft_param_eval_objective(struct FTparam *,
+                               struct RegressOpts *,
+                               const double *, double *);
+struct FunctionTrain *
+c3_regression_run(struct FTparam *, struct RegressOpts *);
 
 #endif
 

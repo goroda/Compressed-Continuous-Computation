@@ -1,11 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -37,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 /** \file ft.c
  * Provides algorithms for function train manipulation
@@ -124,12 +121,15 @@ void ft_mem_space_arr_free(size_t dim, struct FTMemSpace ** ftmem)
 }
 
 
-int ft_mem_space_check(struct FTMemSpace * ftmem, size_t num_spaces, size_t space_size)
+int ft_mem_space_check(struct FTMemSpace * ftmem,
+                       size_t num_spaces,
+                       size_t space_size)
 {
     if (ftmem == NULL){
         return 1;
     }
-    if ( (ftmem->num_spaces < num_spaces) || (ftmem->space_size != space_size))
+    if ( (ftmem->num_spaces < num_spaces) ||
+         (ftmem->space_size != space_size))
     {
         ftmem->num_spaces = num_spaces;
         ftmem->space_size = space_size;
@@ -733,16 +733,37 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
     return out;
 }
 
+
+/***********************************************************//**
+   Get number of parameters of a particular univariate function
+
+   \param[in] ft   - functoin train
+   \param[in] core - which core parameters to count
+   \param[in] ii   - row
+   \param[in] jj   - column
+
+   \returns number of parameters in the core
+***************************************************************/
+size_t function_train_func_get_nparams(const struct FunctionTrain * ft,
+                                       size_t core, size_t ii, size_t jj)
+{
+    size_t nparam =
+        qmarray_func_get_nparams(ft->cores[core],ii,jj);
+    return nparam;
+}
+
 /***********************************************************//**
    Get number of parameters describing a core
 
    \param[in]     ft           - functoin train
    \param[in]     core         - which core parameters to count
-   \param[in,out] maxparamfunc - number of parameters in the function with most parameters within the core
+   \param[in,out] maxparamfunc - number of parameters in the function
+                                 with most parameters within the core
 
    \returns number of parameters in the core
 ***************************************************************/
-size_t function_train_core_get_nparams(const struct FunctionTrain * ft, size_t core,
+size_t function_train_core_get_nparams(const struct FunctionTrain * ft,
+                                       size_t core,
                                        size_t * maxparamfunc)
 {
     size_t ncoreparams = qmarray_get_nparams(ft->cores[core],maxparamfunc);
@@ -752,7 +773,8 @@ size_t function_train_core_get_nparams(const struct FunctionTrain * ft, size_t c
 /***********************************************************//**
    Get core parameters
 ***************************************************************/
-size_t function_train_core_get_params(const struct FunctionTrain * ft, size_t core,
+size_t function_train_core_get_params(const struct FunctionTrain * ft,
+                                      size_t core,
                                       double * param)
 {
     size_t nparam = qmarray_get_params(ft->cores[core],param);
@@ -762,8 +784,10 @@ size_t function_train_core_get_params(const struct FunctionTrain * ft, size_t co
 /***********************************************************//**
    Update the parameters defining a function train core
 ***************************************************************/
-void function_train_core_update_params(struct FunctionTrain * ft, size_t core,
-                                       size_t nparam, const double * param)
+void function_train_core_update_params(struct FunctionTrain * ft,
+                                       size_t core,
+                                       size_t nparam,
+                                       const double * param)
 {
     qmarray_update_params(ft->cores[core],nparam,param);
 }

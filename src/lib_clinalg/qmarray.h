@@ -1,11 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -37,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 /** \file qmarray.h 
  Provides header files for qmarray.c 
@@ -186,6 +183,8 @@ struct Qmarray * qmarray_deriv(struct Qmarray *);
 void qmarray_roundt(struct Qmarray **, double);
 
 void qmarray_eval(struct Qmarray *, double, double *);
+size_t qmarray_func_get_nparams(const struct Qmarray *,
+                                size_t, size_t);
 size_t qmarray_get_nparams(const struct Qmarray *,size_t *);
 size_t qmarray_get_params(struct Qmarray *,double *);
 void qmarray_update_params(struct Qmarray *, size_t, const double *);

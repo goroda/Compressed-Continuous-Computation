@@ -1,5 +1,5 @@
 Notes:
-1) maxorder = 5; ranks = 4, DIM=5,FUNC=3,NSAMPLE=1000
+1) ./runprof.sh maxorder = 5; ranks = 4, DIM=5,FUNC=3,NSAMPLE=1000
 2) training data on cube of [0,1] but polynomials defined on [-1,1] (should fix)
 3) After third.svg - Can probably further increase speed by 10% by storing legendre 
 	                 polynomial evaluations
@@ -29,4 +29,6 @@ fifth.svg  : take advantage of sparsity of gradients during right-to-left multip
 
 sixth.svg  : precompute gradients for linear parameters
            : times = 9.438s, 9.875s, 9.486
-           
+
+seventh.svg : new interface
+            : times = 7.519s, 7.911s, 7.631s

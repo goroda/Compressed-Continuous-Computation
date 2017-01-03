@@ -1,12 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -38,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 
 /** \file optimization.c
@@ -975,8 +971,11 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
             return 0.0;
         }
     }
-    if (dg > 0){
-        printf("line search initial direction is not a descent direction\n");
+    if (dg > 1e-15){
+        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
+        fprintf(stderr,"gradient norm is %G\n",
+                cblas_ddot(d,grad,1,grad,1));
+        /* exit(1); */
         *info = -4;
         return 0.0;
     }
@@ -1037,9 +1036,12 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
 /***********************************************************//**
     Zoom function for Strong Wolfe
 ***************************************************************/
-double c3opt_ls_zoom(struct c3Opt * opt, double tlow, double flow,
-                     double thigh, const double * x, double * dir,
-                     double * newx, double fx, double dg, double * grad,
+double c3opt_ls_zoom(struct c3Opt * opt, double tlow,
+                     double flow,
+                     double thigh, const double * x,
+                     double * dir,
+                     double * newx, double fx,
+                     double dg, double * grad,
                      double * fval)
 {
     double alpha = c3opt_ls_get_alpha(opt);
@@ -1149,8 +1151,8 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
     double tmax = 1.0;
     double t = 1.0;
     double dg = cblas_ddot(d,grad,1,dir,1);
-    if (dg > 0){
-        printf("line search initial direction is not a descent direction\n");
+    if (dg > 1e-15){
+        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
         *info = -4;
         return 0.0;
     }
@@ -1268,7 +1270,8 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
                    (see that function)
 ***************************************************************/
 int c3_opt_damp_bfgs(struct c3Opt * opt,
-                     double * x, double * fval, double * grad,
+                     double * x, double * fval,
+                     double * grad,
                      double * invhess)
                  
 {
@@ -1314,15 +1317,17 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     double eta = cblas_ddot(d,grad,1,workspace+d,1);
 
     if (verbose > 0){
-        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
+        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n"
+               ,*fval,eta*eta/2.0);
         if (verbose > 1){
             printf("\t x = "); dprint(d,x);
         }
     }
 
-    if ( (eta*eta/2.0) < gtol){
-        return C3OPT_GTOL_REACHED;
-    }
+    // cannot terminate immediately
+    /* if ( (eta*eta/2.0) < gtol){ */
+    /*     return C3OPT_GTOL_REACHED; */
+    /* } */
 
     size_t iter = 1;
     double fvaltemp;
@@ -1337,20 +1342,25 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         memmove(workspace,x,d*sizeof(double));
         fvaltemp = *fval;
         if (alg == BACKTRACK){
-            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
+            sc = c3opt_ls_box(opt,workspace,fvaltemp,
+                              grad,workspace+d,
                               x,fval,&res);
             c3opt_eval(opt,x,workspace+2*d);
         }
         else if (alg == STRONGWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
-                                       workspace+2*d,workspace+d,
+            sc = c3opt_ls_strong_wolfe(opt,workspace,
+                                       fvaltemp,
+                                       workspace+2*d,
+                                       workspace+d,
                                        x,fval,&res);
         }
         else if (alg == WEAKWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
-                                       workspace+2*d,workspace+d,
+            sc = c3opt_ls_wolfe_bisect(opt,workspace,
+                                       fvaltemp,
+                                       workspace+2*d,
+                                       workspace+d,
                                        x,fval,&res);
         }
         /* assert (*fval < fvaltemp); */
@@ -1367,7 +1377,8 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             opt->stored_func[opt->niters] = *fval;
         }
         if (opt->store_grad == 1){
-            memmove(opt->stored_grad+opt->niters*opt->d,workspace+2*d,d*sizeof(double));
+            memmove(opt->stored_grad+opt->niters*opt->d,
+                    workspace+2*d,d*sizeof(double));
         }
         if (opt->store_x == 1){
             memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));

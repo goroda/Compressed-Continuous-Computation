@@ -1,12 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -38,6 +33,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
 
 /** \file piecewisepoly.c
  * Provides routines for using piecewise polynomials
@@ -334,6 +331,7 @@ size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
 *************************************************************/
 void pw_poly_opts_set_nparams(struct PwPolyOpts* opts, size_t num)
 {
+    (void)(num);
     assert (opts != NULL);
     fprintf(stderr, "Error: Cannot yet set number of free parameters from pw poly opts\n");
     assert (1 == 0);

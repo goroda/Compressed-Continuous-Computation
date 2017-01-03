@@ -122,6 +122,7 @@ target_link_libraries(c3
   ${blas_lapack}
   -lm
   )
+
 target_include_directories(c3 PUBLIC 
                      $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
                      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

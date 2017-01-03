@@ -1,12 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -38,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 /** \file qmarray.c
  * Provides algorithms for qmarray manipulation
@@ -3037,12 +3033,30 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
     }
 }
 
+/***********************************************************//**
+    Get number of parameters describing a particular function
+    within a quasimatrix array
+
+    \param[in] qma - quasimatrix array
+    \param[in] row - row
+    \param[in] col - col
+
+    \returns number of parameters
+***************************************************************/
+size_t qmarray_func_get_nparams(const struct Qmarray * qma,
+                                size_t row, size_t col)
+{
+    struct GenericFunction * gf = qma->funcs[row + col * qma->nrows];
+    return generic_function_get_num_params(gf);
+}
+                                
 
 /***********************************************************//**
     Get number of parameters describing the qmarray
 
     \param[in]     qma   - quasimatrix array
-    \param[in,out] nfunc - number of parameters in the function with most parameters
+    \param[in,out] nfunc - number of parameters in the 
+                           function with most parameters
 
     \returns - total number of parameters
 ***************************************************************/
@@ -3080,7 +3094,8 @@ size_t qmarray_get_params(struct Qmarray * qma, double * param)
              nparam = generic_function_get_num_params(qma->funcs[ii]);
          }
          else{
-             nparam = generic_function_get_params(qma->funcs[ii],param+onind);
+             nparam = generic_function_get_params(qma->funcs[ii],
+                                                  param+onind);
          }
          onind += nparam;
      }
@@ -3106,7 +3121,8 @@ void qmarray_update_params(struct Qmarray * qma, size_t nparams, const double * 
      }
      if (onind != nparams){
          fprintf(stderr,"Error updating the parameters of a Qmarray\n");
-         fprintf(stderr,"number of parameters expected is not the number of actual parameters\n");
+         fprintf(stderr,"number of parameters expected is not the\n");
+         fprintf(stderr,"number of actual parameters\n");
          exit(1);
      }
 }

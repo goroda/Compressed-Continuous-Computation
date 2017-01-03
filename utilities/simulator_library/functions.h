@@ -39,10 +39,17 @@
 
 struct Function {
     size_t dim;
-    void (*eval)(size_t,const double *,double *, void *);
+    double lower;
+    double upper;
+    int (*eval)(size_t,const double *,double *, void *);
+    char * name;
+    char * message;
 };
 
-size_t function_get_dim(void * arg);
+size_t function_get_dim(void *);
+char * function_get_name(void *);
+double function_get_lower(void *);
+double function_get_upper(void *);
 void function_eval(size_t, const double *, double *, void *);
 
 void create_functions();

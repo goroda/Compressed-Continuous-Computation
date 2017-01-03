@@ -13,9 +13,10 @@ FUNC=3
 ######################################
 # Regression options (order=5,rank=4 for profile data)
 ######################################
+CV=0
 MAXORDER=5
 RANK=4
-VERBOSE=1
+VERBOSE=2
 FTFILE="trainedft.c3"
 
 ######################################
@@ -41,13 +42,21 @@ $EVALFUNC
 # Perform Regression
 ######################################
 REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -m $MAXORDER -r $RANK -v $VERBOSE -o $FTFILE"
-echo $REGRESS
-$REGRESS # Just generate regression
 
-# Do profiling
-# valgrind --tool=callgrind $REGRESS
-# python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
-# rm callgrind.out.*
+if [ $CV == 1 ]
+then
+   echo $REGRESS --cv
+   $REGRESS --cv # Just generate regression
+else
+    echo $REGRESS
+    # $REGRESS # Just generate regression
+
+    # Do profiling
+    valgrind --tool=callgrind $REGRESS
+    python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
+    rm callgrind.out.*
+fi
+
 
 ######################################
 # Generate Testing Data

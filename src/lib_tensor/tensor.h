@@ -1,6 +1,7 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -32,6 +33,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
 
 
 

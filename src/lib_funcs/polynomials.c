@@ -1,12 +1,7 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016, Sandia Corporation
 
-// Copyright (c) 2016, Sandia Corporation. Under the terms of Contract
-// DE-AC04-94AL85000, there is a non-exclusive license for use of this
-// work by or on behalf of the U.S. Government. Export of this program
-// may require a license from the United States Government
-
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
 
@@ -38,6 +33,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
 
 /** \file polynomials.c
  * Provides routines for manipulating orthogonal polynomials
@@ -883,8 +880,8 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
 {
 
     size_t nold = ope->num_poly;
+    ope->num_poly = nparams;
     if (nold >= nparams){
-        ope->num_poly = nparams;
         for (size_t ii = 0; ii < nparams; ii++){
             ope->coeff[ii] = param[ii];
         }
@@ -894,6 +891,7 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
     }
     else{
         if (nparams <= ope->nalloc){
+
             for (size_t ii = 0; ii < nparams; ii++){
                 ope->coeff[ii] = param[ii];
             }
@@ -901,7 +899,6 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
         else{
             free(ope->coeff); ope->coeff = NULL;
             ope->nalloc = nparams;
-            ope->num_poly = nparams;
             ope->coeff = calloc_double(ope->nalloc);
             for (size_t ii = 0; ii < nparams; ii++){
                 ope->coeff[ii] = param[ii];
@@ -2415,10 +2412,19 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
 
     int return_val = 0;
     switch (poly->p->ptype) { 
-    case CHEBYSHEV: return_val = cheb_gauss(nquad,qpt,wt);                                     break;
-    case LEGENDRE:  return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);                                  break; 
-    case HERMITE:   return_val = gauss_hermite(nquad,qpt,wt);                                           break;
-    case STANDARD:  fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec for STANDARD type\n");  return 1;
+    case CHEBYSHEV:
+        return_val = cheb_gauss(nquad,qpt,wt);
+        break;
+    case LEGENDRE:
+        return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
+        break; 
+    case HERMITE:
+        return_val = gauss_hermite(nquad,qpt,wt);
+        break;
+    case STANDARD:
+        fprintf(stderr, "Cannot call orth_poly_expansion_approx_vec");
+        fprintf(stderr," for STANDARD type\n");
+        return 1;
     }
 
     if (return_val != 0){
@@ -2465,7 +2471,8 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
 *       Chebfun in his book Approximation Theory and practice
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts, struct Fwrap * fw)
+orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
+                                 struct Fwrap * fw)
 {
     assert (aopts != NULL);
     assert (fw != NULL);
