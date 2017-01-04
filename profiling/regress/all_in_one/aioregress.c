@@ -160,17 +160,17 @@ int main(int argc, char * argv[])
         params_start[ii] = 0.01*randn();
     }
 
-    struct FTparam * ftp = ft_param_alloc(dim,fapp,params_start,ranks);
-    struct RegressOpts * ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y);
+    /* struct FTparam * ftp = ft_param_alloc(dim,fapp,params_start,ranks); */
+    /* struct RegressOpts * ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y); */
 
-    /* struct FTRegress * ftr = ft_regress_alloc(dim,fapp); */
-    /* ft_regress_set_type(ftr,AIO); */
-    /* ft_regress_set_data(ftr,ndata,x,1,y,1); */
-    /* ft_regress_set_discrete_parameter(ftr,"rank",rank); */
-    /* ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1); */
-    /* ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000); */
-    /* ft_regress_process_parameters(ftr); */
-    /* ft_regress_prep_memory(ftr,2); */
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    ft_regress_set_type(ftr,AIO);
+    ft_regress_set_obj(ftr,FTLS);
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_set_discrete_parameter(ftr,"rank",rank);
+    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
+    ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000);
+    ft_regress_process_parameters(ftr);
 
 
     // choose parameters using cross validation
@@ -201,8 +201,8 @@ int main(int argc, char * argv[])
     }
 
     
-    /* struct FunctionTrain * ft = ft_regress_run(ftr,FTLS); */
-    struct FunctionTrain * ft = c3_regression_run(ftp,ropts);
+    struct FunctionTrain * ft = ft_regress_run(ftr);
+    /* struct FunctionTrain * ft = c3_regression_run(ftp,ropts); */
     
     if (verbose > 0){
         double diff;
@@ -231,9 +231,9 @@ int main(int argc, char * argv[])
     
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
-    /* ft_regress_free(ftr); ftr = NULL; */
-    ft_param_free(ftp);      ftp  = NULL;
-    regress_opts_free(ropts); ropts = NULL;
+    ft_regress_free(ftr); ftr = NULL;
+    /* ft_param_free(ftp);      ftp  = NULL; */
+    /* regress_opts_free(ropts); ropts = NULL; */
 
 
     

@@ -372,79 +372,83 @@ void regress_als_reset(struct RegressALS * als)
 ************************************************************/
 double regress_core_LS(size_t nparam, const double * param, double * grad, void * arg)
 {
+    (void)(nparam);
+    (void)(param);
+    (void)(grad);
+    (void)(arg);
+    
+    /* struct RegressALS * als = arg; */
+    /* /\* size_t d      = als->dim; *\/ */
+    /* size_t core = als->core; */
+    /* assert(nparam == als->nparams[core]); */
 
-    struct RegressALS * als = arg;
-    /* size_t d      = als->dim; */
-    size_t core   = als->core;
-    assert( nparam == als->nparams[core]);
+    /* function_train_core_update_params(als->ft,core,nparam,param); */
 
-    function_train_core_update_params(als->ft,core,nparam,param);
-
-    if (grad != NULL){
-        for (size_t ii = 0; ii < nparam; ii++){
-            grad[ii] = 0.0;
-        }
-    }
-    double out=0.0, resid;
-    if (grad != NULL){
-        /* printf("evaluate\n"); */
-        if (als->reset == 1){
-            function_train_core_param_grad_eval(
-                als->ft,
-                als->N, als->x, als->core, nparam,
-                als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
-                als->fparam_space->vals,
-                als->grad_space->vals,
-                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
-                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
-                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
-                als->evals->vals);
-            // turn off the reset since this is in the middle of optimization
-            als->reset = 0;
-        }
-        else{
-            function_train_core_param_grad_eval_single(
-                als->ft,als->N,als->x,als->core,
-                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
-                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
-                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
-                als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space),
-                als->fparam_space->vals,
-                als->evals->vals,als->grad_space->vals,nparam);                
-        }
+    /* if (grad != NULL){ */
+    /*     for (size_t ii = 0; ii < nparam; ii++){ */
+    /*         grad[ii] = 0.0; */
+    /*     } */
+    /* } */
+    /* double out=0.0, resid; */
+    /* if (grad != NULL){ */
+    /*     /\* printf("evaluate\n"); *\/ */
+    /*     if (als->reset == 1){ */
+    /*         function_train_core_param_grad_eval( */
+    /*             als->ft, */
+    /*             als->N, als->x, als->core, nparam, */
+    /*             als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space), */
+    /*             als->fparam_space->vals, */
+    /*             als->grad_space->vals, */
+    /*             als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval), */
+    /*             als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval), */
+    /*             als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval), */
+    /*             als->evals->vals); */
+    /*         // turn off the reset since this is in the middle of optimization */
+    /*         als->reset = 0; */
+    /*     } */
+    /*     else{ */
+    /*         function_train_core_param_grad_eval_single( */
+    /*             als->ft,als->N,als->x,als->core, */
+    /*             als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval), */
+    /*             als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval), */
+    /*             als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval), */
+    /*             als->grad_core_space->vals, reg_mem_space_get_data_inc(als->grad_core_space), */
+    /*             als->fparam_space->vals, */
+    /*             als->evals->vals,als->grad_space->vals,nparam);                 */
+    /*     } */
             
-        /* printf("done with evaluations\n"); */
-        for (size_t ii = 0; ii < als->N; ii++){
-            resid = als->y[ii]-als->evals->vals[ii];
-            out += 0.5*resid*resid;
-            cblas_daxpy(nparam,-resid,als->grad_space->vals + ii * nparam,1,grad,1);
-        }
-    }
-    else{
-        if (als->reset == 1){
-            for (size_t ii = 0; ii < als->N; ii++){
-                /* dprint(d,als->x+ii*d); */
-                als->evals->vals[ii] = function_train_eval(als->ft, als->x+ii*als->dim);
-                resid = als->y[ii]-als->evals->vals[ii];
-                out += 0.5*resid*resid;
-            }
-        }
-        else{
-            function_train_core_param_grad_eval_single(
-                als->ft,als->N,als->x,als->core,
-                als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval),
-                als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval),
-                als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval),
-                NULL,0,NULL,als->evals->vals,NULL,0);
-            for (size_t ii = 0; ii < als->N; ii++){
-                /* dprint(d,als->x+ii*d); */
-                resid = als->y[ii]-als->evals->vals[ii];
-                out += 0.5*resid*resid;
-            }
-        }
-    }
+    /*     /\* printf("done with evaluations\n"); *\/ */
+    /*     for (size_t ii = 0; ii < als->N; ii++){ */
+    /*         resid = als->y[ii]-als->evals->vals[ii]; */
+    /*         out += 0.5*resid*resid; */
+    /*         cblas_daxpy(nparam,-resid,als->grad_space->vals + ii * nparam,1,grad,1); */
+    /*     } */
+    /* } */
+    /* else{ */
+    /*     if (als->reset == 1){ */
+    /*         for (size_t ii = 0; ii < als->N; ii++){ */
+    /*             /\* dprint(d,als->x+ii*d); *\/ */
+    /*             als->evals->vals[ii] = function_train_eval(als->ft, als->x+ii*als->dim); */
+    /*             resid = als->y[ii]-als->evals->vals[ii]; */
+    /*             out += 0.5*resid*resid; */
+    /*         } */
+    /*     } */
+    /*     else{ */
+    /*         function_train_core_param_grad_eval_single( */
+    /*             als->ft,als->N,als->x,als->core, */
+    /*             als->prev_eval->vals, reg_mem_space_get_data_inc(als->prev_eval), */
+    /*             als->curr_eval->vals, reg_mem_space_get_data_inc(als->curr_eval), */
+    /*             als->post_eval->vals, reg_mem_space_get_data_inc(als->post_eval), */
+    /*             NULL,0,NULL,als->evals->vals,NULL,0); */
+    /*         for (size_t ii = 0; ii < als->N; ii++){ */
+    /*             /\* dprint(d,als->x+ii*d); *\/ */
+    /*             resid = als->y[ii]-als->evals->vals[ii]; */
+    /*             out += 0.5*resid*resid; */
+    /*         } */
+    /*     } */
+    /* } */
 
-    return out;
+    return 0.0;
 }
 
 
@@ -1137,6 +1141,661 @@ double regress_aio_LS(size_t nparam, const double * param,
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Clean Attempt
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Parameterized FT
+struct FTparam
+{
+    struct FunctionTrain * ft;
+    size_t dim;
+
+    size_t * nparams_per_uni; // number of parmaters per univariate funciton
+    size_t * nparams_per_core;
+    size_t nparams;
+    double * params;
+    
+    struct MultiApproxOpts * approx_opts;
+};
+
+/***********************************************************//**
+    Free FT regress structure
+***************************************************************/
+void ft_param_free(struct FTparam * ftr)
+{
+    if (ftr != NULL){
+        function_train_free(ftr->ft); ftr->ft = NULL;
+        free(ftr->nparams_per_uni); ftr->nparams_per_uni = NULL;
+        free(ftr->nparams_per_core); ftr->nparams_per_core = NULL;
+        free(ftr->params); ftr->params = NULL;
+        free(ftr); ftr = NULL;
+    }
+}
+
+
+/***********************************************************//**
+    Allocate parameterized function train
+***************************************************************/
+struct FTparam *
+ft_param_alloc(size_t dim,
+               struct MultiApproxOpts * aopts,
+               double * params, size_t * ranks)
+{
+    struct FTparam * ftr = malloc(sizeof(struct FTparam));
+    if (ftr == NULL){
+        fprintf(stderr, "Cannot allocate FTparam structure\n");
+        exit(1);
+    }
+    ftr->approx_opts = aopts;
+
+    ftr->ft = function_train_zeros(aopts,ranks);
+    ftr->dim = dim;
+    
+    ftr->nparams_per_core = calloc_size_t(ftr->dim);
+    ftr->nparams = 0;
+    size_t nuni = 0; // number of univariate functions
+    for (size_t jj = 0; jj < ftr->dim; jj++)
+    {
+        nuni += ranks[jj]*ranks[jj+1];
+        ftr->nparams_per_core[jj] = ranks[jj]*ranks[jj+1] * multi_approx_opts_get_dim_nparams(aopts,jj);
+        function_train_core_update_params(ftr->ft,jj,ftr->nparams_per_core[jj],params+ftr->nparams);
+        ftr->nparams += ftr->nparams_per_core[jj];
+    }
+    
+    ftr->nparams_per_uni = calloc_size_t(nuni);
+    size_t onind = 0;
+    for (size_t jj = 0; jj < ftr->dim; jj++){
+
+        for (size_t ii = 0; ii < ranks[jj]*ranks[jj+1]; ii++){
+            ftr->nparams_per_uni[onind] = multi_approx_opts_get_dim_nparams(aopts,jj);
+            onind++;
+        }
+    }
+    
+    ftr->params = calloc_double(ftr->nparams);
+    memmove(ftr->params,params,ftr->nparams * sizeof(double) );
+    
+    return ftr;
+}
+    
+void ft_param_update_params(struct FTparam * ftp, const double * params)
+{
+    size_t runparam = 0;
+    for (size_t ii = 0; ii < ftp->dim; ii ++){
+        function_train_core_update_params(ftp->ft,ii,
+                                          ftp->nparams_per_core[ii],
+                                          params+runparam);
+        runparam += ftp->nparams_per_core[ii];
+    }
+
+    assert (runparam == ftp->nparams);
+
+    memmove(ftp->params,params,ftp->nparams * sizeof(double) );
+}
+
+
+void ft_param_update_core_params(struct FTparam * ftp, size_t core, const double * params)
+{
+    size_t runparam = 0;
+    for (size_t ii = 0; ii < core; ii ++){
+        runparam += ftp->nparams_per_core[ii];
+    }
+    function_train_core_update_params(ftp->ft,core,
+                                      ftp->nparams_per_core[core],
+                                      params);
+
+    memmove(ftp->params + runparam,params,ftp->nparams_per_core[core] * sizeof(double) );
+}
+
+void ft_param_update_structure(struct FTparam ** ftp,
+                               struct MultiApproxOpts * opts,
+                               size_t * new_ranks, double * new_vals)
+{
+    // just overwrites
+    size_t dim = (*ftp)->dim;
+    ft_param_free(*ftp); *ftp = NULL;
+    *ftp = ft_param_alloc(dim,opts,new_vals,new_ranks);
+}
+
+size_t * ft_param_get_num_params_per_core(const struct FTparam * ftp)
+{
+    assert (ftp != NULL);
+    return ftp->nparams_per_core;
+}
+
+struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
+{
+    assert(ftp != NULL);
+    return ftp->ft;
+}
+        
+struct RegressionMemManager
+{
+
+    size_t dim;
+    size_t N;
+    struct RunningCoreTotal *  running_evals_lr;
+    struct RunningCoreTotal *  running_evals_rl;
+    struct RunningCoreTotal ** running_grad;
+    struct RegMemSpace *       evals;
+    struct RegMemSpace *       grad;
+    struct RegMemSpace *       grad_space;
+    struct RegMemSpace **      all_grads;
+    struct RegMemSpace *       fparam_space;
+
+    enum FTPARAM_ST structure;
+    int once_eval_structure;
+
+    double ** lin_structure_vals;
+    size_t * lin_structure_inc;
+};
+
+void regression_mem_manager_free(struct RegressionMemManager * mem)
+{
+    if (mem != NULL){
+    
+        reg_mem_space_free(mem->grad_space);
+        mem->grad_space = NULL;
+        
+        reg_mem_space_free(mem->fparam_space);
+        mem->fparam_space = NULL;
+        
+        reg_mem_space_free(mem->evals);
+        mem->evals = NULL;
+        
+        reg_mem_space_free(mem->grad);
+        mem->grad = NULL;
+
+        reg_mem_space_arr_free(mem->dim,mem->all_grads);
+        mem->all_grads = NULL;
+
+        running_core_total_free(mem->running_evals_lr);
+        running_core_total_free(mem->running_evals_rl);
+        running_core_total_arr_free(mem->dim,mem->running_grad);
+
+        free(mem->lin_structure_vals); mem->lin_structure_vals = NULL;
+        free(mem->lin_structure_inc);  mem->lin_structure_inc  = NULL;
+        
+        free(mem); mem = NULL;
+    }
+
+}
+
+
+struct RegressionMemManager *
+regress_mem_manager_alloc(size_t d, size_t n,
+                          size_t * num_params_per_core,
+                          size_t * ranks,
+                          size_t max_param_within_uni,
+                          enum FTPARAM_ST structure)
+{
+
+    struct RegressionMemManager * mem = malloc(sizeof(struct RegressionMemManager));
+    if (mem == NULL){
+        fprintf(stderr, "Cannot allocate struct RegressionMemManager\n");
+        exit(1);
+    }
+
+    mem->dim = d;
+    mem->N = n;
+
+    mem->fparam_space = reg_mem_space_alloc(1,max_param_within_uni);
+
+    mem->all_grads = malloc(d * sizeof(struct RegMemSpace * ));
+    assert (mem->all_grads != NULL);
+    size_t mr2_max = 0;
+    size_t mr2;
+    size_t num_tot_params = 0;
+    size_t max_param_within_core = 0;
+    for (size_t ii = 0; ii < d; ii++){
+        mr2 = ranks[ii]*ranks[ii+1];
+        mem->all_grads[ii] = reg_mem_space_alloc(n,num_params_per_core[ii] * mr2 );
+        num_tot_params += num_params_per_core[ii];
+        if (mr2 > mr2_max){
+            mr2_max = mr2;
+        }
+        if (num_params_per_core[ii] > max_param_within_core){
+            max_param_within_core = num_params_per_core[ii];
+        }
+    }
+    mem->running_evals_lr = running_core_total_alloc(mr2_max);
+    mem->running_evals_rl = running_core_total_alloc(mr2_max);
+    mem->running_grad     = running_core_total_arr_alloc(d,mr2_max);
+    
+    mem->grad       = reg_mem_space_alloc(n,num_tot_params);
+    mem->evals      = reg_mem_space_alloc(n,1);
+
+
+    mem->grad_space = reg_mem_space_alloc(n, max_param_within_core * mr2_max);
+    if ( structure != LINEAR_ST){
+        if (structure != NONE_ST){
+            fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
+            exit(1);
+        }
+    }
+    mem->structure = structure;
+    mem->once_eval_structure = 0;
+    mem->lin_structure_vals = malloc(mem->dim * sizeof(double * ));
+    assert (mem->lin_structure_vals != NULL);
+    mem->lin_structure_inc = calloc_size_t(mem->dim * sizeof(size_t));
+    assert (mem->lin_structure_inc != NULL);
+    
+    return mem;
+    
+}
+
+void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
+{
+    running_core_total_restart(mem->running_evals_lr);
+    running_core_total_restart(mem->running_evals_rl);
+    running_core_total_arr_restart(mem->dim, mem->running_grad);
+}
+
+// might be a mismatch here need to compare N and the actual amount of memory allocated
+void regress_mem_manager_check_structure(struct RegressionMemManager * mem, struct FTparam * ftp,
+                                         const double * x)
+{
+
+    if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
+        for (size_t ii = 0; ii < ftp->dim; ii++){
+            if (ii == 0){
+                qmarray_param_grad_eval(
+                    ftp->ft->cores[ii],mem->N,
+                    x + ii,ftp->dim,
+                    NULL, 0,
+                    mem->all_grads[ii]->vals,
+                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
+                    mem->fparam_space->vals);
+            }
+            else{
+                qmarray_param_grad_eval_sparse_mult(
+                    ftp->ft->cores[ii],
+                    mem->N,x + ii,
+                    ftp->dim,
+                    NULL, 0,
+                    mem->all_grads[ii]->vals,
+                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
+                    NULL,NULL,0);
+            }
+
+            mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals;
+            mem->lin_structure_inc[ii]  = reg_mem_space_get_data_inc(mem->all_grads[ii]);
+        }
+        /* printf("OKOKOK\n"); */
+        mem->once_eval_structure = 1;
+    }
+}
+
+struct RegressOpts
+{
+
+    enum REGTYPE type;
+    enum REGOBJ obj;
+
+    size_t nmem_alloc; // number of evaluations there is space for
+    struct RegressionMemManager * mem;
+
+
+    size_t N;
+    size_t d;
+    const double * x;
+    const double * y;
+
+    size_t nbatches; // should be N/nmem_alloc
+
+    struct c3Opt * optimizer;
+
+
+    // for ALS
+    size_t active_core;
+};
+
+
+void regress_opts_free(struct RegressOpts * opts)
+{
+    if (opts != NULL){
+        regression_mem_manager_free(opts->mem); opts->mem = NULL;
+        c3opt_free(opts->optimizer); opts->optimizer = NULL;
+        free(opts); opts = NULL;
+    }
+}
+    
+struct RegressOpts * regress_opts_alloc()
+{
+    struct RegressOpts * ropts = malloc(sizeof(struct RegressOpts));
+    if (ropts == NULL){
+        fprintf(stderr,"Error: Failure to allocate\n\t struct RegressOpts\n");
+        exit(1);
+    }
+    ropts->x = NULL;
+    ropts->y = NULL;
+    ropts->mem = NULL;
+    ropts->optimizer = NULL;
+    ropts->active_core = 0;
+    return ropts;
+}
+
+struct RegressOpts *
+regress_opts_create(enum REGTYPE type, enum REGOBJ obj, size_t N,
+                    size_t d, const double * x, const double * y)
+{
+
+    struct RegressOpts * opts = regress_opts_alloc();
+
+    if (type == AIO){
+        /* printf("type == AIO\n"); */
+        opts->type = AIO;
+    }
+    else if (type == ALS){
+        opts->type = ALS;
+        opts->active_core = 0;
+    }
+    else{
+        fprintf(stderr,"Error: REGTYPE %d unavailable\n",type);
+        exit(1);
+    }
+
+    if (obj == FTLS){
+        opts->obj = FTLS;
+    }
+    else{
+        fprintf(stderr,"Error: REGOBJ %d unavailable\n",obj);
+        exit(1);
+    }
+
+    opts->N = N;
+    opts->d = d;
+    opts->x = x;
+    opts->y = y;
+    return opts;
+}
+
+void regress_opts_initialize_memory(struct RegressOpts * opts, size_t * num_params_per_core,
+                                    size_t * ranks, size_t max_param_within_uni,
+                                    enum FTPARAM_ST structure)
+{
+
+    opts->nmem_alloc = opts->N;
+    opts->nbatches = 1;
+    if (opts->mem != NULL){
+        regression_mem_manager_free(opts->mem); opts->mem = NULL;
+    }
+    opts->mem = regress_mem_manager_alloc(opts->d,opts->N,
+                                          num_params_per_core,
+                                          ranks,
+                                          max_param_within_uni,
+                                          structure);
+
+    size_t num_tot_params = 0;
+    for (size_t ii = 0; ii < opts->d; ii++){
+        num_tot_params += num_params_per_core[ii];
+    }
+    if (opts->optimizer != NULL){
+        c3opt_free(opts->optimizer); opts->optimizer = NULL;
+    }
+    opts->optimizer = c3opt_alloc(BFGS,num_tot_params);
+}
+
+double ft_param_eval_objective_aio_ls(struct FTparam * ftp, struct RegressOpts * regopts,
+                                      double * grad)
+{
+    double out = 0.0;
+    double resid;
+    if (grad != NULL){
+        if (regopts->mem->structure == LINEAR_ST){
+            function_train_linparam_grad_eval(
+                ftp->ft, regopts->N,
+                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
+                regopts->mem->running_grad,
+                ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals,
+                regopts->mem->lin_structure_vals,regopts->mem->lin_structure_inc);
+        }
+        else{
+            function_train_param_grad_eval(
+                ftp->ft, regopts->N,
+                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
+                regopts->mem->running_grad,
+                ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals,
+                regopts->mem->grad_space->vals,
+                reg_mem_space_get_data_inc(regopts->mem->grad_space),
+                regopts->mem->fparam_space->vals
+                );
+        }
+        
+        for (size_t ii = 0; ii < regopts->N; ii++){
+            /* printf("grad = "); dprint(ftp->nparams,regopts->mem->grad->vals + ii * ftp->nparams); */
+            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
+            out += 0.5 * resid * resid;
+            cblas_daxpy(ftp->nparams,-resid,regopts->mem->grad->vals + ii * ftp->nparams,
+                        1,grad,1);
+        }        
+    }
+    else{
+        function_train_param_grad_eval(
+            ftp->ft, regopts->N,
+            regopts->x, regopts->mem->running_evals_lr,NULL,NULL,
+            ftp->nparams_per_core, regopts->mem->evals->vals, NULL,NULL,0,NULL);
+        for (size_t ii = 0; ii < regopts->N; ii++){
+            /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
+            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
+            out += 0.5 * resid * resid;
+        }   
+    }
+    return out;
+}
+    
+double ft_param_eval_objective_aio(struct FTparam * ftp,
+                                   struct RegressOpts * regopts,
+                                   double * grad)
+{
+    double out = 0.0;
+    if (regopts->obj == FTLS){
+        out = ft_param_eval_objective_aio_ls(ftp,regopts,grad);
+    }
+    else{
+        assert (1 == 0);
+    }
+
+    return out;
+}
+
+double ft_param_eval_objective_als_ls(struct FTparam * ftp, struct RegressOpts * regopts,
+                                      double * grad)
+{
+    double out = 0.0;
+    double resid;
+    if (grad != NULL){
+        if (regopts->mem->structure == LINEAR_ST){
+            assert ( 1 == 0);
+            /* function_train_linparam_grad_eval( */
+            /*     ftp->ft, regopts->N, */
+            /*     regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl, */
+            /*     regopts->mem->running_grad, */
+            /*     ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals, */
+            /*     regopts->mem->lin_structure_vals,regopts->mem->lin_structure_inc); */
+        }
+        else{
+            function_train_core_param_grad_eval(
+                ftp->ft, regopts->active_core, regopts->N,
+                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
+                regopts->mem->running_grad[regopts->active_core],
+                ftp->nparams_per_core[regopts->active_core],
+                regopts->mem->evals->vals, regopts->mem->grad->vals,
+                regopts->mem->grad_space->vals,
+                reg_mem_space_get_data_inc(regopts->mem->grad_space),
+                regopts->mem->fparam_space->vals
+                );
+        }
+        
+        for (size_t ii = 0; ii < regopts->N; ii++){
+            /* printf("grad = "); dprint(ftp->nparams,regopts->mem->grad->vals + ii * ftp->nparams); */
+            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
+            out += 0.5 * resid * resid;
+            cblas_daxpy(ftp->nparams_per_core[regopts->active_core],
+                        -resid,
+                        regopts->mem->grad->vals + ii * ftp->nparams_per_core[regopts->active_core],
+                        1,grad,1);
+        }        
+    }
+    else{
+        function_train_core_param_grad_eval(
+            ftp->ft, regopts->active_core,regopts->N,
+            regopts->x,
+            regopts->mem->running_evals_lr,
+            regopts->mem->running_evals_rl,NULL,
+            ftp->nparams_per_core[regopts->active_core],
+            regopts->mem->evals->vals, NULL,NULL,0,NULL);
+        for (size_t ii = 0; ii < regopts->N; ii++){
+            /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
+            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
+            out += 0.5 * resid * resid;
+        }   
+    }
+    return out;
+}
+
+double ft_param_eval_objective_als(struct FTparam * ftp,
+                                   struct RegressOpts * regopts,
+                                   double * grad)
+{
+    double out = 0.0;
+    if (regopts->obj == FTLS){
+        out = ft_param_eval_objective_als_ls(ftp,regopts,grad);
+    }
+    else{
+        assert (1 == 0);
+    }
+
+    return out;
+}
+
+
+double ft_param_eval_objective(struct FTparam * ftp,
+                               struct RegressOpts * regopts,
+                               const double * params, double * grad)
+{
+
+    assert (regopts->nmem_alloc == regopts->N);
+    
+    // check if special structure exists / initialized
+    regress_mem_manager_check_structure(regopts->mem, ftp,regopts->x);
+    
+    double out = 0.0;
+    if (regopts->type == AIO){
+        // reset stuff for new evaluation
+        regress_mem_manager_reset_running(regopts->mem);
+        ft_param_update_params(ftp,params);
+        if (grad != NULL){
+            for (size_t ii = 0; ii < ftp->nparams; ii++){
+                grad[ii] = 0.0;
+            }
+        }
+        out = ft_param_eval_objective_aio(ftp,regopts,grad);
+    }
+    else if (regopts->type == ALS){
+        ft_param_update_core_params(ftp,regopts->active_core,params);
+        if (grad != NULL){
+            for (size_t ii = 0; ii < ftp->nparams_per_core[regopts->active_core]; ii++){
+                grad[ii] = 0.0;
+            }
+        }
+        out = ft_param_eval_objective_als(ftp,regopts,grad);
+    }
+    else{
+        printf("Regress opts of type %d is unknown\n",regopts->type);
+        printf("                     AIO is %d \n",AIO);
+        printf("                     ALS is %d \n",AIO);
+        exit(1);
+    }
+
+    return out;
+}
+
+
+struct PP
+{
+    struct FTparam * ftp;
+    struct RegressOpts * opts;
+};
+
+double regress_opts_minimize(size_t nparam, const double * param,
+                             double * grad, void * args)
+{
+    (void)(nparam);
+    struct PP * pp = args;
+    return ft_param_eval_objective(pp->ftp,pp->opts,param,grad);
+}
+
+
+struct FunctionTrain *
+c3_regression_run(struct FTparam * ftp, struct RegressOpts * ropts)
+{
+
+    struct PP pp;
+    pp.ftp = ftp;
+    pp.opts = ropts;
+
+    /* enum FTPARAM_ST structure = NONE_ST; */
+    enum FTPARAM_ST structure = LINEAR_ST;
+    size_t max_param_within_uni = 1000;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    regress_opts_initialize_memory(ropts, ftp->nparams_per_core,
+                                   ranks, max_param_within_uni, structure);
+
+    assert (ropts->optimizer != NULL);
+    c3opt_add_objective(ropts->optimizer,regress_opts_minimize,&pp);
+
+    c3opt_set_verbose(ropts->optimizer,0);
+    c3opt_set_relftol(ropts->optimizer,1e-20);
+    c3opt_set_absxtol(ropts->optimizer,1e-20);
+    /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
+    c3opt_set_gtol(ropts->optimizer,1e-20);
+
+    double * guess = calloc_double(ftp->nparams);
+    memmove(guess,ftp->params,ftp->nparams * sizeof(double));
+
+    double val;
+    int res = c3opt_minimize(ropts->optimizer,guess,&val);
+    if (res < -1){
+        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
+    }
+
+    ft_param_update_params(ftp,guess);
+    struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
+
+    free(guess); guess = NULL;
+
+
+    return ft_final;
+}
+    
+
+
+
 ////////////////////////////////////
 ////////////////////////////////////
 ////////////////////////////////////
@@ -1265,26 +1924,26 @@ static char reg_param_opts[NRPARAM][30] = {"rank","num_param","opt maxiter"};
 
 struct FTRegress
 {
-    enum REGTYPE type;
+    size_t type;
+    size_t obj;
     size_t dim;
     size_t ntotparam;
-    union {
-        struct RegressALS * als;
-        struct RegressAIO * aio;
-    } reg;
-
 
     struct MultiApproxOpts * approx_opts;
+    struct FTparam * ftp;
+    struct RegressOpts * regopts;
     
     // high level parameters
     size_t nhlparam;
     struct RegParameter * hlparam[NRPARAM];
 
     size_t optmaxiter;
-    struct c3Opt * optimizer;
     size_t * start_ranks;
 
-
+    size_t N;
+    const double * x;
+    const double * y;
+    
     // internal
     size_t processed_param;
 };
@@ -1301,10 +1960,13 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
         exit(1);
     }
     ftr->type = REGNONE;
+    ftr->obj = REGOBJNONE;
     ftr->dim = dim;
     ftr->ntotparam = 0;
 
     ftr->approx_opts = aopts;
+    ftr->ftp = NULL;
+    ftr->regopts = NULL;
     
     ftr->nhlparam = 0;
     for (size_t ii = 0; ii < NRPARAM; ii++){
@@ -1312,9 +1974,12 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
     }
 
     ftr->optmaxiter = 1000;
-    ftr->optimizer = NULL;
     ftr->start_ranks = NULL;
 
+    ftr->N = 0;
+    ftr->x = NULL;
+    ftr->y = NULL;
+    
     ftr->processed_param = 0;
     return ftr;
 }
@@ -1325,20 +1990,14 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
 void ft_regress_free(struct FTRegress * ftr)
 {
     if (ftr != NULL){
-        if (ftr->type == ALS){
-            regress_als_free(ftr->reg.als); ftr->reg.als = NULL;
-        }
-        else if (ftr->type == AIO){
-            regress_aio_free(ftr->reg.aio); ftr->reg.aio = NULL;
-        }
+        ft_param_free(ftr->ftp); ftr->ftp = NULL;
+        regress_opts_free(ftr->regopts); ftr->regopts = NULL;
 
         for (size_t ii = 0; ii < ftr->nhlparam; ii++){
             reg_param_free(ftr->hlparam[ii]); ftr->hlparam[ii] = NULL;
         }
 
-        c3opt_free(ftr->optimizer); ftr->optimizer = NULL;
         free(ftr->start_ranks); ftr->start_ranks = NULL;
-        
         free(ftr); ftr = NULL;
     }
 }
@@ -1366,18 +2025,34 @@ void ft_regress_set_type(struct FTRegress * ftr, enum REGTYPE type)
         fprintf(stdout,"Use function ft_regress_reset_type instead\n");
     }
     ftr->type = type;
-    if (type == ALS){
-        ftr->reg.als = regress_als_alloc(ftr->dim);
-    }
-    else if (type == AIO){
-        ftr->reg.aio = regress_aio_alloc(ftr->dim);
-    }
-    else{
+    
+    if ((type != ALS) && (type != AIO)){
         fprintf(stderr,"Error: Regularization type %d not available. Options include\n",type);
         fprintf(stderr,"       ALS = 0\n");
         fprintf(stderr,"       AIO = 1\n");
+        exit(1);
     }
 }
+
+/***********************************************************//**
+    Set Regression Objective Function
+***************************************************************/
+void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
+{
+    assert (ftr != NULL);
+    if (ftr->obj != REGOBJNONE){
+        fprintf(stdout,"Warning: respecifying regression objective function may lead to memory problems");
+        fprintf(stdout,"Use function ft_regress_reset_obj instead\n");
+    }
+    ftr->obj = obj;
+    
+    if (obj != FTLS){
+        fprintf(stderr,"Error: Regularization type %d not available. Options include\n",obj);
+        fprintf(stderr,"       FTLS = 0\n");
+        exit(1);
+    }
+}
+
 
 /***********************************************************//**
     Set regression type
@@ -1419,12 +2094,70 @@ void ft_regress_set_discrete_parameter(struct FTRegress * ftr, char * name, size
     }
 }
 
+/***********************************************************//**
+    Set regression type
+***************************************************************/
+void ft_regress_set_start_ranks(struct FTRegress * ftr, const size_t * ranks)
+{
+    assert (ftr != NULL);
+    ftr->start_ranks = calloc_size_t(ftr->dim+1);
+    memmove(ftr->start_ranks,ranks,(ftr->dim+1)*sizeof(size_t));
+}
 
 /***********************************************************//**
-    Process all parameters
+    Add data
+***************************************************************/
+void ft_regress_set_data(struct FTRegress * ftr, size_t N,
+                         const double * x, size_t incx,
+                         const double * y, size_t incy)
+{
+
+    assert (ftr != NULL);
+    assert (incx == 1);
+    assert (incy == 1);
+
+    ftr->N = N;
+    ftr->x = x;
+    ftr->y = y;
+}
+
+/***********************************************************//**
+   Update parameters
+***************************************************************/
+void ft_regress_update_params(struct FTRegress * ftr, const double * param)
+{
+    assert (ftr != NULL);
+    assert (ftr->ftp != NULL);
+
+    ft_param_update_params(ftr->ftp,param);
+}
+
+
+/***********************************************************//**
+    Process all parameters (not those optimizing over, but problem structure)
 ***************************************************************/
 void ft_regress_process_parameters(struct FTRegress * ftr)
 {
+
+    if (ftr->type == REGNONE){
+        fprintf(stderr, "Must call ft_regress_set_type before processing parameters\n");
+        exit(1);
+    }
+    else if (ftr->obj == REGOBJNONE){
+        fprintf(stderr, "Must call ft_regress_set_obj before processing parameters\n");
+        exit(1);
+    }
+    else if (ftr->N == 0){
+        fprintf(stderr, "Must add data before processing arguments\n");
+        exit(1);
+    }
+    
+    if (ftr->ftp != NULL){
+        ft_param_free(ftr->ftp); ftr->ftp = NULL;
+    }
+    if (ftr->regopts != NULL){
+        regress_opts_free(ftr->regopts); ftr->regopts = NULL;
+    }
     
     for (size_t ii = 0; ii < ftr->nhlparam; ii++){
         if (strcmp(ftr->hlparam[ii]->name,"rank") == 0){
@@ -1452,147 +2185,76 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
         }
     }
 
-    ftr->processed_param = 1;
-    
-}
 
 
-/***********************************************************//**
-    Set regression type
-***************************************************************/
-void ft_regress_set_start_ranks(struct FTRegress * ftr, const size_t * ranks)
-{
-    assert (ftr != NULL);
-    ftr->start_ranks = calloc_size_t(ftr->dim+1);
-    memmove(ftr->start_ranks,ranks,(ftr->dim+1)*sizeof(size_t));
-}
-
-/***********************************************************//**
-    Add data
-***************************************************************/
-void ft_regress_set_data(struct FTRegress * ftr, size_t N,
-                         const double * x, size_t incx,
-                         const double * y, size_t incy)
-{
-
-    assert (ftr != NULL);
-    assert (incx == 1);
-    assert (incy == 1);
-
-    enum REGTYPE type = ftr->type;
-    if (type == ALS){
-        regress_als_add_data(ftr->reg.als,N,x,y);
+    double avgy = 0.0;
+    for (size_t ii = 0; ii < ftr->N; ii++){
+        avgy += ftr->y[ii];
     }
-    else if (type == AIO){
-        regress_aio_add_data(ftr->reg.aio,N,x,y);
-    }
-    else{
-        fprintf(stderr,"Must set regression type before setting data\n");
-    }
-}
+    avgy /= (double)ftr->N;
 
-/***********************************************************//**
-    Set regression type
-***************************************************************/
-/* void ft_regress_prep_memory(struct FTRegress * ftr, struct FunctionTrain * ft, int how) */
-void ft_regress_prep_memory(struct FTRegress * ftr, int how)
-{
-
-    assert (ftr != NULL);
-    assert (ftr->start_ranks != NULL);
     assert (ftr->approx_opts != NULL);
+    size_t running=0;
+    size_t maxparams_core = 0;
+    for (size_t ii = 0; ii < ftr->dim; ii++){
 
-    if (ftr->processed_param == 0){
-        fprintf(stderr,"Must call ft_regress_process_params\n");
-        fprintf(stderr,"before preparing memory\n");
-        exit(1);
-    }
+        size_t nparams_core = multi_approx_opts_get_dim_nparams(ftr->approx_opts,ii);
 
-    enum REGTYPE type = ftr->type;
-    if (type == ALS){
-        assert (1 == 0);
-        /* regress_als_prep_memory(ftr->reg.als,ft,how); */
-        /* ftr->ntotparam = regress_als_get_num_params(ftr->reg.als); */
-    }
-    else if (type == AIO){
-        regress_aio_prep_memory2(ftr->reg.aio,ftr->approx_opts,
-                                 ftr->start_ranks,how);
-        ftr->ntotparam = regress_aio_get_num_params(ftr->reg.aio);
-    }
-    else{
-        fprintf(stderr,"Must set regression type before calling \n");
-        fprintf(stderr,"prep_memory\n");
-        exit(1);
-    }
 
-    /* printf("Number of total parameters = %zu\n",ftr->ntotparam); */
-    c3opt_free(ftr->optimizer); ftr->optimizer = NULL;
-    ftr->optimizer = c3opt_alloc(BFGS,ftr->ntotparam);
-    c3opt_set_maxiter(ftr->optimizer,ftr->optmaxiter);
+        if (nparams_core > maxparams_core){
+            maxparams_core = nparams_core;
+        }
+        running += nparams_core * ftr->start_ranks[ii] * ftr->start_ranks[ii+1];
+    }
+    
+    /* struct FunctionTrain * a = function_train_constant(avgy,ftr->approx_opts); */
+    /* double * a_params = calloc_double(running); */
+    
+    double * init_params = calloc_double(running);
+    running = 0;
+    for (size_t ii = 0; ii < ftr->dim; ii++){
+        size_t nparams_uni = multi_approx_opts_get_dim_nparams(ftr->approx_opts,ii);
+        size_t nparams_core = nparams_uni * ftr->start_ranks[ii] * ftr->start_ranks[ii+1];
+        /* size_t na = function_train_core_get_params(a,ii,a_params); */
+        /* for (size_t kk = 0; kk < na; kk++){ // since a is a constant it is rank one so just copy as many params */
+        /*     init_params[running+kk] = a_params[kk]; */
+        /*     if (kk >= nparams_uni){  */
+        /*         break; */
+        /*     } */
+        /* } */
+        for (size_t kk = 0; kk < nparams_core; kk++){
+            init_params[running+kk] = randu(); /* * 1e-2 / (double)ftr->dim; */
+        }
+        running += nparams_core;
+     }
+    
+    ftr->ftp = ft_param_alloc(ftr->dim,ftr->approx_opts,init_params,ftr->start_ranks);
+    free(init_params); init_params = NULL;
+    /* free(a_params); a_params = NULL; */
+    /* function_train_free(a); a = NULL; */
+    
+    ftr->regopts = regress_opts_create(ftr->type,ftr->obj,ftr->N,ftr->dim,ftr->x,ftr->y);
+    regress_opts_initialize_memory(
+        ftr->regopts,ft_param_get_num_params_per_core(ftr->ftp),
+        ftr->start_ranks,maxparams_core,LINEAR_ST);
+
+    
+    ftr->processed_param = 1;
 }
+
 
 /***********************************************************//**
     Run the regression
 ***************************************************************/
 struct FunctionTrain *
-ft_regress_run(struct FTRegress * ftr, enum REGOBJ obj)
+ft_regress_run(struct FTRegress * ftr)
 {
     assert (ftr != NULL);
-    assert (ftr->ntotparam > 0);
-    assert (ftr->optimizer != NULL);
-    enum REGTYPE type = ftr->type;
+    assert (ftr->ftp != NULL);
+    assert (ftr->regopts != NULL);
 
-    double * guess = calloc_double(ftr->ntotparam);
-    if (obj == FTLS){
-        if (type == ALS){
-            fprintf(stderr, "Cannot yet run ALS, not complete!\n");
-            exit(1);
-            /* c3opt_add_objective(ftr->optimizer,regress_als_LS,ftr->reg.als); */
-            /* guess = regress_als_get_ftparam(ftr->reg.als); */
-        }
-        else if (type == AIO){
-            c3opt_add_objective(ftr->optimizer,
-                                regress_aio_LS,ftr->reg.aio);
-            memmove(guess, 
-                    regress_aio_get_ftparam(ftr->reg.aio),
-                    ftr->ntotparam * sizeof(double));
-        }
-    }
-    else{
-        fprintf(stderr,"Must call prep_memory before regress_run \n");
-        exit(1);
-    }
-
-    /* printf("initial guess\n"); */
-    /* dprint(ftr->ntotparam,guess); */
-    /* exit(1); */
-
-    /* for (size_t ii = 0; ii < ftr->ntotparam; ii++){ */
-    /*     guess[ii] = randn()*.001; */
-    /* } */
-    
-    assert (guess != NULL);
-    double val;
-    c3opt_set_verbose(ftr->optimizer,0);
-    c3opt_set_relftol(ftr->optimizer,1e-8);/* c3opt_ls_set_alpha(ftr->optimizer,0.2); */
-    c3opt_set_absxtol(ftr->optimizer,1e-10);
-    /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
-    c3opt_set_gtol(ftr->optimizer,1e-20);
-    int res = c3opt_minimize(ftr->optimizer,guess,&val);
-    if (res < -1){
-        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
-    }
-
-    struct FunctionTrain * ft_final = NULL;
-    if (type == ALS){
-        ft_final = regress_als_get_ft(ftr->reg.als);
-    }
-    else if (type == AIO){
-        ft_final = regress_aio_get_ft(ftr->reg.aio);
-    }
-    free(guess); guess = NULL;
-    
-    return ft_final;
+    struct FunctionTrain * ft = c3_regression_run(ftr->ftp,ftr->regopts);
+    return ft;
 }
 
 ////////////////////////////////////
@@ -1750,10 +2412,10 @@ double cross_validate_run(struct CrossValidate * cv,
         /* printf("ytrain = ");dprint(cv->N-batch,ytrain); */
 
 
-        // update date and reprep memmory
+        // update data and reprep memmory
         ft_regress_set_data(reg,cv->N-batch,xtrain,1,ytrain,1);
-        ft_regress_prep_memory(reg,2);
-        struct FunctionTrain * ft = ft_regress_run(reg, FTLS);
+        ft_regress_process_parameters(reg);
+        struct FunctionTrain * ft = ft_regress_run(reg);
 
 
         double newerr = 0.0;
@@ -1821,9 +2483,6 @@ void cross_validate_opt(struct CrossValidate * cv,
             size_t val = cv->params[0]->discrete_ops[ii];
             ft_regress_set_discrete_parameter(ftr,name,val);
             ft_regress_process_parameters(ftr);
-            // don't understand why this one is necessary
-            /* ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1);  */
-            ft_regress_prep_memory(ftr,2);
             double err = cross_validate_run(cv,ftr);
             if (verbose > 1){
                 printf("\"%s\", val=%zu, cv_err=%G\n",name,val,err);
@@ -1847,7 +2506,6 @@ void cross_validate_opt(struct CrossValidate * cv,
         }
         ft_regress_set_discrete_parameter(ftr,name,minval);
         ft_regress_process_parameters(ftr);
-        ft_regress_prep_memory(ftr,2);
     }
     else if (cv->nparam == 2){
         size_t nopts = cv->params[0]->nops;
@@ -1867,9 +2525,6 @@ void cross_validate_opt(struct CrossValidate * cv,
                 ft_regress_set_discrete_parameter(ftr,name2,val2);
                 ft_regress_process_parameters(ftr);
             
-                // don't understand why this one is necessary
-                ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
-                ft_regress_prep_memory(ftr,2);
                 double err = cross_validate_run(cv,ftr);
                 if (verbose > 1){
                     printf("\"%s\":%zu, \"%s\":%zu, ",name,val,name2,val2);
@@ -1897,8 +2552,6 @@ void cross_validate_opt(struct CrossValidate * cv,
         ft_regress_set_discrete_parameter(ftr,name,minval[0]);
         ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
         ft_regress_process_parameters(ftr);
-        /* ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1);  */
-        ft_regress_prep_memory(ftr,2);
     }
     else if (cv->nparam == 3){
         size_t nopts = cv->params[0]->nops;
@@ -1921,12 +2574,8 @@ void cross_validate_opt(struct CrossValidate * cv,
                 for (size_t kk = 0; kk < nopts3; kk++){
                     size_t val3 = cv->params[2]->discrete_ops[kk];
                     ft_regress_set_discrete_parameter(ftr,name3,val3);
-
                     ft_regress_process_parameters(ftr);
             
-                    // don't understand why this one is necessary
-                    ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1); 
-                    ft_regress_prep_memory(ftr,2);
                     double err = cross_validate_run(cv,ftr);
                     if (verbose > 1){
                         printf("\"%s\":%zu, \"%s\":%zu,",name,val,name2,val2);
@@ -1960,8 +2609,6 @@ void cross_validate_opt(struct CrossValidate * cv,
         ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
         ft_regress_set_discrete_parameter(ftr,name3,minval[2]);
         ft_regress_process_parameters(ftr);
-        /* ft_regress_set_data(ftr,cv->N,cv->x,1,cv->y,1);  */
-        ft_regress_prep_memory(ftr,2);
     }
     else {
         fprintf(stderr,"Cannot cross validate over arbitrary number of \n");
@@ -1970,558 +2617,3 @@ void cross_validate_opt(struct CrossValidate * cv,
 
 }
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Clean Attempt
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-// Parameterized FT
-struct FTparam
-{
-    struct FunctionTrain * ft;
-    size_t dim;
-
-    size_t * nparams_per_uni; // number of parmaters per univariate funciton
-    size_t * nparams_per_core;
-    size_t nparams;
-    double * params;
-    
-    struct MultiApproxOpts * approx_opts;
-};
-
-/***********************************************************//**
-    Free FT regress structure
-***************************************************************/
-void ft_param_free(struct FTparam * ftr)
-{
-    if (ftr != NULL){
-        function_train_free(ftr->ft); ftr->ft = NULL;
-        free(ftr->nparams_per_uni); ftr->nparams_per_uni = NULL;
-        free(ftr->nparams_per_core); ftr->nparams_per_core = NULL;
-        free(ftr->params); ftr->params = NULL;
-        free(ftr); ftr = NULL;
-    }
-}
-
-
-/***********************************************************//**
-    Allocate parameterized function train
-***************************************************************/
-struct FTparam *
-ft_param_alloc(size_t dim,
-               struct MultiApproxOpts * aopts,
-               double * params, size_t * ranks)
-{
-    struct FTparam * ftr = malloc(sizeof(struct FTparam));
-    if (ftr == NULL){
-        fprintf(stderr, "Cannot allocate FTparam structure\n");
-        exit(1);
-    }
-    ftr->approx_opts = aopts;
-
-    ftr->ft = function_train_zeros(aopts,ranks);
-    ftr->dim = dim;
-    
-    ftr->nparams_per_core = calloc_size_t(ftr->dim);
-    ftr->nparams = 0;
-    size_t nuni = 0; // number of univariate functions
-    for (size_t jj = 0; jj < ftr->dim; jj++)
-    {
-        nuni += ranks[jj]*ranks[jj+1];
-        ftr->nparams_per_core[jj] = ranks[jj]*ranks[jj+1] * multi_approx_opts_get_dim_nparams(aopts,jj);
-        function_train_core_update_params(ftr->ft,jj,ftr->nparams_per_core[jj],params+ftr->nparams);
-        ftr->nparams += ftr->nparams_per_core[jj];
-    }
-    
-    ftr->nparams_per_uni = calloc_size_t(nuni);
-    size_t onind = 0;
-    for (size_t jj = 0; jj < ftr->dim; jj++){
-
-        for (size_t ii = 0; ii < ranks[jj]*ranks[jj+1]; ii++){
-            ftr->nparams_per_uni[onind] = multi_approx_opts_get_dim_nparams(aopts,jj);
-            onind++;
-        }
-    }
-    
-    ftr->params = calloc_double(ftr->nparams);
-    memmove(ftr->params,params,ftr->nparams * sizeof(double) );
-    
-    return ftr;
-}
-    
-void ft_param_update_params(struct FTparam * ftp, const double * params)
-{
-    size_t runparam = 0;
-    for (size_t ii = 0; ii < ftp->dim; ii ++){
-        function_train_core_update_params(ftp->ft,ii,
-                                          ftp->nparams_per_core[ii],
-                                          params+runparam);
-        runparam += ftp->nparams_per_core[ii];
-    }
-
-    assert (runparam == ftp->nparams);
-
-    memmove(ftp->params,params,ftp->nparams * sizeof(double) );
-}
-
-void ft_param_update_structure(struct FTparam ** ftp,
-                               struct MultiApproxOpts * opts,
-                               size_t * new_ranks, double * new_vals)
-{
-    // just overwrites
-    size_t dim = (*ftp)->dim;
-    ft_param_free(*ftp); *ftp = NULL;
-    *ftp = ft_param_alloc(dim,opts,new_vals,new_ranks);
-}
-
-size_t * ft_param_get_num_params_per_core(const struct FTparam * ftp)
-{
-    assert (ftp != NULL);
-    return ftp->nparams_per_core;
-}
-
-struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
-{
-    assert(ftp != NULL);
-    return ftp->ft;
-}
-        
-struct RegressionMemManager
-{
-
-    size_t dim;
-    size_t N;
-    struct RunningCoreTotal *  running_evals_lr;
-    struct RunningCoreTotal *  running_evals_rl;
-    struct RunningCoreTotal ** running_grad;
-    struct RegMemSpace *       evals;
-    struct RegMemSpace *       grad;
-    struct RegMemSpace *       grad_space;
-    struct RegMemSpace **      all_grads;
-    struct RegMemSpace *       fparam_space;
-
-    enum FTPARAM_ST structure;
-    int once_eval_structure;
-
-    double ** lin_structure_vals;
-    size_t * lin_structure_inc;
-};
-
-void regression_mem_manager_free(struct RegressionMemManager * mem)
-{
-    if (mem != NULL){
-    
-        reg_mem_space_free(mem->grad_space);
-        mem->grad_space = NULL;
-        
-        reg_mem_space_free(mem->fparam_space);
-        mem->fparam_space = NULL;
-        
-        reg_mem_space_free(mem->evals);
-        mem->evals = NULL;
-        
-        reg_mem_space_free(mem->grad);
-        mem->grad = NULL;
-
-        
-        reg_mem_space_arr_free(mem->dim,mem->all_grads);
-        mem->all_grads = NULL;
-
-        running_core_total_free(mem->running_evals_lr);
-        running_core_total_free(mem->running_evals_rl);
-        running_core_total_arr_free(mem->dim,mem->running_grad);
-
-        free(mem->lin_structure_vals); mem->lin_structure_vals = NULL;
-        free(mem->lin_structure_inc);  mem->lin_structure_inc  = NULL;
-        
-        free(mem); mem = NULL;
-    }
-
-}
-
-
-struct RegressionMemManager *
-regress_mem_manager_alloc(size_t d, size_t n,
-                          size_t * num_params_per_core,
-                          size_t * ranks,
-                          size_t max_param_within_uni,
-                          enum FTPARAM_ST structure)
-{
-
-    struct RegressionMemManager * mem = malloc(sizeof(struct RegressionMemManager));
-    if (mem == NULL){
-        fprintf(stderr, "Cannot allocate struct RegressionMemManager\n");
-        exit(1);
-    }
-
-    mem->dim = d;
-    mem->N = n;
-
-    mem->fparam_space = reg_mem_space_alloc(1,max_param_within_uni);
-
-    mem->all_grads = malloc(d * sizeof(struct RegMemSpace * ));
-    assert (mem->all_grads != NULL);
-    size_t mr2_max = 0;
-    size_t mr2;
-    size_t num_tot_params = 0;
-    size_t max_param_within_core = 0;
-    for (size_t ii = 0; ii < d; ii++){
-        mr2 = ranks[ii]*ranks[ii+1];
-        mem->all_grads[ii] = reg_mem_space_alloc(n,num_params_per_core[ii] * mr2 );
-        num_tot_params += num_params_per_core[ii];
-        if (mr2 > mr2_max){
-            mr2_max = mr2;
-        }
-        if (num_params_per_core[ii] > max_param_within_core){
-            max_param_within_core = num_params_per_core[ii];
-        }
-    }
-    mem->running_evals_lr = running_core_total_alloc(mr2_max);
-    mem->running_evals_rl = running_core_total_alloc(mr2_max);
-    mem->running_grad     = running_core_total_arr_alloc(d,mr2_max);
-    
-    mem->grad       = reg_mem_space_alloc(n,num_tot_params);
-    mem->evals      = reg_mem_space_alloc(n,1);
-
-
-    mem->grad_space = reg_mem_space_alloc(n, max_param_within_core * mr2_max);
-    if ( structure != LINEAR_ST){
-        if (structure != NONE_ST){
-            fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
-            exit(1);
-        }
-    }
-    mem->structure = structure;
-    mem->once_eval_structure = 0;
-    mem->lin_structure_vals = malloc(mem->dim * sizeof(double * ));
-    assert (mem->lin_structure_vals != NULL);
-    mem->lin_structure_inc = calloc_size_t(mem->dim * sizeof(size_t));
-    assert (mem->lin_structure_inc != NULL);
-    
-    return mem;
-    
-}
-
-void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
-{
-    running_core_total_restart(mem->running_evals_lr);
-    running_core_total_restart(mem->running_evals_rl);
-    running_core_total_arr_restart(mem->dim, mem->running_grad);
-}
-
-// might be a mismatch here need to compare N and the actual amount of memory allocated
-void regress_mem_manager_check_structure(struct RegressionMemManager * mem, struct FTparam * ftp,
-                                         const double * x)
-{
-
-    if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
-        for (size_t ii = 0; ii < ftp->dim; ii++){
-            if (ii == 0){
-                qmarray_param_grad_eval(
-                    ftp->ft->cores[ii],mem->N,
-                    x + ii,ftp->dim,
-                    NULL, 0,
-                    mem->all_grads[ii]->vals,
-                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
-                    mem->fparam_space->vals);
-            }
-            else{
-                qmarray_param_grad_eval_sparse_mult(
-                    ftp->ft->cores[ii],
-                    mem->N,x + ii,
-                    ftp->dim,
-                    NULL, 0,
-                    mem->all_grads[ii]->vals,
-                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
-                    NULL,NULL,0);
-            }
-
-            mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals;
-            mem->lin_structure_inc[ii]  = reg_mem_space_get_data_inc(mem->all_grads[ii]);
-        }
-        /* printf("OKOKOK\n"); */
-        mem->once_eval_structure = 1;
-    }
-}
-
-struct RegressOpts
-{
-
-    enum REGTYPE type;
-    enum REGOBJ obj;
-
-    size_t nmem_alloc; // number of evaluations there is space for
-    struct RegressionMemManager * mem;
-
-
-    size_t N;
-    size_t d;
-    const double * x;
-    const double * y;
-
-    size_t nbatches; // should be N/nmem_alloc
-
-    struct c3Opt * optimizer;
-};
-
-
-void regress_opts_free(struct RegressOpts * opts)
-{
-    if (opts != NULL){
-        regression_mem_manager_free(opts->mem); opts->mem = NULL;
-        c3opt_free(opts->optimizer); opts->optimizer = NULL;
-        free(opts); opts = NULL;
-    }
-}
-    
-struct RegressOpts * regress_opts_alloc()
-{
-    struct RegressOpts * ropts = malloc(sizeof(struct RegressOpts));
-    if (ropts == NULL){
-        fprintf(stderr,"Error: Failure to allocate\n\t struct RegressOpts\n");
-        exit(1);
-    }
-    ropts->x = NULL;
-    ropts->y = NULL;
-    ropts->mem = NULL;
-    ropts->optimizer = NULL;
-    return ropts;
-}
-
-struct RegressOpts *
-regress_opts_create(enum REGTYPE type, enum REGOBJ obj, size_t N,
-                    size_t d, const double * x, const double * y)
-{
-
-    struct RegressOpts * opts = regress_opts_alloc();
-
-    if (type == AIO){
-        /* printf("type == AIO\n"); */
-        opts->type = AIO;
-    }
-    else{
-        fprintf(stderr,"Error: REGTYPE %d unavailable\n",type);
-        exit(1);
-    }
-
-    if (obj == FTLS){
-        opts->obj = FTLS;
-    }
-    else{
-        fprintf(stderr,"Error: REGOBJ %d unavailable\n",obj);
-        exit(1);
-    }
-
-    opts->N = N;
-    opts->d = d;
-    opts->x = x;
-    opts->y = y;
-    return opts;
-}
-
-void regress_opts_initialize_memory(struct RegressOpts * opts, size_t * num_params_per_core,
-                                    size_t * ranks, size_t max_param_within_uni,
-                                    enum FTPARAM_ST structure)
-{
-
-    opts->nmem_alloc = opts->N;
-    opts->nbatches = 1;
-    if (opts->mem != NULL){
-        regression_mem_manager_free(opts->mem); opts->mem = NULL;
-    }
-    opts->mem = regress_mem_manager_alloc(opts->d,opts->N,
-                                          num_params_per_core,
-                                          ranks,
-                                          max_param_within_uni,
-                                          structure);
-
-    size_t num_tot_params = 0;
-    for (size_t ii = 0; ii < opts->d; ii++){
-        num_tot_params += num_params_per_core[ii];
-    }
-    if (opts->optimizer != NULL){
-        c3opt_free(opts->optimizer); opts->optimizer = NULL;
-    }
-    opts->optimizer = c3opt_alloc(BFGS,num_tot_params);
-}
-
-double ft_param_eval_objective_aio_ls(struct FTparam * ftp, struct RegressOpts * regopts,
-                                      double * grad)
-{
-    double out = 0.0;
-    double resid;
-    if (grad != NULL){
-        if (regopts->mem->structure == LINEAR_ST){
-            function_train_linparam_grad_eval(
-                ftp->ft, regopts->N,
-                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
-                regopts->mem->running_grad,
-                ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals,
-                regopts->mem->lin_structure_vals,regopts->mem->lin_structure_inc);
-        }
-        else{
-            function_train_param_grad_eval(
-                ftp->ft, regopts->N,
-                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
-                regopts->mem->running_grad,
-                ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals,
-                regopts->mem->grad_space->vals,
-                reg_mem_space_get_data_inc(regopts->mem->grad_space),
-                regopts->mem->fparam_space->vals
-                );
-        }
-        
-        for (size_t ii = 0; ii < regopts->N; ii++){
-            /* printf("grad = "); dprint(ftp->nparams,regopts->mem->grad->vals + ii * ftp->nparams); */
-            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
-            out += 0.5 * resid * resid;
-            cblas_daxpy(ftp->nparams,-resid,regopts->mem->grad->vals + ii * ftp->nparams,
-                        1,grad,1);
-        }        
-    }
-    else{
-        function_train_param_grad_eval(
-            ftp->ft, regopts->N,
-            regopts->x, regopts->mem->running_evals_lr,NULL,NULL,
-            ftp->nparams_per_core, regopts->mem->evals->vals, NULL,NULL,0,NULL);
-        for (size_t ii = 0; ii < regopts->N; ii++){
-            /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
-            resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
-            out += 0.5 * resid * resid;
-        }   
-    }
-    return out;
-}
-    
-double ft_param_eval_objective_aio(struct FTparam * ftp,
-                                   struct RegressOpts * regopts,
-                                   double * grad)
-{
-    double out = 0.0;
-    if (regopts->obj == FTLS){
-        out = ft_param_eval_objective_aio_ls(ftp,regopts,grad);
-    }
-    else{
-        assert (1 == 0);
-    }
-
-    return out;
-}
-
-
-double ft_param_eval_objective(struct FTparam * ftp,
-                               struct RegressOpts * regopts,
-                               const double * params, double * grad)
-{
-
-    assert (regopts->nmem_alloc == regopts->N);
-    
-    // check if special structure exists / initialized
-    regress_mem_manager_check_structure(regopts->mem, ftp,regopts->x);
-    
-    // reset stuff for new evaluation
-    regress_mem_manager_reset_running(regopts->mem);
-    ft_param_update_params(ftp,params);
-    if (grad != NULL){
-        for (size_t ii = 0; ii < ftp->nparams; ii++){
-            grad[ii] = 0.0;
-        }
-    }
-
-    double out = 0.0;
-    if (regopts->type == AIO){
-        out = ft_param_eval_objective_aio(ftp,regopts,grad);
-    }
-    else{
-        printf("Regress opts of type %d is unknown\n",regopts->type);
-        printf("AIO is %d \n",AIO);
-        assert (1 == 0);
-    }
-
-    return out;
-}
-
-
-struct PP
-{
-    struct FTparam * ftp;
-    struct RegressOpts * opts;
-};
-
-double regress_opts_minimize(size_t nparam, const double * param,
-                             double * grad, void * args)
-{
-    (void)(nparam);
-    struct PP * pp = args;
-    return ft_param_eval_objective(pp->ftp,pp->opts,param,grad);
-}
-
-
-struct FunctionTrain *
-c3_regression_run(struct FTparam * ftp, struct RegressOpts * ropts)
-{
-
-    struct PP pp;
-    pp.ftp = ftp;
-    pp.opts = ropts;
-
-    /* enum FTPARAM_ST structure = NONE_ST; */
-    enum FTPARAM_ST structure = LINEAR_ST;
-    size_t max_param_within_uni = 1000;
-    size_t * ranks = function_train_get_ranks(ftp->ft);
-    regress_opts_initialize_memory(ropts, ftp->nparams_per_core,
-                                   ranks, max_param_within_uni, structure);
-
-    assert (ropts->optimizer != NULL);
-    c3opt_add_objective(ropts->optimizer,regress_opts_minimize,&pp);
-
-    
-    c3opt_set_verbose(ropts->optimizer,0);
-    c3opt_set_relftol(ropts->optimizer,1e-20);
-    c3opt_set_absxtol(ropts->optimizer,1e-20);
-    /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
-    c3opt_set_gtol(ropts->optimizer,1e-20);
-
-    double * guess = calloc_double(ftp->nparams);
-    memmove(guess,ftp->params,ftp->nparams * sizeof(double));
-
-
-    
-    double val;
-    int res = c3opt_minimize(ropts->optimizer,guess,&val);
-    if (res < -1){
-        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
-    }
-
-    ft_param_update_params(ftp,guess);
-    struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
-
-    free(guess); guess = NULL;
-
-
-    return ft_final;
-}
-    

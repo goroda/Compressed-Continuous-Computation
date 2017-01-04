@@ -55,548 +55,676 @@
 
 static int seed = 3;
 
+/* void Test_Machinery_For_Parameterization(CuTest * tc, struct FunctionTrain * a, size_t core, */
+/*                                          double * guess, */
+/*                                          size_t r1, size_t r2, size_t totparam, size_t maxparam, */
+/*                                          size_t ndata, double * x, size_t dim, size_t * ranks) */
+/* { */
 
-void Test_Machinery_For_Parameterization(CuTest * tc, struct FunctionTrain * a, size_t core,
-                                         double * guess,
-                                         size_t r1, size_t r2, size_t totparam, size_t maxparam,
-                                         size_t ndata, double * x, size_t dim, size_t * ranks)
-{
+/*     double * space1 = calloc_double(totparam*r1*r2*ndata); */
+/*     size_t inc1     = totparam*r1*r2; */
+/*     double * space2 = calloc_double(maxparam); */
+/*     double * grad   = calloc_double(totparam * ndata); */
+/*     double * pre    = calloc_double(r1 * ndata); */
+/*     size_t inc_pre  = r1; */
+/*     double * cur    = calloc_double(totparam * r1 * r2 * ndata); */
+/*     size_t inc_cur  = totparam * r1 * r2; */
+/*     double * post   = calloc_double(r2 * ndata); */
+/*     size_t inc_post = r2; */
 
-    double * space1 = calloc_double(totparam*r1*r2*ndata);
-    size_t inc1     = totparam*r1*r2;
-    double * space2 = calloc_double(maxparam);
-    double * grad   = calloc_double(totparam * ndata);
-    double * pre    = calloc_double(r1 * ndata);
-    size_t inc_pre  = r1;
-    double * cur    = calloc_double(totparam * r1 * r2 * ndata);
-    size_t inc_cur  = totparam * r1 * r2;
-    double * post   = calloc_double(r2 * ndata);
-    size_t inc_post = r2;
-
-    double * val    = calloc_double(ndata);
+/*     double * val    = calloc_double(ndata); */
     
-    double core_eval[1000];
-    double core_eval2[1000];
-    double qm_grad[10000];
-    double qm_eval[1000];
+/*     double core_eval[1000]; */
+/*     double core_eval2[1000]; */
+/*     double qm_grad[10000]; */
+/*     double qm_eval[1000]; */
 
-    double h = 1e-8;
+/*     double h = 1e-8; */
 
-    for (size_t zz = 1; zz < dim; zz++){
-        CuAssertIntEquals(tc,ranks[zz],a->ranks[zz]);
-    }
+/*     for (size_t zz = 1; zz < dim; zz++){ */
+/*         CuAssertIntEquals(tc,ranks[zz],a->ranks[zz]); */
+/*     } */
 
-    /* printf("here!\n"); */
-    function_train_core_param_grad_eval(a,ndata,x,core,totparam,space1,inc1, space2,
-                                        grad,pre,inc_pre,cur,inc_cur,post,inc_post,val);
+/*     /\* printf("here!\n"); *\/ */
+/*     function_train_core_param_grad_eval(a,ndata,x,core,totparam,space1,inc1, space2, */
+/*                                         grad,pre,inc_pre,cur,inc_cur,post,inc_post,val); */
 
-    /* printf("LETS GO!\n"); */
-    for (size_t ii = 0; ii < ndata; ii++){
-    	/* printf("x = %G\n",x[ii*dim+core]);         */
-        double val2 = function_train_eval(a,x+ii*dim);
-        CuAssertDblEquals(tc,val2,val[ii],1e-13);
-        CuAssertIntEquals(tc,dim,a->dim);
+/*     /\* printf("LETS GO!\n"); *\/ */
+/*     for (size_t ii = 0; ii < ndata; ii++){ */
+/*     	/\* printf("x = %G\n",x[ii*dim+core]);         *\/ */
+/*         double val2 = function_train_eval(a,x+ii*dim); */
+/*         CuAssertDblEquals(tc,val2,val[ii],1e-13); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
 
-        qmarray_eval(a->cores[core],x[ii*dim+core],core_eval);
-        CuAssertIntEquals(tc,dim,a->dim);
+/*         qmarray_eval(a->cores[core],x[ii*dim+core],core_eval); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
 
-        qmarray_param_grad_eval(a->cores[core],1,x + ii*dim + core,dim,qm_eval,1,qm_grad,totparam,space2);
-        CuAssertIntEquals(tc,dim,a->dim);
+/*         qmarray_param_grad_eval(a->cores[core],1,x + ii*dim + core,dim,qm_eval,1,qm_grad,totparam,space2); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
 
-    	double * param_grad = calloc_double(maxparam);
-        size_t onparam = 0;
+/*     	double * param_grad = calloc_double(maxparam); */
+/*         size_t onparam = 0; */
 
-        /* /\* printf("cur outside = "); dprint(2,cur); *\/ */
-        /* /\* printf("grad outside = ") *\/ */
-        for (size_t zz = 0; zz < r1 * r2; zz++){
-            /* print_generic_function(a->cores[core]->funcs[zz],0,NULL); */
-            generic_function_param_grad_eval(a->cores[core]->funcs[zz],1,x+ii*dim+core,param_grad);
-            CuAssertDblEquals(tc,core_eval[zz],cur[zz + ii*inc_cur],1e-14);
-            CuAssertDblEquals(tc,core_eval[zz],qm_eval[zz],1e-14);
-            /* dprint(maxorder+1,param_grad); */
+/*         /\* /\\* printf("cur outside = "); dprint(2,cur); *\\/ *\/ */
+/*         /\* /\\* printf("grad outside = ") *\\/ *\/ */
+/*         for (size_t zz = 0; zz < r1 * r2; zz++){ */
+/*             /\* print_generic_function(a->cores[core]->funcs[zz],0,NULL); *\/ */
+/*             generic_function_param_grad_eval(a->cores[core]->funcs[zz],1,x+ii*dim+core,param_grad); */
+/*             CuAssertDblEquals(tc,core_eval[zz],cur[zz + ii*inc_cur],1e-14); */
+/*             CuAssertDblEquals(tc,core_eval[zz],qm_eval[zz],1e-14); */
+/*             /\* dprint(maxorder+1,param_grad); *\/ */
 	  
-            for (size_t qq = 0; qq < maxparam; qq++){
-                /* printf("pred grad with respect to first param\n"); */
-                /* dprint2d_col(2,2,qm_grad + onparam*4); */
-                CuAssertDblEquals(tc,qm_grad[onparam*r1*r2+zz],param_grad[qq],1e-10);
-                onparam++;
+/*             for (size_t qq = 0; qq < maxparam; qq++){ */
+/*                 /\* printf("pred grad with respect to first param\n"); *\/ */
+/*                 /\* dprint2d_col(2,2,qm_grad + onparam*4); *\/ */
+/*                 CuAssertDblEquals(tc,qm_grad[onparam*r1*r2+zz],param_grad[qq],1e-10); */
+/*                 onparam++; */
+/*             } */
+/*         } */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
+/*     	free(param_grad); param_grad = NULL; */
+
+/*         /\* // check derivatives *\/ */
+/*         for (size_t jj = 0; jj < totparam; jj++){ */
+/*     	    /\* printf("jj=%zu\n",jj); *\/ */
+/*             guess[jj] = guess[jj]-h; */
+/*             function_train_core_update_params(a,core,totparam,guess); */
+/*             qmarray_eval(a->cores[core],x[ii*dim+core],core_eval2); */
+
+/*     	    /\* printf("grad think = jj=%zu\n",jj); *\/ */
+/*     	    /\* dprint2d_col(r1,r2,qm_grad + jj*r1*r2); *\/ */
+
+/*             /\* dprint2d_col(r1,r2,space1 + jj*r1*r2); *\/ */
+/*             // test derivative of the core */
+/*     	    double fd_diff[2]; */
+/*             for (size_t zz = 0; zz < r2*r1; zz++){ */
+/*                 double v1 = core_eval[zz]; */
+/*                 double v2 = core_eval2[zz]; */
+/*                 fd_diff[zz] = (v1-v2)/h; */
+/*                 CuAssertDblEquals(tc,fd_diff[zz],space1[ii*inc1 + jj*r1*r2+zz],1e-5); */
+/*                 CuAssertDblEquals(tc,fd_diff[zz],qm_grad[jj*r1*r2+zz],1e-5); */
+/*             } */
+/*     	    /\* printf("FD is = \n"); *\/ */
+/*     	    /\* dprint2d_col(1,2,fd_diff); *\/ */
+
+/*             // test derivative of the function evaluation */
+/*             double val3 = function_train_eval(a,x+ii*dim); */
+/*             double fv_diff = (val2 - val3)/h; */
+/*             CuAssertDblEquals(tc,fv_diff,grad[jj + ii * totparam],1e-5); */
+
+/*             guess[jj] = guess[jj]+h; */
+/*             function_train_core_update_params(a,core,totparam,guess); */
+/*         } */
+/*     } */
+
+/*     free(space1); space1 = NULL; */
+/*     free(space2); space2 = NULL; */
+/*     free(grad);   grad   = NULL; */
+/*     free(pre);    pre    = NULL; */
+/*     free(cur);    cur    = NULL; */
+/*     free(post);   post   = NULL; */
+/*     free(val);    val    = NULL; */
+/* } */
+
+
+/* void Check_Obj_Grad_and_Min(CuTest * tc, size_t totparam, double * guess, struct RegressALS * als) */
+/* { */
+/*     struct c3Opt * optimizer = c3opt_alloc(BFGS,totparam); */
+/*     c3opt_set_verbose(optimizer,0); */
+/*     c3opt_add_objective(optimizer,regress_core_LS,als); */
+/*     for (size_t zz = 0; zz < totparam; zz++){ */
+/*         guess[zz] = 1.0; */
+/*     } */
+
+/*     /\* // check derivative *\/ */
+/*     double * deriv_diff = calloc_double(totparam); */
+/*     double gerr = c3opt_check_deriv_each(optimizer,guess,1e-8,deriv_diff); */
+/*     for (size_t ii = 0; ii < totparam; ii++){ */
+/*         /\* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); *\/ */
+/*         CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+/*     } */
+/*     /\* printf("gerr = %G\n",gerr); *\/ */
+/*     CuAssertDblEquals(tc,0.0,gerr,1e-3); */
+/*     free(deriv_diff); deriv_diff = NULL; */
+
+/*     double minval; */
+/*     int res = c3opt_minimize(optimizer,guess,&minval); */
+/*     CuAssertIntEquals(tc,1,res>-1); */
+
+/*     // minimum should be zero because there is no noise */
+/*     // in the data; */
+/*     CuAssertDblEquals(tc,0.0,minval,1e-10); */
+
+/*     c3opt_free(optimizer);  optimizer = NULL; */
+/* } */
+
+/* void Test_LS_ALS_grad(CuTest * tc) */
+/* { */
+/*     printf("Testing Function: regress_core_LS (core 0) \n"); */
+
+/*     srand(seed); */
+    
+/*     size_t dim = 4;     */
+/*     size_t core = 0; */
+    
+/*     size_t ranks[5] = {1,2,3,2,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 10; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 4; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*     } */
+    
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,a,1); */
+/*     regress_als_set_core(als,core); */
+
+/*     size_t totparam = 0; */
+/*     size_t maxparam = 0; */
+/*     size_t r1 = ranks[core]; */
+/*     size_t r2 = ranks[core+1]; */
+/*     totparam = function_train_core_get_nparams(a,core,&maxparam); */
+/*     CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam); */
+/*     CuAssertIntEquals(tc,maxorder+1,maxparam); */
+/*     double * guess = calloc_double(totparam); */
+
+/*     size_t nrand_iter = 10; */
+/*     for (size_t ll = 0; ll < nrand_iter; ll++){ */
+/*         for (size_t zz = 0; zz < totparam; zz++){ */
+/*             guess[zz] = randn(); */
+/*         } */
+/*         function_train_core_update_params(a,core,totparam,guess); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
+        
+/*         Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam, */
+/*                                             ndata,x,dim,ranks); */
+/*     } */
+
+/*     Check_Obj_Grad_and_Min(tc,totparam,guess,als); */
+/*     /\* printf("Great!\n"); *\/ */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+/*     free(guess); guess = NULL; */
+/* } */
+
+/* void Test_LS_ALS_grad1(CuTest * tc) */
+/* { */
+/*     printf("Testing Function: regress_core_LS (core 1) \n"); */
+
+/*     srand(seed); */
+    
+/*     size_t dim = 4;     */
+/*     size_t core = 1; */
+    
+/*     size_t ranks[5] = {1,2,3,2,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 10; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 4; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*     } */
+    
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,a,1); */
+/*     regress_als_set_core(als,core); */
+
+/*     size_t totparam = 0; */
+/*     size_t maxparam = 0; */
+/*     size_t r1 = ranks[core]; */
+/*     size_t r2 = ranks[core+1]; */
+/*     totparam = function_train_core_get_nparams(a,core,&maxparam); */
+/*     CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam); */
+/*     CuAssertIntEquals(tc,maxorder+1,maxparam); */
+/*     double * guess = calloc_double(totparam); */
+
+/*     size_t nrand_iter = 10; */
+/*     for (size_t ll = 0; ll < nrand_iter; ll++){ */
+/*         for (size_t zz = 0; zz < totparam; zz++){ */
+/*             guess[zz] = randn(); */
+/*         } */
+/*         function_train_core_update_params(a,core,totparam,guess); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
+        
+/*         Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam, */
+/*                                             ndata,x,dim,ranks); */
+/*     } */
+
+/*     Check_Obj_Grad_and_Min(tc,totparam,guess,als); */
+/*     /\* printf("Great!\n"); *\/ */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+/*     free(guess); guess = NULL; */
+/* } */
+
+/* void Test_LS_ALS_grad2(CuTest * tc) */
+/* { */
+/*     srand(seed); */
+/*     printf("Testing Function: regress_core_LS (core 2) \n"); */
+
+/*     size_t dim = 4;     */
+/*     size_t core = 2; */
+    
+/*     size_t ranks[5] = {1,2,3,2,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 10; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 4; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*     } */
+    
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,a,1); */
+/*     regress_als_set_core(als,core); */
+
+/*     size_t totparam = 0; */
+/*     size_t maxparam = 0; */
+/*     size_t r1 = ranks[core]; */
+/*     size_t r2 = ranks[core+1]; */
+/*     totparam = function_train_core_get_nparams(a,core,&maxparam); */
+/*     CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam); */
+/*     CuAssertIntEquals(tc,maxorder+1,maxparam); */
+/*     double * guess = calloc_double(totparam); */
+
+/*     size_t nrand_iter = 10; */
+/*     for (size_t ll = 0; ll < nrand_iter; ll++){ */
+/*         for (size_t zz = 0; zz < totparam; zz++){ */
+/*             guess[zz] = randn(); */
+/*         } */
+/*         function_train_core_update_params(a,core,totparam,guess); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
+        
+/*         Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam, */
+/*                                             ndata,x,dim,ranks); */
+/*     } */
+
+/*     Check_Obj_Grad_and_Min(tc,totparam,guess,als); */
+/*     /\* printf("Great!\n"); *\/ */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+/*     free(guess); guess = NULL; */
+/* } */
+
+/* void Test_LS_ALS_grad3(CuTest * tc) */
+/* { */
+/*     srand(seed); */
+/*     printf("Testing Function: regress_core_LS (core 3) \n"); */
+
+/*     size_t dim = 4;     */
+/*     size_t core = 3; */
+    
+/*     size_t ranks[5] = {1,2,3,2,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 10; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 4; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*     } */
+    
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,a,1); */
+/*     regress_als_set_core(als,core); */
+
+/*     size_t totparam = 0; */
+/*     size_t maxparam = 0; */
+/*     size_t r1 = ranks[core]; */
+/*     size_t r2 = ranks[core+1]; */
+/*     totparam = function_train_core_get_nparams(a,core,&maxparam); */
+/*     CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam); */
+/*     CuAssertIntEquals(tc,maxorder+1,maxparam); */
+/*     double * guess = calloc_double(totparam); */
+
+/*     size_t nrand_iter = 10; */
+/*     for (size_t ll = 0; ll < nrand_iter; ll++){ */
+/*         for (size_t zz = 0; zz < totparam; zz++){ */
+/*             guess[zz] = randn(); */
+/*         } */
+/*         function_train_core_update_params(a,core,totparam,guess); */
+/*         CuAssertIntEquals(tc,dim,a->dim); */
+        
+/*         Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam, */
+/*                                             ndata,x,dim,ranks); */
+/*     } */
+
+/*     Check_Obj_Grad_and_Min(tc,totparam,guess,als); */
+/*     /\* printf("Great!\n"); *\/ */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+/*     free(guess); guess = NULL; */
+/* } */
+
+/* void Test_LS_ALS_sweep_lr(CuTest * tc) */
+/* { */
+/*     srand(seed); */
+/*     printf("Testing Function: regress_als_sweep_lr (5 dimensional, max rank = 8, max order = 3)\n"); */
+
+/*     size_t dim = 5; */
+/*     struct c3Opt * optimizer[10]; */
+/*     /\* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; *\/ */
+/*     size_t ranks[6] = {1,2,3,2,8,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 3; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+/*     struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 1000; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         // no noise! */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*         /\* y[ii] += randn(); *\/ */
+/*     } */
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,b,1); */
+
+/*     for (size_t ii = 0; ii < dim; ii++){ */
+/*         size_t r1 = ranks[ii]; */
+/*         size_t r2 = ranks[ii+1]; */
+/*         optimizer[ii] = c3opt_alloc(BFGS,r1*r2*(maxorder+1)); */
+/*         c3opt_set_verbose(optimizer[ii],0); */
+/*         /\* c3opt_set_relftol(optimizer[ii],1e-5); *\/ */
+/*         c3opt_add_objective(optimizer[ii],regress_core_LS,als); */
+/*     } */
+    
+/*     size_t nsweeps = 100; */
+/*     double obj = regress_als_sweep_lr(als,optimizer,0); */
+/*     for (size_t ii = 0; ii < nsweeps; ii++){ */
+/*         printf("On Sweep %zu\n",ii); */
+/*         /\* regress_als_sweep_rl(als,optimizer,1); *\/ */
+/*         /\* regress_als_sweep_lr(als,optimizer,1); *\/ */
+/*         obj = regress_als_sweep_lr(als,optimizer,0); */
+/*         if (obj < 1e-8){ */
+/*             break; */
+/*         } */
+/*     } */
+/*     CuAssertDblEquals(tc,0.0,obj,1e-6); */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     function_train_free(b); b         = NULL; */
+/*     for (size_t ii = 0; ii < dim; ii++){ */
+/*         c3opt_free(optimizer[ii]);  optimizer[ii] = NULL; */
+/*     } */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+
+/* } */
+
+/* void Test_LS_ALS_sweep_lr2(CuTest * tc) */
+/* { */
+/*     srand(seed); */
+/*     printf("Testing Function: regress_als_sweep_lr (5 dimensional, max rank = 8, max order = 8) \n"); */
+
+/*     size_t dim = 5; */
+/*     struct c3Opt * optimizer[10]; */
+/*     /\* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; *\/ */
+/*     size_t ranks[6] = {1,2,3,2,8,1}; */
+/*     double lb = -1.0; */
+/*     double ub = 1.0; */
+/*     size_t maxorder = 8; */
+/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
+/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+/*     struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+/*     // create data */
+/*     size_t ndata = 100; */
+/*     double * x = calloc_double(ndata*dim); */
+/*     double * y = calloc_double(ndata); */
+
+/*     // // add noise */
+/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
+/*         for (size_t jj = 0; jj < dim; jj++){ */
+/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
+/*         } */
+/*         // no noise! */
+/*         y[ii] = function_train_eval(a,x+ii*dim); */
+/*         /\* y[ii] += randn(); *\/ */
+/*     } */
+/*     struct RegressALS * als = regress_als_alloc(dim); */
+/*     regress_als_add_data(als,ndata,x,y); */
+/*     regress_als_prep_memory(als,b,1); */
+
+/*     for (size_t ii = 0; ii < dim; ii++){ */
+/*         size_t r1 = ranks[ii]; */
+/*         size_t r2 = ranks[ii+1]; */
+/*         optimizer[ii] = c3opt_alloc(BFGS,r1*r2*(maxorder+1)); */
+/*         c3opt_set_verbose(optimizer[ii],0); */
+/*         /\* c3opt_set_relftol(optimizer[ii],1e-5); *\/ */
+/*         c3opt_add_objective(optimizer[ii],regress_core_LS,als); */
+/*     } */
+    
+/*     size_t nsweeps = 100; */
+/*     double obj = regress_als_sweep_lr(als,optimizer,0); */
+/*     for (size_t ii = 0; ii < nsweeps; ii++){ */
+/*         printf("On Sweep %zu\n",ii); */
+/*         /\* regress_als_sweep_rl(als,optimizer,1); *\/ */
+/*         /\* regress_als_sweep_lr(als,optimizer,1); *\/ */
+/*         obj = regress_als_sweep_lr(als,optimizer,0); */
+/*         if (obj < 1e-6){ */
+/*             break; */
+/*         } */
+/*     } */
+/*     CuAssertDblEquals(tc,0.0,obj,1e-6); */
+    
+/*     bounding_box_free(bds); bds       = NULL; */
+/*     function_train_free(a); a         = NULL; */
+/*     function_train_free(b); b         = NULL; */
+/*     for (size_t ii = 0; ii < dim; ii++){ */
+/*         c3opt_free(optimizer[ii]);  optimizer[ii] = NULL; */
+/*     } */
+/*     regress_als_free(als);  als       = NULL; */
+
+/*     free(x); x = NULL; */
+/*     free(y); y = NULL; */
+
+/* } */
+
+
+void Test_function_train_core_param_grad_eval1(CuTest * tc)
+{
+    printf("Testing Function: function_train_param_grad_eval1 \n");
+    srand(seed);
+    size_t dim = 4;    
+    
+    size_t ranks[5] = {1,2,3,8,1};
+    /* size_t ranks[5] = {1,2,2,2,1}; */
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 10; // 10
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 10; // 10
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    struct RunningCoreTotal * runeval_lr = ftutil_running_tot_space(a);
+    struct RunningCoreTotal * runeval_rl = ftutil_running_tot_space(a);
+    struct RunningCoreTotal * rungrad = ftutil_running_tot_space(a);
+
+    /* size_t core = 2; */
+    for (size_t core = 0; core < dim; core++){
+        printf("core = %zu\n",core);
+        running_core_total_restart(runeval_lr);
+        running_core_total_restart(runeval_rl);
+        running_core_total_restart(rungrad);
+
+        /* function_train_core_pre_post_run(a,core,ndata,x,runeval_lr,runeval_rl); */
+        
+        size_t max_param_within_func;
+        size_t nparam;
+        nparam = function_train_core_get_nparams(a,core,&max_param_within_func);
+        CuAssertIntEquals(tc,(maxorder+1)*ranks[core]*ranks[core+1],nparam);
+        CuAssertIntEquals(tc,(maxorder+1),max_param_within_func);
+
+        size_t core_space_size = nparam * ranks[core] * ranks[core+1];
+        double * core_grad_space = calloc_double(core_space_size * ndata);
+        double * max_func_param_space = calloc_double(max_param_within_func);
+
+        double * vals = calloc_double(ndata);
+        double * grad = calloc_double(ndata*nparam);
+
+        double * guess = calloc_double(nparam);
+        for (size_t jj = 0; jj < nparam; jj++){
+            guess[jj] = randn();
+        }
+        function_train_core_update_params(a,core,nparam,guess);
+
+        for (size_t ii = 0 ; ii < ndata; ii++){
+            for (size_t jj = 0; jj < dim; jj++){
+                x[ii*dim+jj] = randu()*(ub-lb) + lb;
+            }
+            y[ii] = function_train_eval(a,x+ii*dim);
+        }
+
+        /* printf("x = \n"); */
+        /* dprint2d_col(dim,ndata,x); */
+        /* printf("y = "); */
+        /* dprint(ndata,y); */
+
+    
+        printf("\t Testing Evaluation\n");
+        function_train_core_pre_post_run(a,core,ndata,x,runeval_lr,runeval_rl);
+        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,NULL,nparam,vals,NULL,
+                                             NULL,0,NULL);
+
+        for (size_t ii = 0; ii < ndata; ii++){
+            CuAssertDblEquals(tc,y[ii],vals[ii],1e-13);
+        }
+    
+        printf("\t Testing Gradient\n");
+        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
+                                             core_grad_space,core_space_size,max_func_param_space);
+        for (size_t ii = 0; ii < ndata; ii++){
+            CuAssertDblEquals(tc,y[ii],vals[ii],1e-13);
+        }
+
+        running_core_total_restart(rungrad);
+        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
+                                             core_grad_space,core_space_size,max_func_param_space);
+
+        running_core_total_restart(rungrad);
+        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
+                                             core_grad_space,core_space_size,max_func_param_space);
+
+        running_core_total_restart(rungrad);
+        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
+                                             core_grad_space,core_space_size,max_func_param_space);
+
+        /* printf("grad = "); dprint(totparam,grad); */
+        for (size_t zz = 0; zz < ndata; zz++){
+            double h = 1e-8;
+            for (size_t jj = 0; jj < nparam; jj++){
+                guess[jj] += h;
+                function_train_core_update_params(a,core,nparam,guess);
+            
+                double val2 = function_train_eval(a,x+zz*dim);
+                double fd = (val2-y[zz])/h;
+                CuAssertDblEquals(tc,fd,grad[jj + zz * nparam],1e-5);
+                guess[jj] -= h;
+                function_train_core_update_params(a,core,nparam,guess);
             }
         }
-        CuAssertIntEquals(tc,dim,a->dim);
-    	free(param_grad); param_grad = NULL;
 
-        /* // check derivatives */
-        for (size_t jj = 0; jj < totparam; jj++){
-    	    /* printf("jj=%zu\n",jj); */
-            guess[jj] = guess[jj]-h;
-            function_train_core_update_params(a,core,totparam,guess);
-            qmarray_eval(a->cores[core],x[ii*dim+core],core_eval2);
-
-    	    /* printf("grad think = jj=%zu\n",jj); */
-    	    /* dprint2d_col(r1,r2,qm_grad + jj*r1*r2); */
-
-            /* dprint2d_col(r1,r2,space1 + jj*r1*r2); */
-            // test derivative of the core
-    	    double fd_diff[2];
-            for (size_t zz = 0; zz < r2*r1; zz++){
-                double v1 = core_eval[zz];
-                double v2 = core_eval2[zz];
-                fd_diff[zz] = (v1-v2)/h;
-                CuAssertDblEquals(tc,fd_diff[zz],space1[ii*inc1 + jj*r1*r2+zz],1e-5);
-                CuAssertDblEquals(tc,fd_diff[zz],qm_grad[jj*r1*r2+zz],1e-5);
-            }
-    	    /* printf("FD is = \n"); */
-    	    /* dprint2d_col(1,2,fd_diff); */
-
-            // test derivative of the function evaluation
-            double val3 = function_train_eval(a,x+ii*dim);
-            double fv_diff = (val2 - val3)/h;
-            CuAssertDblEquals(tc,fv_diff,grad[jj + ii * totparam],1e-5);
-
-            guess[jj] = guess[jj]+h;
-            function_train_core_update_params(a,core,totparam,guess);
-        }
-    }
-
-    free(space1); space1 = NULL;
-    free(space2); space2 = NULL;
-    free(grad);   grad   = NULL;
-    free(pre);    pre    = NULL;
-    free(cur);    cur    = NULL;
-    free(post);   post   = NULL;
-    free(val);    val    = NULL;
-}
-
-void Check_Obj_Grad_and_Min(CuTest * tc, size_t totparam, double * guess, struct RegressALS * als)
-{
-    struct c3Opt * optimizer = c3opt_alloc(BFGS,totparam);
-    c3opt_set_verbose(optimizer,0);
-    c3opt_add_objective(optimizer,regress_core_LS,als);
-    for (size_t zz = 0; zz < totparam; zz++){
-        guess[zz] = 1.0;
-    }
-
-    /* // check derivative */
-    double * deriv_diff = calloc_double(totparam);
-    double gerr = c3opt_check_deriv_each(optimizer,guess,1e-8,deriv_diff);
-    for (size_t ii = 0; ii < totparam; ii++){
-        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
-        CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3);
-    }
-    /* printf("gerr = %G\n",gerr); */
-    CuAssertDblEquals(tc,0.0,gerr,1e-3);
-    free(deriv_diff); deriv_diff = NULL;
-
-    double minval;
-    int res = c3opt_minimize(optimizer,guess,&minval);
-    CuAssertIntEquals(tc,1,res>-1);
-
-    // minimum should be zero because there is no noise
-    // in the data;
-    CuAssertDblEquals(tc,0.0,minval,1e-10);
-
-    c3opt_free(optimizer);  optimizer = NULL;
-}
-
-void Test_LS_ALS_grad(CuTest * tc)
-{
-    printf("Testing Function: regress_core_LS (core 0) \n");
-
-    srand(seed);
+        free(guess); guess = NULL;
+        free(vals); vals = NULL;
+        free(grad); grad = NULL;
     
-    size_t dim = 4;    
-    size_t core = 0;
+        free(core_grad_space);      core_grad_space = NULL;
+        free(max_func_param_space); max_func_param_space = NULL;
+    }        
+    running_core_total_free(runeval_lr); runeval_lr = NULL;
+    running_core_total_free(runeval_rl); runeval_rl = NULL;
+    running_core_total_free(rungrad);    rungrad = NULL;
     
-    size_t ranks[5] = {1,2,3,2,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 10;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 4;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-    
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,a,1);
-    regress_als_set_core(als,core);
-
-    size_t totparam = 0;
-    size_t maxparam = 0;
-    size_t r1 = ranks[core];
-    size_t r2 = ranks[core+1];
-    totparam = function_train_core_get_nparams(a,core,&maxparam);
-    CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam);
-    CuAssertIntEquals(tc,maxorder+1,maxparam);
-    double * guess = calloc_double(totparam);
-
-    size_t nrand_iter = 10;
-    for (size_t ll = 0; ll < nrand_iter; ll++){
-        for (size_t zz = 0; zz < totparam; zz++){
-            guess[zz] = randn();
-        }
-        function_train_core_update_params(a,core,totparam,guess);
-        CuAssertIntEquals(tc,dim,a->dim);
-        
-        Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam,
-                                            ndata,x,dim,ranks);
-    }
-
-    Check_Obj_Grad_and_Min(tc,totparam,guess,als);
-    /* printf("Great!\n"); */
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    free(guess); guess = NULL;
-}
-
-void Test_LS_ALS_grad1(CuTest * tc)
-{
-    printf("Testing Function: regress_core_LS (core 1) \n");
-
-    srand(seed);
-    
-    size_t dim = 4;    
-    size_t core = 1;
-    
-    size_t ranks[5] = {1,2,3,2,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 10;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 4;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-    
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,a,1);
-    regress_als_set_core(als,core);
-
-    size_t totparam = 0;
-    size_t maxparam = 0;
-    size_t r1 = ranks[core];
-    size_t r2 = ranks[core+1];
-    totparam = function_train_core_get_nparams(a,core,&maxparam);
-    CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam);
-    CuAssertIntEquals(tc,maxorder+1,maxparam);
-    double * guess = calloc_double(totparam);
-
-    size_t nrand_iter = 10;
-    for (size_t ll = 0; ll < nrand_iter; ll++){
-        for (size_t zz = 0; zz < totparam; zz++){
-            guess[zz] = randn();
-        }
-        function_train_core_update_params(a,core,totparam,guess);
-        CuAssertIntEquals(tc,dim,a->dim);
-        
-        Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam,
-                                            ndata,x,dim,ranks);
-    }
-
-    Check_Obj_Grad_and_Min(tc,totparam,guess,als);
-    /* printf("Great!\n"); */
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    free(guess); guess = NULL;
-}
-
-void Test_LS_ALS_grad2(CuTest * tc)
-{
-    srand(seed);
-    printf("Testing Function: regress_core_LS (core 2) \n");
-
-    size_t dim = 4;    
-    size_t core = 2;
-    
-    size_t ranks[5] = {1,2,3,2,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 10;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 4;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-    
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,a,1);
-    regress_als_set_core(als,core);
-
-    size_t totparam = 0;
-    size_t maxparam = 0;
-    size_t r1 = ranks[core];
-    size_t r2 = ranks[core+1];
-    totparam = function_train_core_get_nparams(a,core,&maxparam);
-    CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam);
-    CuAssertIntEquals(tc,maxorder+1,maxparam);
-    double * guess = calloc_double(totparam);
-
-    size_t nrand_iter = 10;
-    for (size_t ll = 0; ll < nrand_iter; ll++){
-        for (size_t zz = 0; zz < totparam; zz++){
-            guess[zz] = randn();
-        }
-        function_train_core_update_params(a,core,totparam,guess);
-        CuAssertIntEquals(tc,dim,a->dim);
-        
-        Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam,
-                                            ndata,x,dim,ranks);
-    }
-
-    Check_Obj_Grad_and_Min(tc,totparam,guess,als);
-    /* printf("Great!\n"); */
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    free(guess); guess = NULL;
-}
-
-void Test_LS_ALS_grad3(CuTest * tc)
-{
-    srand(seed);
-    printf("Testing Function: regress_core_LS (core 3) \n");
-
-    size_t dim = 4;    
-    size_t core = 3;
-    
-    size_t ranks[5] = {1,2,3,2,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 10;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 4;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-    
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,a,1);
-    regress_als_set_core(als,core);
-
-    size_t totparam = 0;
-    size_t maxparam = 0;
-    size_t r1 = ranks[core];
-    size_t r2 = ranks[core+1];
-    totparam = function_train_core_get_nparams(a,core,&maxparam);
-    CuAssertIntEquals(tc,(maxorder+1)*r1*r2,totparam);
-    CuAssertIntEquals(tc,maxorder+1,maxparam);
-    double * guess = calloc_double(totparam);
-
-    size_t nrand_iter = 10;
-    for (size_t ll = 0; ll < nrand_iter; ll++){
-        for (size_t zz = 0; zz < totparam; zz++){
-            guess[zz] = randn();
-        }
-        function_train_core_update_params(a,core,totparam,guess);
-        CuAssertIntEquals(tc,dim,a->dim);
-        
-        Test_Machinery_For_Parameterization(tc,a,core,guess,r1,r2,totparam,maxparam,
-                                            ndata,x,dim,ranks);
-    }
-
-    Check_Obj_Grad_and_Min(tc,totparam,guess,als);
-    /* printf("Great!\n"); */
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    free(guess); guess = NULL;
-}
-
-void Test_LS_ALS_sweep_lr(CuTest * tc)
-{
-    srand(seed);
-    printf("Testing Function: regress_als_sweep_lr (5 dimensional, max rank = 8, max order = 3)\n");
-
-    size_t dim = 5;
-    struct c3Opt * optimizer[10];
-    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
-    size_t ranks[6] = {1,2,3,2,8,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 3;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-    struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 1000;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        // no noise!
-        y[ii] = function_train_eval(a,x+ii*dim);
-        /* y[ii] += randn(); */
-    }
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,b,1);
-
-    for (size_t ii = 0; ii < dim; ii++){
-        size_t r1 = ranks[ii];
-        size_t r2 = ranks[ii+1];
-        optimizer[ii] = c3opt_alloc(BFGS,r1*r2*(maxorder+1));
-        c3opt_set_verbose(optimizer[ii],0);
-        /* c3opt_set_relftol(optimizer[ii],1e-5); */
-        c3opt_add_objective(optimizer[ii],regress_core_LS,als);
-    }
-    
-    size_t nsweeps = 100;
-    double obj = regress_als_sweep_lr(als,optimizer,0);
-    for (size_t ii = 0; ii < nsweeps; ii++){
-        printf("On Sweep %zu\n",ii);
-        /* regress_als_sweep_rl(als,optimizer,1); */
-        /* regress_als_sweep_lr(als,optimizer,1); */
-        obj = regress_als_sweep_lr(als,optimizer,0);
-    }
-    CuAssertDblEquals(tc,0.0,obj,1e-6);
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    function_train_free(b); b         = NULL;
-    for (size_t ii = 0; ii < dim; ii++){
-        c3opt_free(optimizer[ii]);  optimizer[ii] = NULL;
-    }
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-
-}
-
-void Test_LS_ALS_sweep_lr2(CuTest * tc)
-{
-    srand(seed);
-    printf("Testing Function: regress_als_sweep_lr (5 dimensional, max rank = 8, max order = 8) \n");
-
-    size_t dim = 5;
-    struct c3Opt * optimizer[10];
-    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
-    size_t ranks[6] = {1,2,3,2,8,1};
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 8;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-    struct FunctionTrain * b = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 100;
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    // // add noise
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        // no noise!
-        y[ii] = function_train_eval(a,x+ii*dim);
-        /* y[ii] += randn(); */
-    }
-    struct RegressALS * als = regress_als_alloc(dim);
-    regress_als_add_data(als,ndata,x,y);
-    regress_als_prep_memory(als,b,1);
-
-    for (size_t ii = 0; ii < dim; ii++){
-        size_t r1 = ranks[ii];
-        size_t r2 = ranks[ii+1];
-        optimizer[ii] = c3opt_alloc(BFGS,r1*r2*(maxorder+1));
-        c3opt_set_verbose(optimizer[ii],0);
-        /* c3opt_set_relftol(optimizer[ii],1e-5); */
-        c3opt_add_objective(optimizer[ii],regress_core_LS,als);
-    }
-    
-    size_t nsweeps = 100;
-    double obj = regress_als_sweep_lr(als,optimizer,0);
-    for (size_t ii = 0; ii < nsweeps; ii++){
-        printf("On Sweep %zu\n",ii);
-        /* regress_als_sweep_rl(als,optimizer,1); */
-        /* regress_als_sweep_lr(als,optimizer,1); */
-        obj = regress_als_sweep_lr(als,optimizer,0);
-        if (obj < 1e-6){
-            break;
-        }
-    }
-    CuAssertDblEquals(tc,0.0,obj,1e-6);
-    
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    function_train_free(b); b         = NULL;
-    for (size_t ii = 0; ii < dim; ii++){
-        c3opt_free(optimizer[ii]);  optimizer[ii] = NULL;
-    }
-    regress_als_free(als);  als       = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(a); a   = NULL;
+    free(x);                x   = NULL;
+    free(y);                y   = NULL;
 }
 
 
@@ -1092,13 +1220,13 @@ void Test_LS_cross_validation(CuTest * tc)
 
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(ftr,AIO);
+    ft_regress_set_obj(ftr,FTLS);
     ft_regress_set_data(ftr,ndata,x,1,y,1);
     
     ft_regress_set_discrete_parameter(ftr,"rank",maxrank);
     ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
     ft_regress_set_discrete_parameter(ftr,"opt maxiter",10000);
     ft_regress_process_parameters(ftr);
-    ft_regress_prep_memory(ftr,2);
 
     double err = cross_validate_run(cv,ftr);
 
@@ -1110,7 +1238,6 @@ void Test_LS_cross_validation(CuTest * tc)
     ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+2);
     ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000);
     ft_regress_process_parameters(ftr);
-    ft_regress_prep_memory(ftr,2);
 
     double err2 = cross_validate_run(cv,ftr);
 
@@ -1131,7 +1258,7 @@ void Test_LS_cross_validation(CuTest * tc)
     /* cross_validate_add_discrete_param(cv,"opt maxiter",nmiters,miter_ops); */
     cross_validate_opt(cv,ftr,2);
     
-    struct FunctionTrain * ft = ft_regress_run(ftr,FTLS);
+    struct FunctionTrain * ft = ft_regress_run(ftr);
 
     // check to make sure options are set to optimal ones
     size_t * ranks = function_train_get_ranks(ft);
@@ -1192,7 +1319,7 @@ void Test_LS_AIO_new(CuTest * tc)
         function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
     
     // create data
-    size_t ndata = 100;
+    size_t ndata = 500;
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -1271,12 +1398,28 @@ void Test_LS_AIO_new(CuTest * tc)
 
     ft_param_update_params(ftp,param_space);
     struct FunctionTrain * ft = c3_regression_run(ftp,ropts);
-
     double diff = function_train_relnorm2diff(ft,a);
     printf("Difference = %G\n",diff);
-    CuAssertDblEquals(tc,0.0,diff,1e-7);
+    /* CuAssertDblEquals(tc,0.0,diff,1e-7); */
 
+
+    struct FTRegress * reg = ft_regress_alloc(dim,fapp);
+    ft_regress_set_type(reg,AIO);
+    ft_regress_set_obj(reg,FTLS);
+    ft_regress_set_discrete_parameter(reg,"num_param",maxorder+1);
+    ft_regress_set_start_ranks(reg,ranks);
+    ft_regress_set_data(reg,ndata,x,1,y,1);
+    ft_regress_process_parameters(reg);
+
+    /* ft_regress_update_params(reg,param_space); */
+    struct FunctionTrain * ft2 = ft_regress_run(reg);
+
+    diff = function_train_relnorm2diff(ft2,a);
+    printf("Difference = %G\n",diff);
+    /* CuAssertDblEquals(tc,0.0,diff,1e-7); */
     
+    ft_regress_free(reg); reg = NULL;
+    function_train_free(ft2); ft2 = NULL;
     function_train_free(ft); ft = NULL;
     free(param_space); param_space = NULL;
     free(true_params); true_params = NULL;
@@ -1302,12 +1445,13 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_sweep_lr2); */
 
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
     /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
     /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
 }

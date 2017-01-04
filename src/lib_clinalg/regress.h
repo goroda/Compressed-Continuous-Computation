@@ -69,19 +69,22 @@ void regress_aio_prep_memory(struct RegressAIO *, struct FunctionTrain *, int);
 double regress_aio_LS(size_t, const double *, double *, void *);
 
 enum REGTYPE {ALS,AIO,REGNONE};
-enum REGOBJ  {FTLS};
+enum REGOBJ  {FTLS,REGOBJNONE};
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t, struct MultiApproxOpts *);
 void ft_regress_free(struct FTRegress *);
 void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
-/* void ft_regress_set_start_ranks(struct FTRegress *, const size_t * ); */
+void ft_regress_set_obj(struct FTRegress *, enum REGOBJ);
+void ft_regress_set_start_ranks(struct FTRegress *, const size_t * );
 void ft_regress_set_discrete_parameter(struct FTRegress *, char *, size_t);
 void ft_regress_set_data(struct FTRegress *, size_t, const double *, size_t,
                          const double *, size_t);
 void ft_regress_process_parameters(struct FTRegress *);
-void ft_regress_prep_memory(struct FTRegress *, int);
+void ft_regress_update_params(struct FTRegress *, const double *);
+
+/* void ft_regress_prep_memory(struct FTRegress *, int); */
 /* void ft_regress_prep_memory(struct FTRegress *, struct FunctionTrain *, int); */
-struct FunctionTrain * ft_regress_run(struct FTRegress *, enum REGOBJ);
+struct FunctionTrain * ft_regress_run(struct FTRegress *);
 
 
 
@@ -109,6 +112,7 @@ void ft_param_free(struct FTparam *);
 size_t * ft_param_get_num_params_per_core(const struct FTparam *);
 struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
 void ft_param_update_params(struct FTparam *, const double *);
+void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 
 struct RegressOpts;
 struct RegressOpts *

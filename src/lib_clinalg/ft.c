@@ -792,343 +792,6 @@ void function_train_core_update_params(struct FunctionTrain * ft,
     qmarray_update_params(ft->cores[core],nparam,param);
 }
 
-/***********************************************************//**
-   Combine evaluations of cores up to K-1, core K, and cores past K+1
-
-    Evaluate the FT and get the gradient with respect to all the 
-    parameters of a particular core
-
-    \param[in]     ft           - function_train
-    \param[in]     K            - center core
-    \param[in]     nvals        - number of evaluations
-    \param[in]     pre          - vector of evaluation of all cores prior to *core* r1 * n
-    \parma[in]     inc_pre      - increment between data for previous cores
-    \param[in]     cur          - evaluation of *core* r1 * r2 * n
-    \parma[in]     inc_cur      - increment between data for current evaluations
-    \param[in]     post         - evaluation of all cores after *core* r2 * n
-    \parma[in]     inc_post     - increment between data for evaluations after current core
-    \param[in]     cur_grad     - gradient of *core* r1 * r2 * gsize * n
-    \param[in]     inc_cur_grad - increment between data for current evaluations
-    \param[in]     t1           - Extra space (max rank * max rank)
-    \param[in,out] val          - evaluation 
-    \param[in,out] grad         - gradient of the function (gsize * n)
-    \param[in]     gsize        - total number of parameters in the core
-
-    \note r1,r2 refer to the sizes of core K
-***************************************************************/
-void function_train_combine_cores(struct FunctionTrain * ft, size_t K,
-                                  size_t nvals, 
-                                  const double * pre, size_t inc_pre,
-                                  const double * cur, size_t inc_cur,
-                                  const double * post, size_t inc_post,
-                                  const double * cur_grad, size_t inc_cur_grad,
-                                  double * t1,
-                                  double * val, double * grad, size_t gsize)
-{
-
-    size_t dim = ft->dim;
-    if (K == 0){
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            if (grad != NULL){
-                for (size_t kk = 0; kk < gsize; kk++){
-                    grad[kk + jj*gsize] = cblas_ddot(r2,cur_grad + kk*r1*r2 + jj*inc_cur_grad,1,
-                                                     post + jj*inc_post,1);
-                }
-            }
-            val[jj] = cblas_ddot(r2,cur + jj * inc_cur,1,post + jj * inc_post,1);
-        }
-
-    }
-    else if (K == dim-1){
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            if (grad != NULL){
-                for (size_t kk = 0; kk < gsize; kk++){
-                    grad[kk + jj*gsize] = cblas_ddot(r1,cur_grad + kk*r1*r2 + jj*inc_cur_grad,1,pre + jj*inc_pre,1);
-                }
-            }
-            /* printf("pre1 = "); dprint(r1,pre+jj*inc_pre); */
-            val[jj] = cblas_ddot(r1,cur + jj * inc_cur,1,pre + jj * inc_pre,1);
-        }
-    }
-    else{ 
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            if (grad != NULL){
-                for (size_t kk = 0; kk < gsize; kk++){
-                    cblas_dgemv(CblasColMajor,CblasTrans,
-                                r1, r2, 1.0,
-                                cur_grad + kk*r1*r2 + jj * inc_cur_grad, ft->ranks[K],
-                                pre + jj*inc_pre, 1, 0.0, t1, 1);
-            
-                    grad[kk + jj*gsize] = cblas_ddot(r2,t1,1,post + jj*inc_post,1);
-                }
-            }
-            cblas_dgemv(CblasColMajor,CblasTrans,
-                        r1,r2,1.0,
-                        cur + jj * inc_cur, r1,
-                        pre + jj * inc_pre, 1, 0.0, t1, 1);
-
-            val[jj] = cblas_ddot(r2,t1,1,post + jj*inc_post,1);
-        }
-    }
-}
-
-/***********************************************************//**
-    Combine evaluations of cores up to K-1, gradient of core K, and cores past K+1
-
-    Evaluate the FT and get the gradient with respect to all the 
-    parameters of a particular core
-
-    \param[in]     ft           - function_train
-    \param[in]     K            - center core
-    \param[in]     nvals        - number of evaluations
-    \param[in]     pre          - vector of evaluation of all cores prior to *core* r1 * n
-    \parma[in]     inc_pre      - increment between data for previous cores
-    \param[in]     post         - evaluation of all cores after *core* r2 * n
-    \parma[in]     inc_post     - increment between data for evaluations after current core
-    \param[in]     cur_grad     - gradient of *core* r1 * r2 * gsize * n
-    \param[in]     inc_cur_grad - increment between data for current evaluations
-    \param[in]     t1           - Extra space (max rank * max rank)
-    \param[in,out] val          - evaluation 
-    \param[in,out] grad         - gradient of the function (gsize * n)
-    \param[in]     gsize        - total number of parameters in the core
-
-    \note r1,r2 refer to the sizes of core K
-***************************************************************/
-void function_train_combine_cores_param_grad(struct FunctionTrain * ft, size_t K,
-                                             size_t nvals, 
-                                             const double * pre, size_t inc_pre,
-                                             const double * post, size_t inc_post,
-                                             const double * cur_grad, size_t inc_cur_grad,
-                                             double * t1,
-                                             double * grad, size_t gsize)
-{
-
-    size_t dim = ft->dim;
-    if (K == 0){
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            for (size_t kk = 0; kk < gsize; kk++){
-                grad[kk + jj*gsize] = cblas_ddot(r2,cur_grad + kk*r1*r2 + jj*inc_cur_grad,1,
-                                                 post + jj*inc_post,1);
-            }
-        }
-
-    }
-    else if (K == dim-1){
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            for (size_t kk = 0; kk < gsize; kk++){
-                grad[kk + jj*gsize] =
-                    cblas_ddot(r1,cur_grad + kk*r1*r2 + jj*inc_cur_grad,1,pre + jj*inc_pre,1);
-            }
-        }
-    }
-    else{ 
-        size_t r1 = ft->cores[K]->nrows;
-        size_t r2 = ft->cores[K]->ncols;
-        for (size_t jj = 0; jj < nvals; jj++){
-            for (size_t kk = 0; kk < gsize; kk++){
-                cblas_dgemv(CblasColMajor,CblasTrans,
-                            r1, r2, 1.0,
-                            cur_grad + kk*r1*r2 + jj * inc_cur_grad, ft->ranks[K],
-                            pre + jj*inc_pre, 1, 0.0, t1, 1);
-            
-                grad[kk + jj*gsize] = cblas_ddot(r2,t1,1,post + jj*inc_post,1);
-            }
-        }
-    }
-}
-
-
-/***********************************************************//**
-    Evaluate the FT and get the gradient with respect to all the 
-    parameters of a particular core
-
-    \param[in]     ft               - function_train
-    \param[in]     n                - number of evaluations
-    \param[in]     x                - locations at which to evaluate
-    \param[in]     core             - dimension to evaluate
-    \param[in]     nparam           - total number of parameters in the core
-    \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, 
-                                      where r1,r2 are the size of the core
-    \param[in]     inc_grad         - increment between gradient evaluations for 
-                                      different locations
-    \param[in,out] grad_core_space2 - space that is at least as big as the max num of 
-                                      params of any 
-                                      function making up the core
-    \param[in,out] grad             - gradient of the function (nparam * n)
-    \param[in,out] pre              - vector of evaluation of all cores prior to *core* r1 * n
-    \parma[in]     inc_pre          - increment between data for previous cores
-    \param[in,out] cur              - evaluation of *core* r1 * r2 * n
-    \parma[in]     inc_cur          - increment between data for current evaluations
-    \param[in,out] post             - evaluation of all cores after *core* r2 * n
-    \parma[in]     inc_post         - increment between data for evaluations after current core
-    \param[in,out] val              - evaluation
-***************************************************************/
-void function_train_core_param_grad_eval(struct FunctionTrain * ft, size_t n,
-                                         const double * x, size_t core,
-                                         size_t nparam,
-                                         double * grad_core_space1,size_t inc_grad,
-                                         double * grad_core_space2,
-                                         double * grad, double * pre, size_t inc_pre,
-                                         double * cur, size_t inc_cur, double * post,
-                                         size_t inc_post, double * val)
-{
-
-    size_t dim = ft->dim;
-    assert(ft->ranks[0] == 1);
-    assert(ft->ranks[dim] == 1);
-
-    size_t maxrank;
-    double *t1=NULL, *t2=NULL, *t3=NULL;
-    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,n);
-    size_t mr2 = maxrank * maxrank; // space allocated for the evaluation of each function
-    
-    // evaluation of cores prior to the core of interest
-    size_t ii = 0;
-    if (core != 0){
-        size_t r1 = ft->cores[ii]->nrows;
-        size_t r2 = ft->cores[ii]->ncols;
-        generic_function_1darray_eval2N(
-            r1*r2,ft->cores[ii]->funcs, n, x+ii, dim, t1, mr2);
-        
-        int onsol = 1;
-        for (ii = 1; ii < core; ii++){
-            if (ii%2 == 1){
-                function_train_eval_next_core(ft,ii,n,x+ii,dim,t1,mr2,t2,mr2,t3,mr2);
-                onsol = 2;
-            }
-            else{
-                function_train_eval_next_core(ft,ii,n,x+ii,dim,t3,mr2,t2,mr2,t1,mr2);
-                onsol=1;
-            }
-        }
-        ii = core-1;
-        size_t s = ft->cores[ii]->ncols;
-        if (onsol == 2){
-            for (size_t jj = 0; jj < n; jj++){
-                memmove(pre + jj * inc_pre, t3 + jj * mr2, s * sizeof(double));
-            }
-        }
-        else{
-            for (size_t jj = 0; jj < n; jj++){
-                memmove(pre + jj * inc_pre, t1 + jj * mr2, s * sizeof(double));
-            }
-        }
-    }
-
-    // evaluation of the core of interest
-    ii = core;
-    qmarray_param_grad_eval(ft->cores[core],n,x+ii,dim,cur,inc_cur,grad_core_space1,inc_grad,grad_core_space2);
-
-    // evaluation of the cores after the core of interest
-    if (core != dim-1){
-        ii = dim-1;
-        size_t nrows = ft->cores[ii]->nrows;
-        size_t ncols = ft->cores[ii]->ncols;
-        struct GenericFunction ** arr = ft->cores[ii]->funcs;
-        generic_function_1darray_eval2N(nrows*ncols,arr,n,x+ii,dim,t1,mr2);
-        int onsol = 1;
-        for (ii = dim-2; ii > core; ii--){
-            if (onsol == 1){
-                function_train_eval_prev_core(ft,ii,n,x+ii,dim,t1,mr2,t2,mr2,t3,mr2);
-                onsol = 2;
-            }
-            else {
-                function_train_eval_prev_core(ft,ii,n,x+ii,dim,t3,mr2,t2,mr2,t1,mr2);
-                onsol = 1;
-            }
-        }
-
-        ii = core+1;
-        size_t s = ft->cores[ii]->nrows;
-        if (onsol == 2){
-            for (size_t jj = 0; jj < n; jj++){
-                memmove(post + jj * inc_post, t3 + jj * mr2, s * sizeof(double));
-            }
-        }
-        else{
-            for (size_t jj = 0; jj < n; jj++){
-                memmove(post + jj * inc_post, t1 + jj * mr2, s * sizeof(double));
-            }
-        }
-    }
-
-    // combine
-
-    function_train_combine_cores(ft,core,n,pre,inc_pre,cur,inc_cur,post,inc_post,
-                                 grad_core_space1,inc_grad,t1,val,grad,nparam);
-}
-
-
-/***********************************************************//**
-    Evaluate the FT and get the gradient with respect to all the 
-    parameters of a particular core, the evaluations of the cores
-    prior and after to the current core are specified in the function
-    and these values are not recomputed
-
-    \param[in]     ft               - function_train
-    \param[in]     n                - number of evaluations
-    \param[in]     x                - locations at which to evaluate
-    \param[in]     core             - dimension to evaluate
-    \param[in]     pre              - vector of evaluation of all cores prior to *core* r1 * n
-    \parma[in]     inc_pre          - increment between data for previous cores
-    \param[in,out] cur              - evaluation of *core* r1 * r2 * n
-    \parma[in]     inc_cur          - increment between data for current evaluations
-    \param[in]     post             - evaluation of all cores after *core* r2 * n
-    \parma[in]     inc_post         - increment between data for evaluations after current core
-    \param[in]     nparam           - total number of parameters in the core
-    \param[in,out] grad_core_space1 - gradient of the core, at least r1 * r2 * nparam * n, 
-                                      where r1,r2 are the size of the core (should be NULL
-                                      to not compute gradient)
-    \param[in]     inc_grad         - increment between gradient evaluations for different 
-                                      locations
-    \param[in,out] grad_core_space2 - space that is at least as big as the max num of params 
-                                      of any 
-                                      function making up the core (should be NULL to not 
-                                      compute gradient)
-    \param[in,out] val              - evaluation
-    \param[in,out] grad             - gradient of the function (nparam * n), NULL to not compute
-    \param[in]                      - number of parameters in the gradient
-***************************************************************/
-void function_train_core_param_grad_eval_single(struct FunctionTrain * ft, size_t n,
-                                                const double * x, size_t core,
-                                                const double * pre, size_t inc_pre,
-                                                double * cur, size_t inc_cur,
-                                                const double * post, size_t inc_post,
-                                                double * grad_core_space1,size_t inc_grad,
-                                                double * grad_core_space2,
-                                                double * val, double * grad, size_t nparam)
-{
-
-    size_t maxrank;
-    double *t1=NULL, *t2=NULL, *t3=NULL;
-    function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,n);
-    
-    qmarray_param_grad_eval(ft->cores[core],
-                            n,x+core,ft->dim,
-                            cur, inc_cur,
-                            grad_core_space1, inc_grad,
-                            grad_core_space2);
-                             
-    function_train_combine_cores(ft, core, n,
-                                 pre, inc_pre,
-                                 cur, inc_cur,
-                                 post, inc_post,
-                                 grad_core_space1, inc_grad,
-                                 t1,
-                                 val, grad,nparam);
-
-}
-
 /** \struct RunningCoreTotal
  * \brief Manages evaluations of function train
  * \var RunningCoreTotal::r2
@@ -1547,6 +1210,20 @@ struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain
     return running_core_total_arr_alloc(ft->dim,maxrank*maxrank);
 }
 
+void core_param_grad_prep_memory(struct FunctionTrain * ft,size_t n)
+{
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t mr2 = maxrank * maxrank; // space allocated for the evaluation of each function
+    if (ft->evalspace4 == NULL){
+        ft->evalspace4 = ft_mem_space_arr_alloc(ft->dim,n,mr2);
+    }
+    else{
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            ft_mem_space_check(ft->evalspace4[ii],n,mr2);
+        }
+    }
+}
+
 /***********************************************************//**
     Evaluate a function train and gradients with respect to
     FT parameters at a set of inputs
@@ -1589,17 +1266,8 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
     assert(ft->ranks[0] == 1);
     assert(ft->ranks[dim] == 1);
 
-    size_t maxrank = function_train_get_maxrank(ft);
-    size_t mr2 = maxrank * maxrank; // space allocated for the evaluation of each function
-    if (ft->evalspace4 == NULL){
-        ft->evalspace4 = ft_mem_space_arr_alloc(ft->dim,n,mr2);
-    }
-    else{
-        for (size_t ii = 0; ii < ft->dim; ii++){
-            ft_mem_space_check(ft->evalspace4[ii],n,mr2);
-        }
-    }
-
+    core_param_grad_prep_memory(ft,n);
+    
     /* printf("start run\n"); */
     size_t r1,r2,totparam=0;
     for (size_t ii = 0; ii < dim; ii++){
@@ -1902,6 +1570,213 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
             running_core_total_update_rl(evals_rl,n,r1,r2,core_eval,incr);
             runparam-=nparam[backind];
             
+        }
+    }
+}
+
+/***********************************************************//**
+    Evaluate a running total of the cores pre and post a 
+    core, useful for ALS based regression
+
+    \param[in]     ft                   - function train
+    \param[in]     core                 - core on which to operatore
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in,out] evals_lr             - structure for storing running evaluations 
+                                          (left to right)
+    \param[in,out] evals_rl             - structure for storing running evaluations 
+                                          (right to left)
+                                          of a single function within a core
+
+***************************************************************/
+void function_train_core_pre_post_run(struct FunctionTrain * ft, size_t core,
+                                      size_t n, const double * x,
+                                      struct RunningCoreTotal * evals_lr,
+                                      struct RunningCoreTotal * evals_rl)
+{
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    core_param_grad_prep_memory(ft,n);
+
+    size_t r1,r2;
+    for (size_t ii = 0; ii < core; ii++){
+        r1 = ft->cores[ii]->nrows;
+        r2 = ft->cores[ii]->ncols;
+
+        // left to right
+        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
+                                ft->evalspace4[ii]->vals,
+                                ft_mem_space_get_incr(ft->evalspace4[ii]),
+                                NULL,0,NULL);
+
+        // update evaluation
+        running_core_total_update(evals_lr,n,r1,r2,
+                                  ft->evalspace4[ii]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[ii]));
+
+    }
+
+    for (size_t ii = dim-1; ii > core; ii--){
+        r1 = ft->cores[ii]->nrows;
+        r2 = ft->cores[ii]->ncols;
+
+        // right_to_left
+        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
+                                ft->evalspace4[ii]->vals,
+                                ft_mem_space_get_incr(ft->evalspace4[ii]),
+                                NULL,0,NULL);
+        size_t incr = ft_mem_space_get_incr(ft->evalspace4[ii]);
+        running_core_total_update_rl(evals_rl,n,r1,r2,ft->evalspace4[ii]->vals,incr);
+    }
+
+}
+
+/***********************************************************//**
+    Evaluate a function train and gradients with respect to
+    FT parameters at a set of inputs for a single core
+
+    \param[in]     ft                   - function train
+    \param[in]     core                 - core on which to operatore
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in]     evals_lr             - structure for storing running evaluations 
+                                          (left to right)
+    \param[in]     evals_rl             - structure for storing running evaluations 
+                                          (right to left)
+    \param[in]     grads                - structure for storing running totals of gradients
+    \param[in]     nparam               - number of parameters expected per core
+    \param[in,out] out                  - evaluations
+    \param[in,out] grad                 - gradient at every evaluation 
+                                          (could be NULL to not compute)
+    \param[in,out] core_grad_space      - space for evaluating gradients of cores
+    \param[in]     inc_grad_n           - increment between gradient evaluations for 
+                                          different inputs
+    \param[in,out] max_func_param_space - allocated space for evaluating the gradient
+                                          of a single function within a core
+
+***************************************************************/
+void function_train_core_param_grad_eval(struct FunctionTrain * ft,
+                                         size_t core,
+                                         size_t n,
+                                         const double * x,
+                                         struct RunningCoreTotal * evals_lr,
+                                         struct RunningCoreTotal * evals_rl,
+                                         struct RunningCoreTotal * grads, size_t nparam,
+                                         double * out, double * grad,
+                                         double * core_grad_space,
+                                         size_t inc_grad_n, double * max_func_param_space)
+{
+
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    core_param_grad_prep_memory(ft,n);
+
+    // Deal with middle core    
+    size_t r1 = ft->cores[core]->nrows;
+    size_t r2 = ft->cores[core]->ncols;
+
+    /* printf("ok lets go\n"); */
+    if (grad == NULL){
+        qmarray_param_grad_eval(ft->cores[core],n,x+core,dim,
+                                ft->evalspace4[core]->vals,
+                                ft_mem_space_get_incr(ft->evalspace4[core]),
+                                NULL,0,NULL);
+    }
+    else{
+        if (core == 0){
+            qmarray_param_grad_eval(ft->cores[core],n,x+core,dim,
+                                    ft->evalspace4[core]->vals,
+                                    ft_mem_space_get_incr(ft->evalspace4[core]),
+                                    core_grad_space, inc_grad_n,
+                                    max_func_param_space);
+            running_core_total_update_multiple(grads,n,nparam,r1,r2,
+                                               core_grad_space,r1*r2,inc_grad_n);
+        }
+        else{
+            double * vals = running_core_total_get_vals(evals_lr);
+            /* printf("sparse mult?\n"); */
+            grads->No = nparam;
+            grads->N = n;
+            running_core_total_check_size(grads,n*nparam*r2);
+            qmarray_param_grad_eval_sparse_mult(ft->cores[core],n,x+core,dim,
+                                                ft->evalspace4[core]->vals,
+                                                ft_mem_space_get_incr(ft->evalspace4[core]),
+                                                core_grad_space,inc_grad_n,
+                                                vals,
+                                                grads->vals1,nparam);
+            /* printf("ok...\n"); */
+            grads->r2 = r2;
+        }
+
+        if (core != dim-1){
+            double * post_vals = running_core_total_get_vals(evals_rl);
+            double val;
+            /* printf("lets go!\n"); */
+            for (size_t jj = 0; jj < n; jj++){
+                size_t onnum = 0;
+                for (size_t zz = 0; zz < r2; zz++){
+                    for (size_t kk = 0; kk < r1; kk++){
+                        size_t onfunc = kk  + zz * r1;
+                        struct GenericFunction * gf = ft->cores[core]->funcs[onfunc];
+                        size_t nparamf = generic_function_get_num_params(gf);
+                        size_t on_output = onnum * r2 + jj * nparam * r2;
+                        for (size_t ll = 0; ll < nparamf; ll++){
+                            size_t modelem = ll * r2 + zz;
+                            val = grads->vals1[on_output + modelem] * post_vals[zz + jj * r2];
+                            grad[jj*nparam + onnum + ll] = val;
+                            /* printf("val = %G\n",val); */
+                        }
+                        onnum += nparamf;
+                    }
+                }
+            }
+        }
+        else{
+            running_core_copy_vals(grads,n,nparam,grad,nparam);
+        }
+    }
+
+    /* printf("updating!\n"); */
+
+    if (core == 0){
+        double * post_vals = running_core_total_get_vals(evals_rl);
+         for (size_t ii = 0; ii < n; ii++){
+            out[ii] =
+                cblas_ddot(r2,post_vals + ii * r2, 1,
+                           ft->evalspace4[core]->vals + ii *ft_mem_space_get_incr(ft->evalspace4[core]),
+                           1);
+        }
+    }
+    else if (core != dim-1){
+        size_t maxrank;
+        double *t1=NULL, *t2=NULL, *t3=NULL;
+        function_train_pre_eval(ft,&maxrank,&t1,&t2,&t3,1);
+
+        double * vals = running_core_total_get_vals(evals_lr);
+        double * post_vals = running_core_total_get_vals(evals_rl);
+
+        for (size_t ii = 0; ii < n; ii++){
+            /* dprint(r1,vals+r1*ii); */
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        r1,r2, 1.0,
+                        ft->evalspace4[core]->vals + ii * ft_mem_space_get_incr(ft->evalspace4[core]),
+                        r1,
+                        vals + ii*r1, 1, 0.0, t1, 1);
+
+            out[ii] = cblas_ddot(r2,t1,1,post_vals+ii*r2,1);
+        }
+    }
+    else{
+        double * vals = running_core_total_get_vals(evals_lr);
+        for (size_t ii = 0; ii < n; ii++){
+            out[ii] =
+                cblas_ddot(r1,vals + ii * r1, 1,
+                           ft->evalspace4[core]->vals + ii *ft_mem_space_get_incr(ft->evalspace4[core]),
+                           1);
         }
     }
 }

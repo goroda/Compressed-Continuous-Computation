@@ -400,8 +400,6 @@ void c3approx_init_regress(struct C3Approx * c3a)
     assert (c3a->type == REGRESS);
     assert (c3a->fapp != NULL);
 
-    // process parameters
-    ft_regress_process_parameters(c3a->reg);
 }
  
 /***********************************************************//**
@@ -418,14 +416,12 @@ c3approx_do_regress(struct C3Approx *c3a, size_t N,
     assert (c3a->reg != NULL);
     /* assert (c3a->ftref != NULL); */
 
+    ft_regress_set_obj(c3a->reg,obj);
     ft_regress_set_data(c3a->reg,N,x,incx,y,incy);
-
-    // NOTE THIS IS FOR LINEAR!
-    /* ft_regress_prep_memory(c3a->reg,c3a->ftref,2); */
-    ft_regress_prep_memory(c3a->reg,2); 
+    ft_regress_process_parameters(c3a->reg);
 
     /* assert (1 == 0); */
-    struct FunctionTrain * ft = ft_regress_run(c3a->reg,obj);
+    struct FunctionTrain * ft = ft_regress_run(c3a->reg);
     
     return ft;
 }
