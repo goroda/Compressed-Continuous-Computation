@@ -875,8 +875,15 @@ struct RegressOpts
     struct c3Opt * optimizer;
 
 
+    int verbose;
+    
+    // relative function tolerance
+    double convtol;
+    
     // for ALS
     size_t active_core;
+    size_t maxsweeps;
+    
 };
 
 
@@ -900,7 +907,10 @@ struct RegressOpts * regress_opts_alloc()
     ropts->y = NULL;
     ropts->mem = NULL;
     ropts->optimizer = NULL;
+    ropts->verbose = 0;
+    ropts->convtol = 1e-10;
     ropts->active_core = 0;
+    ropts->maxsweeps = 10;
     return ropts;
 }
 
@@ -939,6 +949,25 @@ regress_opts_create(enum REGTYPE type, enum REGOBJ obj, size_t N,
     return opts;
 }
 
+void regress_opts_set_als_maxsweep(struct RegressOpts * opts, size_t maxsweeps)
+{
+    assert (opts != NULL);
+    opts->maxsweeps = maxsweeps;
+}
+
+void regress_opts_set_convtol(struct RegressOpts * opts, double convtol)
+{
+    assert (opts != NULL);
+    opts->convtol = convtol;
+}
+
+
+void regress_opts_set_verbose(struct RegressOpts * opts, int verbose)
+{
+    assert (opts != NULL);
+    opts->verbose = verbose;
+}
+
 void regress_opts_initialize_memory(struct RegressOpts * opts, size_t * num_params_per_core,
                                     size_t * ranks, size_t max_param_within_uni,
                                     enum FTPARAM_ST structure)
@@ -955,14 +984,24 @@ void regress_opts_initialize_memory(struct RegressOpts * opts, size_t * num_para
                                           max_param_within_uni,
                                           structure);
 
-    size_t num_tot_params = 0;
-    for (size_t ii = 0; ii < opts->d; ii++){
-        num_tot_params += num_params_per_core[ii];
+    if (opts->type == AIO){
+        size_t num_tot_params = 0;
+        for (size_t ii = 0; ii < opts->d; ii++){
+            num_tot_params += num_params_per_core[ii];
+        }
+        if (opts->optimizer != NULL){
+            c3opt_free(opts->optimizer); opts->optimizer = NULL;
+        }
+        opts->optimizer = c3opt_alloc(BFGS,num_tot_params);
     }
-    if (opts->optimizer != NULL){
-        c3opt_free(opts->optimizer); opts->optimizer = NULL;
-    }
-    opts->optimizer = c3opt_alloc(BFGS,num_tot_params);
+}
+
+void regress_opts_prepare_als_core(struct RegressOpts * opts, size_t core, struct FTparam * ftp)
+{
+    opts->active_core = core;
+    function_train_core_pre_post_run(ftp->ft,core,opts->N,opts->x,
+                                     opts->mem->running_evals_lr,
+                                     opts->mem->running_evals_rl);
 }
 
 double ft_param_eval_objective_aio_ls(struct FTparam * ftp, struct RegressOpts * regopts,
@@ -1099,69 +1138,36 @@ double ft_param_eval_objective_als(struct FTparam * ftp,
 }
 
 
-double ft_param_eval_objective(struct FTparam * ftp,
-                               struct RegressOpts * regopts,
-                               const double * params, double * grad)
-{
-
-    assert (regopts->nmem_alloc == regopts->N);
-    
-    // check if special structure exists / initialized
-    regress_mem_manager_check_structure(regopts->mem, ftp,regopts->x);
-    
-    double out = 0.0;
-    if (regopts->type == AIO){
-        // reset stuff for new evaluation
-        regress_mem_manager_reset_running(regopts->mem);
-        ft_param_update_params(ftp,params);
-        if (grad != NULL){
-            for (size_t ii = 0; ii < ftp->nparams; ii++){
-                grad[ii] = 0.0;
-            }
-        }
-        out = ft_param_eval_objective_aio(ftp,regopts,grad);
-    }
-    else if (regopts->type == ALS){
-
-        // need to insure that running evals_lr are set (not reset!)
-        // need to restart running->grad
-        assert (1 == 0);
-        ft_param_update_core_params(ftp,regopts->active_core,params);
-        if (grad != NULL){
-            for (size_t ii = 0; ii < ftp->nparams_per_core[regopts->active_core]; ii++){
-                grad[ii] = 0.0;
-            }
-        }
-        out = ft_param_eval_objective_als(ftp,regopts,grad);
-    }
-    else{
-        printf("Regress opts of type %d is unknown\n",regopts->type);
-        printf("                     AIO is %d \n",AIO);
-        printf("                     ALS is %d \n",AIO);
-        exit(1);
-    }
-
-    return out;
-}
-
-
 struct PP
 {
     struct FTparam * ftp;
     struct RegressOpts * opts;
 };
 
-double regress_opts_minimize(size_t nparam, const double * param,
-                             double * grad, void * args)
+double regress_opts_minimize_aio(size_t nparam, const double * param,
+                                 double * grad, void * args)
 {
     (void)(nparam);
+
     struct PP * pp = args;
-    return ft_param_eval_objective(pp->ftp,pp->opts,param,grad);
+    assert (pp->opts->nmem_alloc == pp->opts->N);
+
+    // check if special structure exists / initialized
+    regress_mem_manager_check_structure(pp->opts->mem, pp->ftp,pp->opts->x);
+    regress_mem_manager_reset_running(pp->opts->mem);
+
+    ft_param_update_params(pp->ftp,param);
+    if (grad != NULL){
+        for (size_t ii = 0; ii < nparam; ii++){
+            grad[ii] = 0.0;
+        }
+    }
+    return ft_param_eval_objective_aio(pp->ftp,pp->opts,grad);
 }
 
 
 struct FunctionTrain *
-c3_regression_run(struct FTparam * ftp, struct RegressOpts * ropts)
+c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts)
 {
 
     struct PP pp;
@@ -1176,10 +1182,12 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * ropts)
                                    ranks, max_param_within_uni, structure);
 
     assert (ropts->optimizer != NULL);
-    c3opt_add_objective(ropts->optimizer,regress_opts_minimize,&pp);
+    c3opt_add_objective(ropts->optimizer,regress_opts_minimize_aio,&pp);
 
-    c3opt_set_verbose(ropts->optimizer,0);
-    c3opt_set_relftol(ropts->optimizer,1e-20);
+    if (ropts->verbose == 3){
+        c3opt_set_verbose(ropts->optimizer,1);
+    }
+    c3opt_set_relftol(ropts->optimizer,ropts->convtol);
     c3opt_set_absxtol(ropts->optimizer,1e-20);
     /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
     c3opt_set_gtol(ropts->optimizer,1e-20);
@@ -1193,15 +1201,177 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * ropts)
         fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
     }
 
+    if (ropts->verbose == 1){
+        printf("Objective value = %3.5G\n",val);
+    }
     ft_param_update_params(ftp,guess);
     struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
 
     free(guess); guess = NULL;
 
+    return ft_final;
+}
+
+
+
+
+double regress_opts_minimize_als(size_t nparam, const double * params,
+                                 double * grad, void * args)
+{
+    struct PP * pp = args;
+    assert (pp->opts->nmem_alloc == pp->opts->N);
+
+    // check if special structure exists / initialized
+    regress_mem_manager_check_structure(pp->opts->mem,pp->ftp,pp->opts->x);
+
+    // just need to reset the gradient of the active core
+    running_core_total_restart(pp->opts->mem->running_grad[pp->opts->active_core]);
+
+
+    ft_param_update_core_params(pp->ftp,pp->opts->active_core,params);
+    if (grad != NULL){
+        for (size_t ii = 0; ii < nparam; ii++){
+            grad[ii] = 0.0;
+        }
+    }
+    return ft_param_eval_objective_als(pp->ftp,pp->opts,grad);
+}
+
+struct FunctionTrain *
+c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
+{
+
+    enum FTPARAM_ST structure = NONE_ST;
+    /* enum FTPARAM_ST structure = LINEAR_ST; */
+    size_t max_param_within_uni = 1000;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    regress_opts_initialize_memory(ropts, ftp->nparams_per_core,
+                                   ranks, max_param_within_uni, structure);
+
+    for (size_t sweep = 1; sweep <= ropts->maxsweeps; sweep++){
+        if (ropts->verbose == 1){
+            printf("Sweep %zu\n",sweep);
+        }
+        struct FunctionTrain * start = function_train_copy(ftp->ft);
+        for (size_t ii = 0; ii < ftp->dim; ii++){
+            if (ropts->verbose == 1){
+                printf("\tDim %zu: ",ii);
+            }
+            regress_mem_manager_reset_running(ropts->mem);
+            regress_opts_prepare_als_core(ropts,ii,ftp);
+
+
+            c3opt_free(ropts->optimizer); ropts->optimizer = NULL;
+            ropts->optimizer = c3opt_alloc(BFGS,ftp->nparams_per_core[ii]);
+
+            struct PP pp;
+            pp.ftp = ftp;
+            pp.opts = ropts;
+        
+            c3opt_add_objective(ropts->optimizer,regress_opts_minimize_als,&pp);
+            
+            c3opt_set_verbose(ropts->optimizer,0);
+            if (ropts->verbose == 3){
+                c3opt_set_verbose(ropts->optimizer,1);
+            }
+            c3opt_set_relftol(ropts->optimizer,ropts->convtol);
+            c3opt_set_absxtol(ropts->optimizer,1e-20);
+            /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
+            c3opt_set_gtol(ropts->optimizer,1e-20);
+
+            double * guess = calloc_double(ftp->nparams_per_core[ii]);
+            function_train_core_get_params(ftp->ft,ii,guess);
+            double val;
+            int res = c3opt_minimize(ropts->optimizer,guess,&val);
+            /* printf("active core = %zu\n",pp.opts->active_core); */
+            if (res < -1){
+                fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
+            }
+
+            if (ropts->verbose == 1){
+                printf("\t\tObjVal = %3.5G\n",val);
+            }
+
+            ft_param_update_core_params(ftp,ii,guess);
+            free(guess); guess = NULL;
+        }
+
+        for (size_t jj = 1; jj < ftp->dim-1; jj++){
+            size_t ii = ftp->dim-1-jj;
+            if (ropts->verbose == 1){
+                printf("\tDim %zu: ",ii);
+            }
+            regress_mem_manager_reset_running(ropts->mem);
+            regress_opts_prepare_als_core(ropts,ii,ftp);
+
+
+            c3opt_free(ropts->optimizer); ropts->optimizer = NULL;
+            ropts->optimizer = c3opt_alloc(BFGS,ftp->nparams_per_core[ii]);
+
+            struct PP pp;
+            pp.ftp = ftp;
+            pp.opts = ropts;
+        
+            c3opt_add_objective(ropts->optimizer,regress_opts_minimize_als,&pp);
+
+            c3opt_set_verbose(ropts->optimizer,0);
+            c3opt_set_relftol(ropts->optimizer,1e-10);
+            c3opt_set_absxtol(ropts->optimizer,1e-20);
+            /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
+            c3opt_set_gtol(ropts->optimizer,1e-20);
+
+            double * guess = calloc_double(ftp->nparams_per_core[ii]);
+            function_train_core_get_params(ftp->ft,ii,guess);
+            double val;
+            int res = c3opt_minimize(ropts->optimizer,guess,&val);
+            /* printf("active core = %zu\n",pp.opts->active_core); */
+            if (res < -1){
+                fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
+            }
+
+            if (ropts->verbose == 1){
+                printf("\t\tObjVal = %3.5G\n",val);
+            }
+
+            ft_param_update_core_params(ftp,ii,guess);
+            free(guess); guess = NULL;
+        }
+        
+        double diff = function_train_relnorm2diff(ftp->ft,start);
+        if (ropts->verbose == 1){
+            printf("\n\tSweep Difference = %G\n",diff);
+        }
+        function_train_free(start); start = NULL;
+    }
+
+
+    struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
 
     return ft_final;
 }
+
+
+struct FunctionTrain *
+c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts)
+{
+    // check if special structure exists / initialized
     
+    struct FunctionTrain * ft = NULL;
+    if (regopts->type == AIO){
+        ft = c3_regression_run_aio(ftp,regopts);
+    }
+    else if (regopts->type == ALS){
+        ft = c3_regression_run_als(ftp,regopts);
+    }
+    else{
+        printf("Regress opts of type %d is unknown\n",regopts->type);
+        printf("                     AIO is %d \n",AIO);
+        printf("                     ALS is %d \n",AIO);
+        exit(1);
+    }
+
+    return ft;
+}
 
 
 
@@ -1461,7 +1631,6 @@ void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
         exit(1);
     }
 }
-
 
 /***********************************************************//**
     Set regression type

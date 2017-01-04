@@ -110,13 +110,16 @@ regress_opts_create(enum REGTYPE, enum REGOBJ, size_t,
                     size_t, const double *, const double *);
 void regress_opts_free(struct RegressOpts *);
 
+void regress_opts_set_convtol(struct RegressOpts *, double);
+void regress_opts_set_als_maxsweep(struct RegressOpts *, size_t);
+void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
                                     size_t *, size_t,
                                     enum FTPARAM_ST);
 
-double ft_param_eval_objective(struct FTparam *,
-                               struct RegressOpts *,
-                               const double *, double *);
+double ft_param_eval_objective_aio(struct FTparam *,
+                                   struct RegressOpts *,
+                                   double *);
 struct FunctionTrain *
 c3_regression_run(struct FTparam *, struct RegressOpts *);
 
