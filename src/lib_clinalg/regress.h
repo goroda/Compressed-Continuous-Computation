@@ -44,20 +44,6 @@
 
 #include "ft.h"
 
-struct RegressALS;
-struct RegressALS * regress_als_alloc(size_t);
-void regress_als_free(struct RegressALS *);
-struct FunctionTrain * regress_als_get_ft(const struct RegressALS *);
-double * regress_als_get_ftparam(const struct RegressALS *);
-void regress_als_add_data(struct RegressALS *,size_t,const double *,const double *);
-size_t regress_als_get_num_params(const struct RegressALS *);
-void regress_als_prep_memory(struct RegressALS *, struct FunctionTrain *,int);
-void regress_als_set_core(struct RegressALS *, size_t);
-double regress_core_LS(size_t, const double *, double *, void *);
-int regress_als_run_core(struct RegressALS *, struct c3Opt *, double *);
-double regress_als_sweep_lr(struct RegressALS *, struct c3Opt **,int);
-double regress_als_sweep_rl(struct RegressALS *, struct c3Opt **,int);
-
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,REGOBJNONE};
 struct FTRegress;
