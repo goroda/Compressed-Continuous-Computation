@@ -1905,19 +1905,29 @@ int orth_poly_expansion_param_grad_eval(
     \param[in,out] grad  - gradient, on output adds scale * new_grad
 
     \return  0 - success, 1 -failure
+
 ************************************************************/
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
                                             double scale, double * grad)
 {
     int res = 1;
-    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+    if (poly->p->ptype == LEGENDRE){
+        double m = (poly->upper_bound-poly->lower_bound) /(poly->p->upper - poly->p->lower);
         for (size_t ii = 0; ii < poly->num_poly; ii++){
-            grad[ii] += 2.0*scale * poly->coeff[ii];
+            grad[ii] += 2.0*scale * poly->coeff[ii] * poly->p->norm(ii)*m*2.0; //the extra 2 is for the weight
+        }
+        res = 0;
+    }
+    else if (poly->p->ptype == HERMITE){
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            grad[ii] += 2.0*scale * poly->coeff[ii] * poly->p->norm(ii);
         }
         res = 0;
     }
     else if (poly->p->ptype == CHEBYSHEV){
+        /* assert (1 == 0); //doesn't take into account bounds */
+        double m = (poly->upper_bound-poly->lower_bound) /(poly->p->upper - poly->p->lower);
         double * temp = calloc_double(poly->num_poly);
         for (size_t ii = 0; ii < poly->num_poly; ii++){
             temp[ii] = 2.0/(1.0 - (double)2*ii*2*ii);
@@ -1933,10 +1943,10 @@ orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * pol
                     n2 = jj-ii;
                 }
                 if (n1 % 2 == 0){
-                    grad[ii] += 2.0*scale*temp[n1/2];
+                    grad[ii] += 2.0*scale*temp[n1/2] * m;
                 }
                 if (n2 % 2 == 0){
-                    grad[ii] += 2.0*scale*temp[n2/2];
+                    grad[ii] += 2.0*scale*temp[n2/2] * m;
                 }
             }
         }
@@ -1964,21 +1974,40 @@ orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
                                       enum coeff_decay_type decay_type,
                                       double decay_param)
 {
+
+    double m = (poly->upper_bound-poly->lower_bound) /(poly->p->upper - poly->p->lower);
     double out = 0.0;
-    if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
+    if (poly->p->ptype == LEGENDRE){
         if (decay_type == ALGEBRAIC){
             for (size_t ii = 0; ii < poly->num_poly; ii++){
-                out += poly->coeff[ii] * poly->coeff[ii]*pow(decay_param,ii);
+                out += poly->coeff[ii] * poly->coeff[ii]*pow(decay_param,ii) * poly->p->norm(ii)*2.0 * m;
             }   
         }
         else if (decay_type == EXPONENTIAL){
             for (size_t ii = 0; ii < poly->num_poly; ii++){
-                out += poly->coeff[ii] * poly->coeff[ii]*pow((double)ii+1.0,-decay_param);
+                out += poly->coeff[ii] * poly->coeff[ii]*pow((double)ii+1.0,-decay_param)*m*poly->p->norm(ii)*2.0;
             }   
         }
         else{
             for (size_t ii = 0; ii < poly->num_poly; ii++){
-                out += poly->coeff[ii] * poly->coeff[ii];
+                out += poly->coeff[ii] * poly->coeff[ii] * poly->p->norm(ii)*2.0*m;
+            }
+        }
+    }
+    else if (poly->p->ptype == HERMITE){
+        if (decay_type == ALGEBRAIC){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow(decay_param,ii) * poly->p->norm(ii);
+            }   
+        }
+        else if (decay_type == EXPONENTIAL){
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii]*pow((double)ii+1.0,-decay_param) * poly->p->norm(ii);
+            }   
+        }
+        else{
+            for (size_t ii = 0; ii < poly->num_poly; ii++){
+                out += poly->coeff[ii] * poly->coeff[ii] * poly->p->norm(ii);
             }
         }
     }
@@ -2006,13 +2035,13 @@ orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
                 }
             }
             if (decay_type == ALGEBRAIC){
-                out += temp_sum*temp_sum * pow(decay_param,ii);
+                out += temp_sum*temp_sum * pow(decay_param,ii)*m;
             }
             else if (decay_type == EXPONENTIAL){
-                out += temp_sum*temp_sum * pow((double)ii+1.0,-decay_param);
+                out += temp_sum*temp_sum * pow((double)ii+1.0,-decay_param)*m;
             }
             else{
-                out += temp_sum * temp_sum;
+                out += temp_sum * temp_sum*m;
             }
         }
         free(temp); temp = NULL;

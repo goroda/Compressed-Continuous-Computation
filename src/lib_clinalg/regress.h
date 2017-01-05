@@ -45,7 +45,7 @@
 #include "ft.h"
 
 enum REGTYPE {ALS,AIO,REGNONE};
-enum REGOBJ  {FTLS,REGOBJNONE};
+enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t, struct MultiApproxOpts *);
 void ft_regress_free(struct FTRegress *);
@@ -56,6 +56,11 @@ void ft_regress_set_discrete_parameter(struct FTRegress *, char *, size_t);
 void ft_regress_set_data(struct FTRegress *, size_t, const double *, size_t,
                          const double *, size_t);
 void ft_regress_process_parameters(struct FTRegress *);
+void ft_regress_set_als_maxsweep(struct FTRegress *, size_t);
+void ft_regress_set_convtol(struct FTRegress *, double);
+void ft_regress_set_verbose(struct FTRegress *, int);
+void ft_regress_set_regweight(struct FTRegress *, double);
+double * ft_regress_get_params(struct FTRegress *, size_t *);
 void ft_regress_update_params(struct FTRegress *, const double *);
 
 /* void ft_regress_prep_memory(struct FTRegress *, int); */
@@ -99,6 +104,7 @@ void regress_opts_free(struct RegressOpts *);
 void regress_opts_set_convtol(struct RegressOpts *, double);
 void regress_opts_set_als_maxsweep(struct RegressOpts *, size_t);
 void regress_opts_set_verbose(struct RegressOpts *, int);
+void regress_opts_set_regweight(struct RegressOpts *, double);
 void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
                                     size_t *, size_t,
                                     enum FTPARAM_ST);

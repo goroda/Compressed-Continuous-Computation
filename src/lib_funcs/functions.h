@@ -321,6 +321,9 @@ generic_function_update_params(struct GenericFunction *, size_t,const double *);
 
 int generic_function_param_grad_eval(const struct GenericFunction *, size_t,
                                      const double *, double *);
+int
+generic_function_squared_norm_param_grad(const struct GenericFunction *,
+                                         double, double *);
 void regress_1d_opts_set_regularization_penalty(struct Regress1DOpts *, double);
 void regress_1d_opts_set_RKHS_decay_rate(struct Regress1DOpts *, enum coeff_decay_type, double);
 

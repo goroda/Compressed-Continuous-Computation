@@ -41,7 +41,7 @@ $EVALFUNC
 ######################################
 # Perform Regression
 ######################################
-REGRESS="$C3HOME/profiling/regress/bin/aioregress -x $FILENAME -y $EVALFILE -m $MAXORDER -r $RANK -v $VERBOSE -o $FTFILE"
+REGRESS="$C3HOME/profiling/regress/bin/alsregress -x $FILENAME -y $EVALFILE -m $MAXORDER -r $RANK -v $VERBOSE -o $FTFILE"
 
 if [ $CV == 1 ]
 then
@@ -50,6 +50,7 @@ then
    $REGRESS $CVPARAM
 else
     echo $REGRESS
+    # valgrind --leak-check=full $REGRESS # Just generate regression
     $REGRESS # Just generate regression
 
     # Do profiling

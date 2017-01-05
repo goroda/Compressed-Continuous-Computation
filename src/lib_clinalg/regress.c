@@ -439,6 +439,7 @@ struct RegressOpts
     struct c3Opt * optimizer;
 
 
+    double regweight; // regularization weight
     int verbose;
     
     // relative function tolerance
@@ -471,6 +472,7 @@ struct RegressOpts * regress_opts_alloc()
     ropts->y = NULL;
     ropts->mem = NULL;
     ropts->optimizer = NULL;
+    ropts->regweight = 1e-5;
     ropts->verbose = 0;
     ropts->convtol = 1e-10;
     ropts->active_core = 0;
@@ -501,6 +503,9 @@ regress_opts_create(enum REGTYPE type, enum REGOBJ obj, size_t N,
     if (obj == FTLS){
         opts->obj = FTLS;
     }
+    else if (obj == FTLS_SPARSEL2){
+        opts->obj = FTLS_SPARSEL2;
+    }
     else{
         fprintf(stderr,"Error: REGOBJ %d unavailable\n",obj);
         exit(1);
@@ -525,6 +530,11 @@ void regress_opts_set_convtol(struct RegressOpts * opts, double convtol)
     opts->convtol = convtol;
 }
 
+void regress_opts_set_regweight(struct RegressOpts * opts, double weight)
+{
+    assert (opts != NULL);
+    opts->regweight = weight;
+}
 
 void regress_opts_set_verbose(struct RegressOpts * opts, int verbose)
 {
@@ -624,6 +634,17 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     if (regopts->obj == FTLS){
         out = ft_param_eval_objective_aio_ls(ftp,regopts,grad);
     }
+    else if (regopts->obj == FTLS_SPARSEL2){
+        out = ft_param_eval_objective_aio_ls(ftp,regopts,grad);
+
+        double * weights = calloc_double(ftp->dim);
+        for (size_t ii = 0; ii < ftp->dim; ii++){
+            weights[ii] = 0.5*regopts->regweight;
+        }
+        double regval = function_train_param_grad_sqnorm(ftp->ft,weights,grad);
+        out += 0.5 * regopts->regweight * regval;
+        free(weights); weights = NULL;
+    }
     else{
         assert (1 == 0);
     }
@@ -638,13 +659,14 @@ double ft_param_eval_objective_als_ls(struct FTparam * ftp, struct RegressOpts *
     double resid;
     if (grad != NULL){
         if (regopts->mem->structure == LINEAR_ST){
-            assert ( 1 == 0);
-            /* function_train_linparam_grad_eval( */
-            /*     ftp->ft, regopts->N, */
-            /*     regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl, */
-            /*     regopts->mem->running_grad, */
-            /*     ftp->nparams_per_core, regopts->mem->evals->vals, regopts->mem->grad->vals, */
-            /*     regopts->mem->lin_structure_vals,regopts->mem->lin_structure_inc); */
+            function_train_core_linparam_grad_eval(
+                ftp->ft, regopts->active_core,regopts->N,
+                regopts->x, regopts->mem->running_evals_lr, regopts->mem->running_evals_rl,
+                regopts->mem->running_grad[regopts->active_core],
+                ftp->nparams_per_core[regopts->active_core],
+                regopts->mem->evals->vals, regopts->mem->grad->vals,
+                regopts->mem->lin_structure_vals[regopts->active_core],
+                regopts->mem->lin_structure_inc[regopts->active_core]);
         }
         else{
             function_train_core_param_grad_eval(
@@ -776,9 +798,6 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts)
     return ft_final;
 }
 
-
-
-
 double regress_opts_minimize_als(size_t nparam, const double * params,
                                  double * grad, void * args)
 {
@@ -805,8 +824,8 @@ struct FunctionTrain *
 c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
 {
 
-    enum FTPARAM_ST structure = NONE_ST;
-    /* enum FTPARAM_ST structure = LINEAR_ST; */
+    /* enum FTPARAM_ST structure = NONE_ST; */
+    enum FTPARAM_ST structure = LINEAR_ST;
     size_t max_param_within_uni = 1000;
     size_t * ranks = function_train_get_ranks(ftp->ft);
     regress_opts_initialize_memory(ropts, ftp->nparams_per_core,
@@ -1189,9 +1208,10 @@ void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
     }
     ftr->obj = obj;
     
-    if (obj != FTLS){
+    if ((obj != FTLS) && (obj != FTLS_SPARSEL2)){
         fprintf(stderr,"Error: Regularization type %d not available. Options include\n",obj);
-        fprintf(stderr,"       FTLS = 0\n");
+        fprintf(stderr,"       FTLS          = 0\n");
+        fprintf(stderr,"       FTLS_SPARSEL2 = 1\n");
         exit(1);
     }
 }
@@ -1264,6 +1284,21 @@ void ft_regress_set_data(struct FTRegress * ftr, size_t N,
 }
 
 /***********************************************************//**
+   Get the number of parameters
+***************************************************************/
+double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
+{
+    *nparam = ftr->ftp->nparams;
+    double * param = calloc_double(*nparam);
+    size_t running = 0;
+    for (size_t ii = 0; ii < ftr->ftp->dim; ii++){
+        size_t incr = function_train_core_get_params(ftr->ftp->ft,ii,param+running);
+        running += incr;
+    }
+    return param;
+}
+
+/***********************************************************//**
    Update parameters
 ***************************************************************/
 void ft_regress_update_params(struct FTRegress * ftr, const double * param)
@@ -1296,9 +1331,6 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     
     if (ftr->ftp != NULL){
         ft_param_free(ftr->ftp); ftr->ftp = NULL;
-    }
-    if (ftr->regopts != NULL){
-        regress_opts_free(ftr->regopts); ftr->regopts = NULL;
     }
     
     for (size_t ii = 0; ii < ftr->nhlparam; ii++){
@@ -1341,8 +1373,6 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     for (size_t ii = 0; ii < ftr->dim; ii++){
 
         size_t nparams_core = multi_approx_opts_get_dim_nparams(ftr->approx_opts,ii);
-
-
         if (nparams_core > maxparams_core){
             maxparams_core = nparams_core;
         }
@@ -1384,6 +1414,34 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     ftr->processed_param = 1;
 }
 
+
+void ft_regress_set_als_maxsweep(struct FTRegress * opts, size_t maxsweeps)
+{
+    assert (opts != NULL);
+    assert (opts->processed_param == 1);
+    regress_opts_set_als_maxsweep(opts->regopts,maxsweeps);
+}
+
+void ft_regress_set_convtol(struct FTRegress * opts, double convtol)
+{
+    assert (opts != NULL);
+    assert (opts->processed_param == 1);
+    regress_opts_set_convtol(opts->regopts,convtol);
+}
+
+void ft_regress_set_verbose(struct FTRegress * opts, int verbose)
+{
+    assert (opts != NULL);
+    assert (opts->processed_param == 1);
+    regress_opts_set_verbose(opts->regopts,verbose);
+}
+
+void ft_regress_set_regweight(struct FTRegress * opts, double weight)
+{
+    assert (opts != NULL);
+    assert (opts->processed_param == 1);
+    regress_opts_set_regweight(opts->regopts,weight);
+}
 
 /***********************************************************//**
     Run the regression
@@ -1574,7 +1632,7 @@ double cross_validate_run(struct CrossValidate * cv,
             newnorm += (ytest[jj]*ytest[jj]);
         }
         /* erri /= (double)(batch); */
-
+        function_train_free(ft); ft = NULL;
         /* printf("Relative error on batch = %G\n",newerr/newnorm); */
         /* if (newerr / newnorm > 100){ */
             /* printf("Ranks are "); */

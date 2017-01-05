@@ -198,6 +198,7 @@ void qmarray_param_grad_eval_sparse_mult(struct Qmarray *, size_t,
                                          double *, size_t,
                                          double *, size_t,
                                          double *, double *, size_t);
+double qmarray_param_grad_sqnorm(struct Qmarray *, double, double *);
 struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 
 

@@ -3129,7 +3129,7 @@ void qmarray_update_params(struct Qmarray * qma, size_t nparams, const double * 
 
 /***********************************************************//**
     Evaluate the gradient of a qmarray with respect to the parameters
-    of the function
+    of the function at a set of evaluation locations
 
     \param[in]     qma       - quasimatrix array
     \param[in]     N         - number of locations at which to evaluate
@@ -3174,6 +3174,43 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
         }
     }
     /* printf("done there\n"); */
+}
+
+/***********************************************************//**
+    Sum the L2 norms of each function
+
+    \param[in]     qma   - quasimatrix array
+    \param[in]     scale - increment between inputs
+    \param[in,out] grad  - compute gradient if not null (store gradient here)
+
+    \returns sum of L2 norms of each function
+    \note 
+    If gradient is not null then it adds scaled values of the new gradients to the
+    existing gradient. Gradient is stored function first, row second, column third
+***************************************************************/
+double qmarray_param_grad_sqnorm(struct Qmarray * qma, double scale, double * grad)
+{
+    /* printf("\t cmoooonn\n"); */
+    size_t size = qma->nrows*qma->ncols;
+    double out = 0.0;
+    if (grad == NULL){
+        for (size_t ii = 0; ii < size; ii++){
+            out += generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+        }
+    }
+    else{
+        size_t runparam=0;
+        for (size_t ii = 0; ii < size; ii++){
+            out += generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+            size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+            int res = generic_function_squared_norm_param_grad(qma->funcs[ii],
+                                                               scale, grad+runparam);
+            assert (res == 0);
+            runparam += nparam;
+        }
+    }
+
+    return out;
 }
 
 /***********************************************************//**

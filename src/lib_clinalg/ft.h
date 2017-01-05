@@ -109,28 +109,13 @@ size_t function_train_func_get_nparams(const struct FunctionTrain *,
                                      size_t, size_t, size_t);
 size_t function_train_core_get_nparams(const struct FunctionTrain *,
                                        size_t,size_t *);
+size_t function_train_get_nparams(const struct FunctionTrain *);
 size_t function_train_core_get_params(const struct FunctionTrain *,
                                       size_t,double *);
+size_t function_train_get_params(const struct FunctionTrain *,
+                                 double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
-
-void function_train_combine_cores(struct FunctionTrain *, size_t,
-                                  size_t, 
-                                  const double *, size_t,
-                                  const double *, size_t,
-                                  const double *, size_t,
-                                  const double *, size_t,
-                                  double *,
-                                  double *, double *, size_t);
-
-void function_train_core_param_grad_eval_single(struct FunctionTrain *, size_t,
-                                                const double *, size_t,
-                                                const double *, size_t,
-                                                double *, size_t,
-                                                const double *, size_t,
-                                                double *, size_t,
-                                                double *,
-                                                double *, double *, size_t);
 
 struct RunningCoreTotal;
 struct RunningCoreTotal * running_core_total_alloc(size_t);
@@ -171,6 +156,20 @@ void function_train_core_param_grad_eval(struct FunctionTrain *,
                                          struct RunningCoreTotal *, size_t,
                                          double *, double *, double *,
                                          size_t, double *);
+
+void function_train_core_linparam_grad_eval(
+    struct FunctionTrain *,
+    size_t, size_t,
+    const double *,
+    struct RunningCoreTotal *,
+    struct RunningCoreTotal *,
+    struct RunningCoreTotal *,
+    size_t,
+    double *, double *,
+    double *,
+    size_t);
+
+double function_train_param_grad_sqnorm(struct FunctionTrain *, double *, double *);
 
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 

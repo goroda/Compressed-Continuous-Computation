@@ -225,12 +225,15 @@ void Test_LS_ALS2(CuTest * tc)
     
     ft_param_free(ftp);             ftp         = NULL;
     regress_opts_free(ropts);       ropts       = NULL;
+    regress_opts_free(aio_opts);    aio_opts    = NULL;
+    regress_opts_free(als_opts);    als_opts    = NULL;
     free(param_space);              param_space = NULL;
     bounding_box_free(bds);         bds         = NULL;
     function_train_free(a);         a           = NULL;
     function_train_free(ft_final);  ft_final    = NULL;
     function_train_free(ft_final2); ft_final2   = NULL;
     function_train_free(ft_final3); ft_final3   = NULL;
+
     
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
@@ -363,9 +366,6 @@ void Test_function_train_core_param_grad_eval1(CuTest * tc)
 }
 
 
-//////////////////////////////////////////////////////////////
-/// All in one testing
-/////////////////////////////////////////////////////////////
 void Test_function_train_param_grad_eval(CuTest * tc)
 {
     printf("Testing Function: function_train_param_grad_eval \n");
@@ -374,7 +374,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     
     size_t ranks[5] = {1,2,3,8,1};
     /* size_t ranks[5] = {1,2,2,2,1}; */
-    double lb = -1.0;
+    double lb = -0.5;
     double ub = 1.0;
     size_t maxorder = 10; // 10
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
@@ -537,7 +537,8 @@ void Test_LS_AIO(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 300;
+    /* size_t ndata = 300; */
+    size_t ndata = 200;
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -945,6 +946,7 @@ void Test_LS_cross_validation(CuTest * tc)
     free(x); x = NULL;
     free(y); y = NULL;
 
+    function_train_free(ft); ft = NULL;
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
     ft_regress_free(ftr); ftr = NULL;
@@ -1070,15 +1072,15 @@ void Test_LS_AIO_new(CuTest * tc)
     printf("Difference = %G\n",diff);
     /* CuAssertDblEquals(tc,0.0,diff,1e-7); */
     
-    ft_regress_free(reg); reg = NULL;
+    ft_regress_free(reg);     reg = NULL;
     function_train_free(ft2); ft2 = NULL;
-    function_train_free(ft); ft = NULL;
-    free(param_space); param_space = NULL;
-    free(true_params); true_params = NULL;
-    ft_param_free(ftp);      ftp  = NULL;
+    function_train_free(ft);  ft = NULL;
+    free(param_space);        param_space = NULL;
+    free(true_params);        true_params = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
     regress_opts_free(ropts); ropts = NULL;
-    bounding_box_free(bds);  bds  = NULL;
-    function_train_free(a);  a    = NULL;
+    bounding_box_free(bds);   bds  = NULL;
+    function_train_free(a);   a    = NULL;
 
     free(x); x = NULL;
     free(y); y = NULL;
@@ -1087,19 +1089,156 @@ void Test_LS_AIO_new(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
+
+void Test_function_train_param_grad_sqnorm(CuTest * tc)
+{
+    printf("Testing Function: function_train_param_grad_sqnorm \n");
+    srand(seed);
+    size_t dim = 4;    
+    double weights[4] = {1.0,1.0,1.0,1.0};
+    
+    size_t ranks[5] = {1,2,3,8,1};
+
+    /* size_t ranks[5] = {1,2,2,2,1}; */
+    double lb = -0.6;
+    double ub = 1.0;
+    size_t maxorder = 10; // 10
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    size_t nparam = function_train_get_nparams(a);
+    double * guess = calloc_double(nparam);
+    function_train_get_params(a,guess);
+    double * grad = calloc_double(nparam);
+    
+    double val = function_train_param_grad_sqnorm(a,weights,grad);
+
+    /* printf("val = %G\n",val); */
+    size_t running = 0;
+    size_t notused;
+    for (size_t zz = 0; zz < dim; zz++){
+        double h = 1e-8;
+        /* printf("nparam[%zu] = %zu\n",zz,nparam[zz]); */
+        size_t nparam = function_train_core_get_nparams(a,zz,&notused);
+        for (size_t jj = 0; jj < nparam; jj++){
+            /* printf("jj = %zu\n",jj); */
+            guess[running+jj] += h;
+            function_train_core_update_params(a,zz,nparam,guess + running);
+            /* printf("here?!\n"); */
+            double val2 = function_train_param_grad_sqnorm(a,weights,NULL);
+            /* printf("val2 = %3.15G\n",val2); */
+            double fd = (val2-val)/h;
+            /* printf("\t (%3.5G,%3.5G)\n",fd,grad[running+jj]); */
+            CuAssertDblEquals(tc,fd,grad[running+jj],1e-5);
+            guess[running+jj] -= h;
+            function_train_core_update_params(a,zz,nparam,guess + running);
+        }
+        running += nparam;
+        
+    }
+
+    free(guess); guess = NULL;
+    free(grad); grad = NULL;
+    
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(a); a   = NULL;
+}
+
+void Test_SPARSELS_AIO(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: regress_sparse_ls (5 dimensional, max rank = 3, max order = 3) \n");
+    printf("\t Num degrees of freedom = O(5 * 3 * 3 * 4) = O(180)\n");
+
+    size_t dim = 5;
+
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    size_t ranks[6] = {1,2,3,2,3,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 200;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+        /* y[ii] += randn(); */
+    }
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    double * param_space = calloc_double(dim * 25 * (maxorder+1));
+    size_t onparam=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                for (size_t ll = 0; ll < maxorder+1; ll++){
+                    param_space[onparam] += randu()*2.0-1.0;
+                    onparam++;
+                }
+            }
+        }
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
+    struct RegressOpts* ropts = regress_opts_create(AIO,FTLS_SPARSEL2,ndata,dim,x,y);
+    regress_opts_set_regweight(ropts,3e-12);
+    struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts);
+    double diff = function_train_relnorm2diff(ft_final,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-3);
+    
+    ft_param_free(ftp);      ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+    free(param_space); param_space = NULL;
+    bounding_box_free(bds); bds       = NULL;
+    function_train_free(a); a         = NULL;
+    function_train_free(ft_final); ft_final = NULL;
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    free(x); x = NULL;
+    free(y); y = NULL;
+}
+
+
+
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_LS_ALS);
-    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
 
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
-    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
+    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
     SUITE_ADD_TEST(suite, Test_LS_AIO);
-    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
+
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
+
+    // takes too many points
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
-    SUITE_ADD_TEST(suite, Test_LS_c3approx_interface);
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
     return suite;
 }
