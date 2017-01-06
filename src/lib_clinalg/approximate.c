@@ -378,7 +378,7 @@ void c3approx_set_regress_start_ranks(struct C3Approx * c3a, size_t rank)
     assert (c3a != NULL);
     assert (c3a->type == REGRESS);
     assert (c3a->fapp != NULL);
-    ft_regress_set_discrete_parameter(c3a->reg,"rank",rank);
+    ft_regress_set_parameter(c3a->reg,"rank",&rank);
 }
 
 void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num)
@@ -386,7 +386,7 @@ void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num)
     assert (c3a != NULL);
     assert (c3a->type == REGRESS);
     assert (c3a->fapp != NULL);
-    ft_regress_set_discrete_parameter(c3a->reg,"num_param",num);
+    ft_regress_set_parameter(c3a->reg,"num_param",&num);
 }
 
 /***********************************************************//**

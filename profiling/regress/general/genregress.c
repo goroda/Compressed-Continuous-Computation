@@ -196,12 +196,13 @@ int main(int argc, char * argv[])
 
 
     // use ALS as a warmstart
+    size_t nparam = maxorder+1;
     struct FTRegress * ftr_als = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(ftr_als,ALS);
     ft_regress_set_obj(ftr_als,FTLS);
     ft_regress_set_data(ftr_als,ndata,x,1,y,1);
-    ft_regress_set_discrete_parameter(ftr_als,"rank",rank);
-    ft_regress_set_discrete_parameter(ftr_als,"num_param",maxorder+1);
+    ft_regress_set_parameter(ftr_als,"rank",&rank);
+    ft_regress_set_parameter(ftr_als,"num_param",&nparam);
     ft_regress_process_parameters(ftr_als);
     ft_regress_set_als_maxsweep(ftr_als,0);
     ft_regress_set_verbose(ftr_als,1);
@@ -215,8 +216,8 @@ int main(int argc, char * argv[])
     ft_regress_set_type(ftr,AIO);
     ft_regress_set_obj(ftr,FTLS);
     ft_regress_set_data(ftr,ndata,x,1,y,1);
-    ft_regress_set_discrete_parameter(ftr,"rank",rank);
-    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
+    ft_regress_set_parameter(ftr,"rank",&rank);
+    ft_regress_set_parameter(ftr,"num_param",&nparam);
     ft_regress_process_parameters(ftr);
     ft_regress_set_verbose(ftr,1);
     ft_regress_update_params(ftr,params);

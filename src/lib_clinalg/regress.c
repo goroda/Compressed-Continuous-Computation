@@ -977,12 +977,15 @@ struct RegParameter
     enum REGPARAMTYPE type;
 
     size_t nops;
-    size_t * discrete_ops;
-    size_t discval;
-    
+    size_t * integer_ops;
+    double * double_ops;
+
     double lbc;
     double ubc;
+
+    int integer_valued;
     double cval;
+    size_t discval;
 };
 
 /***********************************************************//**
@@ -999,11 +1002,13 @@ struct RegParameter * reg_param_alloc(char * name, enum REGPARAMTYPE type)
     rp->type = type;
 
     rp->nops = 0;
-    rp->discrete_ops = NULL;
-
+    rp->integer_ops = NULL;
+    rp->double_ops = NULL;
+    
     rp->lbc = -DBL_MAX;
     rp->ubc = DBL_MAX;
-    
+
+    rp->integer_valued = -1;
     return rp;
 }
 
@@ -1030,7 +1035,8 @@ struct RegParameter ** reg_param_array_alloc(size_t N)
 void reg_param_free(struct RegParameter * rp)
 {
     if (rp != NULL){
-        free(rp->discrete_ops); rp->discrete_ops = NULL;
+        free(rp->integer_ops); rp->integer_ops = NULL;
+        free(rp->double_ops); rp->double_ops = NULL;
         free(rp); rp = NULL;
     }
 }
@@ -1039,37 +1045,86 @@ void reg_param_free(struct RegParameter * rp)
    Add Discrete parameter options                                                        
 ***************************************************************/
 void reg_param_add_discrete_options(struct RegParameter * rp,
-                                    size_t nops, size_t * opts)
+                                    size_t nops, int sizet, void * opts)
 {
     assert (rp != NULL);
-    assert (rp->type == DISCRETE);
     rp->nops = nops;
+    free(rp->integer_ops); rp->integer_ops = NULL;
+    free(rp->double_ops); rp->double_ops = NULL;
 
-    free(rp->discrete_ops);
-    rp->discrete_ops = calloc_size_t(nops);
-    memmove(rp->discrete_ops,opts, nops * sizeof(size_t));
+    /* printf("elem_size=%zu, sizeof(double)=%zu, sizeof(size_t)=%zu\n",elem_size,sizeof(double),sizeof(size_t)); */
+    if (sizet == 1){
+        /* printf("I am adding integer ops!\n"); */
+        rp->integer_valued = 1;
+        rp->integer_ops = calloc_size_t(nops);
+        memmove(rp->integer_ops,(size_t*)opts, nops * sizeof(size_t));        
+    }
+    else if (sizet == 0){
+        /* printf("I am adding double ops!\n"); */
+        rp->integer_valued = 0;
+        rp->double_ops = calloc_double(nops);
+        memmove(rp->double_ops,(double*)opts, nops * sizeof(double));        
+    }
+    else{
+        assert (1 == 0);
+    }
 }
 
 /***********************************************************//**
-   Add Discrete parameter value
+   Get a specified discrete option;
 ***************************************************************/
-void reg_param_add_discrete_val(struct RegParameter * rp, size_t val)
+void * reg_param_get_discrete_option(const struct RegParameter * rp,size_t ii, size_t * size)
 {
-    assert (rp != NULL);
-    assert (rp->type == DISCRETE);
-    rp->discval = val;
+    assert (ii < rp->nops);
+    if (rp->integer_valued == 1)
+    {
+        assert(rp->integer_ops != NULL);
+        *size = 1;
+        return (rp->integer_ops + ii);
+    }
+    else if (rp->integer_valued == 0)
+    {
+        assert(rp->double_ops != NULL);
+        *size = 0;
+        return (rp->double_ops + ii);
+    }
+    else{
+        assert (1 == 0);
+    }
 }
 
-
 /***********************************************************//**
-   Get discrete value
+   Add value
 ***************************************************************/
-size_t reg_param_get_discrete_val(const struct RegParameter * rp)
+void reg_param_add_val(struct RegParameter * rp, void * val, size_t st)
 {
     assert (rp != NULL);
-    assert (rp->type == DISCRETE);
+    if (st == 1){
+        rp->integer_valued=1;
+        rp->discval = *(size_t *)val;
+    }
+    else if (st == 0){
+        rp->integer_valued=0;
+        rp->cval = *(double *)val;
+    }
+    else{
+        fprintf(stderr,"Cannot add regularization parameter, unknown type %zu\n",st);
+        exit(1);
+    }
+}
+
+size_t reg_param_get_vali(const struct RegParameter * rp)
+{
+    assert (rp->integer_valued == 1);
     return rp->discval;
 }
+
+double reg_param_get_valf(const struct RegParameter * rp)
+{
+    assert (rp->integer_valued == 0);
+    return rp->cval;
+}
+
 
 ////////////////////////////////////
 ////////////////////////////////////
@@ -1081,8 +1136,9 @@ size_t reg_param_get_discrete_val(const struct RegParameter * rp)
 ////////////////////////////////////
 ////////////////////////////////////
 
-#define NRPARAM 3
-static char reg_param_opts[NRPARAM][30] = {"rank","num_param","opt maxiter"};
+#define NRPARAM 4
+static char reg_param_opts[NRPARAM][30] = {"rank","num_param","opt maxiter","reg_weight"};
+static int reg_param_int[NRPARAM]={1,1,1,0};
 
 struct FTRegress
 {
@@ -1101,7 +1157,8 @@ struct FTRegress
 
     size_t optmaxiter;
     size_t * start_ranks;
-
+    double reg_weight;
+    
     size_t N;
     const double * x;
     const double * y;
@@ -1137,7 +1194,8 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
 
     ftr->optmaxiter = 1000;
     ftr->start_ranks = NULL;
-
+    ftr->reg_weight = 0.0;
+    
     ftr->N = 0;
     ftr->x = NULL;
     ftr->y = NULL;
@@ -1219,20 +1277,20 @@ void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
 /***********************************************************//**
     Set regression type
 ***************************************************************/
-void ft_regress_set_discrete_parameter(struct FTRegress * ftr, char * name, size_t val)
+void ft_regress_set_parameter(struct FTRegress * ftr, char * name, void * val)
 {
 
     assert (ftr != NULL);
 
     // check if allowed parameter
-    int match = 0;
+    int match = -1;
     for (size_t ii = 0; ii < NRPARAM; ii++){
         if (strcmp(reg_param_opts[ii],name) == 0){
-            match = 1;
+            match = reg_param_int[ii];
             break;
         }
     }
-    if (match == 0){
+    if (match == -1){
         fprintf(stderr,"Unknown regression parameter type %s\n",name);
         exit(1);
     }
@@ -1241,7 +1299,7 @@ void ft_regress_set_discrete_parameter(struct FTRegress * ftr, char * name, size
     int exist = 0;
     for (size_t ii = 0; ii < ftr->nhlparam; ii++){
         if (strcmp(ftr->hlparam[ii]->name,name) == 0){
-            reg_param_add_discrete_val(ftr->hlparam[ii],val);
+            reg_param_add_val(ftr->hlparam[ii],val,match);
             exist = 1;
             break;
         }
@@ -1250,7 +1308,7 @@ void ft_regress_set_discrete_parameter(struct FTRegress * ftr, char * name, size
     /* printf("num param = %zu\n",ftr->nhlparam); */
     if (exist == 0){
         ftr->hlparam[ftr->nhlparam] = reg_param_alloc(name,DISCRETE);
-        reg_param_add_discrete_val(ftr->hlparam[ftr->nhlparam],val);
+        reg_param_add_val(ftr->hlparam[ftr->nhlparam],val,match);
         ftr->nhlparam++;
         assert (ftr->nhlparam <= NRPARAM);
     }
@@ -1290,11 +1348,7 @@ double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
 {
     *nparam = ftr->ftp->nparams;
     double * param = calloc_double(*nparam);
-    size_t running = 0;
-    for (size_t ii = 0; ii < ftr->ftp->dim; ii++){
-        size_t incr = function_train_core_get_params(ftr->ftp->ft,ii,param+running);
-        running += incr;
-    }
+    function_train_get_params(ftr->ftp->ft,param);
     return param;
 }
 
@@ -1332,6 +1386,11 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     if (ftr->ftp != NULL){
         ft_param_free(ftr->ftp); ftr->ftp = NULL;
     }
+    if (ftr->regopts != NULL){
+        regress_opts_free(ftr->regopts); ftr->regopts = NULL;
+    }
+
+    /* printf("start processing params\n"); */
     
     for (size_t ii = 0; ii < ftr->nhlparam; ii++){
         if (strcmp(ftr->hlparam[ii]->name,"rank") == 0){
@@ -1339,14 +1398,14 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
             free(ftr->start_ranks); ftr->start_ranks = NULL;
             ftr->start_ranks = calloc_size_t(ftr->dim+1);
             for (size_t kk = 1; kk < ftr->dim; kk++){
-                ftr->start_ranks[kk] = reg_param_get_discrete_val(ftr->hlparam[ii]);
+                ftr->start_ranks[kk] = reg_param_get_vali(ftr->hlparam[ii]);
             }
             ftr->start_ranks[0] = 1;
             ftr->start_ranks[ftr->dim] = 1;
         }
         else if (strcmp(ftr->hlparam[ii]->name,"num_param") == 0){
             /* printf("processed num_param\n"); */
-            size_t val = reg_param_get_discrete_val(ftr->hlparam[ii]);
+            size_t val = reg_param_get_vali(ftr->hlparam[ii]);
             for (size_t kk = 0; kk < ftr->dim; kk++){
                 multi_approx_opts_set_dim_nparams(ftr->approx_opts,kk,val);
             }
@@ -1355,12 +1414,20 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
         }
         else if (strcmp(ftr->hlparam[ii]->name,"opt maxiter") == 0){
             /* printf("processed maxiter\n"); */
-            ftr->optmaxiter = reg_param_get_discrete_val(ftr->hlparam[ii]);
+            ftr->optmaxiter = reg_param_get_vali(ftr->hlparam[ii]);
+        }
+        else if (strcmp(ftr->hlparam[ii]->name,"reg_weight") == 0){
+            ftr->reg_weight = reg_param_get_valf(ftr->hlparam[ii]);
         }
     }
 
 
 
+    if (ftr->start_ranks == NULL){
+        fprintf(stderr,"Need to specify starting ranks in ftregress to process parameters\n");
+        exit(1);
+        
+    }
     double avgy = 0.0;
     for (size_t ii = 0; ii < ftr->N; ii++){
         avgy += ftr->y[ii];
@@ -1406,10 +1473,7 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     /* function_train_free(a); a = NULL; */
     
     ftr->regopts = regress_opts_create(ftr->type,ftr->obj,ftr->N,ftr->dim,ftr->x,ftr->y);
-    regress_opts_initialize_memory(
-        ftr->regopts,ft_param_get_num_params_per_core(ftr->ftp),
-        ftr->start_ranks,maxparams_core,LINEAR_ST);
-
+    regress_opts_set_regweight(ftr->regopts,ftr->reg_weight);
     
     ftr->processed_param = 1;
 }
@@ -1543,12 +1607,24 @@ struct CrossValidate * cross_validate_init(size_t N, size_t dim,
 ***************************************************************/
 void cross_validate_add_discrete_param(struct CrossValidate * cv,
                                        char * name, size_t nopts,
-                                       size_t * opts)
+                                       void * opts)
 {
-    assert (cv!= NULL);
+    assert (cv != NULL);
 
+    int match = -1;
+    for (size_t ii = 0; ii < NRPARAM; ii++){
+        if (strcmp(name,reg_param_opts[ii]) == 0){
+            match = (int) ii;
+            break;
+        }
+    }
+    if (match == -1){
+        fprintf(stderr,"Unknown regression parameter type %s\n",name);
+        exit(1);
+    }
+    
     cv->params[cv->nparam] = reg_param_alloc(name,DISCRETE);
-    reg_param_add_discrete_options(cv->params[cv->nparam],nopts,opts);
+    reg_param_add_discrete_options(cv->params[cv->nparam],nopts,reg_param_int[match],opts);
     cv->nparam++;
 }
 
@@ -1662,10 +1738,192 @@ double cross_validate_run(struct CrossValidate * cv,
     free(ytest); ytest = NULL;
 
     ft_regress_set_data(reg,cv->N,cv->x,1,cv->y,1);
+    ft_regress_process_parameters(reg);
 
     return err;
 }
 
+
+struct CVCase
+{
+    size_t nparam;
+    char ** name;
+    size_t * size;
+    void ** vals;
+
+    size_t onparam;
+};
+
+
+struct CVCase * cv_case_alloc(size_t nparam)
+{
+    struct CVCase * cvc = malloc(sizeof(struct CVCase));
+    if (cvc == NULL){
+        fprintf(stderr,"Cannot allocate CV case\n");
+        exit(1);
+    }
+
+    cvc->nparam = nparam;
+    cvc->name = malloc(nparam * sizeof(char *));
+    assert (cvc->name != NULL);
+    cvc->size = calloc_size_t(nparam);
+    assert (cvc->size != NULL);
+    cvc->vals = malloc(nparam * sizeof(void *));
+    assert (cvc->vals != NULL);
+
+    cvc->onparam = 0;
+
+    return cvc;
+}
+
+void cv_case_add_param(struct CVCase * cv, char * name, size_t size, void * val)
+{
+    if (cv->onparam == cv->nparam){
+        fprintf(stderr,"Adding too many parameters to cv_case\n");
+        exit(1);
+    }
+    cv->name[cv->onparam] = name;
+    cv->size[cv->onparam] = size;
+    cv->vals[cv->onparam] = val;
+    cv->onparam++;
+}
+
+void cv_case_string(struct CVCase * cv, char * str, int sbytes)
+{
+    int start = 0;
+    int used = 0;
+    for (size_t ii = 0; ii < cv->nparam; ii++){
+        /* printf("ii=%zu, name=%s\n",ii,cv->name[ii]); */
+        if (strcmp(cv->name[ii],"reg_weight")==0){
+            used = snprintf(str+start,sbytes-start,"%s=%3.5G ",cv->name[ii],*(double*)cv->vals[ii]);
+        }
+        else{
+            used = snprintf(str+start,sbytes-start,"%s=%zu ",cv->name[ii],*(size_t*)cv->vals[ii]);
+        }
+        start += used;
+    }
+}
+
+void cv_case_free(struct CVCase * cv)
+{
+    if (cv != NULL){
+        free(cv->name); cv->name  = NULL;
+        free(cv->size); cv->size = NULL;
+        free(cv->vals); cv->vals  = NULL;
+        free(cv); cv = NULL;
+    }
+}
+
+struct CVCList
+{
+    struct CVCase * cv;
+    struct CVCList * next;
+};
+
+struct CVCList * cvc_list_alloc()
+{
+    struct CVCList * cvl = malloc(sizeof(struct CVCList));
+    if (cvl == NULL){
+        fprintf(stderr,"Cannot allocate CVCase List\n");
+        exit(1);
+    }
+    cvl->next = NULL;
+
+    return cvl;
+}
+
+void cvc_list_push(struct CVCList ** list, size_t nparam)
+{
+    struct CVCList * newList = cvc_list_alloc();
+    newList->cv = cv_case_alloc(nparam);
+    newList->next = *list;
+    *list = newList;
+}
+
+void cvc_list_update_case(struct CVCList * list, char * name, size_t size, void * val)
+{
+    cv_case_add_param(list->cv,name,size,val);
+}
+
+void cvc_list_print(struct CVCList * list, FILE * fp)
+{
+    struct CVCList * temp = list;
+    while (temp != NULL){
+        char * ss = malloc(256 * sizeof(char));
+        cv_case_string(temp->cv,ss,256);
+        fprintf(fp,"%s\n",ss);
+        /* fprintf(fp,"%zu\n",temp->cv->nparam); */
+        temp = temp->next;
+        free(ss); ss = NULL;
+    }
+}
+
+void cvc_list_free(struct CVCList * cv)
+{
+    if (cv != NULL){
+        cv_case_free(cv->cv);
+        cvc_list_free(cv->next);
+        free(cv); cv = NULL;
+    }
+}
+
+
+/***********************************************************//**
+   Setup cross validation cases in a list
+   ONLY WORKS FOR DISCRETE OPTIONS
+***************************************************************/
+struct CVCList * cross_validate_setup_cases(struct CrossValidate * cv)
+{
+    struct CVCList * cvlist = NULL;
+    if (cv->nparam == 1){
+        size_t s;
+        void * elem;
+        for (size_t ii = 0; ii < cv->params[0]->nops; ii++){
+            elem = reg_param_get_discrete_option(cv->params[0],ii,&s);
+            cvc_list_push(&cvlist,1);
+            cvc_list_update_case(cvlist,cv->params[0]->name,s,elem);
+        }
+    }
+    else if (cv->nparam == 2){
+        size_t s1,s2;
+        void * elem1;
+        void * elem2;
+        for (size_t ii = 0; ii < cv->params[0]->nops; ii++){
+            elem1 = reg_param_get_discrete_option(cv->params[0],ii,&s1);
+            for (size_t jj = 0; jj < cv->params[1]->nops; jj++){
+                elem2 = reg_param_get_discrete_option(cv->params[1],jj,&s2);
+                cvc_list_push(&cvlist,2);
+                cvc_list_update_case(cvlist,cv->params[0]->name,s1,elem1);
+                cvc_list_update_case(cvlist,cv->params[1]->name,s2,elem2);
+            }
+        }
+    }
+    else if (cv->nparam == 3){
+        size_t s1,s2,s3;
+        void * elem1;
+        void * elem2;
+        void * elem3;
+        for (size_t ii = 0; ii < cv->params[0]->nops; ii++){
+            elem1 = reg_param_get_discrete_option(cv->params[0],ii,&s1);
+            for (size_t jj = 0; jj < cv->params[1]->nops; jj++){
+                elem2 = reg_param_get_discrete_option(cv->params[1],jj,&s2);
+                for (size_t kk = 0; kk < cv->params[2]->nops; kk++){
+                    elem3 = reg_param_get_discrete_option(cv->params[2],kk,&s3);
+                    cvc_list_push(&cvlist,3);
+                    cvc_list_update_case(cvlist,cv->params[0]->name,s1,elem1);
+                    cvc_list_update_case(cvlist,cv->params[1]->name,s2,elem2);
+                    cvc_list_update_case(cvlist,cv->params[2]->name,s3,elem3);
+                }
+            }
+        }
+    }
+    else {
+        fprintf(stderr,"Cannot cross validate over arbitrary number of \n");
+        fprintf(stderr,"parameters yet.\n");
+    }
+
+    return cvlist;
+}
 
 /***********************************************************//**
    Cross validation optimize         
@@ -1674,146 +1932,61 @@ double cross_validate_run(struct CrossValidate * cv,
 void cross_validate_opt(struct CrossValidate * cv,
                         struct FTRegress * ftr, int verbose)
 {
-    if (cv->nparam == 1){
-        size_t nopts = cv->params[0]->nops;
-        char * name = cv->params[0]->name;
-        double minerr = 0;
-        size_t minval = 0;
-        for (size_t ii = 0; ii < nopts; ii++){
-            size_t val = cv->params[0]->discrete_ops[ii];
-            ft_regress_set_discrete_parameter(ftr,name,val);
-            ft_regress_process_parameters(ftr);
-            double err = cross_validate_run(cv,ftr);
-            if (verbose > 1){
-                printf("\"%s\", val=%zu, cv_err=%G\n",name,val,err);
-            }
 
-            if (ii == 0){
-                minerr = err;
-                minval = val;
-            }
-            else{
-                if (err < minerr){
-                    minerr = err;
-                    minval = val;
-                }
-            }
-        }
+    struct CVCList * cvlist = cross_validate_setup_cases(cv);
 
-        if (verbose > 0){
-            printf("Optimal CV params: ");
-            printf("\t \"%s\", val=%zu, cv_err=%G\n",name,minval,minerr);
+
+    /* cvc_list_print(cvlist,stdout); */
+    /* exit(1); */
+    
+    // Run over all the CV cases to get the best one
+    struct CVCList * temp = cvlist;
+    size_t iter = 0;
+    size_t bestiter = 0;
+    double besterr = DBL_MAX;
+    while (temp != NULL){
+
+        for (size_t ii = 0; ii < temp->cv->nparam; ii++){
+            ft_regress_set_parameter(ftr,
+                                     temp->cv->name[ii],
+                                     temp->cv->vals[ii]);
         }
-        ft_regress_set_discrete_parameter(ftr,name,minval);
         ft_regress_process_parameters(ftr);
-    }
-    else if (cv->nparam == 2){
-        size_t nopts = cv->params[0]->nops;
-        char * name = cv->params[0]->name;
-        size_t nopts2 = cv->params[1]->nops;
-        char * name2 = cv->params[1]->name;
-
-        double minerr = 0.0;;
-        size_t minval[2] = {0,0};
-        for (size_t ii = 0; ii < nopts; ii++){
-            size_t val = cv->params[0]->discrete_ops[ii];
-            ft_regress_set_discrete_parameter(ftr,name,val);
-
-            for (size_t jj = 0; jj < nopts2; jj++){
-
-                size_t val2 = cv->params[1]->discrete_ops[jj];
-                ft_regress_set_discrete_parameter(ftr,name2,val2);
-                ft_regress_process_parameters(ftr);
-            
-                double err = cross_validate_run(cv,ftr);
-                if (verbose > 1){
-                    printf("\"%s\":%zu, \"%s\":%zu, ",name,val,name2,val2);
-                    printf("cv_err=%G\n",err);
-                }
-                if ((ii==0) && (jj==0)){
-                    minerr = err;
-                    minval[0] = val;
-                    minval[1] = val2;
-                }
-                else{
-                    if (err < minerr){
-                        minerr = err;
-                        minval[0] = val;
-                        minval[1] = val2;
-                    }
-                }
-            }
+        double err = cross_validate_run(cv,ftr);
+        if (verbose > 1){
+            char str[256];
+            cv_case_string(temp->cv,str,256);
+            printf("%s : cv_err=%G\n",str,err);
         }
-        if (verbose > 0){
-            printf("Optimal CV params: ");
-            printf("\"%s\":%zu, \"%s\":%zu, ",name,minval[0],name2,minval[1]);
-            printf("cv_err=%G\n",minerr);
+        if (err < besterr){
+            besterr = err;
+            bestiter = iter;
         }
-        ft_regress_set_discrete_parameter(ftr,name,minval[0]);
-        ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
-        ft_regress_process_parameters(ftr);
-    }
-    else if (cv->nparam == 3){
-        size_t nopts = cv->params[0]->nops;
-        char * name = cv->params[0]->name;
-        size_t nopts2 = cv->params[1]->nops;
-        char * name2 = cv->params[1]->name;
-        size_t nopts3 = cv->params[2]->nops;
-        char * name3 = cv->params[2]->name;
-
-        double minerr = 0.0;
-        size_t minval[3] = {0,0,0};
-        for (size_t ii = 0; ii < nopts; ii++){
-            size_t val = cv->params[0]->discrete_ops[ii];
-            ft_regress_set_discrete_parameter(ftr,name,val);
-
-            for (size_t jj = 0; jj < nopts2; jj++){
-                size_t val2 = cv->params[1]->discrete_ops[jj];
-                ft_regress_set_discrete_parameter(ftr,name2,val2);
-                
-                for (size_t kk = 0; kk < nopts3; kk++){
-                    size_t val3 = cv->params[2]->discrete_ops[kk];
-                    ft_regress_set_discrete_parameter(ftr,name3,val3);
-                    ft_regress_process_parameters(ftr);
-            
-                    double err = cross_validate_run(cv,ftr);
-                    if (verbose > 1){
-                        printf("\"%s\":%zu, \"%s\":%zu,",name,val,name2,val2);
-                        printf("\"%s\":%zu, cv_err=%G\n",name3,val3,err);
-                    }
-
-                    if ((ii==0) && (jj==0) && (kk == 0)){
-                        minerr = err;
-                        minval[0] = val;
-                        minval[1] = val2;
-                        minval[2] = val3;
-                    }
-                    else{
-                        if (err < minerr){
-                            minerr = err;
-                            minval[0] = val;
-                            minval[1] = val2;
-                            minval[2] = val3;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (verbose > 0){
-            printf("Optimal CV params: \n");
-            printf("\"%s\":%zu, \"%s\":%zu,",name,minval[0],name2,minval[1]);
-            printf("\"%s\":%zu, cv_err=%G\n",name3,minval[2],minerr);
-        }
-        ft_regress_set_discrete_parameter(ftr,name,minval[0]);
-        ft_regress_set_discrete_parameter(ftr,name2,minval[1]);
-        ft_regress_set_discrete_parameter(ftr,name3,minval[2]);
-        ft_regress_process_parameters(ftr);
-    }
-    else {
-        fprintf(stderr,"Cannot cross validate over arbitrary number of \n");
-        fprintf(stderr,"parameters yet.\n");
+        temp = temp->next;
+        iter++;
     }
 
+    // go back to best parameter set
+    temp = cvlist;
+    for (size_t ii = 0; ii < bestiter; ii++){
+        temp = temp->next;
+    }
+    if (verbose > 0){
+        char str[256];
+        cv_case_string(temp->cv,str,256);
+        printf("Best Parameters are\n\t%s : cv_err=%G\n",str,besterr);
+    }
+
+    // set best parameters
+    for (size_t ii = 0; ii < temp->cv->nparam; ii++){
+        ft_regress_set_parameter(ftr,
+                                 temp->cv->name[ii],
+                                 temp->cv->vals[ii]);
+
+
+    }
+    ft_regress_process_parameters(ftr);
+    
+    cvc_list_free(cvlist); cvlist = NULL;
 }
 

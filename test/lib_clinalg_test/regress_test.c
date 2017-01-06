@@ -874,10 +874,12 @@ void Test_LS_cross_validation(CuTest * tc)
     ft_regress_set_type(ftr,AIO);
     ft_regress_set_obj(ftr,FTLS);
     ft_regress_set_data(ftr,ndata,x,1,y,1);
-    
-    ft_regress_set_discrete_parameter(ftr,"rank",maxrank);
-    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
-    ft_regress_set_discrete_parameter(ftr,"opt maxiter",10000);
+
+    size_t nperfunc = maxorder+1;
+    size_t opt_maxiter = 1000;
+    ft_regress_set_parameter(ftr,"rank",&maxrank);
+    ft_regress_set_parameter(ftr,"num_param",&nperfunc);
+    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
 
     double err = cross_validate_run(cv,ftr);
@@ -886,9 +888,12 @@ void Test_LS_cross_validation(CuTest * tc)
 
     // Increase rank and order -> more sensitive so CV error should go up
 
-    ft_regress_set_discrete_parameter(ftr,"rank",maxrank+2);
-    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+2);
-    ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000);
+    size_t newrank = maxrank+2;
+    nperfunc = maxorder+2;
+    opt_maxiter = 1000;
+    ft_regress_set_parameter(ftr,"rank",&newrank);
+    ft_regress_set_parameter(ftr,"num_param",&nperfunc);
+    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
 
     double err2 = cross_validate_run(cv,ftr);
@@ -907,20 +912,22 @@ void Test_LS_cross_validation(CuTest * tc)
 
     cross_validate_add_discrete_param(cv,"num_param",norder_ops,order_ops);
     cross_validate_add_discrete_param(cv,"rank",nranks,rank_ops);
-    /* cross_validate_add_discrete_param(cv,"opt maxiter",nmiters,miter_ops); */
+    /* cross_validate_add_discrete_param(cv,"opt maxiter",nmiters,sizeof(size_t),miter_ops); */
     cross_validate_opt(cv,ftr,2);
     
     struct FunctionTrain * ft = ft_regress_run(ftr);
+    /* struct FunctionTrain * ft = NULL; */
 
     // check to make sure options are set to optimal ones
+    size_t nparams_per_func;
+    function_train_core_get_nparams(ft,0,&nparams_per_func);
+    CuAssertIntEquals(tc,3,nparams_per_func);
     size_t * ranks = function_train_get_ranks(ft);
     iprint_sz(dim+1,ranks);
     for (size_t jj = 1; jj < dim; jj++){
-        /* CuAssertIntEquals(tc,2,ranks[jj]); */
-
-        size_t nparams_per_func;
+        CuAssertIntEquals(tc,2,ranks[jj]);
         function_train_core_get_nparams(ft,jj,&nparams_per_func);
-        /* CuAssertIntEquals(tc,3,nparams_per_func); */
+        CuAssertIntEquals(tc,3,nparams_per_func); // this is just for regression testing (to match prev code)
         
     }
 
@@ -1057,10 +1064,11 @@ void Test_LS_AIO_new(CuTest * tc)
     /* CuAssertDblEquals(tc,0.0,diff,1e-7); */
 
 
+    size_t nperfunc = maxorder+1;
     struct FTRegress * reg = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(reg,AIO);
     ft_regress_set_obj(reg,FTLS);
-    ft_regress_set_discrete_parameter(reg,"num_param",maxorder+1);
+    ft_regress_set_parameter(reg,"num_param",&nperfunc);
     ft_regress_set_start_ranks(reg,ranks);
     ft_regress_set_data(reg,ndata,x,1,y,1);
     ft_regress_process_parameters(reg);
@@ -1219,6 +1227,186 @@ void Test_SPARSELS_AIO(CuTest * tc)
     free(y); y = NULL;
 }
 
+void Test_SPARSELS_AIOCV(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: regress_sparse_ls (5 dimensional, max rank = 3, max order = 3) \n");
+    printf("\t Num degrees of freedom = O(5 * 3 * 3 * 4) = O(180)\n");
+
+    size_t dim = 5;
+
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    size_t ranks[6] = {1,2,3,2,3,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 200;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+        /* y[ii] += randn(); */
+    }
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_set_type(ftr,AIO);
+    ft_regress_set_start_ranks(ftr,ranks);
+    ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+    ft_regress_process_parameters(ftr);
+    
+    /* // set options for parameters */
+    size_t kfold = 10;
+    size_t nweight = 12;
+    double weight_ops[12]={1e-14, 1e-13, 1e-12,
+                           1e-11, 1e-10, 1e-9,
+                           1e-8, 1e-7, 1e-6,
+                           1e-5, 1e-4, 1e-3};
+    struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold);
+    cross_validate_add_discrete_param(cv,"reg_weight",nweight,weight_ops);
+    cross_validate_opt(cv,ftr,2);
+
+    ft_regress_process_parameters(ftr);
+    struct FunctionTrain * ft = ft_regress_run(ftr);
+
+    double diff = function_train_relnorm2diff(ft,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-3);
+
+    
+    ft_regress_free(ftr); ftr = NULL;
+    cross_validate_free(cv); cv = NULL;
+
+    bounding_box_free(bds); bds = NULL;
+    function_train_free(a); a   = NULL;
+    function_train_free(ft); ft = NULL;
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    free(x); x = NULL;
+    free(y); y = NULL;
+}
+
+
+void Test_SPARSELS_cross_validation(CuTest * tc)
+{
+    printf("Testing Function: cross validation\n");
+    srand(seed);
+    
+    size_t dim = 5;
+    double lb = -1.0;
+    double ub = 1.0;
+
+    // create data
+    size_t ndata = 40;//dim * 8 * 8 * (maxorder+1);
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = funccv(x+ii*dim);
+    }
+
+    // Regression
+    size_t kfold = 5;
+    struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold);
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    ft_regress_set_data(ftr,ndata,x,1,y,1);
+    ft_regress_set_type(ftr,AIO);
+    ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+
+    // set options for parameters
+    size_t norder_ops = 6;
+    size_t order_ops[6] = {1,2,3,4,5,6};
+    size_t nranks = 4;
+    size_t rank_ops[4] ={1,2,3,4};
+    size_t nweight = 11;
+    double weight_ops[11]={1e-14,1e-13,1e-12,1e-11,1e-10,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4};
+
+    cross_validate_add_discrete_param(cv,"num_param",norder_ops,order_ops);
+    cross_validate_add_discrete_param(cv,"rank",nranks,rank_ops);
+    cross_validate_add_discrete_param(cv,"reg_weight",nweight,weight_ops);
+    cross_validate_opt(cv,ftr,2);
+    
+    struct FunctionTrain * ft = ft_regress_run(ftr);
+    /* struct FunctionTrain * ft = NULL; */
+
+    // check to make sure options are set to optimal ones
+    size_t nparams_per_func;
+    function_train_core_get_nparams(ft,0,&nparams_per_func);
+    CuAssertIntEquals(tc,3,nparams_per_func);
+    size_t * ranks = function_train_get_ranks(ft);
+    iprint_sz(dim+1,ranks);
+    /* for (size_t jj = 1; jj < dim; jj++){ */
+    /*     CuAssertIntEquals(tc,2,ranks[jj]); */
+    /*     function_train_core_get_nparams(ft,jj,&nparams_per_func); */
+    /*     CuAssertIntEquals(tc,3,nparams_per_func); */
+    /* } */
+
+    size_t ntest = 1000;
+    double norm = 0.0;
+    double err3 = 0.0;
+    double pt[5];
+    for (size_t ii = 0; ii < ntest; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+
+        double val = funccv(pt);
+        double val2 = function_train_eval(ft,pt);
+        double diff = val-val2;
+        err3 += diff*diff;
+        norm += val*val;
+    }
+
+    printf("error = %G\n",err3/norm);
+    cross_validate_free(cv); cv = NULL;
+    
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    function_train_free(ft); ft = NULL;
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_regress_free(ftr); ftr = NULL;
+
+    CuAssertIntEquals(tc,0,0);
+}
 
 
 CuSuite * CLinalgRegressGetSuite()
@@ -1227,7 +1415,7 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
 
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
     /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
@@ -1235,9 +1423,11 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
 
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
     SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
-
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    
     // takes too many points
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;

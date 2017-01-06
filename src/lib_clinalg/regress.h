@@ -52,7 +52,7 @@ void ft_regress_free(struct FTRegress *);
 void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
 void ft_regress_set_obj(struct FTRegress *, enum REGOBJ);
 void ft_regress_set_start_ranks(struct FTRegress *, const size_t * );
-void ft_regress_set_discrete_parameter(struct FTRegress *, char *, size_t);
+void ft_regress_set_parameter(struct FTRegress *, char *, void *);
 void ft_regress_set_data(struct FTRegress *, size_t, const double *, size_t,
                          const double *, size_t);
 void ft_regress_process_parameters(struct FTRegress *);
@@ -76,8 +76,7 @@ struct CrossValidate * cross_validate_init(size_t, size_t,
                                            const double *,
                                            size_t);
 void cross_validate_add_discrete_param(struct CrossValidate *,
-                                       char *, size_t,
-                                       size_t *);
+                                       char *, size_t,void *);
 double cross_validate_run(struct CrossValidate *,
                           struct FTRegress *);
 void cross_validate_opt(struct CrossValidate *,

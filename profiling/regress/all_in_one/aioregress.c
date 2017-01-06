@@ -201,16 +201,18 @@ int main(int argc, char * argv[])
     /* struct FTparam * ftp = ft_param_alloc(dim,fapp,params_start,ranks); */
     /* struct RegressOpts * ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y); */
 
+    size_t nparam = maxorder+1;
+    size_t opt_maxiter=1000;
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(ftr,AIO);
-    /* ft_regress_set_obj(ftr,FTLS); */
-    ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+    ft_regress_set_obj(ftr,FTLS);
+    /* ft_regress_set_obj(ftr,FTLS_SPARSEL2); */
     ft_regress_set_data(ftr,ndata,x,1,y,1);
-    ft_regress_set_discrete_parameter(ftr,"rank",rank);
-    ft_regress_set_discrete_parameter(ftr,"num_param",maxorder+1);
-    ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000);
+    ft_regress_set_parameter(ftr,"rank",&rank);
+    ft_regress_set_parameter(ftr,"num_param",&nparam);
+    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
-    ft_regress_set_regweight(ftr,1e-10);
+    /* ft_regress_set_regweight(ftr,1e-12); */
 
 
     // choose parameters using cross validation
