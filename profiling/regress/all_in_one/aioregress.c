@@ -29,8 +29,10 @@ void print_code_usage (FILE * stream, int exit_code)
             " -u --upper    <val>      Upper bound, same for every dimension (default  1.0)\n"
             " -m --maxorder <val>      Maximum order of polynomial in univariate approx (default 5)\n"
             " -r --rank     <val>      Starting rank for approximation (default 4)\n"
+            "    --reg                 Perform Sparse Core regularization\n"
             "    --cv-kfold <int>      Specify k for kfold cross validation \n"
             "    --cv-rank  <int>      Add rank option with which to cross validate \n"
+            "    --cv-reg   <dbl>      Regularization parameter to optimizive over with CV\n"
             "    --cv-num   <int>      Add number of univariate params option with which to cross validate \n"
             " -v --verbose  <val>      Output words (default 0)\n"
         );
@@ -40,6 +42,8 @@ void print_code_usage (FILE * stream, int exit_code)
 #define CVK 1000
 #define CVR 1001
 #define CVN 1002
+#define REG 2000
+#define CVREG 2001
 int main(int argc, char * argv[])
 {
     int seed = 3;
@@ -56,9 +60,11 @@ int main(int argc, char * argv[])
         { "upper"    , 1, NULL, 'u' },
         { "maxorder" , 1, NULL, 'm' },
         { "rank"     , 1, NULL, 'r' },
+        { "reg"      , 0, NULL,  REG },
         { "cv-kfold" , 1, NULL,  CVK },
         { "cv-rank"  , 1, NULL,  CVR },
         { "cv-num"   , 1, NULL,  CVN },
+        { "cv-reg"   , 1, NULL,  CVREG },        
         { "verbose"  , 1, NULL, 'v' },
         { NULL       , 0, NULL, 0   }
     };
@@ -81,7 +87,12 @@ int main(int argc, char * argv[])
     size_t * CVnums  = calloc_size_t(nnumsalloc);
     size_t cvnum=0;
 
+    size_t nregalloc=10;
+    double * CVreg  = calloc_double(nregalloc);
+    size_t cvreg=0;
+
     size_t kfold = 5;
+    int reg = 0;
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
         switch (next_option)
@@ -112,6 +123,9 @@ int main(int argc, char * argv[])
             case 'v':
                 verbose = strtol(optarg,NULL,10);
                 break;
+            case REG:
+                reg = 1;
+                break;
             case CVK:
                 kfold = strtol(optarg,NULL,10);
                 break;
@@ -140,6 +154,19 @@ int main(int argc, char * argv[])
                     nnumsalloc = 2 * nnumsalloc;
                 }
                 CVnums[cvnum-1] = strtol(optarg,NULL,10);
+                break;
+            case CVREG:
+                cvreg += 1;
+                if (cvreg > nregalloc){
+                    double * nnew = calloc_double(nregalloc);
+                    memmove(nnew,CVreg,nregalloc*sizeof(double));
+                    free(CVreg); CVreg = NULL;
+                    CVreg = calloc_double(2*nregalloc);
+                    memmove(CVreg,nnew,nregalloc*sizeof(double));
+                    free(nnew); nnew = NULL;
+                    nregalloc = 2 * nregalloc;
+                }
+                CVreg[cvreg-1] = atof(optarg);
                 break;
             case '?': // The user specified an invalid option
                 printf("invalid option %s\n\n",optarg);
@@ -205,8 +232,12 @@ int main(int argc, char * argv[])
     size_t opt_maxiter=1000;
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(ftr,AIO);
-    ft_regress_set_obj(ftr,FTLS);
-    /* ft_regress_set_obj(ftr,FTLS_SPARSEL2); */
+    if (reg == 0){
+        ft_regress_set_obj(ftr,FTLS);
+    }
+    else{
+        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+    }
     ft_regress_set_data(ftr,ndata,x,1,y,1);
     ft_regress_set_parameter(ftr,"rank",&rank);
     ft_regress_set_parameter(ftr,"num_param",&nparam);
@@ -216,7 +247,7 @@ int main(int argc, char * argv[])
 
 
     // choose parameters using cross validation
-    if ((cvrank > 0) || (cvnum > 0)){
+    if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
 
         struct CrossValidate * cv =
             cross_validate_init(ndata,dim,x,y,kfold);
@@ -227,7 +258,11 @@ int main(int argc, char * argv[])
         if (cvrank > 0){ // just cross validate on ranks
             cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);            
         }
+        if (cvreg > 0){ // cv on regularization parameter
+            cross_validate_add_discrete_param(cv,"reg_weight",cvreg,CVreg);            
+        }
 
+        /* printf("verbose = %d\n",verbose); */
         cross_validate_opt(cv,ftr,verbose);
         cross_validate_free(cv); cv = NULL;
     }
