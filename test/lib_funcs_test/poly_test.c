@@ -1804,7 +1804,7 @@ CuSuite * PolySerializationGetSuite(){
     return suite;
 }
 
-void regress_func(size_t N, const double * x, double * out)
+static void regress_func(size_t N, const double * x, double * out)
 {
     for (size_t ii = 0; ii < N; ii++){
         out[ii] = -1.0 * pow(x[ii],7) + 2.0*pow(x[ii],2) + 0.2 * 0.5*x[ii]; 
@@ -1819,7 +1819,7 @@ void Test_LS_cheb_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(CHEBYSHEV);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -1887,7 +1887,7 @@ void Test_LS_leg_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -1955,7 +1955,7 @@ void Test_LS_herm_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(HERMITE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2024,7 +2024,7 @@ void Test_RLS2_cheb_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(CHEBYSHEV);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2093,7 +2093,7 @@ void Test_RLS2_leg_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2110,7 +2110,7 @@ void Test_RLS2_leg_regress(CuTest * tc){
     
     struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,RLS2,ndata,x,y);
     regress_1d_opts_set_parametric_form(regopts,POLYNOMIAL,aopts);
-    regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
+    regress_1d_opts_set_regularization_penalty(regopts,1e2/sqrt(ndata));
     regress_1d_opts_set_initial_parameters(regopts,params);
 
     c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
@@ -2124,6 +2124,7 @@ void Test_RLS2_leg_regress(CuTest * tc){
     CuAssertDblEquals(tc,0.0,gerr,1e-3);
     free(deriv_diff); deriv_diff = NULL;
 
+    regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata));
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     CuAssertIntEquals(tc,1,info>-1);
@@ -2162,7 +2163,7 @@ void Test_RLS2_herm_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(HERMITE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2233,7 +2234,7 @@ void Test_RLSD2_cheb_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(CHEBYSHEV);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2302,7 +2303,7 @@ void Test_RLSD2_leg_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2371,7 +2372,7 @@ void Test_RLSD2_herm_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(HERMITE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2441,7 +2442,7 @@ void Test_RLSRKHS_alg_cheb_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(CHEBYSHEV);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2512,7 +2513,7 @@ void Test_RLSRKHS_exp_cheb_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(CHEBYSHEV);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2583,7 +2584,7 @@ void Test_RLSRKHS_alg_leg_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2653,7 +2654,7 @@ void Test_RLSRKHS_exp_leg_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2724,7 +2725,7 @@ void Test_RLSRKHS_alg_herm_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(HERMITE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;
@@ -2795,7 +2796,7 @@ void Test_RLSRKHS_exp_herm_regress(CuTest * tc){
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
     struct OpeOpts * aopts = ope_opts_alloc(HERMITE);
-    ope_opts_set_maxnum(aopts,nparams);
+    ope_opts_set_nparams(aopts,nparams);
     
     // create data
     size_t ndata = 5000;

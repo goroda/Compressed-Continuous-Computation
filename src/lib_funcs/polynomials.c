@@ -789,6 +789,15 @@ size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion * ope)
 }
 
 /********************************************************//**
+*   Get number of parameters
+*************************************************************/
+size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->num_poly;
+}
+
+/********************************************************//**
 *   Initialize an expansion of a certain orthogonal polynomial family
 *            
 *   \param[in] ptype    - type of polynomial

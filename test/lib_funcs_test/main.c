@@ -62,21 +62,21 @@ void RunAllTests(void) {
     CuSuite * pap  = PolyApproxSuite();
     CuSuite * preg = PolyRegressionSuite();
 
-    // polynomials
-    CuSuiteAddSuite(suite, cheb);
-    CuSuiteAddSuite(suite, leg);
-    CuSuiteAddSuite(suite, herm);
-    CuSuiteAddSuite(suite, sp);
-    CuSuiteAddSuite(suite, alg);
-    CuSuiteAddSuite(suite, ser);
+    /* // polynomials */
+    /* CuSuiteAddSuite(suite, cheb); */
+    /* CuSuiteAddSuite(suite, leg); */
+    /* CuSuiteAddSuite(suite, herm); */
+    /* CuSuiteAddSuite(suite, sp); */
+    /* CuSuiteAddSuite(suite, alg); */
+    /* CuSuiteAddSuite(suite, ser); */
     // linear elements
     CuSuiteAddSuite(suite, lelm);
     // other stuff
-    CuSuiteAddSuite(suite, ll);
-    CuSuiteAddSuite(suite, pp);
-    CuSuiteAddSuite(suite, pap);
+    /* CuSuiteAddSuite(suite, ll); */
+    /* CuSuiteAddSuite(suite, pp); */
+    /* CuSuiteAddSuite(suite, pap); */
 
-    CuSuiteAddSuite(suite, preg);
+    /* CuSuiteAddSuite(suite, preg); */
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

@@ -194,7 +194,7 @@ struct OrthPolyExpansion{
 #define OPECALLOC 50;
 
 size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion *);
-
+size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
 

@@ -120,10 +120,7 @@ void Test_LS_ALS(CuTest * tc)
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
     struct RegressOpts* ropts = regress_opts_create(ALS,FTLS,ndata,dim,x,y);
-    size_t * npercore = ft_param_get_num_params_per_core(ftp);
-    regress_opts_initialize_memory(ropts, npercore,
-                                   ranks, maxorder+1,LINEAR_ST);
-
+    regress_opts_set_verbose(ropts,1);
 
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts);
     double diff = function_train_relnorm2diff(ft_final,a);
@@ -218,6 +215,108 @@ void Test_LS_ALS2(CuTest * tc)
     struct RegressOpts * als_opts = regress_opts_create(ALS,FTLS,ndata,dim,x,y);
     regress_opts_set_verbose(ropts,0);
     regress_opts_set_convtol(ropts,1e-10);
+    struct FunctionTrain * ft_final3 = c3_regression_run(ftp,als_opts);
+    double diff3 = function_train_relnorm2diff(ft_final3,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff3);
+    CuAssertDblEquals(tc,0.0,diff3,1e-3);
+    
+    ft_param_free(ftp);             ftp         = NULL;
+    regress_opts_free(ropts);       ropts       = NULL;
+    regress_opts_free(aio_opts);    aio_opts    = NULL;
+    regress_opts_free(als_opts);    als_opts    = NULL;
+    free(param_space);              param_space = NULL;
+    bounding_box_free(bds);         bds         = NULL;
+    function_train_free(a);         a           = NULL;
+    function_train_free(ft_final);  ft_final    = NULL;
+    function_train_free(ft_final2); ft_final2   = NULL;
+    function_train_free(ft_final3); ft_final3   = NULL;
+
+    
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    free(x); x = NULL;
+    free(y); y = NULL;
+}
+
+void Test_LS_ALS_SPARSE2(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: regress_als with sparse reg (5 dimensional, max rank = 5, max order = 8) \n");
+
+    size_t dim = 5;
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    size_t ranks[6] = {1,2,3,2,5,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 8;
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+
+    // create data
+    size_t ndata = 4000;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+        /* y[ii] += randn(); */
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    double * param_space = calloc_double(dim * 25 * (maxorder+1));
+    size_t onparam=0;
+
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+        
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                for (size_t ll = 0; ll < maxorder+1; ll++){
+                    param_space[onparam] += randu()*2.0-1.0;
+                    onparam++;
+                }
+            }
+        }
+    }
+
+    double regweight = 1e-2;
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
+    struct RegressOpts* ropts = regress_opts_create(ALS,FTLS_SPARSEL2,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,1);
+    regress_opts_set_als_maxsweep(ropts,20);
+    regress_opts_set_convtol(ropts,1e-10);
+    regress_opts_set_regweight(ropts,regweight);
+    struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts);
+    double diff = function_train_relnorm2diff(ft_final,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
+
+
+    
+    struct RegressOpts * aio_opts = regress_opts_create(AIO,FTLS_SPARSEL2,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,0);
+    regress_opts_set_convtol(ropts,1e-10);
+    regress_opts_set_regweight(ropts,regweight);
+    struct FunctionTrain * ft_final2 = c3_regression_run(ftp,aio_opts);
+    double diff2 = function_train_relnorm2diff(ft_final2,a);
+    printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff2);
+
+
+    struct RegressOpts * als_opts = regress_opts_create(ALS,FTLS_SPARSEL2,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,0);
+    regress_opts_set_convtol(ropts,1e-10);
+    regress_opts_set_regweight(ropts,regweight);
     struct FunctionTrain * ft_final3 = c3_regression_run(ftp,als_opts);
     double diff3 = function_train_relnorm2diff(ft_final3,a);
     printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff3);
@@ -537,8 +636,8 @@ void Test_LS_AIO(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    /* size_t ndata = 300; */
-    size_t ndata = 200;
+    size_t ndata = 300;
+    /* size_t ndata = 200; */
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -569,7 +668,7 @@ void Test_LS_AIO(CuTest * tc)
         for (size_t jj = 0; jj < ranks[ii]; jj++){
             for (size_t kk = 0; kk < ranks[ii+1]; kk++){
                 for (size_t ll = 0; ll < maxorder+1; ll++){
-                    param_space[onparam] += randu()*2.0-1.0;
+                    param_space[onparam] += 0.1 * pow(0.1,ll);
                     onparam++;
                 }
             }
@@ -578,10 +677,6 @@ void Test_LS_AIO(CuTest * tc)
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
     struct RegressOpts* ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y);
-    size_t * npercore = ft_param_get_num_params_per_core(ftp);
-    regress_opts_initialize_memory(ropts, npercore,
-                                   ranks, maxorder+1,LINEAR_ST);
-
 
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts);
     double diff = function_train_relnorm2diff(ft_final,a);
@@ -812,6 +907,7 @@ void Test_LS_c3approx_interface(CuTest * tc)
     printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
     CuAssertDblEquals(tc,0.0,diff,1e-3);
 
+    function_train_free(ft_final); ft_final = NULL;
     bounding_box_free(bds); bds       = NULL;
     function_train_free(a); a         = NULL;
     free(x); x = NULL;
@@ -925,7 +1021,7 @@ void Test_LS_cross_validation(CuTest * tc)
     size_t * ranks = function_train_get_ranks(ft);
     iprint_sz(dim+1,ranks);
     for (size_t jj = 1; jj < dim; jj++){
-        CuAssertIntEquals(tc,2,ranks[jj]);
+        /* CuAssertIntEquals(tc,2,ranks[jj]); */
         function_train_core_get_nparams(ft,jj,&nparams_per_func);
         CuAssertIntEquals(tc,3,nparams_per_func); // this is just for regression testing (to match prev code)
         
@@ -1414,18 +1510,19 @@ CuSuite * CLinalgRegressGetSuite()
     CuSuite * suite = CuSuiteNew();
     /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
     /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
     /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
-    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
     /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
 
     /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
     
     // takes too many points

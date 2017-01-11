@@ -971,14 +971,14 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
             return 0.0;
         }
     }
-    if (dg > 1e-15){
-        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
-        fprintf(stderr,"gradient norm is %G\n",
-                cblas_ddot(d,grad,1,grad,1));
-        /* exit(1); */
-        *info = -4;
-        return 0.0;
-    }
+    /* if (dg > 1e-15){ */
+    /*     fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg); */
+    /*     fprintf(stderr,"gradient norm is %G\n", */
+    /*             cblas_ddot(d,grad,1,grad,1)); */
+    /*     /\* exit(1); *\/ */
+    /*     *info = -4; */
+    /*     return 0.0; */
+    /* } */
 
     double checkval, dg2;
     size_t iter = 1;

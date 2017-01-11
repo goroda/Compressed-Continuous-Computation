@@ -2698,12 +2698,21 @@ size_t generic_function_get_num_params(const struct GenericFunction * gf)
     assert (gf != NULL);
     size_t nparam = 0;
     switch (gf->fc){
-    case CONSTANT:                                                     break;
-    case PIECEWISE:  assert (1 == 0);                                  break;
-    case POLYNOMIAL: nparam = orth_poly_expansion_get_num_poly(gf->f); break;
-    case LINELM:     nparam = lin_elem_exp_get_num_nodes(gf->f);       break;
-    case RATIONAL:                                                     break;
-    case KERNEL:                                                       break;
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        assert (1 == 0);
+        break;
+    case POLYNOMIAL:
+        nparam = orth_poly_expansion_get_num_params(gf->f);
+        break;
+    case LINELM:
+        nparam = lin_elem_exp_get_num_params(gf->f);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        break;
     }   
 
     return nparam;
@@ -2753,12 +2762,12 @@ void regress_1d_opts_set_parametric_form(
     switch (fc){
     case CONSTANT:                                                            break;
     case PIECEWISE:                                                           break;
-    case POLYNOMIAL: opts->nparam = ope_opts_get_maxnum(aopts);               break;
-    case LINELM:     opts->nparam = lin_elem_exp_aopts_get_num_nodes(aopts);  break;
+    case POLYNOMIAL: opts->nparam = ope_opts_get_nparams(aopts);              break;
+    case LINELM:     opts->nparam = lin_elem_exp_aopts_get_nparams(aopts);    break;
     case RATIONAL:                                                            break;
     case KERNEL:                                                              break;
     }   
-        
+
     opts->grad = calloc_double(opts->nparam);
 }
 
@@ -2770,6 +2779,7 @@ void regress_1d_opts_set_initial_parameters(
 {
     assert (opts != NULL);
     opts->init_param = param;
+    
     opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,param);
 }
 
@@ -2863,12 +2873,20 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
 
 
     switch (f->fc){
-    case CONSTANT:                                                       break;
-    case PIECEWISE:                                                      break;
-    case POLYNOMIAL: orth_poly_expansion_update_params(f->f,dim,param);  break;
-    case LINELM:     lin_elem_exp_update_params(f->f,dim,param);         break;
-    case RATIONAL:                                                       break;
-    case KERNEL:                                                         break;
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        orth_poly_expansion_update_params(f->f,dim,param);
+        break;
+    case LINELM:
+        lin_elem_exp_update_params(f->f,dim,param);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        break;
     }
 }
 
@@ -2878,7 +2896,7 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
 
     \param[in]     gf   - generic function
     \param[in]     nx   - number of x values
-    \param[in]     x   - x values
+    \param[in]     x    - x values
     \param[in,out] grad - gradient (N,nx)
 
     \return  0 - success, 1 -failure
@@ -2891,13 +2909,24 @@ int generic_function_param_grad_eval(const struct GenericFunction * gf,
     enum function_class fc = generic_function_get_fc(gf);
     int res = 1;
     switch (fc){
-    case CONSTANT:                                                                       break;
-    case PIECEWISE:                                                                      break;
-    case POLYNOMIAL: res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);         break;
-    case LINELM:     res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);                break;
-    case RATIONAL:                                                                       break;
-    case KERNEL:                                                                         break;
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);
+        break;
+    case LINELM:
+        res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);
+        /* printf("res in here is! %d\n",res); */
+        assert (res == 0);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        break;
     }
+    assert (res == 0);
     return res;
 }
 
@@ -2920,12 +2949,20 @@ generic_function_squared_norm_param_grad(const struct GenericFunction * gf,
     enum function_class fc = generic_function_get_fc(gf);
     int res = 1;
     switch (fc){
-    case CONSTANT:                                                                         break;
-    case PIECEWISE:                                                                        break;
-    case POLYNOMIAL: res = orth_poly_expansion_squared_norm_param_grad(gf->f,scale,grad);  break;
-    case LINELM:     fprintf(stderr,"No deriv of squared norm for linelm yet\n");        exit(1);
-    case RATIONAL:                                                                         break;
-    case KERNEL:                                                                           break;
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_squared_norm_param_grad(gf->f,scale,grad);
+        break;
+    case LINELM:
+        res = lin_elem_exp_squared_norm_param_grad(gf->f,scale,grad);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        break;
     }
 
     return res;
@@ -2954,7 +2991,9 @@ generic_function_rkhs_squared_norm(const struct GenericFunction * gf,
     case POLYNOMIAL:
         out = orth_poly_expansion_rkhs_squared_norm(gf->f,decay_type,decay_param);
         break;
-    case LINELM:     fprintf(stderr,"No RKHS squared norm for linelm yet\n");          exit(1);
+    case LINELM:
+        fprintf(stderr,"No RKHS squared norm for linelm yet\n");
+        exit(1);
     case RATIONAL:                                                                     break;
     case KERNEL:                                                                       break;
     }
@@ -3034,7 +3073,8 @@ double param_LSregress_cost(size_t dim, const double * param, double * grad, voi
             grad[ii] = 0.0;
         }
         for (size_t jj = 0; jj < opts->N; jj++){
-            int res = generic_function_param_grad_eval(opts->gf,1,opts->x+jj,
+            int res = generic_function_param_grad_eval(opts->gf,1,
+                                                       opts->x+jj,
                                                        opts->grad);
             assert (res == 0);
             for (size_t ii = 0; ii < dim; ii++){

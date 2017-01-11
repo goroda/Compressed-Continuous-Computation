@@ -610,7 +610,11 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp, struct RegressOpts *
             out += 0.5 * resid * resid;
             cblas_daxpy(ftp->nparams,-resid,regopts->mem->grad->vals + ii * ftp->nparams,
                         1,grad,1);
-        }        
+        }
+        out /= (double) regopts->N;
+        for (size_t ii = 0; ii < ftp->nparams; ii++){
+            grad[ii] /= (double) regopts->N;
+        }
     }
     else{
         function_train_param_grad_eval(
@@ -621,7 +625,8 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp, struct RegressOpts *
             /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
             resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
             out += 0.5 * resid * resid;
-        }   
+        }
+        out /= (double) regopts->N;
     }
     return out;
 }
@@ -689,7 +694,12 @@ double ft_param_eval_objective_als_ls(struct FTparam * ftp, struct RegressOpts *
                         -resid,
                         regopts->mem->grad->vals + ii * ftp->nparams_per_core[regopts->active_core],
                         1,grad,1);
-        }        
+        }
+        out /= (double)regopts->N;
+        for (size_t ii = 0; ii < ftp->nparams_per_core[regopts->active_core]; ii++){
+            grad[ii] /= (double)regopts->N;
+        }
+            
     }
     else{
         function_train_core_param_grad_eval(
@@ -703,7 +713,8 @@ double ft_param_eval_objective_als_ls(struct FTparam * ftp, struct RegressOpts *
             /* aio->evals->vals[ii] = function_train_eval(aio->ft,aio->x+ii*aio->dim); */
             resid = regopts->y[ii] - regopts->mem->evals->vals[ii];
             out += 0.5 * resid * resid;
-        }   
+        }
+        out /= (double)regopts->N;
     }
     return out;
 }
@@ -715,6 +726,13 @@ double ft_param_eval_objective_als(struct FTparam * ftp,
     double out = 0.0;
     if (regopts->obj == FTLS){
         out = ft_param_eval_objective_als_ls(ftp,regopts,grad);
+    }
+    else if (regopts->obj == FTLS_SPARSEL2){
+        out = ft_param_eval_objective_als_ls(ftp,regopts,grad);
+
+        double weight = 0.5*regopts->regweight;
+        double regval = qmarray_param_grad_sqnorm(ftp->ft->cores[regopts->active_core],weight,grad);
+        out += weight * regval;
     }
     else{
         assert (1 == 0);
@@ -773,10 +791,11 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts)
     if (ropts->verbose == 3){
         c3opt_set_verbose(ropts->optimizer,1);
     }
-    c3opt_set_relftol(ropts->optimizer,ropts->convtol);
-    c3opt_set_absxtol(ropts->optimizer,1e-20);
+    /* c3opt_set_verbose(ropts->optimizer,1); */
+    c3opt_set_relftol(ropts->optimizer,ropts->convtol);    
+    c3opt_set_absxtol(ropts->optimizer,1e-10);
     /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
-    c3opt_set_gtol(ropts->optimizer,1e-20);
+    c3opt_set_gtol(ropts->optimizer,1e-10);
 
     double * guess = calloc_double(ftp->nparams);
     memmove(guess,ftp->params,ftp->nparams * sizeof(double));
@@ -1461,10 +1480,23 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
         /*         break; */
         /*     } */
         /* } */
-        for (size_t kk = 0; kk < nparams_core; kk++){
-            init_params[running+kk] = randu()*2.0-1.0; /* * 1e-2 / (double)ftr->dim; */
+        /* for (size_t kk = 0; kk < nparams_core; kk++){ */
+        /*     /\* init_params[running+kk] = randu()*2.0-1.0; /\\* * 1e-2 / (double)ftr->dim; *\\/ *\/ */
+        /*     /\* init_params[running+kk] = kk /\\* * 1e-2 / (double)ftr->dim; *\\/ *\/ */
+        /* } */
+        /* running += nparams_core; */
+        for (size_t kk = 0; kk < ftr->start_ranks[ii]; kk++){
+            for (size_t ll = 0; ll < ftr->start_ranks[ii+1]; ll++){
+                for (size_t zz = 0; zz < nparams_uni; zz++){
+                    /* if (zz == 0){ */
+                    /*     init_params[running] = 0.1 ; */
+                    /* } */
+                    init_params[running] = 1*pow(0.1,zz);
+                    running++;
+                }
+            }
         }
-        running += nparams_core;
+
      }
     
     ftr->ftp = ft_param_alloc(ftr->dim,ftr->approx_opts,init_params,ftr->start_ranks);
@@ -1709,7 +1741,7 @@ double cross_validate_run(struct CrossValidate * cv,
         }
         /* erri /= (double)(batch); */
         function_train_free(ft); ft = NULL;
-        /* printf("Relative error on batch = %G\n",newerr/newnorm); */
+        printf("Relative error on batch = %G\n",newerr/newnorm);
         /* if (newerr / newnorm > 100){ */
             /* printf("Ranks are "); */
             /* iprint_sz(cv->dim, ft->ranks); */

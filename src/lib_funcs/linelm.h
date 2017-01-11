@@ -94,6 +94,7 @@ struct LinElemExp{
 };
 
 size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
+size_t lin_elem_exp_get_num_params(const struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_alloc();
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
 void lin_elem_exp_free(struct LinElemExp *);
@@ -117,7 +118,9 @@ double lin_elem_exp_get_nodal_val(const struct LinElemExp *, size_t);
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
 int lin_elem_exp_param_grad_eval(
     struct LinElemExp *, size_t, const double *, double *);
-
+int
+lin_elem_exp_squared_norm_param_grad(const struct LinElemExp *,
+                                     double, double *);
 double lin_elem_exp_integrate(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
 int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);

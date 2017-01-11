@@ -48,7 +48,7 @@ int main(int argc, char * argv[])
 {
     int seed = 3;
     srand(seed);
-    
+
     int next_option;
     const char * const short_options = "hx:y:o:l:u:m:r:v:";
     const struct option long_options[] = {
@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
         { "upper"    , 1, NULL, 'u' },
         { "maxorder" , 1, NULL, 'm' },
         { "rank"     , 1, NULL, 'r' },
-        { "reg"      , 0, NULL,  REG },
+        { "reg"      , 1, NULL,  REG },
         { "cv-kfold" , 1, NULL,  CVK },
         { "cv-rank"  , 1, NULL,  CVR },
         { "cv-num"   , 1, NULL,  CVN },
@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
     size_t cvreg=0;
 
     size_t kfold = 5;
-    int reg = 0;
+    double reg = 0.0;
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
         switch (next_option)
@@ -124,7 +124,7 @@ int main(int argc, char * argv[])
                 verbose = strtol(optarg,NULL,10);
                 break;
             case REG:
-                reg = 1;
+                reg = atof(optarg);
                 break;
             case CVK:
                 kfold = strtol(optarg,NULL,10);
@@ -232,25 +232,28 @@ int main(int argc, char * argv[])
     size_t opt_maxiter=1000;
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
     ft_regress_set_type(ftr,AIO);
-    if (reg == 0){
-        ft_regress_set_obj(ftr,FTLS);
+    if (reg > 0){
+        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
     }
     else{
-        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+        ft_regress_set_obj(ftr,FTLS);
     }
     ft_regress_set_data(ftr,ndata,x,1,y,1);
     ft_regress_set_parameter(ftr,"rank",&rank);
     ft_regress_set_parameter(ftr,"num_param",&nparam);
     ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
-    /* ft_regress_set_regweight(ftr,1e-12); */
-
+    /* ft_regress_set_als_maxsweep(ftr,20); */
+    ft_regress_set_verbose(ftr,verbose);
+    if (reg > 0){
+        ft_regress_set_regweight(ftr,reg);
+    }
 
     // choose parameters using cross validation
+    struct CrossValidate * cv = NULL;
     if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
 
-        struct CrossValidate * cv =
-            cross_validate_init(ndata,dim,x,y,kfold);
+        cv = cross_validate_init(ndata,dim,x,y,kfold);
 
         if (cvnum > 0){ // just crossvalidate on cv num
             cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);            
@@ -264,26 +267,30 @@ int main(int argc, char * argv[])
 
         /* printf("verbose = %d\n",verbose); */
         cross_validate_opt(cv,ftr,verbose);
-        cross_validate_free(cv); cv = NULL;
     }
 
     
     struct FunctionTrain * ft = ft_regress_run(ftr);
+
+    
+    cross_validate_free(cv); cv = NULL;
+
     /* struct FunctionTrain * ft = c3_regression_run(ftp,ropts); */
     
     if (verbose > 0){
         double diff;
         double err = 0.0;
         double norm = 0.0;
-
+        /* struct FunctionTrain * rounded = function_train_round(ft,1e-1,fapp); */
         for (size_t ii = 0; ii < ndata; ii++){
             diff = y[ii] - function_train_eval(ft,x+ii*dim);
             err += diff*diff;
             norm += y[ii]*y[ii];
         }
 
-        /* printf("rounded FT ranks are ");iprint_sz(dim+1,function_train_get_ranks(ft)); */
-        /* printf("Relative error on training samples = %G\n",err/norm); */
+        printf("Relative error on training samples = %G\n",err/norm);
+        /* printf("rounded FT ranks are ");iprint_sz(dim+1,function_train_get_ranks(rounded)); */
+        /* function_train_free(rounded); rounded = NULL; */
     }
     if (outfile != NULL){
         int res = function_train_save(ft,outfile);
