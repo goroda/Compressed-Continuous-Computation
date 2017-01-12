@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.6)
 
 
-add_executable(genregress genregress.c)
-target_link_libraries(genregress -g
+add_executable(ftregress regress.c)
+target_link_libraries(ftregress -g
     clinalg 
     funcs 
     opt

@@ -29,8 +29,11 @@ void print_code_usage (FILE * stream, int exit_code)
             " -u --upper    <val>      Upper bound, same for every dimension (default  1.0)\n"
             " -m --maxorder <val>      Maximum order of polynomial in univariate approx (default 5)\n"
             " -r --rank     <val>      Starting rank for approximation (default 4)\n"
+            " -a --alg      <string>   Algorithm (AIO or ALS)\n"
+            "    --reg                 Regularization weight\n"
             "    --cv-kfold <int>      Specify k for kfold cross validation \n"
             "    --cv-rank  <int>      Add rank option with which to cross validate \n"
+            "    --cv-reg   <dbl>      Regularization parameter to optimizive over with CV\n"
             "    --cv-num   <int>      Add number of univariate params option with which to cross validate \n"
             " -v --verbose  <val>      Output words (default 0)\n"
         );
@@ -40,13 +43,15 @@ void print_code_usage (FILE * stream, int exit_code)
 #define CVK 1000
 #define CVR 1001
 #define CVN 1002
+#define REG 2000
+#define CVREG 2001
 int main(int argc, char * argv[])
 {
     int seed = 3;
     srand(seed);
-    
+
     int next_option;
-    const char * const short_options = "hx:y:o:l:u:m:r:v:";
+    const char * const short_options = "hx:y:o:l:u:m:r:a:v:";
     const struct option long_options[] = {
         { "help"     , 0, NULL, 'h' },
         { "xtrain"   , 1, NULL, 'x' },
@@ -56,9 +61,12 @@ int main(int argc, char * argv[])
         { "upper"    , 1, NULL, 'u' },
         { "maxorder" , 1, NULL, 'm' },
         { "rank"     , 1, NULL, 'r' },
+        { "alg"      , 1, NULL, 'a' },
+        { "reg"      , 1, NULL,  REG },
         { "cv-kfold" , 1, NULL,  CVK },
         { "cv-rank"  , 1, NULL,  CVR },
         { "cv-num"   , 1, NULL,  CVN },
+        { "cv-reg"   , 1, NULL,  CVREG },        
         { "verbose"  , 1, NULL, 'v' },
         { NULL       , 0, NULL, 0   }
     };
@@ -81,7 +89,13 @@ int main(int argc, char * argv[])
     size_t * CVnums  = calloc_size_t(nnumsalloc);
     size_t cvnum=0;
 
+    size_t nregalloc=10;
+    double * CVreg  = calloc_double(nregalloc);
+    size_t cvreg=0;
+
     size_t kfold = 5;
+    double reg = 0.0;
+    char alg[80] = "ALS";
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
         switch (next_option)
@@ -109,8 +123,14 @@ int main(int argc, char * argv[])
             case 'r':
                 rank = strtol(optarg,NULL,10);
                 break;
+            case 'a':
+                strcpy(alg,optarg);
+                break;
             case 'v':
                 verbose = strtol(optarg,NULL,10);
+                break;
+            case REG:
+                reg = atof(optarg);
                 break;
             case CVK:
                 kfold = strtol(optarg,NULL,10);
@@ -140,6 +160,19 @@ int main(int argc, char * argv[])
                     nnumsalloc = 2 * nnumsalloc;
                 }
                 CVnums[cvnum-1] = strtol(optarg,NULL,10);
+                break;
+            case CVREG:
+                cvreg += 1;
+                if (cvreg > nregalloc){
+                    double * nnew = calloc_double(nregalloc);
+                    memmove(nnew,CVreg,nregalloc*sizeof(double));
+                    free(CVreg); CVreg = NULL;
+                    CVreg = calloc_double(2*nregalloc);
+                    memmove(CVreg,nnew,nregalloc*sizeof(double));
+                    free(nnew); nnew = NULL;
+                    nregalloc = 2 * nregalloc;
+                }
+                CVreg[cvreg-1] = atof(optarg);
                 break;
             case '?': // The user specified an invalid option
                 printf("invalid option %s\n\n",optarg);
@@ -177,7 +210,11 @@ int main(int argc, char * argv[])
     fclose(fpx);
     fclose(fpy);
 
+    if (verbose > 0){
+        printf("Data size: %zu x %zu \n",ndata,dim);
+    }
 
+    
     // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,lower);
@@ -193,73 +230,76 @@ int main(int argc, char * argv[])
     ranks[0] = 1;
     ranks[dim] = 1;
 
-
-
-    // use ALS as a warmstart
     size_t nparam = maxorder+1;
-    struct FTRegress * ftr_als = ft_regress_alloc(dim,fapp);
-    ft_regress_set_type(ftr_als,ALS);
-    ft_regress_set_obj(ftr_als,FTLS);
-    ft_regress_set_data(ftr_als,ndata,x,1,y,1);
-    ft_regress_set_parameter(ftr_als,"rank",&rank);
-    ft_regress_set_parameter(ftr_als,"num_param",&nparam);
-    ft_regress_process_parameters(ftr_als);
-    ft_regress_set_als_maxsweep(ftr_als,0);
-    ft_regress_set_verbose(ftr_als,1);
-
-    
-    struct FunctionTrain * ft = ft_regress_run(ftr_als);
-    size_t nparams;
-    double * params = ft_regress_get_params(ftr_als,&nparams);
-    
+    size_t opt_maxiter=1000;
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
-    ft_regress_set_type(ftr,AIO);
-    ft_regress_set_obj(ftr,FTLS);
+    if (strcmp(alg,"AIO") == 0){
+        ft_regress_set_type(ftr,AIO);
+    }
+    else if (strcmp(alg,"ALS") == 0){
+        ft_regress_set_type(ftr,ALS);
+    }    
+    else{
+        fprintf(stderr,"\n\nAlgorithm %s is not recognized\n",alg);
+        print_code_usage(stderr, 1);      
+    }
+
+    if (reg > 0){
+        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+    }
+    else{
+        ft_regress_set_obj(ftr,FTLS);
+    }
     ft_regress_set_data(ftr,ndata,x,1,y,1);
     ft_regress_set_parameter(ftr,"rank",&rank);
     ft_regress_set_parameter(ftr,"num_param",&nparam);
+    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
-    ft_regress_set_verbose(ftr,1);
-    ft_regress_update_params(ftr,params);
-
-    ft_regress_free(ftr_als); ftr_als = NULL;
-    function_train_free(ft); ft = NULL;
-    /* free(params); params = NULL; */
-    
-
-    // choose parameters using cross validation
-    if ((cvrank > 0) || (cvnum > 0)){
-        assert (1 == 0);
-        /* struct CrossValidate * cv = */
-        /*     cross_validate_init(ndata,dim,x,y,kfold); */
-
-        /* if (cvnum > 0){ // just crossvalidate on cv num */
-        /*     cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);             */
-        /* } */
-        /* if (cvrank > 0){ // just cross validate on ranks */
-        /*     cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);             */
-        /* } */
-
-        /* cross_validate_opt(cv,ftr,verbose); */
-        /* cross_validate_free(cv); cv = NULL; */
+    ft_regress_set_als_maxsweep(ftr,20);
+    ft_regress_set_verbose(ftr,verbose);
+    if (reg > 0){
+        ft_regress_set_regweight(ftr,reg);
     }
 
+    // choose parameters using cross validation
+    struct CrossValidate * cv = NULL;
+    if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
+
+        cv = cross_validate_init(ndata,dim,x,y,kfold);
+
+        if (cvnum > 0){ // just crossvalidate on cv num
+            cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);            
+        }
+        if (cvrank > 0){ // just cross validate on ranks
+            cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);            
+        }
+        if (cvreg > 0){ // cv on regularization parameter
+            cross_validate_add_discrete_param(cv,"reg_weight",cvreg,CVreg);            
+        }
+
+        /* printf("verbose = %d\n",verbose); */
+        cross_validate_opt(cv,ftr,verbose);
+    }
+
+
+    struct FunctionTrain * ft = ft_regress_run(ftr);
     
-    ft = ft_regress_run(ftr);
-    
+    cross_validate_free(cv); cv = NULL;
+
     if (verbose > 0){
         double diff;
         double err = 0.0;
         double norm = 0.0;
-
+        /* struct FunctionTrain * rounded = function_train_round(ft,1e-1,fapp); */
         for (size_t ii = 0; ii < ndata; ii++){
             diff = y[ii] - function_train_eval(ft,x+ii*dim);
             err += diff*diff;
             norm += y[ii]*y[ii];
         }
 
-        /* printf("rounded FT ranks are ");iprint_sz(dim+1,function_train_get_ranks(ft)); */
-        /* printf("Relative error on training samples = %G\n",err/norm); */
+        printf("Relative error on training samples = %G\n",err/norm);
+        /* printf("rounded FT ranks are ");iprint_sz(dim+1,function_train_get_ranks(rounded)); */
+        /* function_train_free(rounded); rounded = NULL; */
     }
     if (outfile != NULL){
         int res = function_train_save(ft,outfile);
@@ -278,11 +318,7 @@ int main(int argc, char * argv[])
     ft_regress_free(ftr); ftr = NULL;
     free(CVranks); CVranks = NULL;
     free(CVnums); CVnums = NULL;
+    free(CVreg); CVreg = NULL;
 
-    /* ft_param_free(ftp);      ftp  = NULL; */
-    /* regress_opts_free(ropts); ropts = NULL; */
-
-
-    
     return 0;
 }

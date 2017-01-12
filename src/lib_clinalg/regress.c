@@ -851,12 +851,12 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
                                    ranks, max_param_within_uni, structure);
 
     for (size_t sweep = 1; sweep <= ropts->maxsweeps; sweep++){
-        if (ropts->verbose == 1){
+        if (ropts->verbose > 0){
             printf("Sweep %zu\n",sweep);
         }
         struct FunctionTrain * start = function_train_copy(ftp->ft);
         for (size_t ii = 0; ii < ftp->dim; ii++){
-            if (ropts->verbose == 1){
+            if (ropts->verbose > 1){
                 printf("\tDim %zu: ",ii);
             }
             regress_mem_manager_reset_running(ropts->mem);
@@ -890,7 +890,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
                 fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
             }
 
-            if (ropts->verbose == 1){
+            if (ropts->verbose > 1){
                 printf("\t\tObjVal = %3.5G\n",val);
             }
 
@@ -900,7 +900,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
 
         for (size_t jj = 1; jj < ftp->dim-1; jj++){
             size_t ii = ftp->dim-1-jj;
-            if (ropts->verbose == 1){
+            if (ropts->verbose > 1){
                 printf("\tDim %zu: ",ii);
             }
             regress_mem_manager_reset_running(ropts->mem);
@@ -931,7 +931,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
                 fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
             }
 
-            if (ropts->verbose == 1){
+            if (ropts->verbose > 1){
                 printf("\t\tObjVal = %3.5G\n",val);
             }
 
@@ -939,9 +939,10 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
             free(guess); guess = NULL;
         }
         
-        double diff = function_train_relnorm2diff(ftp->ft,start);
-        if (ropts->verbose == 1){
-            printf("\n\tSweep Difference = %G\n",diff);
+        double diff = function_train_norm2diff(ftp->ft,start);
+        double no = function_train_norm2(ftp->ft);
+        if (ropts->verbose > 0){
+            printf("\n\t ||f||=%G, ||f-f_p||=%G ||f-f_p||/||f||=%G\n",no,diff,diff/no);
         }
         function_train_free(start); start = NULL;
     }
@@ -1472,7 +1473,7 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     running = 0;
     for (size_t ii = 0; ii < ftr->dim; ii++){
         size_t nparams_uni = multi_approx_opts_get_dim_nparams(ftr->approx_opts,ii);
-        size_t nparams_core = nparams_uni * ftr->start_ranks[ii] * ftr->start_ranks[ii+1];
+        /* size_t nparams_core = nparams_uni * ftr->start_ranks[ii] * ftr->start_ranks[ii+1]; */
         /* size_t na = function_train_core_get_params(a,ii,a_params); */
         /* for (size_t kk = 0; kk < na; kk++){ // since a is a constant it is rank one so just copy as many params */
         /*     init_params[running+kk] = a_params[kk]; */
