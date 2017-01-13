@@ -33,23 +33,47 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
-#ifndef FUNCTEST_H
-#define FUNCTEST_H
-
-#include "CuTest.h"
-
-CuSuite * ChebGetSuite();
-CuSuite * LegGetSuite();
-CuSuite * HermGetSuite();
-CuSuite * LelmGetSuite();
-CuSuite * StandardPolyGetSuite();
-CuSuite * PolyAlgorithmsGetSuite();
-CuSuite * PolySerializationGetSuite();
-CuSuite * LinkedListGetSuite();
-CuSuite * PiecewisePolyGetSuite();
-CuSuite * PolyApproxSuite();
-CuSuite * PolyRegressionSuite();
-CuSuite * KernGetSuite();
 
 
-#endif
+
+/** \file kernels.h
+ * Headers for kernels.c
+*/
+
+double gauss_kernel_eval(double, double, double, double);
+double gauss_kernel_deriv(double, double, double, double);
+
+struct Kernel;
+struct Kernel * kernel_gaussian(double, double, double);
+void kernel_free(struct Kernel *);
+
+
+struct KernelApproxOpts;
+void kernel_approx_opts_free(struct KernelApproxOpts *);
+struct KernelApproxOpts *
+kernel_approx_opts_gauss_rbf(size_t, double *, double, double);
+size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts *);
+
+struct KernelExpansion;
+struct KernelExpansion * kernel_expansion_alloc(size_t);
+unsigned char *
+serialize_kernel_expansion(unsigned char *, struct KernelExpansion *, size_t *);
+unsigned char * 
+deserialize_kernel_expansion(unsigned char *, struct KernelExpansion **);
+struct KernelExpansion * kernel_expansion_copy(struct KernelExpansion *);
+void kernel_expansion_free(struct KernelExpansion *);
+void kernel_expansion_add_kernel(struct KernelExpansion *, double, struct Kernel *);
+double kernel_expansion_eval(struct KernelExpansion *, double);
+void kernel_expansion_evalN(struct KernelExpansion *, size_t,
+                            const double *, size_t, double *, size_t);
+double kernel_expansion_deriv_eval(struct KernelExpansion *, double);
+
+void kernel_expansion_scale(double, struct KernelExpansion *);
+
+size_t kernel_expansion_get_num_params(const struct KernelExpansion *);
+size_t kernel_expansion_get_params(const struct KernelExpansion *, double *);
+    
+int kernel_expansion_param_grad_eval(
+    struct KernelExpansion *, size_t, const double *, double *);
+
+void print_kernel_expansion(struct KernelExpansion *, size_t, void *);

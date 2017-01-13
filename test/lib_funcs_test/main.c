@@ -41,8 +41,6 @@
 #include "CuTest.h"
 #include "functest.h"
 
-
-
 void RunAllTests(void) {
     
     printf("Running Test Suite: lib_funcs\n");
@@ -61,6 +59,7 @@ void RunAllTests(void) {
     CuSuite * pp   = PiecewisePolyGetSuite();
     CuSuite * pap  = PolyApproxSuite();
     CuSuite * preg = PolyRegressionSuite();
+    CuSuite * kern = KernGetSuite();
 
     /* // polynomials */
     /* CuSuiteAddSuite(suite, cheb); */
@@ -70,13 +69,15 @@ void RunAllTests(void) {
     /* CuSuiteAddSuite(suite, alg); */
     /* CuSuiteAddSuite(suite, ser); */
     // linear elements
-    CuSuiteAddSuite(suite, lelm);
+    /* CuSuiteAddSuite(suite, lelm); */
     // other stuff
     /* CuSuiteAddSuite(suite, ll); */
     /* CuSuiteAddSuite(suite, pp); */
     /* CuSuiteAddSuite(suite, pap); */
 
     /* CuSuiteAddSuite(suite, preg); */
+
+    CuSuiteAddSuite(suite, kern);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -89,16 +90,12 @@ void RunAllTests(void) {
     CuSuiteDelete(sp);
     CuSuiteDelete(alg);
     CuSuiteDelete(ser);
-    
     CuSuiteDelete(lelm);
-    
     CuSuiteDelete(ll);
-    
     CuSuiteDelete(pp);
-
     CuSuiteDelete(pap);
-    
     CuSuiteDelete(preg);
+    CuSuiteDelete(kern);
         
     CuStringDelete(output);
     free(suite);

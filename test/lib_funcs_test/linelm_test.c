@@ -952,24 +952,24 @@ void Test_RLSD2_regress(CuTest * tc){
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_derivative); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy2); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_constant); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt); */
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_derivative);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_constant);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt);
 
     SUITE_ADD_TEST(suite, Test_LS_regress);
     SUITE_ADD_TEST(suite, Test_RLS2_regress);

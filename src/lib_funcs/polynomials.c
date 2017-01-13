@@ -1252,7 +1252,8 @@ void orth_poly_expansion_free(struct OrthPolyExpansion * p){
 *   
 *   \param[in] ser       - location to which to serialize
 *   \param[in] p         - polynomial
-*   \param[in] totSizeIn - if not null then only return total size of array without serialization! if NULL then serialiaze
+*   \param[in] totSizeIn - if not null then only return total size of 
+*                          array without serialization! if NULL then serialiaze
 *
 *   \return ptr : pointer to end of serialization
 *************************************************************/
@@ -1876,25 +1877,26 @@ void orth_poly_expansion_evalN(struct OrthPolyExpansion * poly, size_t N,
 *   \param[in]     x    - location at which to evaluate
 *   \param[in,out] grad - gradient values (N,nx)
 *
-*   \return out - polynomial value
+*   \return 0 success, 1 otherwise
 *************************************************************/
 int orth_poly_expansion_param_grad_eval(
     struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
     int res = 1;
+    size_t nparam = orth_poly_expansion_get_num_params(poly);
     if (poly->p->ptype == LEGENDRE){
         for (size_t ii = 0; ii < nx; ii++){
-            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
         }
     }
     else if (poly->p->ptype == HERMITE){
         for (size_t ii = 0; ii < nx; ii++){
-            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
         }
     }
     else if (poly->p->ptype == CHEBYSHEV){
         for (size_t ii = 0; ii < nx; ii++){
-            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii,1);
+            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
         }
     }
     else{
@@ -3164,6 +3166,7 @@ orth_poly_expansion_flip_sign(struct OrthPolyExpansion * p)
         p->coeff[ii] *= -1.0;
     }
 }
+
 /********************************************************//**
 *   Multiply by scalar and overwrite expansion
 *
