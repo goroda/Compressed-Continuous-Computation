@@ -163,7 +163,7 @@ qmarray_serialize(unsigned char * ser, const struct Qmarray * qma,
     ptr = serialize_size_t(ptr, qma->nrows);
     ptr = serialize_size_t(ptr, qma->ncols);
     for (ii = 0; ii < qma->nrows * qma->ncols; ii++){
-       //printf("on function number (%zu/%zu)\n",ii,qma->nrows * qma->nrows);
+       /* printf("on function number (%zu/%zu)\n",ii+1,qma->nrows * qma->ncols); */
        // print_generic_function(qma->funcs[ii],3,NULL);
         ptr = serialize_generic_function(ptr, qma->funcs[ii],NULL);
     }
@@ -186,6 +186,8 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
     size_t nrows, ncols;
     ptr = deserialize_size_t(ptr, &nrows);
     ptr = deserialize_size_t(ptr, &ncols);
+    /* printf("deserialized rows,cols = (%zu,%zu)\n",nrows,ncols); */
+    
     *qma = qmarray_alloc(nrows, ncols);
 
     size_t ii;
@@ -3065,14 +3067,19 @@ size_t qmarray_get_nparams(const struct Qmarray * qma, size_t * nfunc)
 
      size_t size = qma->nrows*qma->ncols;
      size_t ntot = 0;
-     *nfunc = 0;
+     size_t maxfun = 0;
      for (size_t ii = 0; ii < size; ii++){
          size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
          ntot += nparam;
-         if (nparam > *nfunc){
-             *nfunc = nparam;
+         
+         if (nparam > maxfun){
+             maxfun = nparam;
          }
      }
+     if (nfunc != NULL){
+         *nfunc = maxfun;
+     }
+     
      return ntot;
 }
 
@@ -3195,7 +3202,7 @@ double qmarray_param_grad_sqnorm(struct Qmarray * qma, double scale, double * gr
     double out = 0.0;
     if (grad == NULL){
         for (size_t ii = 0; ii < size; ii++){
-            out += generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+            out += scale * generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
         }
     }
     else{

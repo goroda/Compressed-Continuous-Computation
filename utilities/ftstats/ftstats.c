@@ -85,11 +85,13 @@ int main(int argc, char * argv[])
         print_code_usage(stderr,1);
     }
 
+    /* printf("load\n"); */
     struct FunctionTrain * ft = function_train_load(infile);
     if (ft == NULL){
         fprintf(stderr, "Failure loading %s\n",infile);
         return 1;
     }
+    /* printf("loaded\n"); */
 
     double * xtest = NULL;
     size_t ntest, dtest;

@@ -180,8 +180,6 @@ ft_param_alloc(size_t dim,
         exit(1);
     }
     ftr->approx_opts = aopts;
-
-    ftr->ft = function_train_zeros(aopts,ranks);
     ftr->dim = dim;
     
     ftr->nparams_per_core = calloc_size_t(ftr->dim);
@@ -204,26 +202,18 @@ ft_param_alloc(size_t dim,
             onind++;
         }
     }
+
     
+    ftr->ft = function_train_zeros(aopts,ranks);
     ftr->params = calloc_double(ftr->nparams);
-    memmove(ftr->params,params,ftr->nparams * sizeof(double) );
-    
+    function_train_update_params(ftr->ft,ftr->params);
     return ftr;
 }
     
 void ft_param_update_params(struct FTparam * ftp, const double * params)
 {
-    size_t runparam = 0;
-    for (size_t ii = 0; ii < ftp->dim; ii ++){
-        function_train_core_update_params(ftp->ft,ii,
-                                          ftp->nparams_per_core[ii],
-                                          params+runparam);
-        runparam += ftp->nparams_per_core[ii];
-    }
-
-    assert (runparam == ftp->nparams);
-
     memmove(ftp->params,params,ftp->nparams * sizeof(double) );
+    function_train_update_params(ftp->ft,ftp->params);
 }
 
 
@@ -419,6 +409,7 @@ void regress_mem_manager_check_structure(struct RegressionMemManager * mem, stru
     }
 }
 
+
 struct RegressOpts
 {
 
@@ -567,6 +558,7 @@ void regress_opts_initialize_memory(struct RegressOpts * opts, size_t * num_para
             c3opt_free(opts->optimizer); opts->optimizer = NULL;
         }
         opts->optimizer = c3opt_alloc(BFGS,num_tot_params);
+        /* opts->optimizer = c3opt_alloc(BATCHGRAD,num_tot_params); */
     }
 }
 
@@ -647,7 +639,7 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
             weights[ii] = 0.5*regopts->regweight;
         }
         double regval = function_train_param_grad_sqnorm(ftp->ft,weights,grad);
-        out += 0.5 * regopts->regweight * regval;
+        out += regval;
         free(weights); weights = NULL;
     }
     else{
@@ -732,7 +724,7 @@ double ft_param_eval_objective_als(struct FTparam * ftp,
 
         double weight = 0.5*regopts->regweight;
         double regval = qmarray_param_grad_sqnorm(ftp->ft->cores[regopts->active_core],weight,grad);
-        out += weight * regval;
+        out += regval;
     }
     else{
         assert (1 == 0);
@@ -788,14 +780,19 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts)
     assert (ropts->optimizer != NULL);
     c3opt_add_objective(ropts->optimizer,regress_opts_minimize_aio,&pp);
 
-    if (ropts->verbose == 3){
-        c3opt_set_verbose(ropts->optimizer,1);
+    if (ropts->verbose >= 3){
+        c3opt_set_verbose(ropts->optimizer,1 + ropts->verbose-3);
     }
     /* c3opt_set_verbose(ropts->optimizer,1); */
-    c3opt_set_relftol(ropts->optimizer,ropts->convtol);    
-    c3opt_set_absxtol(ropts->optimizer,1e-10);
-    /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
-    c3opt_set_gtol(ropts->optimizer,1e-10);
+    c3opt_set_maxiter(ropts->optimizer,5000);
+    c3opt_set_relftol(ropts->optimizer,ropts->convtol);
+    c3opt_set_absxtol(ropts->optimizer,1e-20);
+    /* c3opt_ls_set_beta(ropts->optimizer,0.9); */
+    /* c3opt_ls_set_alpha(ropts->optimizer,0.45); */
+    /* c3opt_set_gtol(ropts->optimizer,1e-10); */
+    /* c3opt_set_gtol(ropts->optimizer,ropts->convtol); */
+    c3opt_set_gtol(ropts->optimizer,1e-20);
+    c3opt_ls_set_maxiter(ropts->optimizer,50);
 
     double * guess = calloc_double(ftp->nparams);
     memmove(guess,ftp->params,ftp->nparams * sizeof(double));
@@ -809,7 +806,24 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts)
     if (ropts->verbose == 1){
         printf("Objective value = %3.5G\n",val);
     }
+
     ft_param_update_params(ftp,guess);
+
+    /* // second run */
+
+    /* for (size_t ii = 0; ii < ftp->nparams;ii++){ */
+    /*     guess[ii] += randn()*guess[ii]; */
+    /* } */
+    /* res = c3opt_minimize(ropts->optimizer,guess,&val); */
+    /* if (res < -1){ */
+    /*     fprintf(stderr,"Warning: optimizer exited with code %d\n",res); */
+    /* } */
+
+    /* if (ropts->verbose == 1){ */
+    /*     printf("Objective value = %3.5G\n",val); */
+    /* } */
+    
+    /* ft_param_update_params(ftp,guess); */
     struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
 
     free(guess); guess = NULL;
@@ -865,7 +879,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
 
             c3opt_free(ropts->optimizer); ropts->optimizer = NULL;
             ropts->optimizer = c3opt_alloc(BFGS,ftp->nparams_per_core[ii]);
-
+            /* c3opt_ls_set_maxiter(ropts->optimizer,50); */
             struct PP pp;
             pp.ftp = ftp;
             pp.opts = ropts;
@@ -876,10 +890,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
             if (ropts->verbose == 3){
                 c3opt_set_verbose(ropts->optimizer,1);
             }
+            c3opt_set_maxiter(ropts->optimizer,2000);
             c3opt_set_relftol(ropts->optimizer,ropts->convtol);
-            c3opt_set_absxtol(ropts->optimizer,1e-20);
+            c3opt_set_absxtol(ropts->optimizer,1e-10);
             /* c3opt_ls_set_beta(ftr->optimizer,0.99); */
-            c3opt_set_gtol(ropts->optimizer,1e-20);
+            c3opt_set_gtol(ropts->optimizer,ropts->convtol);
 
             double * guess = calloc_double(ftp->nparams_per_core[ii]);
             function_train_core_get_params(ftp->ft,ii,guess);
@@ -909,6 +924,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts)
 
             c3opt_free(ropts->optimizer); ropts->optimizer = NULL;
             ropts->optimizer = c3opt_alloc(BFGS,ftp->nparams_per_core[ii]);
+            
 
             struct PP pp;
             pp.ftp = ftp;
@@ -1178,6 +1194,8 @@ struct FTRegress
     size_t optmaxiter;
     size_t * start_ranks;
     double reg_weight;
+    double convtol;
+    size_t maxsweeps;
     
     size_t N;
     const double * x;
@@ -1214,7 +1232,9 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts)
 
     ftr->optmaxiter = 1000;
     ftr->start_ranks = NULL;
+    ftr->maxsweeps = 10;
     ftr->reg_weight = 0.0;
+    ftr->convtol = 1e-15;
     
     ftr->N = 0;
     ftr->x = NULL;
@@ -1492,7 +1512,19 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
                     /* if (zz == 0){ */
                     /*     init_params[running] = 0.1 ; */
                     /* } */
-                    init_params[running] = 1*pow(0.1,zz);
+                    /* init_params[running] = pow(avgy,1.0/ftr->dim) *pow(0.01,zz); */
+                    init_params[running] = 1.0 * pow(0.01,zz);
+
+                    /* if (kk == ll){ */
+                    /*     /\* if (kk == 0){ *\/ */
+                    /*         /\* if (zz == 0){ *\/ */
+                    /*         /\*     init_params[running] = pow(avgy,1.0/(double)ftr->dim); *\/ */
+                    /*         /\* } *\/ */
+                    /*         init_params[running] = pow(avgy,1.0/(double)ftr->dim) * pow(0.1,zz); */
+                    /*     /\* } *\/ */
+                    /*     init_params[running] = pow(avgy,1.0/ftr->dim) *pow(0.01,zz); */
+                    /* } */
+                    /* /\* init_params[running] += randn()*0.01; *\/ */
                     running++;
                 }
             }
@@ -1507,6 +1539,8 @@ void ft_regress_process_parameters(struct FTRegress * ftr)
     
     ftr->regopts = regress_opts_create(ftr->type,ftr->obj,ftr->N,ftr->dim,ftr->x,ftr->y);
     regress_opts_set_regweight(ftr->regopts,ftr->reg_weight);
+    regress_opts_set_convtol(ftr->regopts,ftr->convtol);
+    regress_opts_set_als_maxsweep(ftr->regopts,ftr->maxsweeps);
     
     ftr->processed_param = 1;
 }
@@ -1516,6 +1550,7 @@ void ft_regress_set_als_maxsweep(struct FTRegress * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
     assert (opts->processed_param == 1);
+    opts->maxsweeps = maxsweeps;
     regress_opts_set_als_maxsweep(opts->regopts,maxsweeps);
 }
 
@@ -1523,6 +1558,7 @@ void ft_regress_set_convtol(struct FTRegress * opts, double convtol)
 {
     assert (opts != NULL);
     assert (opts->processed_param == 1);
+    opts->convtol = convtol;
     regress_opts_set_convtol(opts->regopts,convtol);
 }
 
@@ -1537,6 +1573,7 @@ void ft_regress_set_regweight(struct FTRegress * opts, double weight)
 {
     assert (opts != NULL);
     assert (opts->processed_param == 1);
+    opts->reg_weight = weight;
     regress_opts_set_regweight(opts->regopts,weight);
 }
 
@@ -1662,7 +1699,7 @@ void cross_validate_add_discrete_param(struct CrossValidate * cv,
 }
 
 /***********************************************************//**
-   Cross validation run
+   Cross validation separate data
 ***************************************************************/
 void extract_data(struct CrossValidate * cv, size_t start,
                   size_t num_extract,
@@ -1724,6 +1761,10 @@ double cross_validate_run(struct CrossValidate * cv,
         // update data and reprep memmory
         ft_regress_set_data(reg,cv->N-batch,xtrain,1,ytrain,1);
         ft_regress_process_parameters(reg);
+        ft_regress_set_regweight(reg,reg->reg_weight);
+        ft_regress_set_convtol(reg,reg->convtol);
+        ft_regress_set_als_maxsweep(reg,reg->maxsweeps);
+        
         struct FunctionTrain * ft = ft_regress_run(reg);
 
 
@@ -1742,7 +1783,7 @@ double cross_validate_run(struct CrossValidate * cv,
         }
         /* erri /= (double)(batch); */
         function_train_free(ft); ft = NULL;
-        printf("Relative error on batch = %G\n",newerr/newnorm);
+        /* printf("Relative error on batch = %G\n",newerr/newnorm); */
         /* if (newerr / newnorm > 100){ */
             /* printf("Ranks are "); */
             /* iprint_sz(cv->dim, ft->ranks); */
@@ -1772,6 +1813,10 @@ double cross_validate_run(struct CrossValidate * cv,
 
     ft_regress_set_data(reg,cv->N,cv->x,1,cv->y,1);
     ft_regress_process_parameters(reg);
+    ft_regress_set_regweight(reg,reg->reg_weight);
+    ft_regress_set_convtol(reg,reg->convtol);
+    ft_regress_set_als_maxsweep(reg,reg->maxsweeps);
+
 
     return err;
 }

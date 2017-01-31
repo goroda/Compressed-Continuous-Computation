@@ -93,6 +93,47 @@ double gauss_kernel_deriv(double scale, double width_squared, double center, dou
     return scale * exp(inner) * dinner;
 }
 
+/********************************************************//**
+*   Integrate a gaussian kernel from lb to ub
+*************************************************************/
+double gauss_kernel_integrate(double scale, double width_squared, double center, double lb, double ub)
+{
+    double width = sqrt(width_squared);
+    return 0.5 * sqrt(M_PI) * width * scale * (erf((center-lb)/width) - erf((center-ub)/width));
+}
+
+/********************************************************//**
+*   Integrate a product of gaussian kernels from lb to ub
+*************************************************************/
+double gauss_kernel_inner(double s1, double w1, double c1,
+                          double s2, double w2, double c2,
+                          double lb, double ub)
+{
+
+    double width1 = sqrt(w1);
+    double width2 = sqrt(w2);
+    double wsum = w1+w2;
+    double sqrt_wsum = sqrt(wsum);
+        
+    double pre = sqrt(M_PI) * width1 * width2 * s1 * s2;
+    double den = 2.0 * sqrt_wsum;
+
+    double cdiff = (c1-c2);
+    double n1 = exp(- cdiff * cdiff / wsum);
+    pre *= n1;
+
+
+    double c1w2 = c1*w2;
+    double w1c2 = w1*c2;
+    double c1w2_plus_w1c2 = c1w2 + w1c2;
+    double w1w2sqrt_wsum = width1*width2*sqrt_wsum;
+    double mid1 = erf((c1w2_plus_w1c2 - lb * wsum)/(w1w2sqrt_wsum));
+    double mid2 = erf((c1w2_plus_w1c2 - ub * wsum)/(w1w2sqrt_wsum));
+    
+    return pre / den * (mid1 -mid2);
+}
+
+
 enum KernelType {KernGauss, KernNone};
 struct Kernel
 {
@@ -101,6 +142,26 @@ struct Kernel
     double * params;
 };
 
+/********************************************************//**
+*   Check if same kernel
+*************************************************************/
+int same_kernel(struct Kernel * x, struct Kernel * y)
+{
+    if (x->type != y->type){
+        return 0;
+    }
+    else if (x->nparams != y->nparams){
+        return 0;
+    }
+    int ret = 1;
+    for (size_t ii = 0; ii < x->nparams; ii++){
+        if (fabs(x->params[ii] - y->params[ii]) > 1e-15){
+            ret = 0;
+            break;
+        }
+    }
+    return ret;
+}
 
 /********************************************************//**
 *   Allocate space for the kernel
@@ -138,6 +199,7 @@ serialize_kernel(unsigned char * ser, struct Kernel * kern, size_t * totSizeIn)
         *totSizeIn = totsize;
         return ser;
     }
+    /* printf("serializing nparam = %zu\n",kern->nparams); */
     
     unsigned char * ptr = serialize_int(ser,kern->type);
     ptr = serialize_size_t(ptr,kern->nparams);
@@ -154,9 +216,7 @@ serialize_kernel(unsigned char * ser, struct Kernel * kern, size_t * totSizeIn)
 *   \return ptr - ser + number of bytes of kernel
 *************************************************************/
 unsigned char * 
-deserialize_kernel(
-    unsigned char * ser, 
-    struct Kernel ** kern)
+deserialize_kernel(unsigned char * ser, struct Kernel ** kern)
 {
 
     int type;
@@ -165,7 +225,7 @@ deserialize_kernel(
     ptr = deserialize_int(ptr,&type);
     ptr = deserialize_size_t(ptr,&nparam);
 
-
+    /* printf("deserializing nparam = %zu\n",nparam); */
     *kern = kernel_alloc(nparam);
     (*kern)->type = type;
     free((*kern)->params); (*kern)->params = NULL;
@@ -252,6 +312,42 @@ double kernel_deriv(struct Kernel * kern, double x)
 }
 
 /********************************************************//**
+*   Integrate a kernel
+*************************************************************/
+double kernel_integrate(struct Kernel * kern, double lb, double ub)
+{
+    double out = 0.0;
+    switch (kern->type){
+    case KernGauss:
+        out = gauss_kernel_integrate(kern->params[0],kern->params[1],kern->params[2],lb,ub);
+        break;
+    case KernNone:
+        fprintf(stderr,"No kernel type detected for evaluation\n");
+        exit(1);
+    }
+    return out;
+}
+
+
+/********************************************************//**
+*   Integrate a kernel
+*************************************************************/
+double kernel_inner(struct Kernel * k1, struct Kernel * k2, double lb, double ub)
+{
+    double out = 0.0;
+    if ((k1->type == KernGauss) && (k2->type == KernGauss)){
+        out = gauss_kernel_inner(k1->params[0],k1->params[1],k1->params[2],
+                                 k2->params[0],k2->params[1],k2->params[2],
+                                 lb,ub);
+    }
+    else{
+        fprintf(stderr,"Cannot integrate product of specified kernel types\n");
+        exit(1);
+    }
+    return out;
+}
+
+/********************************************************//**
 *   Allocate an array of kernels with the same number of params
 *************************************************************/
 struct Kernel ** kernel_array_alloc(size_t nkerns)
@@ -331,7 +427,7 @@ void kernel_approx_opts_free(struct KernelApproxOpts * opts)
 *   A set of gaussian radial basis functions
 *************************************************************/
 struct KernelApproxOpts *
-kernel_approx_opts_gauss_rbf(size_t ncenters, double * centers, double scale, double width)
+kernel_approx_opts_gauss(size_t ncenters, double * centers, double scale, double width)
 {
     struct KernelApproxOpts * o = kernel_approx_opts_alloc();
     o->nnodes = ncenters;
@@ -359,6 +455,16 @@ size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts * opts)
         
 }
 
+/********************************************************//**
+*   Get number of parameters used for regression
+*************************************************************/
+void kernel_approx_opts_set_nparams(struct KernelApproxOpts * opts, size_t nparam)
+{
+    assert (opts != NULL);
+    opts->nregress_params = nparam;
+    opts->nnodes = nparam;
+}
+
 
 struct KernelExpansion
 {
@@ -367,7 +473,29 @@ struct KernelExpansion
     size_t nkernels;
     double * coeff;
     struct Kernel ** kernels;
+
+    
+    double lb;
+    double ub;
 };
+
+/********************************************************//**
+*   Get the lower bound
+*************************************************************/
+double kernel_expansion_get_lb(const struct KernelExpansion * k)
+{
+    assert (k != NULL);
+    return k->lb;
+}
+
+/********************************************************//**
+*   Get the upper bound
+*************************************************************/
+double kernel_expansion_get_ub(const struct KernelExpansion * k)
+{
+    assert (k != NULL);
+    return k->ub;
+}
 
 /********************************************************//**
 *   Allocate a kernel expansion 
@@ -385,6 +513,8 @@ struct KernelExpansion * kernel_expansion_alloc(size_t nalloc)
     ke->nkernels = 0;
     ke->coeff = calloc_double(ke->nalloc);
     ke->kernels = kernel_array_alloc(nalloc);
+    ke->lb = -DBL_MAX;
+    ke->ub = DBL_MAX;
     return ke;
 }
 
@@ -402,8 +532,8 @@ unsigned char *
 serialize_kernel_expansion(unsigned char * ser, struct KernelExpansion * kern, size_t * totSizeIn)
 {
     assert (kern->nkernels > 0);
-    // nkernels, (coeff+size), kernels
-    size_t totsize = sizeof(size_t) + kern->nkernels * sizeof(double) + sizeof(size_t);
+    // nkernels, (coeff+size), kernels, lb, ub,
+    size_t totsize = sizeof(size_t) + kern->nkernels * sizeof(double) + sizeof(size_t) + 2 * sizeof(double);
     for (size_t ii = 0; ii < kern->nkernels; ii++){
         size_t ksize = 0;
         serialize_kernel(ser,kern->kernels[ii],&ksize);
@@ -413,12 +543,15 @@ serialize_kernel_expansion(unsigned char * ser, struct KernelExpansion * kern, s
         *totSizeIn = totsize;
         return ser;
     }
-    
+
+    /* printf("serializing %zu\n",kern->nkernels); */
     unsigned char * ptr = serialize_size_t(ser,kern->nkernels);
     ptr = serialize_doublep(ptr,kern->coeff,kern->nkernels);
     for (size_t ii = 0; ii < kern->nkernels; ii++){
         ptr = serialize_kernel(ptr,kern->kernels[ii],NULL);
     }
+    ptr = serialize_double(ptr,kern->lb);
+    ptr = serialize_double(ptr,kern->ub);
     return ptr;
 }
 
@@ -437,17 +570,24 @@ deserialize_kernel_expansion( unsigned char * ser, struct KernelExpansion ** ker
     size_t nkernels;
     unsigned char * ptr = ser;
     ptr = deserialize_size_t(ptr,&nkernels);
-
+    /* printf("deseiralizing nkernels = %zu\n",nkernels); */
     *kern = kernel_expansion_alloc(nkernels);
+    (*kern)->nalloc = nkernels;
 
-    
     free((*kern)->coeff); (*kern)->coeff = NULL;
-    ptr = deserialize_doublep(ptr,&((*kern)->coeff),&((*kern)->nkernels));
 
+    double * coeff = NULL;
+    size_t n2;
+    ptr = deserialize_doublep(ptr,&coeff,&n2);
+    /* printf("n2,nk = (%zu,%zu)\n",n2,nkernels); */
+    (*kern)->coeff = coeff;
+    
     for (size_t ii = 0; ii < nkernels; ii++){
         ptr = deserialize_kernel(ptr,&((*kern)->kernels[ii]));
     }
 
+    ptr = deserialize_double(ptr,&((*kern)->lb));
+    ptr = deserialize_double(ptr,&((*kern)->ub));
     return ptr;
     
 }
@@ -467,6 +607,8 @@ struct KernelExpansion * kernel_expansion_copy(struct KernelExpansion * ke)
         out->coeff[ii] = ke->coeff[ii];
         out->kernels[ii] = kernel_copy(ke->kernels[ii]);
     }
+    out->lb = ke->lb;
+    out->ub = ke->ub;
     return out;
 }
 
@@ -480,6 +622,16 @@ void kernel_expansion_free(struct KernelExpansion * ke)
         kernel_array_free(ke->nalloc,ke->kernels);
         free(ke); ke = NULL;
     }
+}
+
+/********************************************************//**
+*   Set lower and upper bounds
+*************************************************************/
+void kernel_expansion_set_bounds(struct KernelExpansion * ke, double lb, double ub)
+{
+    assert(ke != NULL);
+    ke->lb = lb;
+    ke->ub = ub;
 }
 
 /********************************************************//**
@@ -534,6 +686,95 @@ void kernel_expansion_add_kernel(struct KernelExpansion * ke, double weight, str
 
 
 /********************************************************//**
+    Initialize a kernel expansion with some options
+
+    \param[in] opts  - options
+  
+    \return kernel expansion
+*************************************************************/
+struct KernelExpansion *
+kernel_expansion_init(const struct KernelApproxOpts * opts)
+{
+    struct KernelExpansion * ke = kernel_expansion_alloc(1);
+    struct Kernel * kern = NULL;
+    for (size_t ii = 0; ii < opts->nnodes; ii++)
+    {
+        switch (opts->type){
+        case KernGauss:
+            kern = kernel_gaussian(opts->other_params[0],opts->other_params[1],opts->centers[ii]);
+            kernel_expansion_add_kernel(ke,0.0,kern);
+            break;
+        case KernNone:
+            fprintf(stderr, "Kernel Approximation Options don't sepcify a kernel type\n");
+            exit(1);
+        }
+        kernel_free(kern); kern = NULL;
+    }
+
+    return ke;
+}
+
+/********************************************************//**
+    Update the params of a kernel expansion
+*************************************************************/
+void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
+{
+
+    assert (ke->nkernels == dim);
+    memmove(ke->coeff,param,dim*sizeof(double));
+}
+
+/********************************************************//**
+    Initialize a kernel expansion with particular parameters
+
+    \param[in] opts  - options
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+  
+    \return kernel expansion
+    
+    \note makes a copy of nodes and coefficients
+*************************************************************/
+struct KernelExpansion *
+kernel_expansion_create_with_params(struct KernelApproxOpts * opts,
+                                    size_t dim, const double * param)
+{
+    assert (opts != NULL);
+    assert (opts->nregress_params == dim);
+
+    struct KernelExpansion * ke = kernel_expansion_init(opts);
+    kernel_expansion_update_params(ke,dim,param);
+    
+    return ke;
+}
+
+
+/********************************************************//**
+    Return a zero function
+
+    \param[in] opts         - options
+    \param[in] force_nparam - nothing yet
+
+    \return ke - zero function
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_zero(const struct KernelApproxOpts * opts, int force_param)
+{
+
+    (void) (force_param);
+    assert(opts != NULL);
+    
+    struct KernelExpansion * ke = kernel_expansion_init(opts);
+    for (size_t ii = 0; ii < ke->nkernels; ii++){
+        ke->coeff[ii] = 0.0;
+    }
+
+    return ke;
+}
+
+
+
+/********************************************************//**
 *   Evaluate a kernel expansion
 *************************************************************/
 double kernel_expansion_eval(struct KernelExpansion * kern, double x)
@@ -545,6 +786,28 @@ double kernel_expansion_eval(struct KernelExpansion * kern, double x)
     }
     return out;
 }
+
+
+/********************************************************//**
+*   Check that the two expansions have identical bases
+*************************************************************/
+int check_same_nodes_kernels(struct KernelExpansion * x, struct KernelExpansion * y)
+{
+    if (x->nkernels != y->nkernels){
+        return 0;
+    }
+
+    int ret = 1;
+    for (size_t ii = 0; ii < x->nkernels; ii++){
+        ret = same_kernel(x->kernels[ii],y->kernels[ii]);
+        if (ret == 0){
+            break;
+        }
+    }
+    return ret;
+}
+
+
 
 /********************************************************//**
 *   Evaluate a kernel expansion consisting of sequentially increasing 
@@ -579,6 +842,74 @@ double kernel_expansion_deriv_eval(double x, void * kernin)
     for (size_t ii = 0; ii < kern->nkernels; ii++)
     {
         out += kern->coeff[ii] * kernel_deriv(kern->kernels[ii],x);
+    }
+    return out;
+}
+
+/********************************************************//**
+*   Add two kernels
+*************************************************************/
+void kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelExpansion * y)
+{
+    int same_nodes_and_kernels = check_same_nodes_kernels(x,y);
+
+    if (same_nodes_and_kernels == 1){
+        for (size_t ii = 0; ii < y->nkernels; ii++)
+        {
+            y->coeff[ii] += (a * x->coeff[ii]);
+        }
+    }
+    else{
+        fprintf(stderr, "Cannot axpy kernel expansions that have different structures\n");
+        exit(1);
+            
+    }
+}
+
+/********************************************************//**
+*   Integrate a kernel expansion
+*************************************************************/
+double kernel_expansion_integrate(struct KernelExpansion * a)
+{
+    double out = 0.0;
+    for (size_t ii = 0; ii < a->nkernels; ii++){
+        out += a->coeff[ii]*kernel_integrate(a->kernels[ii],a->lb,a->ub);
+    }
+    return out;
+}
+
+/********************************************************//**
+*   Inner product between two kernel expansions of the same type
+*
+*   \param[in] a - first kernel
+*   \param[in] b - second kernel
+*
+*   \return  inner product
+*
+*   \note
+*   Computes  \f$ \int_{lb}^ub  a(x)b(x) dx \f$ 
+*   where the bounds are the tightest bounds
+*************************************************************/
+double
+kernel_expansion_inner(struct KernelExpansion * a,
+                       struct KernelExpansion * b)
+{
+
+    double lb = a->lb;
+    if (a->lb < b->lb){
+        lb = b->lb;
+    }
+
+    double ub = a->ub;
+    if (a->ub > b->ub){
+        ub = b->ub;
+    }
+
+    double out = 0.0;
+    for (size_t ii = 0; ii < a->nkernels; ii++){
+        for (size_t jj = 0; jj < b->nkernels; jj++){
+            out += a->coeff[ii]*b->coeff[jj]*kernel_inner(a->kernels[ii],b->kernels[jj],lb,ub);
+        }
     }
     return out;
 }
@@ -625,6 +956,34 @@ int kernel_expansion_param_grad_eval(
     return res;
 }
 
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     kernel - kernel
+    \param[in]     scale  - scaling for additional gradient
+    \param[in,out] grad   - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+
+************************************************************/
+int
+kernel_expansion_squared_norm_param_grad(const struct KernelExpansion * ke,
+                                         double scale, double * grad)
+{
+    int res = 1;
+    for (size_t ii = 0; ii < ke->nkernels; ii++){
+        double g1 = 0.0;
+        for (size_t jj = 0; jj < ke->nkernels; jj++){
+            g1 += kernel_inner(ke->kernels[ii],ke->kernels[jj],ke->lb,ke->ub);
+        }
+        g1 *= ke->coeff[ii];
+        grad[ii] += 2.0 * scale * g1;
+    }
+    res = 0;
+    return res;
+}
 
 
 /********************************************************//**
@@ -645,6 +1004,9 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
     memmove(param,ke->coeff,ke->nkernels * sizeof(double));
     return ke->nkernels;
 }
+
+
+
 
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 
                             void * args)

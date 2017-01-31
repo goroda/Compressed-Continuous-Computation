@@ -15,3 +15,4 @@ target_link_libraries(ftregress -g
 
 
 
+install(TARGETS ftregress EXPORT ftregress DESTINATION "${bin_dest}")

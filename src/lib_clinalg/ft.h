@@ -116,6 +116,7 @@ size_t function_train_get_params(const struct FunctionTrain *,
                                  double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
+size_t function_train_update_params(struct FunctionTrain *, const double *);
 
 struct RunningCoreTotal;
 struct RunningCoreTotal * running_core_total_alloc(size_t);

@@ -25,9 +25,10 @@ void print_code_usage (FILE * stream, int exit_code)
             " -y --ytrain   <filename> Input file containing training evaluations (required) \n"
             " -o --outfile  <filename> File to which to save the resulting function train \n"
             "                          Does not save if this file is not specified\n"
+            " -e --evalfile <filename> File with locations to evaluate, writes evaluations to <filename>.evals \n"
             " -l --lower    <val>      Lower bound, same for every dimension (default -1.0)\n"
             " -u --upper    <val>      Upper bound, same for every dimension (default  1.0)\n"
-            " -m --maxorder <val>      Maximum order of polynomial in univariate approx (default 5)\n"
+            " -n --numparam <val>      Number of parameters in univariate approx (default 5)\n"
             " -r --rank     <val>      Starting rank for approximation (default 4)\n"
             " -a --alg      <string>   Algorithm (AIO or ALS)\n"
             "    --reg                 Regularization weight\n"
@@ -35,6 +36,7 @@ void print_code_usage (FILE * stream, int exit_code)
             "    --cv-rank  <int>      Add rank option with which to cross validate \n"
             "    --cv-reg   <dbl>      Regularization parameter to optimizive over with CV\n"
             "    --cv-num   <int>      Add number of univariate params option with which to cross validate \n"
+            " -b --basis    <string>   basis for univariate functions (poly or kernel) \n"
             " -v --verbose  <val>      Output words (default 0)\n"
         );
     exit (exit_code);
@@ -51,22 +53,25 @@ int main(int argc, char * argv[])
     srand(seed);
 
     int next_option;
-    const char * const short_options = "hx:y:o:l:u:m:r:a:v:";
+    const char * const short_options = "hx:y:o:e:l:u:n:r:a:v:b:t:";
     const struct option long_options[] = {
         { "help"     , 0, NULL, 'h' },
         { "xtrain"   , 1, NULL, 'x' },
         { "ytrain"   , 1, NULL, 'y' },
         { "outfile"  , 1, NULL, 'o' },
+        { "evalfile" , 1, NULL, 'e'},
         { "lower"    , 1, NULL, 'l' },
         { "upper"    , 1, NULL, 'u' },
-        { "maxorder" , 1, NULL, 'm' },
+        { "numparam" , 1, NULL, 'n' },
         { "rank"     , 1, NULL, 'r' },
         { "alg"      , 1, NULL, 'a' },
         { "reg"      , 1, NULL,  REG },
         { "cv-kfold" , 1, NULL,  CVK },
         { "cv-rank"  , 1, NULL,  CVR },
         { "cv-num"   , 1, NULL,  CVN },
-        { "cv-reg"   , 1, NULL,  CVREG },        
+        { "cv-reg"   , 1, NULL,  CVREG },
+        { "basis"    , 1, NULL, 'b'},
+        { "tol"      , 1, NULL, 't'},
         { "verbose"  , 1, NULL, 'v' },
         { NULL       , 0, NULL, 0   }
     };
@@ -74,13 +79,15 @@ int main(int argc, char * argv[])
     char * xfile = NULL;
     char * yfile = NULL;
     char * outfile = NULL;
+    char * evalfile = NULL;
     program_name = argv[0];
     double lower = -1.0;
     double upper = 1.0;
-    size_t maxorder = 5;
+    size_t numparam = 5;
     size_t rank = 4;
     int verbose = 0;
 
+    double tol = 1e-10;
     size_t nranksalloc = 10;
     size_t * CVranks = calloc_size_t(nranksalloc);
     size_t cvrank = 0;
@@ -96,6 +103,7 @@ int main(int argc, char * argv[])
     size_t kfold = 5;
     double reg = 0.0;
     char alg[80] = "ALS";
+    enum function_class fc = POLYNOMIAL;
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
         switch (next_option)
@@ -111,20 +119,38 @@ int main(int argc, char * argv[])
             case 'o':
                 outfile = optarg;
                 break;
+            case 'e':
+                evalfile = optarg;
+                break;
             case 'l':
                 lower = atof(optarg);
                 break;
             case 'u':
                 upper = atof(optarg);
                 break;
-            case 'm':
-                maxorder = strtol(optarg,NULL,10);
+            case 'n':
+                numparam = strtol(optarg,NULL,10);
                 break;
             case 'r':
                 rank = strtol(optarg,NULL,10);
                 break;
+            case 't':
+                tol = atof(optarg);
+                break;
             case 'a':
                 strcpy(alg,optarg);
+                break;
+            case 'b':
+                if (strcmp(optarg,"kernel") == 0){
+                    fc = KERNEL;
+                }
+                else if (strcmp(optarg,"poly") == 0){
+                    fc = POLYNOMIAL;
+                }
+                else{
+                    fprintf(stderr, "Error: basis type %s unrecognized\n",optarg);
+                    print_code_usage(stderr,1);
+                }
                 break;
             case 'v':
                 verbose = strtol(optarg,NULL,10);
@@ -206,6 +232,16 @@ int main(int argc, char * argv[])
     size_t ndata, dim, trash;
     double * x = readfile_double_array(fpx,&ndata,&dim);
     double * y = readfile_double_array(fpy,&ndata,&trash);
+
+    double avgy = 0.0;
+    for (size_t ii = 0; ii < ndata; ii++){
+        avgy += y[ii];
+    }
+    avgy /= (double)ndata;
+
+    /* for (size_t ii =0; ii < ndata; ii++){ */
+    /*     y[ii] -= avgy; */
+    /* } */
     
     fclose(fpx);
     fclose(fpy);
@@ -219,8 +255,24 @@ int main(int argc, char * argv[])
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,lower);
     ope_opts_set_ub(opts,upper);
-    ope_opts_set_nparams(opts,maxorder+1);
-    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    size_t maxorder = numparam-1;
+    ope_opts_set_nparams(opts,numparam);
+
+    // Initialize kernel opts incase
+    double * centers = linspace(lower,upper,numparam);
+    double scale = 1.0;
+    double width = pow(numparam,-0.2)*(upper-lower)/sqrt(12.0);
+    width *= 20;
+    struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(numparam,centers,scale,width);
+
+    struct OneApproxOpts * qmopts = NULL;
+    if (fc == POLYNOMIAL){
+        qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    }
+    else if (fc == KERNEL){
+        qmopts = one_approx_opts_alloc(KERNEL,kopts);
+    }
+    
     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
     size_t * ranks = calloc_size_t(dim+1);
     for (size_t ii = 0; ii < dim; ii++){
@@ -255,6 +307,7 @@ int main(int argc, char * argv[])
     ft_regress_set_parameter(ftr,"num_param",&nparam);
     ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
     ft_regress_process_parameters(ftr);
+    ft_regress_set_convtol(ftr,tol);
     ft_regress_set_als_maxsweep(ftr,20);
     ft_regress_set_verbose(ftr,verbose);
     if (reg > 0){
@@ -306,6 +359,48 @@ int main(int argc, char * argv[])
         if (res != 1){
             fprintf(stderr,"Failure saving function train to file %s\n",outfile);
         }
+
+        /* printf("load function train\n"); */
+        /* struct FunctionTrain * f2 = function_train_load(outfile); */
+        /* printf("loaded\n"); */
+    }
+
+    if (evalfile != NULL){
+
+        FILE * evalin = fopen(evalfile,"rt");
+        if (evalin == NULL){
+            fprintf(stderr, "Cannot open %s for reading\n",evalfile);
+        }
+        size_t neval, dimin;        
+        double * z = readfile_double_array(evalin,&neval,&dimin);
+        if (dimin != dim){
+            fprintf(stderr, "Error: File containing testing evaluation locations\n");
+            fprintf(stderr, "has more columns than dimension of training data");
+            exit(1);
+        }
+
+        char evaloutfile[256];
+        sprintf(evaloutfile,"%s.evals",evalfile);
+
+        /* printf("evaloutfile = %s\n",evaloutfile); */
+        FILE * evalout = fopen(evaloutfile,"wt");
+        if (evalout == NULL){
+            fprintf(stderr, "Error: cannot open %s for writing evaluations\n",evaloutfile);
+            exit(1);
+        }
+
+
+        for (size_t ii = 0; ii < neval; ii++){
+            double eval = function_train_eval(ft,z+ii*dim);
+            for (size_t jj = 0; jj < dim; jj++){
+                fprintf(evalout,"%3.15G ",z[ii*dim+jj]);
+            }
+            fprintf(evalout,"%3.15G\n",eval);
+        }
+        
+        fclose(evalin);
+        fclose(evalout);
+        
     }
     
     free(x); x = NULL;
@@ -319,6 +414,8 @@ int main(int argc, char * argv[])
     free(CVranks); CVranks = NULL;
     free(CVnums); CVnums = NULL;
     free(CVreg); CVreg = NULL;
+
+    free(centers); centers = NULL;
 
     return 0;
 }

@@ -971,26 +971,32 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
             return 0.0;
         }
     }
-    /* if (dg > 1e-15){ */
-    /*     fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg); */
-    /*     fprintf(stderr,"gradient norm is %G\n", */
-    /*             cblas_ddot(d,grad,1,grad,1)); */
-    /*     /\* exit(1); *\/ */
-    /*     *info = -4; */
-    /*     return 0.0; */
-    /* } */
+    
+    if (dg > 1e-15){
+        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
+        fprintf(stderr,"gradient norm is %G\n", cblas_ddot(d,grad,1,grad,1));
+
+        memmove(newx,x,d*sizeof(double));
+        *newf = fx;        
+        /* exit(1); */
+        *info = -4;
+        return 0.0;
+    }
 
     double checkval, dg2;
     size_t iter = 1;
     double fval;
     while(iter < maxiter){
 
-        if (verbose > 1){
-            printf("Iter=%zu,t=%G\n",iter,t);
-        }
+
         checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
+        /* printf("verbose = %d\n",verbose); */
+        if (verbose > 1){
+            printf("Iter=%zu,t=%G,fx=%G,reguired_val=%G,fval=%G\n",iter,t,fx,checkval,fval);
+        }
+        
         if (fval > checkval){
             tmax = t;
             t = 0.5 * (tmin + tmax);
@@ -998,6 +1004,9 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
         else{
             c3opt_eval(opt,newx,grad);
             dg2 = cblas_ddot(d,grad,1,dir,1);
+            if (verbose > 1){
+                printf("\t p^Td=%G, required=%G, current=%G\n",dg,beta*dg,dg2);
+            }
             if (dg2 < beta * dg){
                 tmin = t;
                 if (tmax > 1e5){
@@ -1154,6 +1163,8 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
     if (dg > 1e-15){
         fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
         *info = -4;
+        memmove(newx,x,d*sizeof(double));
+        *newf = fx;
         return 0.0;
     }
     if (initial == 1){
@@ -1319,7 +1330,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     if (verbose > 0){
         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n"
                ,*fval,eta*eta/2.0);
-        if (verbose > 1){
+        if (verbose > 3){
             printf("\t x = "); dprint(d,x);
         }
     }
@@ -1357,11 +1368,29 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         }
         else if (alg == WEAKWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_wolfe_bisect(opt,workspace,
+            res = -4;
+            int round=0;
+            while (res < 0){
+                sc = c3opt_ls_wolfe_bisect(opt,workspace,
                                        fvaltemp,
                                        workspace+2*d,
                                        workspace+d,
                                        x,fval,&res);
+                if (res == -4){
+                    fprintf(stderr,"Round %d\n",round);
+                    fprintf(stderr,"\t Warning line search did not move because lack of\n");
+                    fprintf(stderr,"\t descent direction. Changing direction to -gradient\n");
+                    memmove(workspace+d,grad,d*sizeof(double));
+                    for (size_t ii = 0; ii < d; ii++){
+                        workspace[d+ii] *= -1;
+                    }
+                    round++;
+                }
+                else if (res < 0){
+                    fprintf(stderr,"Warning: line search returns %d\n",res);
+                    exit(1);
+                }
+            }
         }
         /* assert (*fval < fvaltemp); */
         if (res < 0){
@@ -1480,9 +1509,9 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             printf("\t f(x)          = %3.5G\n",*fval);
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
             printf("\t |x - x_p|     = %3.5G\n",xdiff);
-            printf("\t eta =         = %3.5G\n",eta);
+            printf("\t p^Tdir =      = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
-            if (verbose > 1){
+            if (verbose > 3){
                 printf("\t x = "); dprint(d,x);
             }
 

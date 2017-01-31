@@ -272,7 +272,7 @@ function_train_serialize(unsigned char * ser, struct FunctionTrain * ft,
     }
     //printf("done serializing ranks dim\n");
     for (ii = 0; ii < ft->dim; ii++){
-        //printf("Serializing core (%zu/%zu)\n",ii,ft->dim);
+        /* printf("Serializing core (%zu/%zu)\n",ii+1,ft->dim); */
         ptr = qmarray_serialize(ptr, ft->cores[ii],NULL);
     }
     return ptr;
@@ -293,13 +293,14 @@ function_train_deserialize(unsigned char * ser, struct FunctionTrain ** ft)
 
     size_t dim;
     ptr = deserialize_size_t(ptr, &dim);
-    //printf("deserialized dim=%zu\n",dim);
+    /* printf("deserialized dim=%zu\n",dim); */
     *ft = function_train_alloc(dim);
     
     size_t ii;
     for (ii = 0; ii < dim+1; ii++){
         ptr = deserialize_size_t(ptr, &((*ft)->ranks[ii]));
     }
+    /* printf("deserialized ranks = \n"); iprint_sz(dim+1,(*ft)->ranks); */
     for (ii = 0; ii < dim; ii++){
         ptr = qmarray_deserialize(ptr, &((*ft)->cores[ii]));
     }
@@ -825,6 +826,21 @@ void function_train_core_update_params(struct FunctionTrain * ft,
                                        const double * param)
 {
     qmarray_update_params(ft->cores[core],nparam,param);
+}
+
+/***********************************************************//**
+   Update the parameters of a function train
+***************************************************************/
+size_t function_train_update_params(struct FunctionTrain * ft, const double * param)
+{
+    size_t running = 0;
+    size_t incore = 0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        incore = qmarray_get_nparams(ft->cores[ii],NULL);
+        qmarray_update_params(ft->cores[ii],incore,param+running);
+        running += incore;
+    }
+    return running;
 }
 
 /** \struct RunningCoreTotal

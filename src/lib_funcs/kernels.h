@@ -42,6 +42,10 @@
 
 double gauss_kernel_eval(double, double, double, double);
 double gauss_kernel_deriv(double, double, double, double);
+double gauss_kernel_integrate(double, double, double, double, double);
+double gauss_kernel_inner(double, double, double,
+                          double, double, double,
+                          double, double);
 
 struct Kernel;
 struct Kernel * kernel_gaussian(double, double, double);
@@ -51,23 +55,38 @@ void kernel_free(struct Kernel *);
 struct KernelApproxOpts;
 void kernel_approx_opts_free(struct KernelApproxOpts *);
 struct KernelApproxOpts *
-kernel_approx_opts_gauss_rbf(size_t, double *, double, double);
+kernel_approx_opts_gauss(size_t, double *, double, double);
 size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts *);
+void kernel_approx_opts_set_nparams(struct KernelApproxOpts *, size_t);
+
 
 struct KernelExpansion;
 struct KernelExpansion * kernel_expansion_alloc(size_t);
+double kernel_expansion_get_lb(const struct KernelExpansion *);
+double kernel_expansion_get_ub(const struct KernelExpansion *);
 unsigned char *
 serialize_kernel_expansion(unsigned char *, struct KernelExpansion *, size_t *);
 unsigned char * 
 deserialize_kernel_expansion(unsigned char *, struct KernelExpansion **);
 struct KernelExpansion * kernel_expansion_copy(struct KernelExpansion *);
 void kernel_expansion_free(struct KernelExpansion *);
+void kernel_expansion_set_bounds(struct KernelExpansion *, double, double);
 void kernel_expansion_add_kernel(struct KernelExpansion *, double, struct Kernel *);
+
+struct KernelExpansion * kernel_expansion_init(const struct KernelApproxOpts *);
+void kernel_expansion_update_params(struct KernelExpansion *, size_t, const double *);
+struct KernelExpansion *
+kernel_expansion_create_with_params(struct KernelApproxOpts *,
+                                    size_t, const double *);
+struct KernelExpansion *
+kernel_expansion_zero(const struct KernelApproxOpts *, int);
 double kernel_expansion_eval(struct KernelExpansion *, double);
 void kernel_expansion_evalN(struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
 double kernel_expansion_deriv_eval(struct KernelExpansion *, double);
-
+void kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
+double kernel_expansion_integrate(struct KernelExpansion *);
+double kernel_expansion_inner(struct KernelExpansion *, struct KernelExpansion *);
 void kernel_expansion_scale(double, struct KernelExpansion *);
 
 size_t kernel_expansion_get_num_params(const struct KernelExpansion *);
@@ -75,5 +94,8 @@ size_t kernel_expansion_get_params(const struct KernelExpansion *, double *);
     
 int kernel_expansion_param_grad_eval(
     struct KernelExpansion *, size_t, const double *, double *);
+int
+kernel_expansion_squared_norm_param_grad(const struct KernelExpansion *,
+                                         double, double *);
 
 void print_kernel_expansion(struct KernelExpansion *, size_t, void *);

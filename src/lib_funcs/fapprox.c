@@ -108,9 +108,13 @@ void one_approx_opts_free_deep(struct OneApproxOpts ** oa)
             (*oa)->aopts = NULL;
         }
         else if ((*oa)->fc == LINELM){
-                
             struct LinElemExpAopts * opts = (*oa)->aopts;
             lin_elem_exp_aopts_free(opts);
+            (*oa)->aopts = NULL;
+        }
+        else if ((*oa)->fc == KERNEL){
+            struct KernelApproxOpts * opts = (*oa)->aopts;
+            kernel_approx_opts_free(opts);
             (*oa)->aopts = NULL;
         }
         else{
@@ -139,6 +143,9 @@ size_t one_approx_opts_get_nparams(const struct OneApproxOpts * oa)
     else if (oa->fc == LINELM){
         nparams = lin_elem_exp_aopts_get_nparams(oa->aopts);
     }
+    else if (oa->fc == KERNEL){
+        nparams = kernel_approx_opts_get_nparams(oa->aopts);
+    }
     else{
         fprintf(stderr,"Cannot get number of parameters for one_approx options of type %d\n",
                 oa->fc);
@@ -162,6 +169,9 @@ void one_approx_opts_set_nparams(struct OneApproxOpts * oa, size_t num)
     }
     else if (oa->fc == LINELM){
         lin_elem_exp_aopts_set_nparams(oa->aopts,num);
+    }
+    else if (oa->fc == KERNEL){
+        kernel_approx_opts_set_nparams(oa->aopts,num);
     }
     else{
         fprintf(stderr,"Cannot set number of parameters for one_approx options of type %d\n",

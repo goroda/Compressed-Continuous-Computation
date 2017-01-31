@@ -1505,12 +1505,447 @@ void Test_SPARSELS_cross_validation(CuTest * tc)
 }
 
 
+double ff_reg(double * x)
+{
+
+    return sin(x[0]*2.0) + x[1] + x[2] + x[3]*x[4] + x[3]*x[2]*x[2]
+            + sin(x[0]*x[5]*300.0);
+}
+void Test_LS_AIO_kernel(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: least squares regression with kernel basis \n");
+
+    size_t dim = 5;
+    double lb = -1.0;
+    double ub = 1.0;
+    /* size_t maxorder = 2; */
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    /* size_t ranks[3] = {1,3,1}; */
+    /* size_t ranks[6] = {1,2,3,5,5,1}; */
+    size_t ranks[6] = {1,7,3,4,2,1};
+    
+    // create data
+    size_t ndata = 300;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+
+    // // add noise
+    double maxy = 0.0;
+    double miny = 0.0;
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = ff_reg(x+ii*dim);
+        if (y[ii] > maxy){
+            maxy = y[ii];
+        }
+        else if (y[ii] < miny){
+            miny = y[ii];
+        }
+        y[ii] += 0.1*randn();
+    }
+    
+    /* for (size_t ii = 0; ii < ndata; ii++){ */
+    /*     y[ii] = (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+    /* } */
+    
+
+    // Initialize Approximation Structure
+    size_t nparams = 10;
+    double * centers = linspace(lb,ub,nparams);
+    double scale = 1.0;
+    double width = pow(nparams,-0.2)*2.0/12.0;
+    width *= 20;
+    printf("width = %G\n",width);
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
+
+
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    double * param_space = calloc_double(dim * 25 * nparams);
+    size_t onparam=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                for (size_t ll = 0; ll < nparams; ll++){
+                    param_space[onparam] = (randu()*2.0-1.0);
+                    onparam++;
+                }
+            }
+        }
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
+    size_t * npercore = ft_param_get_num_params_per_core(ftp);
+    for (size_t jj = 0; jj < dim; jj++){
+        CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams,npercore[jj]);
+                          
+    }
+    
+    /* struct RegressOpts* ropts = regress_opts_create(AIO,FTLS_SPARSEL2,ndata,dim,x,y); */
+    struct RegressOpts* ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,1);
+    regress_opts_set_convtol(ropts,1e-3);
+    regress_opts_set_regweight(ropts,1e-9); // great for AIO
+
+
+    double resid = 0.0;
+    struct FunctionTrain * ft = c3_regression_run(ftp,ropts);
+    for (size_t ii = 0; ii < ndata; ii++){
+        double eval = function_train_eval(ft,x+ii*dim);
+        /* printf("x = ");dprint(dim,x+ii*dim); */
+        /* printf(" y = %G, ft = %G\n",y[ii],eval); */
+        resid += pow(y[ii]-eval,2);
+    }
+    resid /= (double) ndata;
+    printf("resid = %G\n",resid);
+    /* CuAssertDblEquals(tc,0,resid,1e-3); */
+
+    double diff = 0.0;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < 1000; ii++){
+        double pt[5];
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double v1 = ff_reg(pt);
+        /* v1 = (2*v1-maxy-miny)/(maxy-miny); */
+        double v2 = function_train_eval(ft,pt);
+
+        /* dprint(5,pt); */
+        /* printf(" v1 = %G, v2 = %G\n",v1,v2); */
+        /* v2 *= (maxy-miny); */
+        /* v2 += maxy + miny; */
+        /* v2 /= 2.0; */
+        diff += pow(v1-v2,2);
+
+        norm += pow(v1,2);
+
+        /* (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+
+    }
+    printf("Difference = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
+    /* CuAssertDblEquals(tc,0.0,diff,1e-7); */
+                                         
+    free(centers);
+    function_train_free(ft);  ft = NULL;
+    free(param_space);        param_space = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
+
+
+double ff_reg2(double * x)
+{
+    double out = 0.0;
+    for (size_t ii = 0; ii < 10; ii++){
+        out += x[ii];
+    }
+
+    return sin(out);
+}
+
+void Test_LS_AIO_kernel2(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: least squares regression with kernel basis \n");
+
+    size_t dim = 10;
+    double lb = 0.0;
+    double ub = 1.0;
+    size_t ranks[11] = {1,2,2,2,2,2,
+                        2,2,2,2,1};
+    /* size_t ranks[3] = {1,3,1}; */
+    /* size_t ranks[6] = {1,2,3,5,5,1}; */
+    /* size_t ranks[11] = {1,4,3,4,2, */
+    /*                     5,4,3,4,3,1}; */
+    
+    // create data
+    size_t ndata = 600;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+
+    // // add noise
+    double maxy = 0.0;
+    double miny = 0.0;
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = ff_reg2(x+ii*dim);
+        if (y[ii] > maxy){
+            maxy = y[ii];
+        }
+        else if (y[ii] < miny){
+            miny = y[ii];
+        }
+        /* y[ii] += 0.1*randn(); */
+    }
+    
+    /* for (size_t ii = 0; ii < ndata; ii++){ */
+    /*     y[ii] = (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+    /* } */
+    
+
+    // Initialize Approximation Structure
+    size_t nparams = 5;
+    double * centers = linspace(lb,ub,nparams);
+    double scale = 1.0;
+    double width = pow(nparams,-0.2)*2.0/12.0;
+    width *= 20;
+    /* width *= 10; */
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
+
+
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    double * param_space = calloc_double(dim * 25 * nparams);
+    size_t onparam=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                for (size_t ll = 0; ll < nparams; ll++){
+                    param_space[onparam] = (randu()*2.0-1.0);
+                    onparam++;
+                }
+            }
+        }
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
+    size_t * npercore = ft_param_get_num_params_per_core(ftp);
+    for (size_t jj = 0; jj < dim; jj++){
+        CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams,npercore[jj]);
+                          
+    }
+    
+    struct RegressOpts* ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,1);
+    regress_opts_set_convtol(ropts,1e-9);
+    regress_opts_set_regweight(ropts,1e-9); // great for AIO
+
+
+    double resid = 0.0;
+    struct FunctionTrain * ft = c3_regression_run(ftp,ropts);
+    for (size_t ii = 0; ii < ndata; ii++){
+        double eval = function_train_eval(ft,x+ii*dim);
+        /* printf("x = ");dprint(dim,x+ii*dim); */
+        /* printf(" y = %G, ft = %G\n",y[ii],eval); */
+        resid += pow(y[ii]-eval,2);
+    }
+    resid /= (double) ndata;
+    printf("resid = %G\n",resid);
+    /* CuAssertDblEquals(tc,0,resid,1e-3); */
+
+    double diff = 0.0;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < 1000; ii++){
+        double pt[10];
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double v1 = ff_reg2(pt);
+        /* v1 = (2*v1-maxy-miny)/(maxy-miny); */
+        double v2 = function_train_eval(ft,pt);
+
+        /* dprint(5,pt); */
+        /* printf(" v1 = %G, v2 = %G\n",v1,v2); */
+        /* v2 *= (maxy-miny); */
+        /* v2 += maxy + miny; */
+        /* v2 /= 2.0; */
+        diff += pow(v1-v2,2);
+
+        norm += pow(v1,2);
+
+        /* (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+
+    }
+    printf("Difference = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
+    CuAssertDblEquals(tc,0.0,diff/norm,1e-2);
+                                         
+    free(centers);
+    function_train_free(ft);  ft = NULL;
+    free(param_space);        param_space = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
+
+double kern_rosen(double * x)
+{
+    double f1 = 10.0 * (x[1] - pow(x[0],2));
+    double f2 = (1.0 - x[0]);
+    double out = pow(f1,2) + pow(f2,2);
+
+    return out;
+}
+
+void Test_LS_AIO_kernel3(CuTest * tc)
+{
+    srand(seed);
+    printf("Testing Function: least squares regression with kernel basis (on rosen) \n");
+
+    size_t dim = 2;
+    double lb = -2.0;
+    double ub = 2.0;
+    size_t ranks[3] = {1,4,1};
+    
+    // create data
+    size_t ndata = 1000;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+
+    // // add noise
+    double maxy = 0.0;
+    double miny = 0.0;
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = kern_rosen(x+ii*dim);
+        if (y[ii] > maxy){
+            maxy = y[ii];
+        }
+        else if (y[ii] < miny){
+            miny = y[ii];
+        }
+        /* y[ii] += 0.1*randn(); */
+    }
+    
+    /* for (size_t ii = 0; ii < ndata; ii++){ */
+    /*     y[ii] = (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+    /* } */
+    
+
+    // Initialize Approximation Structure
+    size_t nparams = 10;
+    double * centers = linspace(lb,ub,nparams);
+    double scale = 1.0;
+    double width = pow(nparams,-0.2)*2.0/12.0;
+    width *= 20;
+    /* width *= 10; */
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
+
+
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    double * param_space = calloc_double(dim * 25 * nparams);
+    size_t onparam=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                for (size_t ll = 0; ll < nparams; ll++){
+                    param_space[onparam] = (randu()*2.0-1.0);
+                    onparam++;
+                }
+            }
+        }
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
+    size_t * npercore = ft_param_get_num_params_per_core(ftp);
+    for (size_t jj = 0; jj < dim; jj++){
+        CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams,npercore[jj]);
+                          
+    }
+    
+    struct RegressOpts* ropts = regress_opts_create(AIO,FTLS_SPARSEL2,ndata,dim,x,y);
+    regress_opts_set_verbose(ropts,3);
+    regress_opts_set_convtol(ropts,1e-9);
+    regress_opts_set_regweight(ropts,1e-9); // great for AIO
+
+
+    double resid = 0.0;
+    struct FunctionTrain * ft = c3_regression_run(ftp,ropts);
+    for (size_t ii = 0; ii < ndata; ii++){
+        double eval = function_train_eval(ft,x+ii*dim);
+        /* printf("x = ");dprint(dim,x+ii*dim); */
+        /* printf(" y = %G, ft = %G\n",y[ii],eval); */
+        resid += pow(y[ii]-eval,2);
+    }
+    resid /= (double) ndata;
+    printf("resid = %G\n",resid);
+    /* CuAssertDblEquals(tc,0,resid,1e-3); */
+
+    double diff = 0.0;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < 1000; ii++){
+        double pt[2];
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double v1 = kern_rosen(pt);
+        /* v1 = (2*v1-maxy-miny)/(maxy-miny); */
+        double v2 = function_train_eval(ft,pt);
+
+        /* dprint(2,pt); */
+        /* printf(" v1 = %G, v2 = %G\n",v1,v2); */
+        /* v2 *= (maxy-miny); */
+        /* v2 += maxy + miny; */
+        /* v2 /= 2.0; */
+        diff += pow(v1-v2,2);
+
+        norm += pow(v1,2);
+
+        /* (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+
+    }
+    printf("Difference = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
+    CuAssertDblEquals(tc,0.0,diff/norm,1e-2);
+                                         
+    free(centers);
+    function_train_free(ft);  ft = NULL;
+    free(param_space);        param_space = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
+
+
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
 
     /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
     /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
@@ -1524,7 +1959,11 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
-    
+
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
+        
     // takes too many points
     /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
     return suite;
