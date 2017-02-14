@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 file(GLOB SRC_FILES 
   opt_test.c
-  uncon_test.c
+  unconstrained_functions.c
   lbfgs_test.c
   bfgs_test.c
   batchgrad_test.c 

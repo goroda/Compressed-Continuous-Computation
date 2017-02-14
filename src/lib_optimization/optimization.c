@@ -914,7 +914,7 @@ double c3opt_ls_box(struct c3Opt * opt, double * x, double fx,
     \param[in]     opt     - optimization structure
     \param[in]     x       - base point
     \param[in]     fx      - objective function value at x
-    \param[in,out] grad    - gradient at x
+    \param[in,out] grad    - gradient at x (then at new value)
     \param[in]     dir     - search direction
     \param[in,out] newx    - new location (x + t*p)
     \param[in,out] newf    - objective function value f(newx)
@@ -940,8 +940,9 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     double absxtol = c3opt_get_absxtol(opt);
     int verbose = c3opt_get_verbose(opt);
 
-    double tmax = 1e6;
+
     double t = 1.0;
+    double tmax = 0.0;
     double tmin = 0.0;
     double dg = cblas_ddot(d,grad,1,dir,1);
     double normdir = cblas_ddot(d,dir,1,dir,1);
@@ -978,14 +979,17 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     double checkval, dg2;
     size_t iter = 1;
     double fval;
+    tmin = 0.0, tmax = 0.0;
     while(iter < maxiter){
 
-        if (verbose > 1){
-            printf("Iter=%zu,t=%G\n",iter,t);
-        }
+
         checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
+        if (verbose > 1){
+            printf("Iter=%zu,t=%G,fx=%G,reguired=%G,fval=%G\n",iter,t,fx,checkval,fval);
+        }
+        
         if (fval > checkval){
             tmax = t;
             t = 0.5 * (tmin + tmax);
@@ -995,7 +999,7 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
             dg2 = cblas_ddot(d,grad,1,dir,1);
             if (dg2 < beta * dg){
                 tmin = t;
-                if (tmax > 1e5){
+                if (fabs(tmax) < 1e-15){
                     t = 2.0 * tmin;
                 }
                 else{
@@ -1309,7 +1313,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
 
     if (verbose > 0){
         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
-        if (verbose > 1){
+        if (verbose > 3){
             printf("\t x = "); dprint(d,x);
         }
     }
@@ -1460,9 +1464,9 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             printf("\t f(x)          = %3.5G\n",*fval);
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
             printf("\t |x - x_p|     = %3.5G\n",xdiff);
-            printf("\t eta =         = %3.5G\n",eta);
+            printf("\t p^Tg =        = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
-            if (verbose > 1){
+            if (verbose > 3){
                 printf("\t x = "); dprint(d,x);
             }
 

@@ -46,7 +46,7 @@
 
 #include "CuTest.h"
 
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 void Test_unc1(CuTest * tc)
 {

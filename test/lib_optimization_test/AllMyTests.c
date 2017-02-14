@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "CuTest.h"
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 CuSuite * OptGetSuite();
 CuSuite * BFGSGetSuite();
@@ -60,7 +60,7 @@ void RunAllTests(void) {
 
     create_unc_probs();
 
-    CuSuiteAddSuite(suite, lbfgs);
+    /* CuSuiteAddSuite(suite, lbfgs); */
     CuSuiteAddSuite(suite, bfgs);
 
     /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
