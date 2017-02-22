@@ -53,6 +53,8 @@ enum c3opt_return {
 };
 
 struct c3Opt;
+struct c3Opt * c3opt_create(enum c3opt_alg);
+void c3opt_set_nvars(struct c3Opt *, size_t);
 struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);

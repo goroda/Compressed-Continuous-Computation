@@ -23,7 +23,6 @@ fourth.svg : first attempt taking advantage of sparsity of gradients of cores du
            : the cores on the the right
            : times = 24.469s, 24.562s, 25.092s
 
-
 fifth.svg  : take advantage of sparsity of gradients during right-to-left multiplication
            : times = 11.708s, 11.281s, 11.761s
 
@@ -32,3 +31,6 @@ sixth.svg  : precompute gradients for linear parameters
 
 seventh.svg : new interface
             : times = 7.519s, 7.911s, 7.631s
+
+eight.svg : new interface, initialized from linear regression
+          : times = 5.191s, 5.924s, 5.553s

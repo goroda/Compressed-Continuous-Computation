@@ -98,6 +98,36 @@ int sin_sum10d(size_t N, const double * x, double * out, void * arg)
     return 0;
 }
 
+int sin_sum50d(size_t N, const double * x, double * out, void * arg)
+{
+
+    (void)(arg);
+    for (size_t ii = 0; ii < N; ii++){
+        double temp = 0.0;
+        for (size_t jj = 0; jj < 50; jj++){
+            temp += x[ii*50+jj];
+        }
+        out[ii] = sin(temp);
+    }
+
+    return 0;
+}
+
+int sin_sum100d(size_t N, const double * x, double * out, void * arg)
+{
+
+    (void)(arg);
+    for (size_t ii = 0; ii < N; ii++){
+        double temp = 0.0;
+        for (size_t jj = 0; jj < 100; jj++){
+            temp += x[ii*100+jj];
+        }
+        out[ii] = sin(temp);
+    }
+
+    return 0;
+}
+
 int otlcircuit(size_t N, const double * xin, double * out, void * args)
 {
     assert (args == NULL );
@@ -411,7 +441,7 @@ struct Function funcs[34];
 size_t num_funcs;
 void create_functions()
 {
-    num_funcs = 14;
+    num_funcs = 16;
     
     funcs[0].dim = 2;
     funcs[0].lower = -2.0;
@@ -512,5 +542,19 @@ void create_functions()
     funcs[13].eval = xy;
     funcs[13].name = "XY";
     funcs[13].message = "XY\n\t log(x_1x_2+2) / (x_1+2)^2 * exp(10x_1x_2) \n\t 5 dimensions \n\t Normalized: [-1,1] \n";
+
+    funcs[14].dim = 100;
+    funcs[14].lower = 0.0;
+    funcs[14].upper = 1.0;
+    funcs[14].eval = sin_sum100d;
+    funcs[14].name = "SinSum100d";
+    funcs[14].message = "SinSum\n\t sin(sum_{i=1}^100 x_i) \n\t 100 dimensions \n\t [0,1] \n";
+
+    funcs[15].dim = 50;
+    funcs[15].lower = 0.0;
+    funcs[15].upper = 1.0;
+    funcs[15].eval = sin_sum50d;
+    funcs[15].name = "SinSum50d";
+    funcs[15].message = "SinSum\n\t sin(sum_{i=1}^50 x_i) \n\t 100 dimensions \n\t [0,1] \n";
 
 }

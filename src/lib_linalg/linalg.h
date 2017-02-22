@@ -180,6 +180,17 @@
                    I,J,(integer *)K,(integer *)L,M,(integer *)N, \
                    (integer *)O,(integer *)P,(integer *)Q))
 
+    #define dgels_(X,Y,Z,A,B,C,D,E,F,G,H)                                   \
+            ( dgels_(X,(integer * )Y,(integer *)Z,(integer *)A,B,(integer *)C, \
+                       D, (integer *) E,F,(integer *)G,(integer *)H))
+
+    #define dgelsd_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K)                         \
+            ( dgelsd_( (integer *)X, (integer *)Y, (integer *)Z, \
+                       (doublereal *)A, (integer *)B, (doublereal *)C,  \
+                       (integer *)D, (doublereal *) E,                  \
+	                   (doublereal *)F, (integer *)G, (doublereal *)H, (integer *)I, \
+                           (integer *)J, (integer *)K))
+
 
 #endif
 
@@ -249,5 +260,5 @@ skeleton_func2(int (*Ap)(double *, double, size_t, size_t, double *,
                 void *),
                    void *, struct sk_decomp **,  double *, double *, 
                    double);
-
+void linear_ls(size_t, size_t, double *, double *, double *);
 #endif

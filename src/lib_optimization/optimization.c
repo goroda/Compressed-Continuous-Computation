@@ -224,8 +224,128 @@ struct c3Opt
 
 };
 
+
 /***********************************************************//**
     Allocate optimization algorithm
+***************************************************************/
+struct c3Opt * c3opt_create(enum c3opt_alg alg)
+{
+    struct c3Opt * opt = malloc(sizeof(struct c3Opt));
+    if (opt == NULL){
+        fprintf(stderr,"Error allocating optimization\n");
+        exit(1);
+    }
+
+    opt->alg = alg;
+    opt->d = 0;
+
+    opt->f = NULL;
+    opt->farg = NULL;
+
+    opt->lb = NULL;
+    opt->ub = NULL;
+
+    opt->verbose = 0;
+    opt->maxiter = 1000;
+    opt->relxtol = 1e-8;
+    opt->absxtol = 1e-8;
+    opt->relftol = 1e-8;
+    opt->gtol = 1e-12;
+
+    if (alg == BFGS){
+        opt->grad = 1;
+        opt->workspace = NULL; 
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
+    else if (alg==BATCHGRAD){
+        opt->grad = 1;
+        opt->workspace = NULL;
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
+    else{
+        opt->nlocs = 0;
+        opt->grad = 0;
+        opt->ls = NULL;
+        opt->workspace = NULL;        
+    }
+    
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 0;
+
+    opt->store_grad = 0;
+    opt->store_func = 0;
+    opt->store_x = 0;
+    opt->stored_grad = NULL;
+    opt->stored_func = NULL;
+    opt->stored_x = NULL;
+
+    return opt;
+}
+
+/***********************************************************//**
+    Set the number of variables in the optimizer
+
+    \note 
+    This function overwrites any previously allocated memory
+***************************************************************/
+void c3opt_set_nvars(struct c3Opt * opt, size_t nvars)
+{
+    assert (opt != NULL);
+
+    opt->d = nvars;
+    
+    free(opt->lb); opt->lb = NULL;
+    free(opt->ub); opt->ub = NULL;
+    
+    opt->lb = calloc_double(nvars);
+    opt->ub = calloc_double(nvars);
+    for (size_t ii = 0; ii < nvars; ii++){
+//        printf("lower bounds are small\n");
+        opt->lb[ii] = -DBL_MAX;
+        opt->ub[ii] = DBL_MAX;
+    }
+
+    free(opt->workspace);
+    opt->workspace = NULL;
+    if (opt->alg == BFGS){
+        opt->grad = 1;
+        opt->workspace = calloc_double(4*opt->d);
+    }
+    else if (opt->alg==BATCHGRAD){
+        opt->grad = 1;
+        opt->workspace = calloc_double(2*opt->d);
+    }
+    else{
+        opt->nlocs = 0;
+        opt->grad = 0;
+        opt->ls = NULL;
+        opt->workspace = NULL;        
+    }
+
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 0;
+
+    free(opt->stored_grad); opt->stored_grad = NULL;
+    free(opt->stored_func); opt->stored_func = NULL;
+    free(opt->stored_x);    opt->stored_x = NULL;
+    
+    if (opt->store_grad == 1){
+        opt->stored_grad = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_x == 1){
+        opt->stored_x = calloc_double(opt->d*sizeof(double)*opt->maxiter);
+    }
+    if (opt->store_func == 1){
+        opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
+    }
+
+}
+
+/***********************************************************//**
+    Allocate optimization algorithm
+    (Depracated!)
 ***************************************************************/
 struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
 {
@@ -286,6 +406,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->stored_grad = NULL;
     opt->stored_func = NULL;
     opt->stored_x = NULL;
+
     
     return opt;
 }
@@ -1516,6 +1637,9 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             }
 
         }
+        /* if (iter < 4){ */
+        /*     converged = 0; */
+        /* } */
         
     }
 

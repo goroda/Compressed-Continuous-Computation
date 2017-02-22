@@ -3283,6 +3283,24 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
 }
 
 /********************************************************//**
+    Reapproximate a function train with new approximation options
+    in a nonadaptive way. MultiApproxOpts should have all info needed
+
+    \param[in,out] ft    - function train to reapproximate
+    \param[in]     aopts - approximation options
+
+***********************************************************/
+/* void function_train_reapprox_nonadapt(struct FunctionTrain * ft, struct MultiApproxOpts * aopts) */
+/* { */
+/*     assert (ft != NULL); */
+/*     assert (aopts != NULL); */
+/*     struct OneApproxOpts * o = NULL; */
+/*     for (size_t ii = 0; ii < ft->dim; ii++){ */
+/*         o = multi_approx_opts_get_aopts(aopts,ii); */
+/*     } */
+/* } */
+
+/********************************************************//**
     Addition of two functions in FT format
 
     \param[in] a - FT 1

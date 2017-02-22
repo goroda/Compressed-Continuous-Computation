@@ -220,6 +220,7 @@ int main(int argc, char * argv[])
     ranks[0] = 1;
     ranks[dim] = 1;
 
+
     /* size_t nparams = (rank*rank * (dim-2) + 2*rank) * (maxorder+1); */
     /* double * params_start = calloc_double(nparams); */
     /* for (size_t ii = 0; ii < nparams; ii++){ */
@@ -228,55 +229,49 @@ int main(int argc, char * argv[])
     /* struct FTparam * ftp = ft_param_alloc(dim,fapp,params_start,ranks); */
     /* struct RegressOpts * ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y); */
 
-    size_t nparam = maxorder+1;
     size_t opt_maxiter=1000;
-    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
-    ft_regress_set_type(ftr,AIO);
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    c3opt_set_maxiter(optimizer,opt_maxiter);
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp,ranks);
     if (reg > 0){
-        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
+        ft_regress_set_alg_and_obj(ftr,AIO,FTLS_SPARSEL2);
     }
     else{
-        ft_regress_set_obj(ftr,FTLS);
+        ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
     }
-    ft_regress_set_data(ftr,ndata,x,1,y,1);
-    ft_regress_set_parameter(ftr,"rank",&rank);
-    ft_regress_set_parameter(ftr,"num_param",&nparam);
-    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
-    ft_regress_process_parameters(ftr);
-    /* ft_regress_set_als_maxsweep(ftr,20); */
+
     ft_regress_set_verbose(ftr,verbose);
     if (reg > 0){
-        ft_regress_set_regweight(ftr,reg);
+        ft_regress_set_regularization_weight(ftr,reg);
     }
 
     // choose parameters using cross validation
     struct CrossValidate * cv = NULL;
     if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
+        int cvverbose = 0;
+        cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
 
-        cv = cross_validate_init(ndata,dim,x,y,kfold);
-
+        struct CVOptGrid * cvgrid = cv_opt_grid_init(3);
+        
         if (cvnum > 0){ // just crossvalidate on cv num
-            cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);            
+            cv_opt_grid_add_param(cvgrid,"num_param",cvnum,CVnums);
         }
         if (cvrank > 0){ // just cross validate on ranks
-            cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);            
+            cv_opt_grid_add_param(cvgrid,"rank",cvrank,CVranks);            
         }
         if (cvreg > 0){ // cv on regularization parameter
-            cross_validate_add_discrete_param(cv,"reg_weight",cvreg,CVreg);            
+            cv_opt_grid_add_param(cvgrid,"reg_weight",cvreg,CVreg);            
         }
 
-        /* printf("verbose = %d\n",verbose); */
-        cross_validate_opt(cv,ftr,verbose);
+        cross_validate_grid_opt(cv,cvgrid,ftr,optimizer);
+
+        cross_validate_free(cv); cv = NULL; 
+        cv_opt_grid_free(cvgrid); cvgrid = NULL;
     }
 
     
-    struct FunctionTrain * ft = ft_regress_run(ftr);
+    struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,ndata,x,y);
 
-    
-    cross_validate_free(cv); cv = NULL;
-
-    /* struct FunctionTrain * ft = c3_regression_run(ftp,ropts); */
-    
     if (verbose > 0){
         double diff;
         double err = 0.0;
@@ -309,11 +304,7 @@ int main(int argc, char * argv[])
     ft_regress_free(ftr); ftr = NULL;
     free(CVranks); CVranks = NULL;
     free(CVnums); CVnums = NULL;
-
-    /* ft_param_free(ftp);      ftp  = NULL; */
-    /* regress_opts_free(ropts); ropts = NULL; */
-
-
+    c3opt_free(optimizer); optimizer = NULL;
     
     return 0;
 }

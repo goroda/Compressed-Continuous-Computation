@@ -378,8 +378,6 @@ void kernel_array_free(size_t nkerns, struct Kernel ** kerns)
     }
 }
 
-
-
 struct KernelApproxOpts
 {
     size_t nnodes;
@@ -388,6 +386,15 @@ struct KernelApproxOpts
     size_t nother_params;
     double * other_params;
     size_t nregress_params;
+
+
+    // bounds for some operations like generating linear functions
+    double prac_lb; //lower bound for some operations
+    double prac_ub; //upper bound for some operations
+
+    // bounds for approximation
+    double lb; 
+    double ub;
 };
 
 /********************************************************//**
@@ -408,6 +415,12 @@ struct KernelApproxOpts * kernel_approx_opts_alloc()
     ko->other_params = NULL;
 
     ko->nregress_params = 0;
+
+    ko->prac_lb = -DBL_MAX;
+    ko->prac_ub = DBL_MAX;
+
+    ko->lb = -DBL_MAX;
+    ko->ub = DBL_MAX;
     return ko;
 }
 
@@ -442,8 +455,24 @@ kernel_approx_opts_gauss(size_t ncenters, double * centers, double scale, double
 
     o->nregress_params = ncenters;
 
+    o->prac_lb = DBL_MAX;
+    o->prac_ub = -DBL_MAX;
+    for (size_t ii = 0; ii < ncenters; ii++){
+        if (centers[ii] < o->prac_lb){
+            o->prac_lb = centers[ii];
+        }
+
+        if (centers[ii] > o->prac_ub){
+            o->prac_ub = centers[ii];
+        }
+    }
+
+    o->lb = -DBL_MAX;
+    o->ub = DBL_MAX;
     return o;
 }
+
+
 
 /********************************************************//**
 *   Get number of parameters used for regression
@@ -463,8 +492,31 @@ void kernel_approx_opts_set_nparams(struct KernelApproxOpts * opts, size_t npara
     assert (opts != NULL);
     opts->nregress_params = nparam;
     opts->nnodes = nparam;
+
+    free(opts->centers); opts->centers = NULL;
+    assert (opts->prac_lb < DBL_MAX);
+    assert (opts->prac_ub > -DBL_MAX);
+    opts->centers = linspace(opts->prac_lb,opts->prac_ub,opts->nnodes);
 }
 
+
+/********************************************************//**
+*   Set lower bounds
+*************************************************************/
+void kernel_approx_opts_set_lb(struct KernelApproxOpts * opts, double lb)
+{
+    opts->lb = lb;
+    opts->prac_lb = lb;
+}
+
+/********************************************************//**
+*   Set upper bounds
+*************************************************************/
+void kernel_approx_opts_set_ub(struct KernelApproxOpts * opts, double ub)
+{
+    opts->ub = ub;
+    opts->prac_ub = ub;
+}
 
 struct KernelExpansion
 {
@@ -572,6 +624,7 @@ deserialize_kernel_expansion( unsigned char * ser, struct KernelExpansion ** ker
     ptr = deserialize_size_t(ptr,&nkernels);
     /* printf("deseiralizing nkernels = %zu\n",nkernels); */
     *kern = kernel_expansion_alloc(nkernels);
+    (*kern)->nkernels = nkernels;
     (*kern)->nalloc = nkernels;
 
     free((*kern)->coeff); (*kern)->coeff = NULL;
@@ -588,6 +641,7 @@ deserialize_kernel_expansion( unsigned char * ser, struct KernelExpansion ** ker
 
     ptr = deserialize_double(ptr,&((*kern)->lb));
     ptr = deserialize_double(ptr,&((*kern)->ub));
+    /* printf("lb,ub=%G,%G\n",(*kern)->lb,(*kern)->ub); */
     return ptr;
     
 }
@@ -632,6 +686,15 @@ void kernel_expansion_set_bounds(struct KernelExpansion * ke, double lb, double 
     assert(ke != NULL);
     ke->lb = lb;
     ke->ub = ub;
+}
+
+/********************************************************//**
+*   Get number of kernels
+*************************************************************/
+size_t kernel_expansion_get_nkernels(const struct KernelExpansion * ke)
+{
+    assert (ke != NULL);
+    return ke->nkernels;
 }
 
 /********************************************************//**
@@ -711,6 +774,10 @@ kernel_expansion_init(const struct KernelApproxOpts * opts)
         kernel_free(kern); kern = NULL;
     }
 
+    ke->lb = opts->lb;
+    ke->ub = opts->ub;
+    /* kernel_expansion_set_bounds(ke,opts->centers[0],opts->centers[opts->nnodes-1]); */
+
     return ke;
 }
 
@@ -772,7 +839,55 @@ kernel_expansion_zero(const struct KernelApproxOpts * opts, int force_param)
     return ke;
 }
 
+/********************************************************//**
+    Return an approximately linear function
 
+    \param[in] a      - value of the slope function
+    \param[in] offset - offset
+    \param[in] opts   - upper bound
+
+    \return ke - approximately linear function
+
+    \note computed by linear regression
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts * opts)
+{
+    assert(opts != NULL);
+    
+    struct KernelExpansion * ke = kernel_expansion_init(opts);
+    for (size_t ii = 0; ii < ke->nkernels; ii++){
+        ke->coeff[ii] = 0.0;
+    }
+
+    // weird bounds
+    size_t nregress = 100.0 * ke->nkernels;
+    double lb = opts->prac_lb;
+    double ub = opts->prac_ub;
+    
+    double * x = linspace(lb,ub,nregress);
+    double * y = calloc_double(nregress);
+    double * A = calloc_double(nregress * ke->nkernels);
+
+    for (size_t ii = 0; ii < nregress; ii++){
+        y[ii] = a * x[ii] + offset;
+    }
+    
+    for (size_t jj = 0; jj < ke->nkernels; jj++){
+        for (size_t ii = 0; ii < nregress; ii++){
+            A[jj*nregress+ii] = kernel_eval(ke->kernels[jj],x[ii]);
+        }
+    }
+
+    /* dprint2d_col(nregress,ke->nkernels,A); */
+    // perform linear least squares for the coefficients
+    linear_ls(nregress,ke->nkernels,A,y,ke->coeff);
+
+    free(x); x = NULL;
+    free(A); A = NULL;
+    free(y); y = NULL;
+    return ke;
+}
 
 /********************************************************//**
 *   Evaluate a kernel expansion
@@ -905,6 +1020,8 @@ kernel_expansion_inner(struct KernelExpansion * a,
         ub = b->ub;
     }
 
+    /* printf("a coeffs: "); dprint; */
+
     double out = 0.0;
     for (size_t ii = 0; ii < a->nkernels; ii++){
         for (size_t jj = 0; jj < b->nkernels; jj++){
@@ -976,9 +1093,9 @@ kernel_expansion_squared_norm_param_grad(const struct KernelExpansion * ke,
     for (size_t ii = 0; ii < ke->nkernels; ii++){
         double g1 = 0.0;
         for (size_t jj = 0; jj < ke->nkernels; jj++){
-            g1 += kernel_inner(ke->kernels[ii],ke->kernels[jj],ke->lb,ke->ub);
+            g1 += ke->coeff[jj]*kernel_inner(ke->kernels[ii],ke->kernels[jj],ke->lb,ke->ub);
         }
-        g1 *= ke->coeff[ii];
+        /* g1 *= ke->coeff[ii]; */
         grad[ii] += 2.0 * scale * g1;
     }
     res = 0;
@@ -1006,6 +1123,122 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
 }
 
 
+static double numint(struct KernelExpansion * a, struct KernelExpansion * b, size_t nint)
+{
+
+    double lb = a->lb;
+    if (a->lb < b->lb){
+        lb = b->lb;
+    }
+
+    double ub = a->ub;
+    if (a->ub > b->ub){
+        ub = b->ub;
+    }
+
+    double * x = linspace(lb,ub,nint);
+    double num_int = 0.0;
+    for (size_t ii = 0; ii < nint-1; ii++){
+        double val1 = kernel_expansion_eval(a,x[ii]);
+        double val2 = kernel_expansion_eval(b,x[ii]);
+        num_int += val1*val2*(x[ii+1]-x[ii]);
+    }
+    free(x); x = NULL;
+    return num_int;
+}
+
+
+/********************************************************//**
+    Generate an orthonormal basis
+    
+    \param[in]     n    - number of basis function
+    \param[in,out] f    - linear element expansions that are nulled
+    \param[in]     opts - approximation options
+
+    \note
+    Uses modified gram schmidt to determine function coefficients
+*************************************************************/
+void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct KernelApproxOpts * opts)
+{
+    assert (opts != NULL);
+    assert (opts->nnodes >= n);
+
+    for (size_t ii = 0; ii < n; ii++){
+        f[ii] = kernel_expansion_init(opts); // they all have zero coefficients;
+        f[ii]->coeff[ii] = 1.0;        
+        /* for (size_t jj = 0; jj<= ii; jj++){ */
+        /*     f[ii]->coeff[jj] = 1.0; */
+        /* } */
+    }
+
+    double inner, norm, proj;
+    for (size_t ii = 0; ii < n; ii++){
+        inner = kernel_expansion_inner(f[ii],f[ii]);
+        /* inner = numint(f[ii],f[ii],60000); */
+        if (inner < 0){
+            fprintf(stderr,"Cannot generate %zu orthonormal basis with this kernel\n",n);
+            fprintf(stderr,"Consider making the correlation length smaller\n");
+            exit(1);
+            /* inner = 0; */
+            /* kernel_expansion_scale(0.0,f[ii]); */
+            /* for (size_t jj = ii; jj < n; jj++){ */
+            /*     kernel_expansion_scale(0.0,f[jj]); */
+            /* } */
+            /* break; */
+        }
+        else{
+            norm = sqrt(inner);
+            /* printf("norm = %G\n",norm); */
+            if (isnan(norm)){
+                fprintf(stderr,"inner is %G\n",inner);
+                fprintf(stderr,"norm is NAN\n");
+                exit(1);
+            }
+            kernel_expansion_scale(1/norm,f[ii]);
+        }
+        for (size_t jj = ii+1; jj < n; jj++){
+            proj = kernel_expansion_inner(f[ii],f[jj]);
+            /* proj = numint(f[ii],f[jj],60000); */
+
+            if (isnan(proj)){
+                fprintf(stderr,"proj is NAN\n");
+                exit(1);
+            }
+            if (isinf(proj)){
+                fprintf(stderr,"proj is NAN\n");
+                exit(1);
+            }
+            int iter = 0;
+            while (fabs(proj) > 1e-14)
+            {
+                
+                /* printf("proj = %G\n",proj); */
+                kernel_expansion_axpy(-proj,f[ii],f[jj]);
+
+                //check inner
+                proj = kernel_expansion_inner(f[ii],f[jj]);
+                /* proj = numint(f[ii],f[jj],60000); */
+                if (fabs(proj) > 1e-14){
+                    fprintf(stderr,"projection too large, going again: = %G\n",proj);
+                    /* assert (proj < 1e-14);                     */
+                }
+                else{
+                    break;
+                }
+                iter++;
+                if (iter > 0){
+                    fprintf(stderr,"\t on iter %d\n",iter);
+                }
+                if (iter > 0){
+                    /* exit(1); */
+                    break;
+                }
+
+            }
+        }
+        
+    }
+}
 
 
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 

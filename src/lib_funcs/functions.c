@@ -359,7 +359,7 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
     case POLYNOMIAL: gf->f = orth_poly_expansion_constant(a,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_constant(a,aopts);        break;
     case RATIONAL:                                                  break;
-    case KERNEL:     assert (1 == 0);                             break;
+    case KERNEL:     gf->f = kernel_expansion_linear(0.0,a,aopts);  break;
     }
     return gf;
 }
@@ -374,6 +374,9 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
                         sub_type, etc.
 
     \return gf - linear function
+
+    \note 
+    For kernel, this is only approximate
 ***********************************************************/
 struct GenericFunction * 
 generic_function_linear(double a, double offset,
@@ -386,7 +389,7 @@ generic_function_linear(double a, double offset,
     case POLYNOMIAL: gf->f = orth_poly_expansion_linear(a,offset,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_linear(a,offset,aopts);        break;
     case RATIONAL:                                                       break;
-    case KERNEL:     assert (1 == 0);                                    break;
+    case KERNEL:     gf->f = kernel_expansion_linear(a,offset,aopts);    break;
     }
     return gf;
 }
@@ -1398,12 +1401,12 @@ double generic_function_1darray_eval_piv(struct GenericFunction ** f,
 
      int out = 1;
      switch (x->fc){
-     case CONSTANT:                                                break;
-     case PIECEWISE:                                               break;
+     case CONSTANT:   assert(1 == 0);                              break;
+     case PIECEWISE:  assert(1 == 0);                              break;
      case POLYNOMIAL: out = orth_poly_expansion_axpy(a,x->f,y->f); break;
      case LINELM:     out = lin_elem_exp_axpy(a,x->f,y->f);        break;
-     case RATIONAL:                                                break;
-     case KERNEL: assert (1==0);                                   break;
+     case RATIONAL:   assert (1 == 0);                             break;
+     case KERNEL:     out = 0; kernel_expansion_axpy(a,x->f,y->f); break;
      }
      return out;
  }
@@ -2528,6 +2531,7 @@ generic_function_array_orth(size_t n,
     size_t ii;
     /* double lb, ub; */
     struct LinElemExp ** b = NULL;
+    struct KernelExpansion ** ke = NULL;
     switch (fc){
     case CONSTANT: break;
     case PIECEWISE:
@@ -2561,7 +2565,17 @@ generic_function_array_orth(size_t n,
     case RATIONAL:
         break;
     case KERNEL:
-        assert(1==0);
+        /* assert(1==0); */
+        ke = malloc(n * sizeof(struct KernelExpansion *));
+        for (ii = 0 ; ii < n; ii++){
+            gfarray[ii] = generic_function_alloc(1,fc);
+            ke[ii] = NULL;
+        }
+        kernel_expansion_orth_basis(n,ke,args);
+        for (ii = 0; ii < n; ii++){
+            gfarray[ii]->f = ke[ii];
+        }
+ 
         break;
     }
 

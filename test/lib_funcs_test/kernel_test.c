@@ -205,10 +205,13 @@ void Test_serialize_kernel_expansion(CuTest * tc){
     deserialize_kernel_expansion(text, &k2);
     free(text); text = NULL;
     
+    CuAssertIntEquals(tc,N,kernel_expansion_get_nkernels(k2));
+    
     double * x = linspace(-1,1,200);
     for (size_t ii = 0; ii < 200; ii++){
         double val1 = kernel_expansion_eval(ke,x[ii]);
         double val2 = kernel_expansion_eval(k2,x[ii]);
+        /* printf("%G, %G\n",val1,val2); */
         CuAssertDblEquals(tc,val1,val2,1e-15);
     }
     free(x); x = NULL;
@@ -274,7 +277,6 @@ void Test_kernel_expansion_create_with_params_and_grad(CuTest * tc){
     double width = 0.2;
     size_t N = 18;
     double * centers = linspace(-1,1,N);
-
     struct KernelApproxOpts * opts = kernel_approx_opts_gauss(N,centers,scale,width);
 
     double * params = calloc_double(N);
@@ -405,7 +407,7 @@ void Test_kernel_expansion_inner(CuTest * tc)
 
     double ana_int = kernel_expansion_inner(ke,ke2);
 
-    size_t nint = 10000;
+    size_t nint = 200000;
     double * x = linspace(-20,20,nint);
     double num_int = 0.0;
     for (size_t ii = 0; ii < nint-1; ii++){
@@ -415,14 +417,62 @@ void Test_kernel_expansion_inner(CuTest * tc)
     }
     free(x); x = NULL;
 
-    /* printf("%3.15G,%3.15G\n",num_int,ana_int); */
-    CuAssertDblEquals(tc,num_int,ana_int,1e-5);
+    printf("%3.15G,%3.15G,%3.15G\n",num_int,ana_int,num_int-ana_int);
+    CuAssertDblEquals(tc,num_int,ana_int,1e-14);
     
     kernel_expansion_free(ke); ke = NULL;
     kernel_expansion_free(ke2); ke2 = NULL;
 
     free(c1); c1 = NULL;
     free(c2); c2 = NULL;
+}
+
+void Test_kernel_expansion_orth_basis(CuTest * tc)
+{
+
+    printf("Testing functions: kernel_expansion_orth_basis\n");
+        
+    double scale = 1.2;
+
+    size_t N = 30;
+    double width = pow((double) N, -0.2) * 1.0/12.0 * 2;
+    /* width *= 0.1; */
+    /* printf("width = %G\n",width); */
+    double * centers = linspace(-1,1,N);
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(N,centers,scale,width);
+    kernel_approx_opts_set_lb(opts,-10.0);
+    kernel_approx_opts_set_ub(opts,10.0);
+    
+    size_t north = 30;    
+    struct KernelExpansion * ke[200];
+    for (size_t ii = 0; ii < north; ii++){
+        ke[ii] = NULL;
+    }
+
+    kernel_expansion_orth_basis(north,ke,opts);
+    for (size_t ii = 0; ii < north; ii++){
+        /* printf("\n"); */
+        /* printf("ii = %zu\n",ii); */
+        for (size_t jj = 0; jj < north; jj++){
+            double val = kernel_expansion_inner(ke[ii],ke[jj]);
+            if (ii == jj){
+                /* printf("should be 1: %3.15G\n",val); */
+                CuAssertDblEquals(tc,1.0,val,1e-12);
+            }
+            else{
+                /* printf("should be 0: %3.15G\n",val); */
+                CuAssertDblEquals(tc,0.0,val,1e-13);
+            }
+        }
+    }
+    
+    
+    for (size_t ii = 0; ii < north; ii++){
+        kernel_expansion_free(ke[ii]); ke[ii] = NULL;
+    }
+
+    kernel_approx_opts_free(opts); opts = NULL;
+    free(centers); centers = NULL;
 }
 
 static void regress_func(size_t N, const double * x, double * out)
@@ -507,21 +557,58 @@ void Test_kernel_LSregress(CuTest * tc){
     free(params); params = NULL;
 }
 
+void Test_kernel_linear(CuTest * tc){
+
+    printf("Testing function: kernel_expansion_linear\n");
+
+
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t nparams = 10;
+    double * x = linspace(lb,ub,nparams);
+    double scale = 1.0;
+    double width = pow(nparams,-0.2)/12.0 * (ub-lb);
+    width *= 20.0;
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,x,scale,width);
+
+    double a = 2.0, offset=3.0;
+    
+    struct KernelExpansion * ke = kernel_expansion_linear(a,offset,opts);
+    
+    size_t N = 100;
+    double * pts = linspace(lb,ub,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = kernel_expansion_eval(ke,pts[ii]);
+        double eval2 = a*pts[ii] + offset;
+        double diff= fabs(eval1-eval2);
+        /* printf("eval1 = %G, eval2=%G, diff=%G\n",eval1,eval2,diff); */
+        CuAssertDblEquals(tc, 0.0, diff, 1e-5);
+    }
+    free(pts); pts = NULL;
+    
+    kernel_expansion_free(ke); ke = NULL;
+    free(x); x = NULL;
+    kernel_approx_opts_free(opts); opts = NULL;
+}
 
 
 CuSuite * KernGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_gauss_eval);
-    SUITE_ADD_TEST(suite, Test_gauss_integrate);
-    SUITE_ADD_TEST(suite, Test_gauss_inner);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_mem);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_copy);
-    SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion);
-    SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_inner);
-    SUITE_ADD_TEST(suite, Test_kernel_LSregress);
+    /* SUITE_ADD_TEST(suite, Test_gauss_eval); */
+    /* SUITE_ADD_TEST(suite, Test_gauss_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_gauss_inner); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_mem); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_copy); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_inner); */
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis);
+    /* SUITE_ADD_TEST(suite, Test_kernel_LSregress); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_linear); */
     return suite;
 }

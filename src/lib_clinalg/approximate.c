@@ -135,7 +135,8 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
         }
     }
     else if (type == REGRESS){
-        c3a->reg = ft_regress_alloc(dim,c3a->fapp);
+        assert (1 == 0);
+        /* c3a->reg = ft_regress_alloc(dim,c3a->fapp); */
     }
     else{
         fprintf(stderr,"Unknown type %d for c3approx\n",type);
@@ -172,7 +173,8 @@ void c3approx_destroy(struct C3Approx * c3a)
             }
         }
         else if (c3a->type == REGRESS){
-            ft_regress_free(c3a->reg); c3a->reg = NULL;
+            assert (1 == 0);
+            /* ft_regress_free(c3a->reg); c3a->reg = NULL; */
         }
         function_train_free(c3a->ftref); c3a->ftref = NULL;
         free(c3a); c3a = NULL;
@@ -366,65 +368,69 @@ c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw, int adapt)
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 
-void c3approx_set_regress_type(struct C3Approx * c3a, enum REGTYPE rtype)
-{
-    assert (c3a != NULL);
-    assert (c3a -> type == REGRESS);
-    ft_regress_set_type(c3a->reg,rtype);
-}
+/* void c3approx_set_regress_type(struct C3Approx * c3a, enum REGTYPE rtype) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a -> type == REGRESS); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_type(c3a->reg,rtype); *\/ */
+/* } */
 
-void c3approx_set_regress_start_ranks(struct C3Approx * c3a, size_t rank)
-{
-    assert (c3a != NULL);
-    assert (c3a->type == REGRESS);
-    assert (c3a->fapp != NULL);
-    ft_regress_set_parameter(c3a->reg,"rank",&rank);
-}
+/* void c3approx_set_regress_start_ranks(struct C3Approx * c3a, size_t rank) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_parameter(c3a->reg,"rank",&rank); *\/ */
+/* } */
 
-void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num)
-{
-    assert (c3a != NULL);
-    assert (c3a->type == REGRESS);
-    assert (c3a->fapp != NULL);
-    ft_regress_set_parameter(c3a->reg,"num_param",&num);
-}
+/* void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_parameter(c3a->reg,"num_param",&num); *\/ */
+/* } */
 
 /***********************************************************//**
     Initialize regression (tests everything is set up correctly)
 
     \param[in,out] c3a   - approx structure
 ***************************************************************/
-void c3approx_init_regress(struct C3Approx * c3a)
-{
-    assert (c3a != NULL);
-    assert (c3a->type == REGRESS);
-    assert (c3a->fapp != NULL);
-
-}
+/* void c3approx_init_regress(struct C3Approx * c3a) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+    
+/* } */
  
 /***********************************************************//**
     Perform cross approximation of a function
 ***************************************************************/
-struct FunctionTrain *
-c3approx_do_regress(struct C3Approx *c3a, size_t N,
-                    const double * x, size_t incx,
-                    const double * y, size_t incy,
-                    enum REGOBJ obj)
-{
-    assert (c3a != NULL);
-    assert (c3a->type == REGRESS);
-    assert (c3a->reg != NULL);
-    /* assert (c3a->ftref != NULL); */
+/* struct FunctionTrain * */
+/* c3approx_do_regress(struct C3Approx *c3a, size_t N, */
+/*                     const double * x, size_t incx, */
+/*                     const double * y, size_t incy, */
+/*                     enum REGOBJ obj) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->reg != NULL); */
+/*     /\* assert (c3a->ftref != NULL); *\/ */
 
-    ft_regress_set_obj(c3a->reg,obj);
-    ft_regress_set_data(c3a->reg,N,x,incx,y,incy);
-    ft_regress_process_parameters(c3a->reg);
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_obj(c3a->reg,obj); *\/ */
+/*     /\* ft_regress_set_data(c3a->reg,N,x,incx,y,incy); *\/ */
+/*     /\* ft_regress_process_parameters(c3a->reg); *\/ */
 
-    /* assert (1 == 0); */
-    struct FunctionTrain * ft = ft_regress_run(c3a->reg);
+/*     /\* assert (1 == 0); *\/ */
+/*     /\* struct FunctionTrain * ft = ft_regress_run(c3a->reg); *\/ */
     
-    return ft;
-}
+/*     return ft; */
+/* } */
 
     
 /////////////////////////////////////////////////////////////////////////

@@ -1028,7 +1028,7 @@ orth_poly_expansion_constant(double a, struct OpeOpts * opts)
 *
 *   \param[in] a      - value of the slope function
 *   \param[in] offset - offset
-*   \param[in] opts   - upper bound
+*   \param[in] opts   - options
 *
 *   \return p - orthogonal polynomial expansion
 *************************************************************/

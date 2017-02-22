@@ -1538,3 +1538,79 @@ int maxvol_rhs(const double * A, size_t n, size_t r, size_t * rows, double * Asi
     free(tr);
     return 0;
 }
+
+
+/*************************************************************//**
+    Perform linear ls
+
+    min ||Ax-y||
+
+    \param[in] nrows - number of rows of A
+    \param[in] ncols - number of columns of A
+    \param[in,out] A - A matrix stored in column major ordser
+    \param[in,out] y - right hand size
+    \param[in,out] x - solution
+
+    \note
+    Thin wrapper around cblas_dgels
+**************************************************************/
+void linear_ls(size_t nrows, size_t ncols, double * A, double * y, double * x)
+{
+    // Workspace and status variables
+    double * work;
+    if (NULL == ( work = malloc(sizeof(double)))){
+        fprintf(stderr, "failed to allocate memory.\n");
+        exit(1);
+    }
+
+    int lworkinit = -1;
+    int info = 0;
+    //get optimal workspace size
+    int nrhs=1;
+    /* char trans[2] = "N"; */
+    int rank;
+    double rcond = -1;
+    size_t mindim = nrows < ncols ? nrows : ncols;
+    size_t maxdim = nrows > ncols ? nrows : ncols;
+
+    /* printf("mindim = %zu  maxdim = %zu\n",mindim, maxdim); */
+    double * tempy = calloc_double(maxdim);
+    memmove(tempy,y,nrows*sizeof(double));
+    
+    double * s = calloc_double(maxdim);
+    size_t * iwork = calloc_size_t(2);
+    /* dgels_(trans,&nrows,&ncols,&nrhs,A,&nrows,y,&nrows,work,&lworkinit,&info); */
+
+    /* printf("compute workspace\n"); */
+    dgelsd_(&nrows,&ncols,&nrhs,A,&nrows,tempy,&maxdim,s,&rcond,&rank,work,&lworkinit,iwork,&info);
+    free(iwork); iwork = NULL;
+    
+    size_t optimal_work = (size_t) work[0];
+    free(work); work = NULL;
+    if (NULL == ( work = malloc(optimal_work * sizeof(double)))){
+        fprintf(stderr, "failed to allocate memory.\n");
+        exit(1);
+    }
+
+    /* printf("compute workspace, run\n"); */
+    /* int lwork = mindim + mindim * 2; */
+    int lwork = optimal_work;
+    iwork = calloc_size_t(optimal_work * mindim);
+    /* dgels_(trans,&nrows,&ncols,&nrhs,A,&nrows,y,&nrows,work,&lwork,&info); */
+    dgelsd_(&nrows,&ncols,&nrhs,A,&nrows,tempy,&maxdim,s,&rcond,&rank,work,&lwork,iwork,&info);
+    if (info != 0){
+        fprintf(stderr, "Error computing linear regression\n");
+        exit(1);
+    }
+
+    /* printf("in linalg\n"); */
+    /* dprint(nrows,tempy); */
+    
+    memmove(x,tempy,ncols * sizeof(double));
+    free(work); work = NULL;
+    free(iwork); iwork = NULL;
+    free(s); s = NULL;
+    free(tempy); tempy = NULL;
+
+    
+}

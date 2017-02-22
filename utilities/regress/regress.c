@@ -31,12 +31,14 @@ void print_code_usage (FILE * stream, int exit_code)
             " -n --numparam <val>      Number of parameters in univariate approx (default 5)\n"
             " -r --rank     <val>      Starting rank for approximation (default 4)\n"
             " -a --alg      <string>   Algorithm (AIO or ALS)\n"
+            " -d --adapt    <bool>     Adaptation, in this case rank is upper bound"
             "    --reg                 Regularization weight\n"
             "    --cv-kfold <int>      Specify k for kfold cross validation \n"
             "    --cv-rank  <int>      Add rank option with which to cross validate \n"
             "    --cv-reg   <dbl>      Regularization parameter to optimizive over with CV\n"
             "    --cv-num   <int>      Add number of univariate params option with which to cross validate \n"
             " -b --basis    <string>   basis for univariate functions (poly or kernel) \n"
+            " -t --tol      <dbl>      Optimization tolerance\n"
             " -v --verbose  <val>      Output words (default 0)\n"
         );
     exit (exit_code);
@@ -53,7 +55,7 @@ int main(int argc, char * argv[])
     srand(seed);
 
     int next_option;
-    const char * const short_options = "hx:y:o:e:l:u:n:r:a:v:b:t:";
+    const char * const short_options = "hx:y:o:e:l:u:n:r:d:a:v:b:t:";
     const struct option long_options[] = {
         { "help"     , 0, NULL, 'h' },
         { "xtrain"   , 1, NULL, 'x' },
@@ -63,6 +65,7 @@ int main(int argc, char * argv[])
         { "lower"    , 1, NULL, 'l' },
         { "upper"    , 1, NULL, 'u' },
         { "numparam" , 1, NULL, 'n' },
+        { "adapt"    , 1, NULL, 'd' },
         { "rank"     , 1, NULL, 'r' },
         { "alg"      , 1, NULL, 'a' },
         { "reg"      , 1, NULL,  REG },
@@ -102,7 +105,9 @@ int main(int argc, char * argv[])
 
     size_t kfold = 5;
     double reg = 0.0;
-    char alg[80] = "ALS";
+    char alg[80] = "AIO";
+    
+    size_t adapt = 0;
     enum function_class fc = POLYNOMIAL;
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -139,6 +144,9 @@ int main(int argc, char * argv[])
                 break;
             case 'a':
                 strcpy(alg,optarg);
+                break;
+            case 'd':
+                adapt = strtol(optarg,NULL,10);
                 break;
             case 'b':
                 if (strcmp(optarg,"kernel") == 0){
@@ -232,16 +240,6 @@ int main(int argc, char * argv[])
     size_t ndata, dim, trash;
     double * x = readfile_double_array(fpx,&ndata,&dim);
     double * y = readfile_double_array(fpy,&ndata,&trash);
-
-    double avgy = 0.0;
-    for (size_t ii = 0; ii < ndata; ii++){
-        avgy += y[ii];
-    }
-    avgy /= (double)ndata;
-
-    /* for (size_t ii =0; ii < ndata; ii++){ */
-    /*     y[ii] -= avgy; */
-    /* } */
     
     fclose(fpx);
     fclose(fpy);
@@ -255,7 +253,6 @@ int main(int argc, char * argv[])
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,lower);
     ope_opts_set_ub(opts,upper);
-    size_t maxorder = numparam-1;
     ope_opts_set_nparams(opts,numparam);
 
     // Initialize kernel opts incase
@@ -277,68 +274,95 @@ int main(int argc, char * argv[])
     size_t * ranks = calloc_size_t(dim+1);
     for (size_t ii = 0; ii < dim; ii++){
         multi_approx_opts_set_dim(fapp,ii,qmopts);
-        ranks[ii] = rank;
+        if (adapt == 0){
+            ranks[ii] = rank;
+        }
+        else{
+            ranks[ii] = 1;
+        }
     }
     ranks[0] = 1;
     ranks[dim] = 1;
 
-    size_t nparam = maxorder+1;
-    size_t opt_maxiter=1000;
-    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
+    size_t opt_maxiter=50000;
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp,ranks);
     if (strcmp(alg,"AIO") == 0){
-        ft_regress_set_type(ftr,AIO);
+        if (reg > 0){
+            ft_regress_set_alg_and_obj(ftr,AIO,FTLS_SPARSEL2);
+        }
+        else{
+            ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+        }
     }
     else if (strcmp(alg,"ALS") == 0){
-        ft_regress_set_type(ftr,ALS);
+        if (reg > 0){
+            ft_regress_set_alg_and_obj(ftr,ALS,FTLS_SPARSEL2);
+        }
+        else{
+            ft_regress_set_alg_and_obj(ftr,ALS,FTLS);
+        }
     }    
     else{
         fprintf(stderr,"\n\nAlgorithm %s is not recognized\n",alg);
         print_code_usage(stderr, 1);      
     }
 
-    if (reg > 0){
-        ft_regress_set_obj(ftr,FTLS_SPARSEL2);
-    }
-    else{
-        ft_regress_set_obj(ftr,FTLS);
-    }
-    ft_regress_set_data(ftr,ndata,x,1,y,1);
-    ft_regress_set_parameter(ftr,"rank",&rank);
-    ft_regress_set_parameter(ftr,"num_param",&nparam);
-    ft_regress_set_parameter(ftr,"opt maxiter",&opt_maxiter);
-    ft_regress_process_parameters(ftr);
-    ft_regress_set_convtol(ftr,tol);
-    ft_regress_set_als_maxsweep(ftr,20);
+        
+    ft_regress_set_max_als_sweep(ftr,20);
     ft_regress_set_verbose(ftr,verbose);
     if (reg > 0){
-        ft_regress_set_regweight(ftr,reg);
+        ft_regress_set_regularization_weight(ftr,reg);
     }
 
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    if (verbose > 5){
+        c3opt_set_verbose(optimizer,1);
+    }
+    c3opt_set_maxiter(optimizer,opt_maxiter);
+    c3opt_set_gtol(optimizer,tol);
+    c3opt_set_relftol(optimizer,tol);
+    /* c3opt_ls_set_maxiter(optimizer,10); */
+    
     // choose parameters using cross validation
     struct CrossValidate * cv = NULL;
     if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
+        assert (adapt == 0);
+        
+        int cvverbose = 0;
+        cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
 
-        cv = cross_validate_init(ndata,dim,x,y,kfold);
-
+        struct CVOptGrid * cvgrid = cv_opt_grid_init(3);
+        if (verbose > 2){
+            cv_opt_grid_set_verbose(cvgrid,verbose-1);
+        }
+        
         if (cvnum > 0){ // just crossvalidate on cv num
-            cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);            
+            cv_opt_grid_add_param(cvgrid,"num_param",cvnum,CVnums);
         }
         if (cvrank > 0){ // just cross validate on ranks
-            cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);            
+            cv_opt_grid_add_param(cvgrid,"rank",cvrank,CVranks);            
         }
         if (cvreg > 0){ // cv on regularization parameter
-            cross_validate_add_discrete_param(cv,"reg_weight",cvreg,CVreg);            
+            cv_opt_grid_add_param(cvgrid,"reg_weight",cvreg,CVreg);            
         }
 
-        /* printf("verbose = %d\n",verbose); */
-        cross_validate_opt(cv,ftr,verbose);
+        cross_validate_grid_opt(cv,cvgrid,ftr,optimizer);
+
+        cross_validate_free(cv); cv = NULL; 
+        cv_opt_grid_free(cvgrid); cvgrid = NULL;        
     }
 
-
-    struct FunctionTrain * ft = ft_regress_run(ftr);
+    struct FunctionTrain * ft = NULL;
+    if (adapt == 0){
+        ft = ft_regress_run(ftr,optimizer,ndata,x,y);
+    }
+    else{
+        double round_tol = 1e-10;
+        size_t maxrank = rank;
+        size_t kickrank = 1;
+        ft = ft_regress_run_rankadapt(ftr,round_tol,maxrank,kickrank,optimizer,ndata,x,y);
+    }
     
-    cross_validate_free(cv); cv = NULL;
-
     if (verbose > 0){
         double diff;
         double err = 0.0;
@@ -416,6 +440,7 @@ int main(int argc, char * argv[])
     free(CVreg); CVreg = NULL;
 
     free(centers); centers = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
 
     return 0;
 }

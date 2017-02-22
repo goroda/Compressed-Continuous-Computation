@@ -3190,7 +3190,7 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     \param[in]     scale - increment between inputs
     \param[in,out] grad  - compute gradient if not null (store gradient here)
 
-    \returns sum of L2 norms of each function
+    \returns sum of scale * inner_product of each function 
     \note 
     If gradient is not null then it adds scaled values of the new gradients to the
     existing gradient. Gradient is stored function first, row second, column third
@@ -3208,7 +3208,7 @@ double qmarray_param_grad_sqnorm(struct Qmarray * qma, double scale, double * gr
     else{
         size_t runparam=0;
         for (size_t ii = 0; ii < size; ii++){
-            out += generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+            out += scale * generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
             size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
             int res = generic_function_squared_norm_param_grad(qma->funcs[ii],
                                                                scale, grad+runparam);

@@ -24,7 +24,7 @@ FTFILE="trainedft.c3"
 ######################################
 
 # Sample training data
-NSAMPLE=100
+NSAMPLE=1000
 FILENAME="trainingx.dat"
 GENSAMPLES="$C3HOME/bin/random_sample -r $NSAMPLE -t $RVTYPE -c $DIM -l $LB -u $UB"
 
@@ -81,7 +81,7 @@ $TESTVALSFUNC
 ######################################
 # Evaluate the regressed function
 ######################################
-EVALFT="$C3HOME/bin/ftstats -x $XFILE_TEST -i $FTFILE"
+EVALFT="$C3HOME/bin/ftstats -x $XFILE_TEST -f $FTFILE"
 echo $EVALFT
 $EVALFT > ftevals.dat
 

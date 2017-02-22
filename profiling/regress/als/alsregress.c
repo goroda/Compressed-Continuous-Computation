@@ -193,52 +193,41 @@ int main(int argc, char * argv[])
     ranks[0] = 1;
     ranks[dim] = 1;
 
-    /* size_t nparams = (rank*rank * (dim-2) + 2*rank) * (maxorder+1); */
-    /* double * params_start = calloc_double(nparams); */
-    /* for (size_t ii = 0; ii < nparams; ii++){ */
-    /*     params_start[ii] = 0.01*randn(); */
-    /* } */
 
-    /* struct FTparam * ftp = ft_param_alloc(dim,fapp,params_start,ranks); */
-    /* struct RegressOpts * ropts = regress_opts_create(AIO,FTLS,ndata,dim,x,y); */
+    size_t opt_maxiter=1000;
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    c3opt_set_maxiter(optimizer,opt_maxiter);
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp,ranks);
+    ft_regress_set_alg_and_obj(ftr,ALS,FTLS);
 
-    size_t nperfunc = maxorder+1;
-    struct FTRegress * ftr = ft_regress_alloc(dim,fapp);
-    ft_regress_set_type(ftr,ALS);
-    ft_regress_set_obj(ftr,FTLS);
-    ft_regress_set_data(ftr,ndata,x,1,y,1);
-    ft_regress_set_parameter(ftr,"rank",&rank);
-    ft_regress_set_parameter(ftr,"num_param",&nperfunc);
-    /* ft_regress_set_discrete_parameter(ftr,"opt maxiter",1000); */
-    ft_regress_process_parameters(ftr);
-    ft_regress_set_als_maxsweep(ftr,10);
-    ft_regress_set_convtol(ftr,1e-2);
-
-    if (verbose > 0){
-        ft_regress_set_verbose(ftr,1);
-    }
+    /* ft_regress_set_als_maxsweep(ftr,20); */
+    ft_regress_set_verbose(ftr,verbose);
 
     // choose parameters using cross validation
+    struct CrossValidate * cv = NULL;
     if ((cvrank > 0) || (cvnum > 0)){
+        int cvverbose = 0;
+        cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
 
-        struct CrossValidate * cv =
-            cross_validate_init(ndata,dim,x,y,kfold);
-
+        struct CVOptGrid * cvgrid = cv_opt_grid_init(3);
+        
         if (cvnum > 0){ // just crossvalidate on cv num
-            cross_validate_add_discrete_param(cv,"num_param",cvnum,CVnums);            
+            cv_opt_grid_add_param(cvgrid,"num_param",cvnum,CVnums);
         }
         if (cvrank > 0){ // just cross validate on ranks
-            cross_validate_add_discrete_param(cv,"rank",cvrank,CVranks);            
+            cv_opt_grid_add_param(cvgrid,"rank",cvrank,CVranks);            
         }
 
-        cross_validate_opt(cv,ftr,verbose);
-        cross_validate_free(cv); cv = NULL;
+        cross_validate_grid_opt(cv,cvgrid,ftr,optimizer);
+
+        cross_validate_free(cv); cv = NULL; 
+        cv_opt_grid_free(cvgrid); cvgrid = NULL;
     }
 
     
-    struct FunctionTrain * ft = ft_regress_run(ftr);
-    /* struct FunctionTrain * ft = c3_regression_run(ftp,ropts); */
-    
+    struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,ndata,x,y);
+
+
     if (verbose > 0){
         double diff;
         double err = 0.0;
@@ -271,10 +260,7 @@ int main(int argc, char * argv[])
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
     ft_regress_free(ftr); ftr = NULL;
-
-    /* ft_param_free(ftp);      ftp  = NULL; */
-    /* regress_opts_free(ropts); ropts = NULL; */
-
+    c3opt_free(optimizer);
 
     
     return 0;
