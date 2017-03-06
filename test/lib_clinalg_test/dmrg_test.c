@@ -48,8 +48,8 @@
 
 #include "lib_funcs.h"
 #include "lib_linalg.h"
-
 #include "lib_clinalg.h"
+#include "c3_interface.h"
 
 void Test_rightorth(CuTest * tc)
 {

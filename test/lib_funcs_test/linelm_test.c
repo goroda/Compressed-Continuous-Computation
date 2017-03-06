@@ -757,7 +757,7 @@ void Test_LS_regress(CuTest * tc){
     regress_1d_opts_set_parametric_form(regopts,LINELM,aopts);
     regress_1d_opts_set_initial_parameters(regopts,params);
 
-    printf("check deriv\n");
+    /* printf("check deriv\n"); */
     // check derivative
     c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
     double * deriv_diff = calloc_double(nparams);
@@ -868,6 +868,7 @@ void Test_RLS2_regress(CuTest * tc){
     free(xtest); xtest = NULL;
     free(vals); vals = NULL;
 
+    free(params); params = NULL;
     free(x); x = NULL;
     free(y); y = NULL;
     lin_elem_exp_aopts_free(aopts);
@@ -942,7 +943,8 @@ void Test_RLSD2_regress(CuTest * tc){
 
     free(x); x = NULL;
     free(y); y = NULL;
-    lin_elem_exp_aopts_free(aopts);
+    free(params); params = NULL;
+    lin_elem_exp_aopts_free(aopts); aopts = NULL;
     regress_1d_opts_destroy(regopts); regopts = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     generic_function_free(gf); gf = NULL;;

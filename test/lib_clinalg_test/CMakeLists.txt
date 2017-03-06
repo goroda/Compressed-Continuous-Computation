@@ -12,17 +12,18 @@ file(GLOB SRC_FILES
   main.c)
           
 add_executable(clinalg_test ${SRC_FILES})
-target_link_libraries(clinalg_test 
-    clinalg 
-    funcs
-    opt 
-    quadrature 
-    linalg 
-    array 
-    stringmanip
-    cutest 
-    ${blas_lapack} 
-    -lm)
+target_link_libraries(clinalg_test
+  approx_interface
+  clinalg
+  funcs
+  opt 
+  quadrature 
+  linalg 
+  array 
+  stringmanip
+  cutest 
+  ${blas_lapack} 
+  -lm)
 
 
 

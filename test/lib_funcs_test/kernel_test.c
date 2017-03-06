@@ -407,7 +407,7 @@ void Test_kernel_expansion_inner(CuTest * tc)
 
     double ana_int = kernel_expansion_inner(ke,ke2);
 
-    size_t nint = 200000;
+    size_t nint = 500000;
     double * x = linspace(-20,20,nint);
     double num_int = 0.0;
     for (size_t ii = 0; ii < nint-1; ii++){
@@ -417,8 +417,8 @@ void Test_kernel_expansion_inner(CuTest * tc)
     }
     free(x); x = NULL;
 
-    printf("%3.15G,%3.15G,%3.15G\n",num_int,ana_int,num_int-ana_int);
-    CuAssertDblEquals(tc,num_int,ana_int,1e-14);
+    /* printf("%3.15G,%3.15G,%3.15G\n",num_int,ana_int,num_int-ana_int); */
+    CuAssertDblEquals(tc,num_int,ana_int,1e-13);
     
     kernel_expansion_free(ke); ke = NULL;
     kernel_expansion_free(ke2); ke2 = NULL;
@@ -510,6 +510,7 @@ void Test_kernel_LSregress(CuTest * tc){
     struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
     c3opt_set_verbose(optimizer,0);
     c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_gtol(optimizer,1e-6);
     
     struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
     regress_1d_opts_set_parametric_form(regopts,KERNEL,opts);
@@ -597,18 +598,18 @@ void Test_kernel_linear(CuTest * tc){
 CuSuite * KernGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_gauss_eval); */
-    /* SUITE_ADD_TEST(suite, Test_gauss_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_gauss_inner); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_mem); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_copy); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_inner); */
+    SUITE_ADD_TEST(suite, Test_gauss_eval);
+    SUITE_ADD_TEST(suite, Test_gauss_integrate);
+    SUITE_ADD_TEST(suite, Test_gauss_inner);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_mem);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_copy);
+    SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion);
+    SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_inner);
     SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis);
-    /* SUITE_ADD_TEST(suite, Test_kernel_LSregress); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_linear); */
+    SUITE_ADD_TEST(suite, Test_kernel_LSregress);
+    SUITE_ADD_TEST(suite, Test_kernel_linear);
     return suite;
 }

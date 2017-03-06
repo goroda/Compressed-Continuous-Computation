@@ -250,16 +250,25 @@ int main(int argc, char * argv[])
 
     
     // Initialize Approximation Structure
-    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_lb(opts,lower);
-    ope_opts_set_ub(opts,upper);
+    struct OpeOpts * opts = NULL;
+
+    if (fabs(upper - lower) < 1e-15){
+        printf("HERMITE!!!!!\n");
+        opts = ope_opts_alloc(HERMITE);
+    }
+    else{
+        opts = ope_opts_alloc(LEGENDRE);
+        ope_opts_set_lb(opts,lower);
+        ope_opts_set_ub(opts,upper);
+    }
+    
     ope_opts_set_nparams(opts,numparam);
 
     // Initialize kernel opts incase
     double * centers = linspace(lower,upper,numparam);
     double scale = 1.0;
     double width = pow(numparam,-0.2)*(upper-lower)/sqrt(12.0);
-    width *= 20;
+    width *= 1;
     struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(numparam,centers,scale,width);
 
     struct OneApproxOpts * qmopts = NULL;
@@ -357,9 +366,9 @@ int main(int argc, char * argv[])
         ft = ft_regress_run(ftr,optimizer,ndata,x,y);
     }
     else{
-        double round_tol = 1e-10;
+        double round_tol = 1e-13;
         size_t maxrank = rank;
-        size_t kickrank = 1;
+        size_t kickrank = 2;
         ft = ft_regress_run_rankadapt(ftr,round_tol,maxrank,kickrank,optimizer,ndata,x,y);
     }
     

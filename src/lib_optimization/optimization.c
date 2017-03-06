@@ -80,8 +80,8 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
         ls->beta = 0.9;
     }
     else if (alg == STRONGWOLFE){
-        ls->alpha = 0.1;
-        ls->beta = 0.4;
+        ls->alpha = 0.001;
+        ls->beta = 0.9;
     }
     else if (alg == WEAKWOLFE){
         ls->alpha = 0.1;
@@ -260,7 +260,8 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
     else if (alg==BATCHGRAD){
         opt->grad = 1;
         opt->workspace = NULL;
-        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+        opt->ls = c3ls_alloc(STRONGWOLFE,0);
+        /* opt->ls = c3ls_alloc(WEAKWOLFE,0); */
     }
     else{
         opt->nlocs = 0;
@@ -387,6 +388,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
         opt->grad = 1;
         opt->workspace = calloc_double(2*d);
         /* opt->ls = c3ls_alloc(BACKTRACK,1); */
+        /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
         opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
     else{
@@ -1328,7 +1330,7 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
         
         double dg2 = cblas_ddot(d,grad,1,dir,1);
         if (verbose > 2){
-            printf("\t dg2=%G x=",dg2); dprint(d,newx);
+            printf("\t dg2=%G required = %G x=",dg2,-beta*dg); dprint(d,newx);
             printf("\t \t grad=");dprint(d,grad);
         }
         /* printf("fx=%G, f_prev = %G, *newf=%G\n",fx,f_prev,*newf); */

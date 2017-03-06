@@ -44,14 +44,9 @@
 #include "array.h"
 
 #include "CuTest.h"
-#include "testfunctions.h"
 
-#include "lib_funcs.h"
-#include "lib_linalg.h"
+#include "regress.h"
 
-#include "lib_clinalg.h"
-
-#include "lib_optimization.h"
 
 static int seed = 3;
 
@@ -2271,15 +2266,15 @@ void Test_LS_AIO_rounding(CuTest * tc)
     function_train_free(ftnew); ftnew = NULL;
 }
 
-static double fff_reg2(double * x)
-{
-    double out = 0.0;
-    for (size_t ii = 0; ii < 5; ii++){
-        out += x[ii];
-    }
+/* static double fff_reg2(double * x) */
+/* { */
+/*     double out = 0.0; */
+/*     for (size_t ii = 0; ii < 5; ii++){ */
+/*         out += x[ii]; */
+/*     } */
 
-    return sin(out);
-}
+/*     return sin(out); */
+/* } */
 
 static double ff_reg2(double * x)
 {
@@ -2784,42 +2779,42 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     // next 3 are good
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
+    SUITE_ADD_TEST(suite, Test_LS_ALS);
+    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
     // next 5 are good
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
+    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
     // next 4 are good
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
     
     /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
 
     // Next 2 are good
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
     // next 2 are good
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
     // Next 3 are good
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
-    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rounding); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
+    SUITE_ADD_TEST(suite,Test_LS_AIO_rounding);
     SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt);
-    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
         
     // takes too many points
 

@@ -56,11 +56,13 @@ void RunAllTests(void) {
     CuSuite * bfgs = BFGSGetSuite();
     CuSuite * bgrad = BGradGetSuite();
 
-    /* CuSuiteAddSuite(suite, opt); */
+    CuSuiteAddSuite(suite, opt);
 
     create_unc_probs();
     CuSuiteAddSuite(suite, bfgs);
-    /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
+
+    // batch gradient doesn't work
+    /* CuSuiteAddSuite(suite, bgrad); //something is wrong */
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

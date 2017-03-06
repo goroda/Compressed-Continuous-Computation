@@ -50,6 +50,8 @@
 #include "lib_linalg.h"
 
 #include "lib_clinalg.h"
+#include "c3_interface.h"
+
 
 static void all_opts_free(
     struct Fwrap * fw,

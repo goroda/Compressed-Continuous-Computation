@@ -43,21 +43,13 @@
 #ifndef LIB_CLINALG_H
 #define LIB_CLINALG_H
 
-#include "approximate.h"
+#include "ft.h"
 #include "dmrgprod.h"
 #include "diffusion.h"
-#include "regress.h"
+/* #include "regress.h" */
 //#include "dmrg.h"
 
 //#include "cross2d.h"
 
-/* #include "elements.h" */
-/* #include "indmanage.h" */
-/* #include "algs.h" */
-/* #include "dmrg.h" */
-/* #include "dmrgprod.h" */
-/* #include "qmarray_qr.h" */
-/* #include "diffusion.h" */
-/* #include "approximate.h" */
 
 #endif

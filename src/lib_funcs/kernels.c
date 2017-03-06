@@ -1123,29 +1123,29 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
 }
 
 
-static double numint(struct KernelExpansion * a, struct KernelExpansion * b, size_t nint)
-{
+/* static double numint(struct KernelExpansion * a, struct KernelExpansion * b, size_t nint) */
+/* { */
 
-    double lb = a->lb;
-    if (a->lb < b->lb){
-        lb = b->lb;
-    }
+/*     double lb = a->lb; */
+/*     if (a->lb < b->lb){ */
+/*         lb = b->lb; */
+/*     } */
 
-    double ub = a->ub;
-    if (a->ub > b->ub){
-        ub = b->ub;
-    }
+/*     double ub = a->ub; */
+/*     if (a->ub > b->ub){ */
+/*         ub = b->ub; */
+/*     } */
 
-    double * x = linspace(lb,ub,nint);
-    double num_int = 0.0;
-    for (size_t ii = 0; ii < nint-1; ii++){
-        double val1 = kernel_expansion_eval(a,x[ii]);
-        double val2 = kernel_expansion_eval(b,x[ii]);
-        num_int += val1*val2*(x[ii+1]-x[ii]);
-    }
-    free(x); x = NULL;
-    return num_int;
-}
+/*     double * x = linspace(lb,ub,nint); */
+/*     double num_int = 0.0; */
+/*     for (size_t ii = 0; ii < nint-1; ii++){ */
+/*         double val1 = kernel_expansion_eval(a,x[ii]); */
+/*         double val2 = kernel_expansion_eval(b,x[ii]); */
+/*         num_int += val1*val2*(x[ii+1]-x[ii]); */
+/*     } */
+/*     free(x); x = NULL; */
+/*     return num_int; */
+/* } */
 
 
 /********************************************************//**

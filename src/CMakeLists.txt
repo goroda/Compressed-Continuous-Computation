@@ -9,6 +9,9 @@ add_subdirectory(lib_quadrature)
 add_subdirectory(lib_funcs)
 
 add_subdirectory(lib_clinalg)
+add_subdirectory(lib_superlearn)
+add_subdirectory(lib_interface)
+
 #add_subdirectory(lib_twodfuncs)
 add_subdirectory(lib_tensor)
 add_subdirectory(lib_tensdecomp)
@@ -21,8 +24,8 @@ add_subdirectory(lib_probability)
 #set headers
 set(header lib_stringmanip/stringmanip.h
            lib_array/array.h
-           lib_clinalg/approximate.h
-           lib_clinalg/regress.h
+           lib_superlearn/regress.h
+           lib_interface/c3_interface.h
            lib_clinalg/diffusion.h
            lib_clinalg/dmrg.h
            lib_clinalg/dmrgprod.h
@@ -66,8 +69,8 @@ set(header lib_stringmanip/stringmanip.h
 
 
 set(src lib_array/array.c
-        lib_clinalg/approximate.c
-        lib_clinalg/regress.c
+        lib_superlearn/regress.c
+        lib_interface/approximate.c
         lib_clinalg/diffusion.c
         lib_clinalg/dmrg.c
         lib_clinalg/dmrgprod.c

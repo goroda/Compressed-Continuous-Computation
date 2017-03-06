@@ -33,17 +33,40 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
-#ifndef CLINALGTEST_H
-#define CLINALGTEST_H
+
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <assert.h>
+#include <time.h>
 
 #include "CuTest.h"
+#include "suptest.h"
 
-CuSuite * QuasimatrixGetSuite();
-CuSuite * CLinalgQmarrayGetSuite();
-CuSuite * CLinalgFuncTrainGetSuite();
-CuSuite * CLinalgCrossIndGetSuite();
-CuSuite * CLinalgFuncTrainArrayGetSuite();
-CuSuite * CLinalgDMRGGetSuite();
-CuSuite * CLinalgDiffusionGetSuite();
+void RunAllTests(void) {
+    
+    printf("Running Test Suite: lib_clinalg\n");
+    srand(time(NULL));
 
-#endif
+    CuString * output = CuStringNew();
+    CuSuite * suite = CuSuiteNew();
+    
+    CuSuite * regress = CLinalgRegressGetSuite();
+    
+    CuSuiteAddSuite(suite, regress);
+    
+    CuSuiteRun(suite);
+    CuSuiteSummary(suite, output);
+    CuSuiteDetails(suite, output);
+    printf("%s \n", output->buffer);
+
+    CuSuiteDelete(regress);
+    
+    CuStringDelete(output);
+    free(suite);
+}
+
+int main(void) {
+    RunAllTests();
+}

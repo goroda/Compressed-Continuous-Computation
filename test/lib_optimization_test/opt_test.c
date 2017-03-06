@@ -542,20 +542,20 @@ void Test_c3opt_bfgs3(CuTest * tc)
     c3opt_add_objective(opt,sum_diff_powers,NULL);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,maxiter);
-    //c3opt_set_relftol(opt,1e-100);
-    //c3opt_set_absxtol(opt,1e-100);
-    //c3opt_set_gtol(opt,1e-40);
-    c3opt_ls_set_alpha(opt,0.1);
-    c3opt_ls_set_beta(opt,0.2);
+    c3opt_set_relftol(opt,1e-18);
+    c3opt_set_absxtol(opt,1e-18);
+    c3opt_set_gtol(opt,1e-18);
+    c3opt_ls_set_alpha(opt,0.0001);
+    c3opt_ls_set_beta(opt,0.9);
 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
-    CuAssertIntEquals(tc,1,res>-1); 
     for (size_t ii = 0; ii < dim; ii++){
         //printf("ii =%zu\n",ii);
         CuAssertDblEquals(tc,0.0,start[ii],1e-2);
     }
     CuAssertDblEquals(tc,0.0,val,1e-7);
+    CuAssertIntEquals(tc,1,res>-1); 
 
     c3opt_free(opt);
 }

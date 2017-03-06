@@ -44,11 +44,18 @@
 #include <assert.h>
 #include <math.h>
 
-/* #include "array.h" */
-/* #include "ft.h" */
 #include "lib_linalg.h"
 #include "regress.h"
 
+/** \struct RegMemSpace
+ * \brief Memory manager for certain regression objects
+ * \var RegMemSpace::ndata
+ * number of objects being stored
+ * \var RegMemSpace::one_data_size
+ * size of memory for storing some values corresponding to a single object
+ * \var RegMemSpace::vals
+ * values stored
+ */
 struct RegMemSpace
 {
     size_t ndata;
@@ -56,6 +63,15 @@ struct RegMemSpace
     double * vals;
 };
 
+
+/***********************************************************//**
+    Allocate regression memory structure
+
+    \param[in] ndata         - number of objects being stored
+    \param[in] one_data_size - number of elements of one object
+
+    \returns Regression memory structure
+***************************************************************/
 struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
 {
     struct RegMemSpace * mem = malloc(sizeof(struct RegMemSpace));
@@ -70,6 +86,19 @@ struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
     return mem;
 }
 
+
+/***********************************************************//**
+    Allocate an array of regression memory structures
+    
+    \param[in] dim           - number of structures to allocate
+    \param[in] ndata         - number of objects being stored
+    \param[in] one_data_size - number of elements of one object
+
+    \returns Array of regression memory structures
+
+    \note
+    Each element of the array is the same size
+***************************************************************/
 struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t one_data_size)
 {
     struct RegMemSpace ** mem = malloc(dim * sizeof(struct RegMemSpace * ));
@@ -84,6 +113,12 @@ struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t o
     return mem;
 }
 
+
+/***********************************************************//**
+    Free a regression memory structure
+    
+    \param[in,out] rmem - structure to free
+***************************************************************/
 void reg_mem_space_free(struct RegMemSpace * rmem)
 {
     if (rmem != NULL){
@@ -92,6 +127,12 @@ void reg_mem_space_free(struct RegMemSpace * rmem)
     }
 }
 
+/***********************************************************//**
+    Free an array of regression memory structures
+
+    \param[in]     dim  - size of array
+    \param[in,out] rmem - array of structure to free
+***************************************************************/
 void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
 {
     if (rmem != NULL){
@@ -103,7 +144,12 @@ void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
 }
 
 
-size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
+/***********************************************************//**
+    Return increment between objects 
+
+    \param[in] rmem - regression memomory structure
+***************************************************************/
+size_t reg_mem_space_get_data_inc(const struct RegMemSpace * rmem)
 {
     assert (rmem != NULL);
     return rmem->one_data_size;
@@ -122,7 +168,7 @@ size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Clean Attempt
+// Regression code
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -135,6 +181,26 @@ size_t reg_mem_space_get_data_inc(struct RegMemSpace * rmem)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/** \struct FTparam
+ * \brief Stores an FT and parameterization information
+ * \var FTparam::ft
+ * function-train 
+ * \var FTparam::dim
+ * size of input space
+ * \var FTparam::nparams_per_uni
+ * number of parameters in each univariate function of each core
+ * \var FTparam::nparams_per_core
+ * number of parameters in each core
+ * \var FTparam::max_param_uni
+ * Upper bound on the maximum number of parameters within any given function
+ * \var FTparam::nparams
+ * Number of total params describing the function train
+ * \var FTparam::params
+ * Array of the parameters describing the FT
+ * \var FTparam::approx_opts
+ * Approximation options
+ */
 struct FTparam
 {
     struct FunctionTrain * ft;
@@ -149,23 +215,29 @@ struct FTparam
     struct MultiApproxOpts * approx_opts;
 };
 
+/** \struct RegressOpts
+ * \brief Options for regression
+ * \var RegressOpts::type
+ * Regression type (ALS,AIO)
+ * \var RegressOpts::obj
+ * Regression objective (FTLS, FTLS_SPARSEL2)
+ * \var RegressOpts::dim
+ * size of feature space
+ * \var RegressOpts::verbose
+ * verbosity options
+ * \var RegressOpts::regularization_weight
+ * regularization weight for regularization objectives
+ * \var RegressOpts::max_als_sweeps
+ * maximum number of sweeps for ALS
+ * \var RegressOpts::als_active_core
+ * flag for active core within ALS
+ * \var RegressOpts::restrict_rank_opt
+ * Restrict optimization of ranks to those >= values here
+ */
 struct RegressOpts
 {
     enum REGTYPE type;
     enum REGOBJ obj;
-
-    /* size_t nmem_alloc; // number of evaluations there is space for */
-    /* struct RegressionMemManager * mem; */
-
-
-    /* size_t N; */
-    /* size_t d; */
-    /* const double * x; */
-    /* const double * y; */
-
-    /* size_t nbatches; // should be N/nmem_alloc */
-
-    /* struct c3Opt * optimizer; */
 
     size_t dim;
     int verbose;
@@ -177,16 +249,26 @@ struct RegressOpts
 };
 
 
+/***********************************************************//**
+    Free regression options
+    
+    \param[in,out] opts - options to free
+***************************************************************/
 void regress_opts_free(struct RegressOpts * opts)
 {
     if (opts != NULL){
-        /* regression_mem_manager_free(opts->mem); opts->mem = NULL; */        
-        /* c3opt_free(opts->optimizer); opts->optimizer = NULL; */
         free(opts->restrict_rank_opt); opts->restrict_rank_opt = NULL;
         free(opts); opts = NULL;
     }
 }
+
+/***********************************************************//**
+    Allocate default regression options
     
+    \param[in] dim - number of features
+
+    \returns regression options
+***************************************************************/
 struct RegressOpts * regress_opts_alloc(size_t dim)
 {
     struct RegressOpts * ropts = malloc(sizeof(struct RegressOpts));
@@ -203,6 +285,22 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     return ropts;
 }
 
+
+/***********************************************************//**
+    Allocate default regression options for a problem type
+    
+    \param[in] dim  - number of features
+    \param[in] type - type of optimization
+                      AIO: all-at-once
+                      ALS: alternating least squares
+    \param[in] obj  - objective type
+                      FTLS: least squares
+                      FTLS_SPARSEL2: regularize on sparsity of cores 
+                                     measured by L2 norm of univariate
+                                     functions
+
+    \returns regression options
+***************************************************************/
 struct RegressOpts *
 regress_opts_create(size_t dim, enum REGTYPE type, enum REGOBJ obj)
 {
@@ -236,36 +334,102 @@ regress_opts_create(size_t dim, enum REGTYPE type, enum REGOBJ obj)
     return opts;
 }
 
+
+/***********************************************************//**
+    Set maximum number of als sweeps
+    
+    \param[in,out] opts      - regression options
+    \param[in]     maxsweeps - number of sweeps     
+***************************************************************/
 void regress_opts_set_max_als_sweep(struct RegressOpts * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
     opts->max_als_sweeps = maxsweeps;
 }
 
+/***********************************************************//**
+    Set regularization weight
+    
+    \param[in,out] opts   - regression options
+    \param[in]     weight - regularization weight   
+***************************************************************/
 void regress_opts_set_regularization_weight(struct RegressOpts * opts, double weight)
 {
     assert (opts != NULL);
     opts->regularization_weight = weight;
 }
 
+/***********************************************************//**
+    Get regularization weight
+    
+    \param[in] opts - regression options
+    
+    \returns regularization weight   
+***************************************************************/
 double regress_opts_get_regularization_weight(const struct RegressOpts * opts)
 {
     assert (opts != NULL);
     return opts->regularization_weight;
 }
 
+
+/***********************************************************//**
+    Set verbosity level
+    
+    \param[in,out] opts    - regression options
+    \param[in]     verbose - verbosity level
+***************************************************************/
 void regress_opts_set_verbose(struct RegressOpts * opts, int verbose)
 {
     assert (opts != NULL);
     opts->verbose = verbose;
 }
 
+/***********************************************************//**
+    Set a rank to restrict
+    
+    \param[in,out] opts - regression options
+    \param[in]     ind  - index of rank to restrict
+    \param[in]     rank - threshold of restriction
+***************************************************************/
 void regress_opts_set_restrict_rank(struct RegressOpts * opts, size_t ind, size_t rank)
 {
     assert (opts != NULL);
     opts->restrict_rank_opt[ind] = rank;
 }
 
+
+/** \struct Regression Memory Manager
+ * \brief Manages all memory for regression
+ * \var RegressionMemManager::dim
+ * size of feature space
+ * \var RegressionMemManager::N
+ * number of data points for which to store objects
+ * \var RegressionMemManager::running_evals_lr
+ * space for storing the evaluations of cores from left to right
+ * \var RegressionMemManager::running_evals_rl
+ * space for storing the evaluations of cores from right to left
+ * \var RegressionMemManager::running_grad
+ * Running evaluations of gradient from left to right
+ * \var RegressionMemManager::evals
+ * space for storing the evaluations of an FT at all the data apoints
+ * \var RegressionMemManager::grad
+ * space for storing the gradient of the FT at all the data points
+ * \var RegressionMemManager::grad_space
+ * space for gradient computations
+ * \var RegressionMemManager::all_grads
+ * space for storing the gradients of univariate functions in particular cores
+ * \var RegressionMemManager::fparam_space
+ * space for storing the gradients of any single univariate function
+ * \var RegressionMemManager::structure
+ * flag for whether or not the parameters are linearly mapped to outputs
+ * \var RegressionMemManager::once_eval_structure
+ * flag for whether or structure has been precomputed
+ * \var RegressionMemManager::lin_structure_vals
+ * precomputed elements for linearly dependent parameters
+ * \var RegressionMemManager::lin_structure_inc
+ * precomputed incremement for linearly dependent parameters between data points
+ */
 struct RegressionMemManager
 {
 
@@ -287,6 +451,13 @@ struct RegressionMemManager
     size_t * lin_structure_inc;
 };
 
+
+
+/***********************************************************//**
+    Free memory allocated 
+    
+    \param[in,out] mem - memory to free
+***************************************************************/
 void regression_mem_manager_free(struct RegressionMemManager * mem)
 {
     if (mem != NULL){
@@ -318,7 +489,17 @@ void regression_mem_manager_free(struct RegressionMemManager * mem)
 
 }
 
+/***********************************************************//**
+    Allocate memory for regression
+    
+    \param[in] d                    - size of feature space
+    \param[in] n                    - number of data points to make room for
+    \param[in] num_params_per_core  - number of parameters in each core
+    \param[in] max_param_within_uni - upper bound on number of parameters in a univariate funciton
+    \param[in] structure            - either (LINEAR_ST or NONE)
 
+    \returns Regression memomry manager
+***************************************************************/
 struct RegressionMemManager *
 regress_mem_manager_alloc(size_t d, size_t n,
                           size_t * num_params_per_core,
@@ -381,14 +562,29 @@ regress_mem_manager_alloc(size_t d, size_t n,
     
 }
 
+
+/***********************************************************//**
+    Check whether enough memory has been allocated
+    
+    \param[in] mem - memory structure
+    \param[in] N   - number of data points 
+
+    \returns 1 if yes, 0  if no
+***************************************************************/
 int regress_mem_manager_enough(struct RegressionMemManager * mem, size_t N)
 {
-    if (mem->N != N){
+    if (mem->N < N){
         return 0;
     }
     return 1;
 }
 
+
+/***********************************************************//**
+    Reset left,right, and gradient running evaluations
+    
+    \param[in,out] mem - memory structure
+***************************************************************/
 void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
 {
     running_core_total_restart(mem->running_evals_lr);
@@ -396,8 +592,19 @@ void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
     running_core_total_arr_restart(mem->dim, mem->running_grad);
 }
 
-// might be a mismatch here need to compare N and the actual amount of memory allocated
-void regress_mem_manager_check_structure(struct RegressionMemManager * mem, struct FTparam * ftp,
+/***********************************************************//**
+    Check if special structure exists and if so, precompute
+    
+    \param[in,out] mem - memory structure
+    \param[in]     ftp - parameterized ftp
+    \param[in]     x   - all training points for which to precompute
+
+    \note
+    This is an aggressive function, there might be a mismatch between the size
+    of x, plus recall that x can change for non-batch gradient
+***************************************************************/
+void regress_mem_manager_check_structure(struct RegressionMemManager * mem,
+                                         const struct FTparam * ftp,
                                          const double * x)
 {
 
@@ -438,7 +645,9 @@ void regress_mem_manager_check_structure(struct RegressionMemManager * mem, stru
 ///////////////////////////////////////////////////////////////////////////
 
 /***********************************************************//**
-    Free FT regress structure
+    Free memory allocated for FT parameterization structure
+    
+    \param[in,out] ftr - parameterized FT
 ***************************************************************/
 void ft_param_free(struct FTparam * ftr)
 {
@@ -454,6 +663,13 @@ void ft_param_free(struct FTparam * ftr)
 
 /***********************************************************//**
     Allocate parameterized function train
+
+    \param[in] dim    - size of input space
+    \param[in] aopts  - approximation options
+    \param[in] params - parameters
+    \param[in] ranks  - ranks (dim+1,)
+
+    \return parameterized FT
 ***************************************************************/
 struct FTparam *
 ft_param_alloc(size_t dim,
@@ -503,17 +719,39 @@ ft_param_alloc(size_t dim,
     return ftr;
 }
 
+
+/***********************************************************//**
+    Get number of parameters 
+
+    \param[in] ftp - parameterized FTP
+
+    \return number of parameters
+***************************************************************/
 size_t ft_param_get_nparams(const struct FTparam * ftp)
 {
     return ftp->nparams;
 }
 
+/***********************************************************//**
+    Update the parameters of an FT
+
+    \param[in,out] ftp    - parameterized FTP
+    \param[in]     params - new parameter values
+***************************************************************/
 void ft_param_update_params(struct FTparam * ftp, const double * params)
 {
     memmove(ftp->params,params,ftp->nparams * sizeof(double) );
     function_train_update_params(ftp->ft,ftp->params);
 }
 
+
+/***********************************************************//**
+    Get the number of parameters of an FT for univariate functions
+    >= ranks_start
+
+    \param[in] ftp         - parameterized FTP
+    \param[in] ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+***************************************************************/
 size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * rank_start)
 {
     size_t nparams = 0;
@@ -538,6 +776,17 @@ size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * 
     return nparams;
 }
 
+/***********************************************************//**
+    Update the parameters of an FT for univariate functions
+    >= ranks_start
+
+    \param[in,out] ftp         - parameterized FTP
+    \param[in]     params      - parameters for univariate functions at locations >= ranks_start
+    \param[in]     ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+
+    \note
+    As always FORTRAN ordering (columns first, then rows)
+***************************************************************/
 void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * params, const size_t * rank_start)
 {
 
@@ -571,6 +820,17 @@ void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * param
     function_train_update_params(ftp->ft,ftp->params);
 }
 
+/***********************************************************//**
+    Update the parameters of an FT for univariate functions
+    < ranks_start
+
+    \param[in,out] ftp         - parameterized FTP
+    \param[in]     params      - parameters for univariate functions at locations < ranks_start
+    \param[in]     ranks_start - threshold of ranks at which not to update
+
+    \note
+    As always FORTRAN ordering (columns first, then rows)
+***************************************************************/
 void ft_param_update_inside_restricted_ranks(struct FTparam * ftp,
                                              const double * params, const size_t * rank_start)
 {
@@ -605,6 +865,14 @@ void ft_param_update_inside_restricted_ranks(struct FTparam * ftp,
     function_train_update_params(ftp->ft,ftp->params);
 }
 
+
+/***********************************************************//**
+    Update the parameters of an FT for a specific core
+
+    \param[in,out] ftp    - parameterized FTP
+    \param[in]     core   - core to update
+    \param[in]     params - parameters
+***************************************************************/
 void ft_param_update_core_params(struct FTparam * ftp, size_t core, const double * params)
 {
     size_t runparam = 0;
@@ -618,6 +886,15 @@ void ft_param_update_core_params(struct FTparam * ftp, size_t core, const double
     memmove(ftp->params + runparam,params,ftp->nparams_per_core[core] * sizeof(double) );
 }
 
+
+/***********************************************************//**
+    Update the parameterization of an FT
+
+    \param[in,out] ftp       - parameterized FTP
+    \param[in]     opts      - new approximation options
+    \param[in]     new_ranks - new ranks
+    \param[in]     new_vals  - new parameters values
+***************************************************************/
 void ft_param_update_structure(struct FTparam ** ftp,
                                struct MultiApproxOpts * opts,
                                size_t * new_ranks, double * new_vals)
@@ -628,18 +905,49 @@ void ft_param_update_structure(struct FTparam ** ftp,
     *ftp = ft_param_alloc(dim,opts,new_vals,new_ranks);
 }
 
+
+/***********************************************************//**
+    Get a reference to an array storing the number of parameters per core                      
+
+    \param[in] ftp - parameterized FTP
+
+    \returns number of parameters per core
+***************************************************************/
 size_t * ft_param_get_nparams_per_core(const struct FTparam * ftp)
 {
     assert (ftp != NULL);
     return ftp->nparams_per_core;
 }
 
+
+/***********************************************************//**
+    Get a reference to the underlying FT
+
+    \param[in] ftp - parameterized FTP
+
+    \returns a function train
+***************************************************************/
 struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
 {
     assert(ftp != NULL);
     return ftp->ft;
 }
 
+
+/***********************************************************//**
+    Create a parameterization from a linear least squares fit to 
+    x and y
+
+    \param[in,out] ftp - parameterized FTP
+    \param[in]     N   - number of data points
+    \param[in]     x   - features
+    \param[in]     y   - labels
+
+    \note
+    If ranks are < 2 then performs a constant fit at the mean of the data
+    Else creates top 2x2 blocks to be a linear least squares fit and sets everything
+    else to 1e-12
+***************************************************************/
 void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N, const double * x, const double * y)
 {
 
@@ -686,7 +994,7 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N, const double * 
     free(ftp->params); ftp->params = NULL;
     ftp->params = calloc_double(ftp->nparams);
     for (size_t ii = 0; ii < ftp->nparams; ii++){
-        ftp->params[ii] = 1e-5;
+        ftp->params[ii] = 1e-12;
     }
 
     size_t onparam = 0;
@@ -786,6 +1094,17 @@ void ft_param_prepare_als_core(struct FTparam * ftp,size_t core,
                                      mem->running_evals_rl);
 }
 
+
+/***********************************************************//**
+    Evaluate the least squares objective function
+
+    \param[in]     ftp  - parameterized FT
+    \param[in,out] mem  - memory manager that will store the evaluations
+    \param[in]     N    - Number of evaluations
+    \param[in]     x    - evaluation locations
+    \param[in]     y    - evaluation labels
+    \param[in,out] grad - gradient (doesn't evaluate if NULL)
+***************************************************************/
 double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
                                       struct RegressionMemManager * mem,
                                       size_t N,
@@ -849,6 +1168,17 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
 }
     
 
+/***********************************************************//**
+    Evaluate the least squares objective function within ALS
+
+    \param[in]     ftp         - parameterized FT
+    \param[in]     active_core - core over which gradient can be taken
+    \param[in,out] mem         - memory manager that will store the evaluations
+    \param[in]     N           - Number of evaluations
+    \param[in]     x           - evaluation locations
+    \param[in]     y           - evaluation labels
+    \param[in,out] grad        - gradient (doesn't evaluate if NULL)
+***************************************************************/
 double ft_param_eval_objective_als_ls(struct FTparam * ftp,
                                       size_t active_core,
                                       struct RegressionMemManager * mem,
@@ -916,6 +1246,14 @@ double ft_param_eval_objective_als_ls(struct FTparam * ftp,
     return out;
 }
 
+
+/***********************************************************//**
+    Check if ranks need to be restricted
+
+    \param[in] opts - regression options
+
+    \returns 1 if yes 0 if no
+***************************************************************/
 int restrict_ranksp(const struct RegressOpts * opts)
 {
     // check if ranks need to be restricted
@@ -929,6 +1267,17 @@ int restrict_ranksp(const struct RegressOpts * opts)
     return restrict_needed;
 }
 
+
+/***********************************************************//**
+    Get parameter values from restricted set of ranks
+
+    \param[in]    regopts        - regression options
+    \param[in]     ftp           - parameterized FT
+    \param[in]     full_vals     - all parameters 
+    \param[in,out] restrict_vals - subset of *full_vals* obtained from univariate functions corresponding
+                                   to restricted ranks sepcified in regopts
+
+***************************************************************/
 void extract_restricted_vals(const struct RegressOpts * regopts, const struct FTparam * ftp,
                              const double * full_vals, double * restrict_vals)
 {
@@ -967,6 +1316,19 @@ void extract_restricted_vals(const struct RegressOpts * regopts, const struct FT
 }
 
 
+
+/***********************************************************//**
+    Evaluate an objective function, if needed gradient is with respect
+    to all parameters.
+
+    \param[in]     ftp     - parameterized FT
+    \param[in]     regopts - regression options
+    \param[in,out] mem     - memory manager that will store the evaluations
+    \param[in]     N       - number of evaluations
+    \param[in]     x       - evaluation locations
+    \param[in]     y       - evaluation labels
+    \param[in,out] grad    - gradient (doesn't evaluate if NULL)
+***************************************************************/
 double ft_param_eval_objective_aio(struct FTparam * ftp,
                                    struct RegressOpts * regopts,
                                    struct RegressionMemManager * mem,
@@ -1018,6 +1380,18 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
 }
 
 
+/***********************************************************//**
+    Evaluate an objective function, if needed gradient is with respect
+    to parameters of the active core, specified in regopts
+
+    \param[in]     ftp     - parameterized FT
+    \param[in]     regopts - regression options
+    \param[in,out] mem     - memory manager that will store the evaluations
+    \param[in]     N       - number of evaluations
+    \param[in]     x       - evaluation locations
+    \param[in]     y       - evaluation labels
+    \param[in,out] grad    - gradient (doesn't evaluate if NULL)
+***************************************************************/
 double ft_param_eval_objective_als(struct FTparam * ftp,
                                    struct RegressOpts * regopts,
                                    struct RegressionMemManager * mem,
@@ -1316,20 +1690,6 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
 
     return ft;
 }
-
-
-
-////////////////////////////////////
-////////////////////////////////////
-////////////////////////////////////
-////////////////////////////////////
-// Top-level regression parameters
-// like regularization, rank,
-// poly order
-////////////////////////////////////
-////////////////////////////////////
-////////////////////////////////////
-////////////////////////////////////
 
 
 /* //////////////////////////////////// */
