@@ -2575,6 +2575,7 @@ generic_function_array_orth(size_t n,
         for (ii = 0; ii < n; ii++){
             gfarray[ii]->f = ke[ii];
         }
+        free(ke); ke = NULL;
  
         break;
     }

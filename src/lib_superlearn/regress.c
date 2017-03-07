@@ -429,7 +429,7 @@ void regress_opts_set_restrict_rank(struct RegressOpts * opts, size_t ind, size_
  * precomputed elements for linearly dependent parameters
  * \var RegressionMemManager::lin_structure_inc
  * precomputed incremement for linearly dependent parameters between data points
- */
+ */ 
 struct RegressionMemManager
 {
 
@@ -1104,6 +1104,8 @@ void ft_param_prepare_als_core(struct FTparam * ftp,size_t core,
     \param[in]     x    - evaluation locations
     \param[in]     y    - evaluation labels
     \param[in,out] grad - gradient (doesn't evaluate if NULL)
+
+    \returns evaluation
 ***************************************************************/
 double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
                                       struct RegressionMemManager * mem,
@@ -1178,6 +1180,8 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
     \param[in]     x           - evaluation locations
     \param[in]     y           - evaluation labels
     \param[in,out] grad        - gradient (doesn't evaluate if NULL)
+
+    \returns evaluation
 ***************************************************************/
 double ft_param_eval_objective_als_ls(struct FTparam * ftp,
                                       size_t active_core,
@@ -1328,6 +1332,8 @@ void extract_restricted_vals(const struct RegressOpts * regopts, const struct FT
     \param[in]     x       - evaluation locations
     \param[in]     y       - evaluation labels
     \param[in,out] grad    - gradient (doesn't evaluate if NULL)
+
+    \returns evaluation
 ***************************************************************/
 double ft_param_eval_objective_aio(struct FTparam * ftp,
                                    struct RegressOpts * regopts,
@@ -1391,6 +1397,8 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     \param[in]     x       - evaluation locations
     \param[in]     y       - evaluation labels
     \param[in,out] grad    - gradient (doesn't evaluate if NULL)
+
+    \returns evaluation
 ***************************************************************/
 double ft_param_eval_objective_als(struct FTparam * ftp,
                                    struct RegressOpts * regopts,
@@ -1423,6 +1431,9 @@ double ft_param_eval_objective_als(struct FTparam * ftp,
 }
 
 
+/** \struct PP
+ * \brief Store items that will be passed as void to optimizer
+ */
 struct PP
 {
     struct FTparam * ftp;
@@ -1434,6 +1445,17 @@ struct PP
 
 };
 
+
+/***********************************************************//**
+    General all-at-once regression objective for c3opt optimizer
+
+    \param[in]     nparam - number of parameters
+    \param[in]     param  - parameter values
+    \param[in,out] grad   - gradient (doesn't evaluate if NULL)
+    \param[in,out] args   - additional arguments to optimizer
+
+    \returns evaluation
+***************************************************************/
 double regress_opts_minimize_aio(size_t nparam, const double * param,
                                  double * grad, void * args)
 {
@@ -1473,6 +1495,18 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
 }
 
 
+/***********************************************************//**
+    Run all-at-once regression and return the result
+
+    \param[in,out] ftp       - parameterized function train
+    \param[in,out] ropts     - regression options
+    \param[in,out] optimizer - optimization arguments
+    \param[in]     N         - number of data points
+    \param[in]     x         - training samples
+    \param[in]     y         - training labels
+
+    \returns function train
+***************************************************************/
 struct FunctionTrain *
 c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts, struct c3Opt * optimizer,
                       size_t N, const double * x, const double * y)
@@ -1535,6 +1569,17 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     return ft_final;
 }
 
+
+/***********************************************************//**
+    General ALS regression objective for c3opt optimizer
+
+    \param[in]     nparam - number of parameters
+    \param[in]     param  - parameter values
+    \param[in,out] grad   - gradient (doesn't evaluate if NULL)
+    \param[in,out] args   - additional arguments to optimizer
+
+    \returns evaluation
+***************************************************************/
 double regress_opts_minimize_als(size_t nparam, const double * params,
                                  double * grad, void * args)
 {
@@ -1556,6 +1601,20 @@ double regress_opts_minimize_als(size_t nparam, const double * params,
     return ft_param_eval_objective_als(pp->ftp,pp->opts,pp->mem,pp->N,pp->x,pp->y,grad);
 }
 
+
+
+/***********************************************************//**
+    Run als regression and return the result
+
+    \param[in,out] ftp       - parameterized function train
+    \param[in,out] ropts     - regression options
+    \param[in,out] optimizer - optimization arguments
+    \param[in]     N         - number of data points
+    \param[in]     x         - training samples
+    \param[in]     y         - training labels
+
+    \returns function train
+***************************************************************/
 struct FunctionTrain *
 c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c3Opt * optimizer,
                       size_t N, const double * x, const double * y)
@@ -1668,6 +1727,18 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 }
 
 
+/***********************************************************//**
+    Run regression and return the result
+
+    \param[in,out] ftp       - parameterized function train
+    \param[in,out] ropts     - regression options
+    \param[in,out] optimizer - optimization arguments
+    \param[in]     N         - number of data points
+    \param[in]     x         - training samples
+    \param[in]     y         - training labels
+
+    \returns function train
+***************************************************************/
 struct FunctionTrain *
 c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3Opt * optimizer,
                   size_t N, const double * x, const double * y)
@@ -1703,6 +1774,21 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
 /* //////////////////////////////////// */
 
 
+/** \struct FTRegress
+ * \brief Interface to regression
+ * \var FTRegress::type
+ * algorithm for regression (ALS,AIO)
+ * \var FTRegress::obj
+ * objective function (FTLS, FTLS_SPARSEL2)
+ * \var FTRegress::dim
+ * dimension of the feature space
+ * \var FTRegress::approx_opts
+ * approximation options
+ * \var FTRegress::ftp
+ * parameterized function train
+ * \var FTRegress::regopts
+ * regression options
+ */ 
 struct FTRegress
 {
     size_t type;
@@ -1717,6 +1803,12 @@ struct FTRegress
 
 /***********************************************************//**
     Allocate function train regression structure
+
+    \param[in] dim   - dimension of feature space
+    \param[in] aopts - approximation options
+    \param[in] ranks - rank of approxiamtion
+
+    \returns regression structure
 ***************************************************************/
 struct FTRegress *
 ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
@@ -1738,7 +1830,9 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
 }
     
 /***********************************************************//**
-    Free FT regress structure
+    Free memory allocated to FT regress structure
+    
+    \param[in,out] ftr - regression structure
 ***************************************************************/
 void ft_regress_free(struct FTRegress * ftr)
 {
@@ -1751,6 +1845,10 @@ void ft_regress_free(struct FTRegress * ftr)
 
 /***********************************************************//**
     Clear memory, keep only dim
+
+    \param[in,out] ftr   - regression structuture
+    \param[in]     aopts - approximation options
+    \param[in]     ranks - FT ranks
 ***************************************************************/
 void ft_regress_reset_param(struct FTRegress* ftr, struct MultiApproxOpts * aopts, size_t * ranks)
 {
@@ -1762,7 +1860,10 @@ void ft_regress_reset_param(struct FTRegress* ftr, struct MultiApproxOpts * aopt
 
 
 /***********************************************************//**
-    Set regression type
+    Set regression algorithm type
+
+    \param[in,out] ftr  - regression structuture
+    \param[in]     type - ALS or AIO
 ***************************************************************/
 void ft_regress_set_type(struct FTRegress * ftr, enum REGTYPE type)
 {
@@ -1783,6 +1884,9 @@ void ft_regress_set_type(struct FTRegress * ftr, enum REGTYPE type)
 
 /***********************************************************//**
     Set Regression Objective Function
+
+    \param[in,out] ftr - regression structuture
+    \param[in]     obj - FTLS or FTLS_SPARSEL2
 ***************************************************************/
 void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
 {
@@ -1803,6 +1907,10 @@ void ft_regress_set_obj(struct FTRegress * ftr, enum REGOBJ obj)
 
 /***********************************************************//**
     Set regression algorithm and objective
+
+    \param[in,out] ftr  - regression structuture
+    \param[in]     type - ALS or AIO
+    \param[in]     obj  - FTLS or FTLS_SPARSEL2
 ***************************************************************/
 void ft_regress_set_alg_and_obj(struct FTRegress * ftr, enum REGTYPE type, enum REGOBJ obj)
 {
@@ -1815,7 +1923,12 @@ void ft_regress_set_alg_and_obj(struct FTRegress * ftr, enum REGTYPE type, enum 
 }
 
 /***********************************************************//**
-   Get the number of parameters
+    Get the parameters of the underlying FT
+
+    \param[in]     ftr    - regression structuture
+    \param[in,out] nparam - reference to parameters (could be NULL)
+
+    \returns parameters
 ***************************************************************/
 double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
 {
@@ -1826,7 +1939,10 @@ double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
 }
 
 /***********************************************************//**
-   Update parameters
+    Update parameters
+
+    \param[in,out] ftr   - regression structuture
+    \param[in]     param - parameters
 ***************************************************************/
 void ft_regress_update_params(struct FTRegress * ftr, const double * param)
 {
@@ -1836,6 +1952,12 @@ void ft_regress_update_params(struct FTRegress * ftr, const double * param)
     ft_param_update_params(ftr->ftp,param);
 }
 
+/***********************************************************//**
+    Set maximum number of als sweeps
+
+    \param[in,out] opts      - regression structuture
+    \param[in]     maxsweeps - maximum number of sweeps
+***************************************************************/
 void ft_regress_set_max_als_sweep(struct FTRegress * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
@@ -1843,6 +1965,12 @@ void ft_regress_set_max_als_sweep(struct FTRegress * opts, size_t maxsweeps)
     regress_opts_set_max_als_sweep(opts->regopts,maxsweeps);
 }
 
+/***********************************************************//**
+    Set verbosity level
+
+    \param[in,out] opts    - regression structuture
+    \param[in]     verbose - maximum number of sweeps
+***************************************************************/
 void ft_regress_set_verbose(struct FTRegress * opts, int verbose)
 {
     assert (opts != NULL);
@@ -1850,6 +1978,12 @@ void ft_regress_set_verbose(struct FTRegress * opts, int verbose)
     regress_opts_set_verbose(opts->regopts,verbose);
 }
 
+/***********************************************************//**
+    Set regularization weight
+
+    \param[in,out] opts   - regression structuture
+    \param[in]     weight - weight
+***************************************************************/
 void ft_regress_set_regularization_weight(struct FTRegress * opts, double weight)
 {
     assert (opts != NULL);
@@ -1857,6 +1991,13 @@ void ft_regress_set_regularization_weight(struct FTRegress * opts, double weight
     regress_opts_set_regularization_weight(opts->regopts,weight);
 }
 
+/***********************************************************//**
+    Get regularization weight
+
+    \param[in] opts - regression structuture
+
+    \returns weight
+***************************************************************/
 double ft_regress_get_regularization_weight(const struct FTRegress * opts)
 {
     assert (opts != NULL);
@@ -1865,10 +2006,19 @@ double ft_regress_get_regularization_weight(const struct FTRegress * opts)
 }
 
 /***********************************************************//**
-    Run the regression
+    Run regression and return the result
+
+    \param[in,out] ftr       - regression parameters
+    \param[in,out] optimizer - optimization arguments
+    \param[in]     N         - number of data points
+    \param[in]     x         - training samples
+    \param[in]     y         - training labels
+
+    \returns function train
 ***************************************************************/
 struct FunctionTrain *
-ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer, size_t N, const double * x, const double * y)
+ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
+               size_t N, const double * x, const double * y)
 {
     assert (ftr != NULL);
     assert (ftr->ftp != NULL);
@@ -1887,10 +2037,22 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer, size_t N, const
 
 
 /***********************************************************//**
-    Adaptively increase ranks
+    Run regression with rank adaptation and return the result
+
+    \param[in,out] ftr       - regression parameters
+    \param[in]     tol       - rounding tolerance
+    \param[in]     maxrank   - upper bound on rank
+    \param[in]     kickrank  - size of rank increase
+    \param[in,out] optimizer - optimization arguments
+    \param[in]     N         - number of data points
+    \param[in]     x         - training samples
+    \param[in]     y         - training labels
+
+    \returns function train
 ***************************************************************/
 struct FunctionTrain *
-ft_regress_run_rankadapt(struct FTRegress * ftr, double tol, size_t maxrank, size_t kickrank,
+ft_regress_run_rankadapt(struct FTRegress * ftr,
+                         double tol, size_t maxrank, size_t kickrank,
                          struct c3Opt * optimizer,
                          size_t N, const double * x, const double * y)
 {
@@ -1942,7 +2104,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr, double tol, size_t maxrank, siz
         int allmax = 1;
         for (size_t ii = 1; ii < ft->dim;ii++){
             if (ranks[ii] < maxrank){
-                allmax = 0;
+                allmax = 0;                
                 break;
             }
         }
@@ -1987,6 +2149,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr, double tol, size_t maxrank, siz
             ft_param_update_params(ftr->ftp,rounded_params);
             printf("updated them\n");
             ft = function_train_copy(ftr->ftp->ft);
+            function_train_free(ftround); ftround = NULL;
             break;
         }
         else{
@@ -2010,7 +2173,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr, double tol, size_t maxrank, siz
     /* c3opt_set_gtol(optimizer,1e-10); */
     /* c3opt_set_relftol(optimizer,1e-10); */
     ft = ft_regress_run(ftr,optimizer,N,x,y);
-
+    cross_validate_free(cv); cv = NULL;
     free(ranks); ranks = NULL;
     return ft;
 }

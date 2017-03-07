@@ -1130,6 +1130,7 @@ void Test_LS_AIO_ftparam_create_from_lin_ls_kernel(CuTest * tc)
     free(x); x = NULL;
     free(y); y = NULL;
 
+    free(centers); centers = NULL;
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
 }
