@@ -78,11 +78,11 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
         ls->beta = 0.9;
     }
     else if (alg == STRONGWOLFE){
-        ls->alpha = 0.1;
-        ls->beta = 0.4;
+        ls->alpha = 0.0001;
+        ls->beta = 0.9;
     }
     else if (alg == WEAKWOLFE){
-        ls->alpha = 0.1;
+        ls->alpha = 0.3;
         ls->beta = 0.9;
     }
     else{
@@ -90,9 +90,7 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
         exit(1);
     }
         
-    
     ls->maxiter = 10000;
-
     ls->set_initial = set_initial;
     
     return ls;
@@ -211,6 +209,9 @@ struct c3Opt
     // for different algorithmic details
     double prev_eval;
 
+    // for lbfgs
+    size_t nvectors_store;
+
     // storing traces
     int store_grad;
     int store_func;
@@ -248,13 +249,20 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     }
 
     opt->verbose = 0;
-    opt->maxiter = 1000;
+    opt->maxiter = 50000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
     if (alg == BFGS){
+        opt->grad = 1;
+        opt->workspace = calloc_double(4*d);
+        /* opt->ls = c3ls_alloc(BACKTRACK,0); */
+        /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
+    else if (alg == LBFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*d);
         /* opt->ls = c3ls_alloc(BACKTRACK,0); */
@@ -277,6 +285,8 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->nevals = 0;
     opt->ngvals = 0;
     opt->niters = 0;
+
+    opt->nvectors_store = 40;
 
     opt->store_grad = 0;
     opt->store_func = 0;
@@ -308,7 +318,7 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->relftol = old->relftol;
     opt->gtol    = old->gtol;
     opt->nlocs   = old->nlocs;
-    if ((opt->alg == BFGS) || (opt->alg == BATCHGRAD)){
+    if ((opt->alg == BFGS) || (opt->alg == BATCHGRAD) || (opt->alg == LBFGS)){
         opt->grad = 1;
         memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
         c3ls_free(opt->ls); opt->ls = NULL;
@@ -325,7 +335,8 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->niters = old->niters;
 
     opt->prev_eval = old->prev_eval;
-
+    opt->nvectors_store = old->nvectors_store;
+        
     opt->store_grad  = old->store_grad;
     opt->store_func = old->store_func;
     opt->store_x     = old->store_x;
@@ -361,6 +372,24 @@ void c3opt_free(struct c3Opt * opt)
         free(opt->stored_x);    opt->stored_x    = NULL;
         free(opt); opt = NULL;
     }
+}
+
+/***********************************************************//**
+    Set the number of vectors to store for lbfgs
+***************************************************************/
+void c3opt_set_nvectors_store(struct c3Opt * opt, size_t nvecs)
+{
+    assert (opt != NULL);
+    opt->nvectors_store = nvecs;
+}
+
+/***********************************************************//**
+    Get the number of vectors used for lbfgs
+***************************************************************/
+size_t c3opt_get_nvectors_store(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return opt->nvectors_store;
 }
 
 /***********************************************************//**
@@ -982,7 +1011,6 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     tmin = 0.0, tmax = 0.0;
     while(iter < maxiter){
 
-
         checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
@@ -1232,20 +1260,8 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
 /***********************************************************//**
     Projected Gradient damped BFGS with active sets
 
-    \param[in]     opt        - optimization
-    \param[in,out] x          - starting/final point
-    \param[in,out] fval       - final function value
-    \param[in,out] grad       - gradient at final point
-    \param[in,out] invhess    - approx hessian at start and end
-                                only upper triangular part used
-
-    \return  0    - success
-            -20+? - failure in gradient (gradient outputs ?)
-             1    - maximum number of iterations reached
-         other    - error in backward_line_search 
-                   (see that function)
-
-    \note  Domgmin Kim 2010 (with suvrit sra)
+    TODO
+    Domgmin Kim 2010 (with suvrit sra)
 ***************************************************************/
 
 
@@ -1296,7 +1312,6 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
     }
 
-
     
     cblas_dsymv(CblasColMajor,CblasUpper,
                 d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
@@ -1309,26 +1324,661 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     /* printf("ub = "); dprint(2,ub); */
 
     int ret = C3OPT_SUCCESS;;
-    double eta = cblas_ddot(d,grad,1,workspace+d,1);
-
+    
+    double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1));
+    double eta;
     if (verbose > 0){
-        printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,eta*eta/2.0);
+        printf("Initial values:\n \t (fval,||g||) = (%3.5G,%3.5G)\n",*fval,grad_norm);
         if (verbose > 3){
             printf("\t x = "); dprint(d,x);
         }
     }
 
-    if ( (eta*eta/2.0) < gtol){
-        return C3OPT_GTOL_REACHED;
-    }
+    /* if ( (eta*eta/2.0) < gtol){ */
+    /*     return C3OPT_GTOL_REACHED; */
+    /* } */
 
-    size_t iter = 1;
+    size_t iter = 0;
     double fvaltemp;
     int onbound = 0;
     int converged = 0;
     int res = 0;
     double sc = 0.0;;
     opt->prev_eval = 0.0;
+    enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
+    while (converged == 0){
+        
+        memmove(workspace,x,d*sizeof(double));
+        // workspace[0:d) is current x
+        // workspace[d:2d) is the search direction
+        // workspace[2d:3d) is gradient at a new x
+        
+        fvaltemp = *fval;
+        if (alg == BACKTRACK){
+            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
+                              x,fval,&res);
+            c3opt_eval(opt,x,workspace+2*d);
+        }
+        else if (alg == STRONGWOLFE){
+            memmove(workspace+2*d,grad,d*sizeof(double));
+            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+                                       workspace+2*d,workspace+d,
+                                       x,fval,&res);
+        }
+        else if (alg == WEAKWOLFE){
+            memmove(workspace+2*d,grad,d*sizeof(double));
+            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                       workspace+2*d,workspace+d,
+                                       x,fval,&res);
+        }
+        /* assert (*fval < fvaltemp); */
+        assert (res > -1);
+
+        // x is now at the nextiterate
+        // workspace[2d:3d) is the gradient at the next iterate
+
+        /* printf("newx = "); dprint(d,x); */
+        /* printf("newgrad = "); dprint(d,workspace+2*d); */
+        
+        opt->prev_eval = fvaltemp;
+
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = *fval;
+        }
+        if (opt->store_grad == 1){
+            memmove(opt->stored_grad+opt->niters*opt->d,workspace+2*d,d*sizeof(double));
+        }
+        if (opt->store_x == 1){
+            memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
+        }
+
+        // compute s = xnew - xold
+        cblas_dscal(d,-1.0,workspace,1);
+        cblas_daxpy(d,1.0,x,1,workspace,1);
+        double * s = workspace;
+
+        /* printf("bfgs s = "); dprint(d,s); */
+        // compute difference in gradients
+        cblas_daxpy(d,-1.0,grad,1,workspace+2*d,1); 
+        double * y = workspace+2*d;
+        
+        // combute BY;
+        cblas_dsymv(CblasColMajor,CblasUpper,
+                    d,1.0,invhess,d,y,1,0.0,workspace+3*d,1);
+        
+        double sty = cblas_ddot(d,s,1,y,1);
+        /* printf("rhoinv = %G\n",sty); */
+        double ytBy = cblas_ddot(d,y,1,workspace+3*d,1);
+        if (fabs(sty) > 1e-16){
+            double a1 = (sty + ytBy)/(sty * sty);
+        
+            // rank 1 update
+            cblas_dsyr(CblasColMajor,CblasUpper,d,a1,
+                       s,1,invhess, d);
+        
+            double a2 = -1.0/sty;
+            // symmetric rank 2 updatex
+            cblas_dsyr2(CblasColMajor,CblasUpper,d,a2,
+                        workspace+3*d,1,
+                        /* workspace+d,1,invhess,d); */
+                        s,1,invhess,d);
+        }
+
+        cblas_daxpy(d,1.0,y,1,grad,1);
+
+        
+        // compute next search direction;
+        /* printf("bfgs grad = "); dprint(d,grad); */
+        cblas_dsymv(CblasColMajor,CblasUpper,
+                d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
+        
+
+        /* printf("new direction = "); dprint(d,workspace+d); */
+        eta = cblas_ddot(d,grad,1,workspace+d,1);
+        onbound = 0;
+        for (size_t ii = 0; ii < d; ii++){
+            if ((x[ii] <= lb[ii]) || (x[ii] >= ub[ii])){
+                onbound = 1;
+                break;
+            }
+        }
+        double diff = fabs(*fval - fvaltemp);
+        if (fabs(fvaltemp) > 1e-10){
+            diff /= fabs(fvaltemp);
+        }
+
+        double xdiff = 0.0;
+        for (size_t ii = 0; ii < d; ii++){
+            xdiff += pow(x[ii]-workspace[ii],2);
+        }
+        xdiff = sqrt(xdiff);
+        if (onbound == 1){
+            //printf("grad = ");
+            //dprint(2,grad);
+            if (diff < relftol){
+                //printf("converged close?\n");
+                ret = C3OPT_FTOL_REACHED;
+                converged = 1;
+            }
+            else{
+                if (xdiff < absxtol){
+                    ret = C3OPT_XTOL_REACHED;
+                    //printf("converged xclose\n");
+                    converged = 1;
+                }
+            }
+        }
+        else{
+            if ( (eta*eta/2.0) < pow(gtol,2)){
+                ret = C3OPT_GTOL_REACHED;
+                //printf("converged gradient\n");
+                converged = 1;
+            }
+            else if (diff < relftol){
+                ret = C3OPT_FTOL_REACHED;
+                if (fabs(diff) < 1e-30){
+                    if (xdiff < 1e-30){
+                        converged = 1;
+                    }
+                }
+                else{
+                    converged = 1;
+                }
+            }
+            else if (xdiff < absxtol){
+                if (iter > 3){
+                    ret = C3OPT_XTOL_REACHED;
+                    converged = 1;
+                }
+            }
+                
+        }
+        
+        if (verbose > 0){
+            printf("Iteration:%zu/%zu\n",iter,maxiter);
+            printf("\t f(x)          = %3.5G\n",*fval);
+            printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
+            printf("\t |x - x_p|     = %3.5G\n",xdiff);
+            printf("\t p^Tg =        = %3.5G\n",eta);
+            printf("\t Onbound       = %d\n",onbound);
+            if (verbose > 3){
+                printf("\t x = "); dprint(d,x);
+            }
+
+        }
+        
+        opt->niters++;
+        iter += 1;
+
+        if (iter > maxiter){
+            //printf("iter = %zu,verbose=%d\n",iter,verbose);
+            return C3OPT_MAXITER_REACHED;
+        }
+
+        
+    }
+
+    return ret;
+}
+
+
+// circular list storing lbfgs vectors
+struct c3opt_lbfgs_data
+{
+    size_t iter;
+    double * s;
+    double * y;
+    double rhoinv;
+    struct c3opt_lbfgs_data * next;
+    struct c3opt_lbfgs_data * prev;
+};
+
+/***********************************************************//**
+    Allocate low-memory fgs data structure  
+***************************************************************/
+struct c3opt_lbfgs_data * c3opt_lbfgs_data_alloc(){
+    struct c3opt_lbfgs_data* out = malloc(sizeof(struct c3opt_lbfgs_data));
+    if (out == NULL){
+        fprintf(stderr, "Cannot allocate lbfgs_data to store data\n");
+        return NULL;
+    }
+    out->s = NULL;
+    out->y = NULL;
+    out->next = NULL;
+    out->prev = NULL;
+    return out;
+}
+
+/***********************************************************//**
+    Print lbfgs data structure
+***************************************************************/
+void c3opt_lbfgs_data_print(struct c3opt_lbfgs_data * data, FILE * fp,int width,int prec)
+{
+    if (data!= NULL){
+        fprintf(fp,"Iter=%zu, rhoinv=%*.*G\n",data->iter,width,prec,data->rhoinv);
+        fprintf(fp," \t (prev==NULL)=%d, (next==NULL)=%d\n",data->prev==NULL,data->next==NULL);
+    }
+    else{
+        fprintf(fp,"NULL\n");
+    }
+    
+}
+
+/***********************************************************//**
+    Free contets of the lbfgs data structure
+***************************************************************/
+void c3opt_lbfgs_data_free_contents(struct c3opt_lbfgs_data * list)
+{
+    if (list != NULL){
+        free(list->s); list->s = NULL;
+        free(list->y); list->y = NULL;
+    }
+}
+
+
+struct c3opt_lbfgs_list
+{
+    size_t m; 
+    size_t d;
+    size_t size;
+    struct c3opt_lbfgs_data * most_recent;
+
+    // iterate
+    size_t step;
+    struct c3opt_lbfgs_data * cstep;
+};
+
+
+/***********************************************************//**
+    Allocate a list of lbfgs data.
+
+    \param[in] m - number of steps to remember
+    \param[in] d - dimension of memory
+***************************************************************/
+struct c3opt_lbfgs_list * c3opt_lbfgs_list_alloc(size_t m, size_t d){
+    struct c3opt_lbfgs_list* out = malloc(sizeof(struct c3opt_lbfgs_list));
+    if (out == NULL){
+        fprintf(stderr, "Cannot allocate lbfgs_list to store data\n");
+        return NULL;
+    }
+    out->m = m;
+    out->d = d;
+    out->size = 0;
+    out->most_recent = NULL;
+
+    out->step = 0;
+    out->cstep = NULL;
+    return out;
+}
+
+/***********************************************************//**
+    Insert a new element as the first element of the bfgs list
+    
+    \param[in,out] list      - list to be updated
+    \param[in]     iter      - iteration of optimization
+    \param[in]     x_next    - next design point
+    \param[in]     x_curr    - current design point
+    \param[in]     grad_next - gradient at next design point
+    \param[in]     grad_curr - gradient at current design point
+***************************************************************/
+void c3opt_lbfgs_list_insert(struct c3opt_lbfgs_list * list, size_t iter,
+                             const double * x_next, const double * x_curr,
+                             const double * grad_next, const double * grad_curr)
+{
+
+    struct c3opt_lbfgs_data * new = NULL;
+    struct c3opt_lbfgs_data * head = list->most_recent;
+    
+    if (list->size >= list->m){ // full list replace last one
+        new = head->prev; // last one becomes newest;
+    }
+    else{ // need to create a new one
+        new = c3opt_lbfgs_data_alloc();
+    }
+    
+    if (new->s == NULL){
+        new->s = calloc_double(list->d);
+        new->y = calloc_double(list->d);
+    }
+
+    //s = x_next - x_curr
+    memmove(new->s,x_next,list->d * sizeof(double));
+    cblas_daxpy(list->d,-1.0,x_curr,1,new->s,1);
+
+    /* printf("x_next = "); dprint(list->d,x_next); */
+    /* printf("new->s = "); dprint(list->d,new->s); */
+    
+    //y = g_next - g_curr
+    memmove(new->y,grad_next,list->d * sizeof(double));
+    cblas_daxpy(list->d,-1.0,grad_curr,1,new->y,1);
+
+    // 1/rho = s^Ty
+    new->rhoinv = cblas_ddot(list->d,new->s,1,new->y,1);
+    
+    // NEED TO CHECK IF HTIS IS BELOW A TOLERANCE!
+    /* printf("rhoinv = %G\n ",new->rhoinv); */
+    /* assert (fabs(new->rhoinv) > 1e-15); */
+    
+    new->iter = iter;
+
+    if (list->size >= list->m){ // full list
+        new->next = list->most_recent; // next one is going to be the most recent one
+        // don't need to set prev as it is already set in first if statement
+    }
+    else if (list->size > 0){
+        new->next = list->most_recent;
+        list->most_recent->prev = new;
+        new->prev = NULL;
+        list->size = list->size + 1;
+
+        // size of the list reaches maximum number kept
+        if (list->size == list->m){ // set to last element
+            while (head->next != NULL){
+                head = head->next;
+            }
+            new->prev = head;
+        }
+    }
+    else{//(list->size == 0){
+        new->next = NULL;
+        new->prev = NULL;
+        list->size = 1;
+    }
+    
+    // set the head
+    list->most_recent = new;
+}
+
+/***********************************************************//**
+   Reset stepping prior to stepping through list
+***************************************************************/
+void c3opt_lbfgs_reset_step(struct c3opt_lbfgs_list * list)
+{
+    list->step = 0;
+}
+
+/***********************************************************//**
+    Step through a list, from most recent to oldest
+    current location measured by list->step
+    
+    \param[in]     list      - list to step through
+    \param[in,out] iter      - iteration of optimization
+    \param[in,out] s         - x_iter+1 - x_iter
+    \param[in,out] y         - g_iter+1 - g_iter
+    \param[in,out] rhoinv    - s^Ty
+***************************************************************/
+void c3opt_lbfgs_list_step(struct c3opt_lbfgs_list * list,
+                           size_t * iter, double ** s,
+                           double ** y, double *rhoinv)
+{
+    assert (list != NULL);
+
+    list->step = list->step+1;
+    if (list->step == 1){
+        list->cstep = list->most_recent;
+    }
+    else{
+        list->cstep = list->cstep->next;
+        if (list->step == list->size){
+            list->step = 0;
+        }
+    }
+
+    *iter = list->cstep->iter;
+    *s = list->cstep->s;
+    *y = list->cstep->y;
+    *rhoinv = list->cstep->rhoinv;
+}
+
+/***********************************************************//**
+    Step through the bfgs list, from oldest to newest
+    current location measured by list->step
+    
+    \param[in]     list      - list to step through
+    \param[in,out] iter      - iteration of optimization
+    \param[in,out] s         - x_iter+1 - x_iter
+    \param[in,out] y         - g_iter+1 - g_iter
+    \param[in,out] rhoinv    - s^Ty
+***************************************************************/
+void c3opt_lbfgs_list_step_back(struct c3opt_lbfgs_list * list,
+                                size_t * iter, double ** s,
+                                double ** y, double *rhoinv)
+{
+    assert (list != NULL);
+
+    list->step = list->step+1;
+
+    /* printf("list step = %zu\n",list->step); */
+    /* printf("list size = %zu\n",list->size); */
+    if (list->step == 1){
+        list->cstep = list->most_recent;
+        for (size_t ii = 1; ii < list->size; ii++){
+            list->cstep = list->cstep->next;
+        }
+    }
+    else{
+        list->cstep = list->cstep->prev;
+        if (list->step == list->size){
+            list->step = 0;
+        }
+    }
+
+    *iter = list->cstep->iter;
+    *s = list->cstep->s;
+    *y = list->cstep->y;
+    *rhoinv = list->cstep->rhoinv;
+}
+
+
+/***********************************************************//**
+    Print the list                                                            
+***************************************************************/
+void c3opt_lbfgs_list_print(struct c3opt_lbfgs_list * list, FILE * fp, int width, int prec)
+{
+
+    if (list == NULL){
+        fprintf(fp,"NULL\n");
+    }
+    else{
+        struct c3opt_lbfgs_data * head = list->most_recent;
+        for (size_t ii = 0; ii < list->size; ii++){
+            c3opt_lbfgs_data_print(head,fp,width,prec);
+            head = head->next;
+        }
+    }
+}
+
+/***********************************************************//**
+    Free the list
+***************************************************************/
+void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list * list)
+{
+    if (list != NULL){
+        /* printf("size to free = %zu\n",list->size); */
+        struct c3opt_lbfgs_data * current = list->most_recent;
+        /* c3opt_lbfgs_data_print(current,stdout,3,5); */
+        struct c3opt_lbfgs_data * next;
+        c3opt_lbfgs_data_free_contents(current);
+        current->prev = NULL;
+        for (size_t ii = 1; ii < list->size; ii++){
+            next = current->next;
+            free(current); current=NULL;
+            current = next;
+            /* c3opt_lbfgs_data_print(current,stdout,3,5); */
+            c3opt_lbfgs_data_free_contents(current);
+            current->prev = NULL;
+        }
+        free(current); current = NULL;
+        free(list); list = NULL;
+    }
+}
+
+
+/***********************************************************//**
+    Apply Hg, where H is stored as a list and Ho is the identity scaled
+    by hoscale
+
+    \param[in]     iter    - iteration
+    \param[in]     m       - number of stored vectors
+    \param[in]     hoscale - scale for initial Ho
+    \param[in,out] alpha   - space for evlaluation of rho s^T q (at most m)
+    \param[in]     g       - object to multiply by
+    \param[in,out] q       - space for evaluation of Hg (at least d)
+    \param[in]     list    - bfgs list
+***************************************************************/
+void lbfgs_hg(size_t iter, size_t m, size_t dx, double hoscale,
+              double * alpha, const double * g, double * q,
+              struct c3opt_lbfgs_list * list)
+{
+    // H_0 is identy!!!!
+    size_t incr, bound;
+    if (iter <= m){
+        /* printf("still before everything\n"); */
+        incr = 0;
+        bound = iter;
+    }
+    else{
+        /* printf("IN HERE\n"); */
+        incr = iter-m;
+        bound = m;
+    }
+    memmove(q,g,dx*sizeof(double));
+
+    size_t jj;
+    double beta;
+
+    double rhoinv;
+    size_t kk;
+    double * s = NULL;/* calloc_double(dx); */
+    double * y = NULL;/* calloc_double(dx); */
+    /* printf("bound = %zu\n",bound); */
+    /* printf("incr = %zu\n",incr); */
+    c3opt_lbfgs_reset_step(list);
+
+    double num_start = 0.0;
+    double den_start = 0.0;
+    for (int ii = bound-1; ii >= 0; ii--){
+        /* printf("ii = %d\n",ii); */
+        jj = (size_t)ii + incr;
+
+        c3opt_lbfgs_list_step(list,&kk,&s,&y,&rhoinv); // newest to oldest
+        if ((size_t)ii == bound-1){
+            /* printf("MUST GO HERE OCNE\n"); */
+            /* dprint(dx,y); */
+            den_start = cblas_ddot(dx,y,1,y,1);
+            num_start = rhoinv;
+            if (isnan(num_start)){
+                printf("num_start is nan\n");
+                exit(1);
+            }
+        }
+        /* printf("stepped back\n"); */
+        assert (kk == jj); // just to make sure
+        /* printf("rhoinv = %G\n",rhoinv); */
+        alpha[ii] = 1.0/rhoinv * cblas_ddot(dx,s,1,q,1);
+        /* printf("s = "); dprint(dx,s); */
+        /* printf("alpha[%d] = %G\n",ii,alpha[ii]); */
+        cblas_daxpy(dx,-alpha[ii],y,1,q,1);
+    }
+
+    /* printf("done with backwards loop\n"); */
+    /* printf("num start = %G\n",num_start); */
+    /* printf("den start = %G\n",den_start); */
+    for (size_t zz = 0; zz < dx; zz++){
+        /* if (den_start > 1e-15){ */
+        /*     q[zz] *= hoscale*num_start/den_start; */
+        /* } */
+        /* else{ */
+            q[zz] *= hoscale;
+        /* } */
+    }
+    /* printf("q = "); dprint(dx,q); */
+    c3opt_lbfgs_reset_step(list);
+    for (size_t ii = 0; ii < bound ;ii++){
+        jj = ii + incr;
+        
+        c3opt_lbfgs_list_step_back(list,&kk,&s,&y,&rhoinv); // oldest to newest
+        /* assert (kk == jj); */
+        /* printf("stepped back\n"); */
+        
+        beta = 1.0/rhoinv * cblas_ddot(dx,y,1,q,1);
+        /* printf("jj = %zu, ii=%zu, alpha[ii] = %G,  alpha[ii]-beta = %G\n",jj,ii,alpha[ii],alpha[ii]-beta); */
+        cblas_daxpy(dx,(alpha[ii]-beta),s,1,q,1);
+    }
+    free(s); s = NULL;
+    free(y); y = NULL;
+}
+
+/***********************************************************//**
+    Low memory lbfgs
+
+    \param[in]     opt        - optimization
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+    \param[in,out] grad       - gradient at final point
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+***************************************************************/
+int c3_opt_lbfgs(struct c3Opt * opt,
+                double * x, double * fval, double * grad)
+{
+    size_t d = c3opt_get_d(opt);
+    double * workspace = c3opt_get_workspace(opt);
+    int verbose = c3opt_get_verbose(opt);
+    double * lb = c3opt_get_lb(opt);
+    double * ub = c3opt_get_ub(opt);
+    size_t maxiter = c3opt_get_maxiter(opt);
+    double gtol = c3opt_get_gtol(opt);
+    double relftol = c3opt_get_relftol(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+
+    size_t m = c3opt_get_nvectors_store(opt);
+    
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 1;
+
+    *fval = c3opt_eval(opt,x,grad);
+    if (opt->store_func == 1){
+        opt->stored_func[opt->niters-1] = *fval;
+    }
+    if (opt->store_grad == 1){
+        memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double));
+    }
+    if (opt->store_x == 1){
+        memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double));
+    }
+
+    double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1));
+    int ret = C3OPT_SUCCESS;;
+
+    if (verbose > 0){
+
+        printf("Initial values:\n \t (fval,||g||) = (%3.5G,%3.5G)\n",*fval,grad_norm);
+        if (verbose > 1){
+            printf("\t x = "); dprint(d,x);
+        }
+    }
+
+    opt->prev_eval = 0.0;    
+    /* size_t m = 10; */
+    /* printf("nstore = %zu\n",m); */
+    struct c3opt_lbfgs_list * list = c3opt_lbfgs_list_alloc(m,d);
+    size_t iter = 0;
+    double fvaltemp;
+    int onbound = 0;
+    int converged = 0;
+    int res = 0;
+    double sc = 0.0;;
+    double eta;
+    double * alpha = calloc_double(m);
+    memmove(workspace+d,grad,d*sizeof(double));
+    for (size_t ii = 0; ii < d; ii++){ workspace[d+ii] *= -1;}
+    
     enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
     while (converged == 0){
         
@@ -1354,10 +2004,18 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         /* assert (*fval < fvaltemp); */
         assert (res > -1);
 
-        opt->prev_eval = fvaltemp;
-        double * s = workspace+d;
-        cblas_dscal(d,sc,s,1);
+        // x is now the next point
+        // workspace+2d is the new gradient
+        c3opt_lbfgs_list_insert(list,iter,x,workspace,workspace+2*d,grad);
 
+        printf("newx = "); dprint(d,x);
+        printf("newgrad = "); dprint(d,workspace+2*d);
+        /* printf("grad should be (%G,%G)\n",2.0*x[0],2.0*2.0*x[1]); */
+        /* printf("oldx = "); dprint(d,workspace); */
+        /* c3opt_lbfgs_list_print(list,stdout,5,3); */
+        memmove(grad,workspace+2*d,d*sizeof(double));
+
+        opt->prev_eval = fvaltemp;
         if (opt->store_func == 1){
             opt->stored_func[opt->niters] = *fval;
         }
@@ -1368,46 +2026,14 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
         }
 
-        
-        opt->niters++;
-        iter += 1;
-        if (iter > maxiter){
-            //printf("iter = %zu,verbose=%d\n",iter,verbose);
-            return C3OPT_MAXITER_REACHED;
-        }
 
-        // compute difference in gradients
-        cblas_daxpy(d,-1.0,grad,1,workspace+2*d,1); 
-        double * y = workspace+2*d;
-        
-        // combute BY;
-        cblas_dsymv(CblasColMajor,CblasUpper,
-                    d,1.0,invhess,d,y,1,0.0,workspace+3*d,1);
-        
-        double sty = cblas_ddot(d,s,1,y,1);        
-        double ytBy = cblas_ddot(d,y,1,workspace+3*d,1);
-        if (fabs(sty) > 1e-16){
-
-            double a1 = (sty + ytBy)/(sty * sty);
-        
-            // rank 1 update
-            cblas_dsyr(CblasColMajor,CblasUpper,d,a1,
-                       s,1,invhess, d);
-        
-            double a2 = -1.0/sty;
-            // symmetric rank 2 updatex
-            cblas_dsyr2(CblasColMajor,CblasUpper,d,a2,
-                        workspace+3*d,1,
-                        workspace+d,1,invhess,d);
-        }
-
-        cblas_daxpy(d,1.0,y,1,grad,1);
-
-        
         // compute next search direction;
-        cblas_dsymv(CblasColMajor,CblasUpper,
-                d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
-
+        /* printf("computing!\n"); */
+        printf("lbfgs grad = "); dprint(d,grad);
+        lbfgs_hg(iter+1,m,d,1.0,alpha,grad,workspace+d,list);
+        for (size_t ii = 0; ii < d; ii++){ workspace[d+ii] *= -1;}
+        /* printf("computed!\n"); */
+        printf("new direction = "); dprint(d,workspace+d);
         eta = cblas_ddot(d,grad,1,workspace+d,1);
         onbound = 0;
         for (size_t ii = 0; ii < d; ii++){
@@ -1426,6 +2052,8 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             xdiff += pow(x[ii]-workspace[ii],2);
         }
         xdiff = sqrt(xdiff);
+
+        
         if (onbound == 1){
             //printf("grad = ");
             //dprint(2,grad);
@@ -1471,339 +2099,19 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             }
 
         }
+        opt->niters++;
+        iter += 1;
         
-    }
-
-    return ret;
-}
-
-
-// circular list
-struct c3opt_lbfgs_data
-{
-    size_t iter;
-    double * s;
-    double * y;
-    double rhoinv;
-    struct c3opt_lbfgs_data * next;
-    struct c3opt_lbfgs_data * prev;
-};
-
-struct c3opt_lbfgs_data * c3opt_lbfgs_data_alloc(){
-    struct c3opt_lbfgs_data* out = malloc(sizeof(struct c3opt_lbfgs_data));
-    if (out == NULL){
-        fprintf(stderr, "Cannot allocate lbfgs_data to store data\n");
-        return NULL;
-    }
-    out->s = NULL;
-    out->y = NULL;
-    out->next = NULL;
-    out->prev = NULL;
-    return out;
-}
-
-void c3opt_lbfgs_data_print(struct c3opt_lbfgs_data * data, FILE * fp,int width,int prec)
-{
-    if (data!= NULL){
-        fprintf(fp,"Iter=%zu, rhoinv=%*.*G\n",data->iter,width,prec,data->rhoinv);
-        fprintf(fp," \t (prev==NULL)=%d, (next==NULL)=%d\n",data->prev==NULL,data->next==NULL);
-    }
-    else{
-        fprintf(fp,"NULL\n");
-    }
-    
-}
-
-void c3opt_lbfgs_data_free_contents(struct c3opt_lbfgs_data * list)
-{
-    if (list != NULL){
-        free(list->s); list->s = NULL;
-        free(list->y); list->y = NULL;
-    }
-}
-
-struct c3opt_lbfgs_list
-{
-    size_t m;
-    size_t d;
-    size_t size;
-    struct c3opt_lbfgs_data * most_recent;
-
-    // iterate
-    size_t step;
-    struct c3opt_lbfgs_data * cstep;
-};
-
-struct c3opt_lbfgs_list * c3opt_lbfgs_list_alloc(size_t m, size_t d){
-    struct c3opt_lbfgs_list* out = malloc(sizeof(struct c3opt_lbfgs_list));
-    if (out == NULL){
-        fprintf(stderr, "Cannot allocate lbfgs_list to store data\n");
-        return NULL;
-    }
-    out->m = m;
-    out->d = d;
-    out->size = 0;
-    out->most_recent = NULL;
-
-    out->step = 0;
-    out->cstep = NULL;
-    return out;
-}
-
-void c3opt_lbfgs_list_insert(struct c3opt_lbfgs_list * list, size_t iter,
-                             double * x_next, double * x_curr,
-                             double * grad_next, double * grad_curr)
-{
-
-    struct c3opt_lbfgs_data * new = NULL;
-    struct c3opt_lbfgs_data * head = list->most_recent;
-    
-    if (list->size >= list->m){ // full list replace last one
-        new = head->prev; // last one becomes newest;
-    }
-    else{ // need to create a new one
-        new = c3opt_lbfgs_data_alloc();
-    }
-    
-    if (new->s == NULL){
-        new->s = calloc_double(list->d);
-        new->y = calloc_double(list->d);
-    }
-    
-    memmove(new->s,x_next,list->d * sizeof(double));
-    cblas_daxpy(list->d,-1.0,x_curr,1,new->s,1);
-    
-    memmove(new->y,grad_next,list->d * sizeof(double));
-    cblas_daxpy(list->d,-1.0,grad_curr,1,new->y,1);
-
-    new->rhoinv = cblas_ddot(list->d,new->s,1,new->y,1);
-    // NEED TO CHECK IF HTIS IS BELOW A TOLERANCE!
-    assert (fabs(new->rhoinv) > 1e-15);
-    
-    new->iter = iter;
-
-    if (list->size >= list->m){ // full list
-        new->next = list->most_recent; // next one is going to be the most recent one
-        // don't need to set prev as it is already set
-    }
-    else if (list->size > 0){
-        new->next = list->most_recent;
-        list->most_recent->prev = new;
-        new->prev = NULL;
-        list->size = list->size + 1;
-        if (list->size == list->m){ // set to last element
-            while (head->next != NULL){
-                head = head->next;
-            }
-            new->prev = head;
+        if (iter > maxiter){
+            //printf("iter = %zu,verbose=%d\n",iter,verbose);
+            ret = C3OPT_MAXITER_REACHED;
+            converged = 1;
         }
+
     }
-    else{//(list->size == 0){
-        new->next = NULL;
-        new->prev = NULL;
-        list->size = 1;
-    }
-    
-    // set the head
-    list->most_recent = new;
+    free(alpha); alpha = NULL;
+    return 0;
 }
-
-// newest to oldest
-void c3opt_lbfgs_list_step(struct c3opt_lbfgs_list * list, size_t * iter, double * s, double * y, double *rhoinv)
-{
-    assert (list != NULL);
-
-    list->step = list->step+1;
-    if (list->step == 1){
-        list->cstep = list->most_recent;
-    }
-    else{
-        list->cstep = list->cstep->next;
-        if (list->step == list->size){
-            list->step = 0;
-        }
-    }
-
-    *iter = list->cstep->iter;
-    s = list->cstep->s;
-    y = list->cstep->y;
-    *rhoinv = list->cstep->rhoinv;
-}
-
-// oldest to newest
-void c3opt_lbfgs_list_step_back(struct c3opt_lbfgs_list * list, size_t * iter, double * s, double * y, double *rhoinv)
-{
-    assert (list != NULL);
-
-    list->step = list->step+1;
-    if (list->step == 1){
-        list->cstep = list->most_recent;
-        for (size_t ii = 1; ii < list->size; ii++){
-            list->cstep = list->cstep->next;
-        }
-    }
-    else{
-        list->cstep = list->cstep->prev;
-        if (list->step == list->size){
-            list->step = 0;
-        }
-    }
-
-    *iter = list->cstep->iter;
-    s = list->cstep->s;
-    y = list->cstep->y;
-    *rhoinv = list->cstep->rhoinv;
-}
-
-
-void c3opt_lbfgs_list_print(struct c3opt_lbfgs_list * list, FILE * fp, int width, int prec)
-{
-
-    if (list == NULL){
-        fprintf(fp,"NULL\n");
-    }
-    else{
-        struct c3opt_lbfgs_data * head = list->most_recent;
-        for (size_t ii = 0; ii < list->size; ii++){
-            c3opt_lbfgs_data_print(head,fp,width,prec);
-            head = head->next;
-        }
-    }
-}
-
-void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list * list)
-{
-    if (list != NULL){
-        /* printf("size to free = %zu\n",list->size); */
-        struct c3opt_lbfgs_data * current = list->most_recent;
-        /* c3opt_lbfgs_data_print(current,stdout,3,5); */
-        struct c3opt_lbfgs_data * next;
-        c3opt_lbfgs_data_free_contents(current);
-        current->prev = NULL;
-        for (size_t ii = 1; ii < list->size; ii++){
-            next = current->next;
-            free(current); current=NULL;
-            current = next;
-            /* c3opt_lbfgs_data_print(current,stdout,3,5); */
-            c3opt_lbfgs_data_free_contents(current);
-            current->prev = NULL;
-        }
-        free(current); current = NULL;
-        free(list); list = NULL;
-    }
-}
-
-void lbfgs_hg(size_t iter, size_t m, size_t dx, double hoscale, double * alpha, double * g, double * q,
-              struct c3opt_lbfgs_list * list)
-{
-    // H_0 is identy!!!!
-    size_t incr, bound;
-    if (iter <= m){
-        incr = 0;
-        bound = iter;
-    }
-    else{
-        incr = iter-m;
-        bound = m;
-    }
-    memmove(q,g,dx*sizeof(double));
-
-    size_t jj;
-    double beta;
-
-    double rhoinv;
-    size_t kk;
-    double * s = NULL;
-    double * y = NULL;
-    for (int ii = bound-1; ii >= 0; ii--){
-        jj = (size_t)ii + incr;
-
-        c3opt_lbfgs_list_step(list,&kk,s,y,&rhoinv); // newest to oldest
-        assert (kk == jj); // just to make sure
-        alpha[ii] = 1.0/rhoinv * cblas_ddot(dx,s,1,q,1);
-        cblas_daxpy(dx,-alpha[ii],y,1,q,1);
-    }
-
-    for (size_t zz = 0; zz < dx; zz++){
-        q[zz] *= hoscale;
-    }
-    for (size_t ii = 0; ii < bound ;ii++){
-        jj = ii + incr;
-
-        c3opt_lbfgs_list_step_back(list,&kk,s,y,&rhoinv); // oldest to newest
-        assert (kk == jj);
-                              
-        beta = 1.0/rhoinv * cblas_ddot(dx,y,1,q,1);
-        
-        cblas_daxpy(dx,(alpha[ii]-beta),s,1,q,1);
-    }
-    
-}
-
-
-/***********************************************************//**
-    Low memory lbfgs
-
-    \param[in]     opt        - optimization
-    \param[in,out] x          - starting/final point
-    \param[in,out] fval       - final function value
-    \param[in,out] grad       - gradient at final point
-
-    \return  0    - success
-            -20+? - failure in gradient (gradient outputs ?)
-             1    - maximum number of iterations reached
-         other    - error in backward_line_search 
-                   (see that function)
-***************************************************************/
-/* int c3_opt_lbfgs(struct c3Opt * opt, */
-/*                  double * x, double * fval, double * grad) */
-/* { */
-/*     size_t d = c3opt_get_d(opt); */
-/*     double * workspace = c3opt_get_workspace(opt); */
-/*     int verbose = c3opt_get_verbose(opt); */
-/*     double * lb = c3opt_get_lb(opt); */
-/*     double * ub = c3opt_get_ub(opt); */
-/*     size_t maxiter = c3opt_get_maxiter(opt); */
-/*     double gtol = c3opt_get_gtol(opt); */
-/*     double relftol = c3opt_get_relftol(opt); */
-/*     double absxtol = c3opt_get_absxtol(opt); */
-    
-/*     opt->nevals = 0; */
-/*     opt->ngvals = 0; */
-/*     opt->niters = 1; */
-
-/*     *fval = c3opt_eval(opt,x,grad); */
-/*     if (opt->store_func == 1){ */
-/*         opt->stored_func[opt->niters-1] = *fval; */
-/*     } */
-/*     if (opt->store_grad == 1){ */
-/*         memmove(opt->stored_grad+(opt->niters-1)*opt->d,grad,d*sizeof(double)); */
-/*     } */
-/*     if (opt->store_x == 1){ */
-/*         memmove(opt->stored_x+(opt->niters-1)*opt->d,x,d*sizeof(double)); */
-/*     } */
-
-/*     double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1)); */
-/*     int ret = C3OPT_SUCCESS;; */
-
-/*     if (verbose > 0){ */
-
-/*         printf("Iteration:0 (fval,||g||) = (%3.5G,%3.5G)\n",*fval,grad_norm); */
-/*         if (verbose > 1){ */
-/*             printf("\t x = "); dprint(d,x); */
-/*         } */
-/*     } */
-
-/*     if ( grad_norm < gtol){ */
-/*         return C3OPT_GTOL_REACHED; */
-/*     } */
-
-/*     for (size_t ii = 0; ii < maxiter; ii++){ */
-
-/*         // */
-/*     } */
-/*     return 0; */
-/* } */
 
 
 /***********************************************************//**
@@ -1988,10 +2296,6 @@ int c3_opt_gradient(struct c3Opt * opt,
 
 
 
-
-
-
-
 /***********************************************************//**
     Main minimization routine
 
@@ -2018,6 +2322,17 @@ int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
         res = c3_opt_damp_bfgs(opt,start,minf,grad,invhess);
         free(grad); grad = NULL;
         free(invhess); invhess = NULL;
+    }
+    else if (opt->alg == LBFGS){
+        size_t d = c3opt_get_d(opt);
+        /* double * invhess = calloc_double(d*d); */
+        double * grad = calloc_double(d);
+        /* for (size_t ii = 0; ii < d; ii++){ */
+        /*     invhess[ii*d+ii] = 1.0; */
+        /* } */
+        res = c3_opt_lbfgs(opt,start,minf,grad);/* ,invhess); */
+        free(grad); grad = NULL;
+        /* free(invhess); invhess = NULL; */
     }
     else if (opt->alg == BATCHGRAD){
         size_t d = c3opt_get_d(opt);
