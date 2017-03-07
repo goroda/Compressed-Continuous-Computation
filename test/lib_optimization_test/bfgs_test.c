@@ -535,7 +535,7 @@ void Test_unc10(CuTest * tc)
     c3opt_ls_set_maxiter(opt,1000);
 
     double * start = unc_test_problem_get_start(&p);
-    double gerr = c3opt_check_deriv(opt,start,1e-8);
+    double gerr = c3opt_check_deriv(opt,start,1e-7);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
     

@@ -61,7 +61,11 @@ void Test_c3opt_lbfgs_storage(CuTest * tc)
     struct c3opt_lbfgs_list * list = c3opt_lbfgs_list_alloc(m,2);
 
     double rhoinv[10];
+
+    double ss[10];
+    double yy[10];
     for (size_t ii = 0; ii < 10; ii++){
+        /* printf("ii = %zu\n",ii); */
         c3opt_lbfgs_list_insert(list,ii,xn,x,gn,g);
         double rhoshould = 0.0;
         for (size_t jj = 0; jj < 2; jj++){
@@ -70,10 +74,19 @@ void Test_c3opt_lbfgs_storage(CuTest * tc)
         rhoinv[ii] = rhoshould;
         /* printf("rhoinvshould = %G\n", rhoshould); */
 
+        if (ii > 4){
+            ss[(ii-5)*2+0] = xn[0]-x[0];
+            ss[(ii-5)*2+1] = xn[1]-x[1];
+            yy[(ii-5)*2+0] = gn[0]-g[0];
+            yy[(ii-5)*2+1] = gn[1]-g[1];
+        }
+        
         x[0] = xn[0]; x[1] = xn[1];
         g[0] = gn[0]; g[1] = gn[1];
         xn[0] = x[0]+0.4*randu()*3; xn[1] = x[1]+0.3*randu()*3;
         gn[0] = g[0]-0.2*randu()*3; gn[1] = g[1]+0.7*randu()*3;
+
+        
     }
 
     size_t iter;
@@ -81,20 +94,39 @@ void Test_c3opt_lbfgs_storage(CuTest * tc)
     double * y = NULL;
     double rhoi;
 
+    // most recent to oldest
     for (size_t jj = 0; jj < 10; jj++)
     {
+        /* printf("jj = %zu\n",jj); */
         c3opt_lbfgs_list_step(list,&iter,&s,&y,&rhoi);
-        CuAssertIntEquals(tc,9-jj%m,iter);
-        /* printf("jj=%zu, iter=%zu, check=%zu\n",jj,iter,9-jj%m); */
+        /* printf("iter = %zu\n",iter); */
+        if (jj < 5){
+            CuAssertIntEquals(tc,9-jj,iter);
+        }
+        else{
+            /* printf("%zu\n",9-jj+5); */
+            CuAssertIntEquals(tc,9-jj+5,iter);
+        }
+
+        size_t inds = (4-jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
     }
 
     c3opt_lbfgs_reset_step(list);
-    // NOTE THIS WORKS BECAUSE PREVIOUSLY STEPPED 2M
     for (size_t jj = 0; jj < 10; jj++)
     {
         c3opt_lbfgs_list_step_back(list,&iter,&s,&y,&rhoi);
         CuAssertIntEquals(tc,jj%m+m,iter);
         /* printf("jj=%zu, iter=%zu, check=%zu\n",jj,iter,jj%m+m); */
+
+        size_t inds = (jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
     }
 
     c3opt_lbfgs_reset_step(list);
@@ -103,6 +135,12 @@ void Test_c3opt_lbfgs_storage(CuTest * tc)
         c3opt_lbfgs_list_step(list,&iter,&s,&y,&rhoi);
         /* printf("rho=%G, rhoi=%G\n",rhoinv[jj],rhoi); */
         CuAssertDblEquals(tc,rhoinv[jj],rhoi,1e-15);
+
+        size_t inds = (jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
     }
     
     /* printf("\n\n\n"); */
@@ -133,7 +171,7 @@ void Test_c3opt_lbfgs_ss(CuTest * tc)
     printf("Testing Function: lbfgs projected gradient with c3opt interface (1)\n");
     
     size_t dim = 5;
-    size_t maxiter = 1000;
+
     
     double lb[6];
     double ub[6];
@@ -147,7 +185,7 @@ void Test_c3opt_lbfgs_ss(CuTest * tc)
 
     int res;
     double val;
-
+    size_t maxiter = 1000;
     struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_lb(opt,lb);
     c3opt_add_ub(opt,ub);
@@ -157,7 +195,7 @@ void Test_c3opt_lbfgs_ss(CuTest * tc)
     c3opt_set_absxtol(opt,1e-15);
     c3opt_set_relftol(opt,1e-15);
     c3opt_set_gtol(opt,1e-15);
-    c3opt_set_nvectors_store(opt,10);
+    c3opt_set_nvectors_store(opt,5);
     c3opt_ls_set_alpha(opt,0.0001);
     c3opt_ls_set_beta(opt,0.9);
 
@@ -197,29 +235,30 @@ void Test_c3opt_lbfgs_equiv_bfgs(CuTest * tc)
     int res;
     double val;
 
-    size_t maxiter = 1;
+    size_t maxiter = 5;
     struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_lb(opt,lb);
     c3opt_add_ub(opt,ub);
     c3opt_add_objective(opt,sum_squares,NULL);
-    c3opt_set_verbose(opt,1);
+    c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,maxiter);
     c3opt_set_absxtol(opt,1e-15);
     c3opt_set_relftol(opt,1e-15);
     c3opt_set_gtol(opt,1e-15);
     c3opt_set_nvectors_store(opt,1000);
+    c3opt_set_lbfgs_scale(opt,0);
     c3opt_ls_set_alpha(opt,0.0001);
     c3opt_ls_set_beta(opt,0.9);
 
     res = c3opt_minimize(opt,start,&val);
-    printf("final val lbfgs = %G\n",val);
-    c3opt_free(opt);
+    /* printf("final val lbfgs = %G\n",val); */
+    c3opt_free(opt); opt = NULL;
 
     opt = c3opt_alloc(BFGS,dim);
     c3opt_add_lb(opt,lb);
     c3opt_add_ub(opt,ub);
     c3opt_add_objective(opt,sum_squares,NULL);
-    c3opt_set_verbose(opt,1);
+    c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,maxiter);
     c3opt_set_absxtol(opt,1e-15);
     c3opt_set_relftol(opt,1e-15);
@@ -229,16 +268,11 @@ void Test_c3opt_lbfgs_equiv_bfgs(CuTest * tc)
     
     double val2;
     res = c3opt_minimize(opt,start2,&val2);
-    printf("final val bfgs = %G\n",val2);
-    c3opt_free(opt);
-    
-/* //    printf("res = %d",res); */
-/*     CuAssertIntEquals(tc,1,res>-1); */
-/*     for (size_t ii = 0; ii < dim; ii++){ */
-/*         CuAssertDblEquals(tc,0.0,start[ii],1e-7); */
-/*     } */
-/*     CuAssertDblEquals(tc,0.0,val,1e-7); */
+    /* printf("final val bfgs = %G\n",val2); */
+    c3opt_free(opt); opt = NULL;
 
+    /* printf("diff = %G\n",val2-val); */
+    CuAssertDblEquals(tc,val,val2,1e-13);
 }
 
 void Test_lbfgs_unc1(CuTest * tc)
@@ -256,7 +290,7 @@ void Test_lbfgs_unc1(CuTest * tc)
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_maxiter(opt,1000);
     c3opt_set_nvectors_store(opt,1000);
-    c3opt_set_verbose(opt,1);
+    c3opt_set_verbose(opt,0);
 
     double * start = unc_test_problem_get_start(&p);
 
@@ -740,12 +774,6 @@ void Test_lbfgs_unc10(CuTest * tc)
 
     double * soll = unc_test_problem_get_sol(&p);
 
-    //minimum
-    double err = fabs(soll[dim]-val);
-    if (fabs(soll[dim]) > 1){
-        err /= fabs(soll[dim]);
-    }
-    CuAssertDblEquals(tc,0.0,err,1e-4);
     
     //minimizer //not sure for this problem]
     /* for (size_t ii = 0; ii < dim; ii++){ */
@@ -760,6 +788,14 @@ void Test_lbfgs_unc10(CuTest * tc)
     printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
     printf("////////////////////////////////////////////\n");
 
+    //minimum
+    double err = fabs(soll[dim]-val);
+    if (fabs(soll[dim]) > 1){
+        err /= fabs(soll[dim]);
+    }
+    CuAssertDblEquals(tc,0.0,err,1e-4);
+
+    
     c3opt_free(opt); opt = NULL;
 }
 
@@ -1533,32 +1569,32 @@ CuSuite * LBFGSGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_storage); */
-    /* SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_ss); */
+    SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_storage);
+    SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_ss);
     SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_equiv_bfgs);
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc1); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc2); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc3); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc4); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc5); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc6); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc7); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc8); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc9); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc10); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc11); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc12); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc13); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc14); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc15); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc16); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc17); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc18); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc19); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc20); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc21); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc22); */
-    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc23); */
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc1);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc2);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc3);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc4);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc5);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc6);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc7);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc8);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc9);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc10);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc11);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc12);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc13);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc14);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc15);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc16);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc17);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc18);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc19);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc20);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc21);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc22);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc23);
     /* SUITE_ADD_TEST(suite, Test_lbfgs_unc24); */
     return suite;
 }

@@ -57,6 +57,8 @@ void c3opt_free(struct c3Opt *);
 
 void c3opt_set_nvectors_store(struct c3Opt *, size_t);
 size_t c3opt_get_nvectors_store(const struct c3Opt *);
+void c3opt_set_lbfgs_scale(struct c3Opt *, int);
+int c3opt_get_lbfgs_scale(struct c3Opt *);
 
 int c3opt_is_bruteforce(struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);

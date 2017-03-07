@@ -56,15 +56,14 @@ void RunAllTests(void) {
     CuSuite * lbfgs = LBFGSGetSuite();
     CuSuite * bgrad = BGradGetSuite();
 
-    /* CuSuiteAddSuite(suite, opt); */
+    CuSuiteAddSuite(suite, opt);
 
     create_unc_probs();
 
-    /* CuSuiteAddSuite(suite, lbfgs); */
     CuSuiteAddSuite(suite, bfgs);
+    CuSuiteAddSuite(suite, lbfgs);
 
-    /* CuSuiteAddSuite(suite, bgrad); */ // something is wrong
-    
+    /* CuSuiteAddSuite(suite, bgrad); /\* something is wrong *\/ */
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
