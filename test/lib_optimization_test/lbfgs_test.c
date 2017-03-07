@@ -292,9 +292,11 @@ void Test_lbfgs_unc1(CuTest * tc)
     c3opt_set_nvectors_store(opt,1000);
     c3opt_set_verbose(opt,0);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
 
     double val;
+    double * start = calloc_double(dim);
+    memmove(start,start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     CuAssertIntEquals(tc,1,res>=0);
 
@@ -321,6 +323,7 @@ void Test_lbfgs_unc1(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc2(CuTest * tc)
@@ -339,9 +342,11 @@ void Test_lbfgs_unc2(CuTest * tc)
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     /* c3opt_set_verbose(opt,1); */
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
 
     double val;
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     CuAssertIntEquals(tc,1,res>=0);
 
@@ -368,6 +373,7 @@ void Test_lbfgs_unc2(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc3(CuTest * tc)
@@ -388,9 +394,9 @@ void Test_lbfgs_unc3(CuTest * tc)
     c3opt_set_relftol(opt,1e-20);
     c3opt_set_maxiter(opt,10000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
 
-    double val;
+    double val; double * start = calloc_double(dim); memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -417,7 +423,7 @@ void Test_lbfgs_unc3(CuTest * tc)
     printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
     printf("////////////////////////////////////////////\n");
 
-    c3opt_free(opt); opt = NULL;
+    c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
 void Test_lbfgs_unc4(CuTest * tc)
@@ -440,12 +446,14 @@ void Test_lbfgs_unc4(CuTest * tc)
     /* c3opt_set_relftol(opt,1e-14); */
     /* c3opt_set_maxiter(opt,1000); */
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-6);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
 
 
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     CuAssertIntEquals(tc,1,res>=0);
 
@@ -472,6 +480,7 @@ void Test_lbfgs_unc4(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc5(CuTest * tc)
@@ -491,9 +500,11 @@ void Test_lbfgs_unc5(CuTest * tc)
     /* c3opt_set_absxtol(opt,1e-20); */
     /* c3opt_set_relftol(opt,1e-14); */
     /* c3opt_set_maxiter(opt,1000); */
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
 
     double val;
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     CuAssertIntEquals(tc,1,res>=0);
 
@@ -519,7 +530,7 @@ void Test_lbfgs_unc5(CuTest * tc)
     printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
     printf("////////////////////////////////////////////\n");
 
-    c3opt_free(opt); opt = NULL;
+    c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
 void Test_lbfgs_unc6(CuTest * tc)
@@ -543,15 +554,16 @@ void Test_lbfgs_unc6(CuTest * tc)
     c3opt_set_maxiter(opt,400);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     /* printf("start\n"); */
     /* dprint(2,start); */
-
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-8);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     CuAssertIntEquals(tc,1,res>=0);
 
@@ -578,6 +590,7 @@ void Test_lbfgs_unc6(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc7(CuTest * tc)
@@ -600,7 +613,9 @@ void Test_lbfgs_unc7(CuTest * tc)
     c3opt_set_maxiter(opt,400);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-8);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
@@ -632,6 +647,7 @@ void Test_lbfgs_unc7(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc8(CuTest * tc)
@@ -655,12 +671,14 @@ void Test_lbfgs_unc8(CuTest * tc)
     c3opt_set_maxiter(opt,400);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-8);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -688,6 +706,7 @@ void Test_lbfgs_unc8(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc9(CuTest * tc)
@@ -711,12 +730,14 @@ void Test_lbfgs_unc9(CuTest * tc)
     c3opt_set_maxiter(opt,400);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-8);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -744,6 +765,7 @@ void Test_lbfgs_unc9(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc10(CuTest * tc)
@@ -762,12 +784,15 @@ void Test_lbfgs_unc10(CuTest * tc)
     c3opt_set_maxiter(opt,1000);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv(opt,start,1e-8);
     CuAssertDblEquals(tc,0.0,gerr,1e-5);
     /* printf("gerr = %G\n",gerr); */
     
     double val;
+
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -797,6 +822,7 @@ void Test_lbfgs_unc10(CuTest * tc)
 
     
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc11(CuTest * tc)
@@ -818,8 +844,10 @@ void Test_lbfgs_unc11(CuTest * tc)
     c3opt_set_maxiter(opt,1000);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -829,7 +857,7 @@ void Test_lbfgs_unc11(CuTest * tc)
     free(deriv_diff); deriv_diff = NULL;
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -857,6 +885,7 @@ void Test_lbfgs_unc11(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc12(CuTest * tc)
@@ -878,8 +907,10 @@ void Test_lbfgs_unc12(CuTest * tc)
     c3opt_set_maxiter(opt,1000);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -889,7 +920,7 @@ void Test_lbfgs_unc12(CuTest * tc)
     free(deriv_diff); deriv_diff = NULL;
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -916,7 +947,7 @@ void Test_lbfgs_unc12(CuTest * tc)
     printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
     printf("////////////////////////////////////////////\n");
 
-    c3opt_free(opt); opt = NULL;
+    c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
 void Test_lbfgs_unc13(CuTest * tc)
@@ -940,8 +971,10 @@ void Test_lbfgs_unc13(CuTest * tc)
     /* c3opt_ls_set_beta(opt,0.99);  */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -979,6 +1012,7 @@ void Test_lbfgs_unc13(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc14(CuTest * tc)
@@ -1004,8 +1038,10 @@ void Test_lbfgs_unc14(CuTest * tc)
     /* c3opt_ls_set_alpha(opt,0.3); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1015,7 +1051,7 @@ void Test_lbfgs_unc14(CuTest * tc)
     free(deriv_diff); deriv_diff = NULL;
     /* printf("gerr = %G\n",gerr); */
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1045,6 +1081,7 @@ void Test_lbfgs_unc14(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc15(CuTest * tc)
@@ -1068,8 +1105,10 @@ void Test_lbfgs_unc15(CuTest * tc)
     /* c3opt_ls_set_alpha(opt,0.3); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1104,6 +1143,7 @@ void Test_lbfgs_unc15(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc16(CuTest * tc)
@@ -1124,8 +1164,10 @@ void Test_lbfgs_unc16(CuTest * tc)
     /* c3opt_ls_set_alpha(opt,0.3); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);    
+    double * start_ref = unc_test_problem_get_start(&p);    
     double val;
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1150,6 +1192,7 @@ void Test_lbfgs_unc16(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc17(CuTest * tc)
@@ -1170,8 +1213,10 @@ void Test_lbfgs_unc17(CuTest * tc)
     /* c3opt_ls_set_beta(opt,0.99); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1181,7 +1226,7 @@ void Test_lbfgs_unc17(CuTest * tc)
     free(deriv_diff); deriv_diff = NULL;
 
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1206,6 +1251,7 @@ void Test_lbfgs_unc17(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc18(CuTest * tc)
@@ -1222,8 +1268,10 @@ void Test_lbfgs_unc18(CuTest * tc)
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1232,8 +1280,7 @@ void Test_lbfgs_unc18(CuTest * tc)
     CuAssertDblEquals(tc,0.0,gerr,1e-3);
     free(deriv_diff); deriv_diff = NULL;
 
-    
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1247,7 +1294,6 @@ void Test_lbfgs_unc18(CuTest * tc)
     }
     CuAssertDblEquals(tc,0.0,err,1e-4);
     
-
     printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
     printf("\t\t Minimum Found:                : %3.6E\n\n",val);
 
@@ -1257,6 +1303,7 @@ void Test_lbfgs_unc18(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc19(CuTest * tc)
@@ -1277,9 +1324,11 @@ void Test_lbfgs_unc19(CuTest * tc)
     /* c3opt_ls_set_beta(opt,0.99); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     
     double val;
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1302,7 +1351,7 @@ void Test_lbfgs_unc19(CuTest * tc)
     printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
     printf("////////////////////////////////////////////\n");
 
-    c3opt_free(opt); opt = NULL;
+    c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
 void Test_lbfgs_unc20(CuTest * tc)
@@ -1326,8 +1375,10 @@ void Test_lbfgs_unc20(CuTest * tc)
     /* c3opt_ls_set_beta(opt,0.7); */
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1350,7 +1401,6 @@ void Test_lbfgs_unc20(CuTest * tc)
     }
     CuAssertDblEquals(tc,0.0,err,1e-4);
     
-
     printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
     printf("\t\t Minimum Found:                : %3.6E\n\n",val);
 
@@ -1360,6 +1410,7 @@ void Test_lbfgs_unc20(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc21(CuTest * tc)
@@ -1379,8 +1430,10 @@ void Test_lbfgs_unc21(CuTest * tc)
 
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1389,7 +1442,7 @@ void Test_lbfgs_unc21(CuTest * tc)
     CuAssertDblEquals(tc,0.0,gerr,1e-3);
     free(deriv_diff); deriv_diff = NULL;
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1413,6 +1466,7 @@ void Test_lbfgs_unc21(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc22(CuTest * tc)
@@ -1432,8 +1486,10 @@ void Test_lbfgs_unc22(CuTest * tc)
 
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1442,7 +1498,7 @@ void Test_lbfgs_unc22(CuTest * tc)
     CuAssertDblEquals(tc,0.0,gerr,1e-3);
     free(deriv_diff); deriv_diff = NULL;
     
-    double val;
+    double val; 
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1466,6 +1522,7 @@ void Test_lbfgs_unc22(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc23(CuTest * tc)
@@ -1484,8 +1541,10 @@ void Test_lbfgs_unc23(CuTest * tc)
     c3opt_set_maxiter(opt,10000);
     c3opt_ls_set_maxiter(opt,1000);
 
-    double * start = unc_test_problem_get_start(&p);    
+    double * start_ref = unc_test_problem_get_start(&p);    
     double val;
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1509,6 +1568,7 @@ void Test_lbfgs_unc23(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 void Test_lbfgs_unc24(CuTest * tc)
@@ -1530,8 +1590,10 @@ void Test_lbfgs_unc24(CuTest * tc)
     c3opt_set_maxiter(opt,1000000);
     c3opt_ls_set_maxiter(opt,1000000);
 
-    double * start = unc_test_problem_get_start(&p);
+    double * start_ref = unc_test_problem_get_start(&p);
     double * deriv_diff = calloc_double(dim);
+    double * start = calloc_double(dim);
+    memmove(start, start_ref, dim * sizeof(double));
     double gerr = c3opt_check_deriv_each(opt,start,1e-8,deriv_diff);
     for (size_t ii = 0; ii < dim; ii++){
         /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
@@ -1541,6 +1603,7 @@ void Test_lbfgs_unc24(CuTest * tc)
     free(deriv_diff); deriv_diff = NULL;
 
     double val;
+
     int res = c3opt_minimize(opt,start,&val);
     /* printf("res = %d\n",res); */
     CuAssertIntEquals(tc,1,res>=0);
@@ -1563,6 +1626,7 @@ void Test_lbfgs_unc24(CuTest * tc)
     printf("////////////////////////////////////////////\n");
 
     c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
 }
 
 CuSuite * LBFGSGetSuite(){

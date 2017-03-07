@@ -60,8 +60,9 @@ void RunAllTests(void) {
 
     create_unc_probs();
 
-    CuSuiteAddSuite(suite, bfgs);
     CuSuiteAddSuite(suite, lbfgs);
+    CuSuiteAddSuite(suite, bfgs);
+
 
     /* CuSuiteAddSuite(suite, bgrad); /\* something is wrong *\/ */
 
