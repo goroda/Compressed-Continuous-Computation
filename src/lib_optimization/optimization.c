@@ -37,6 +37,7 @@
 
 
 
+
 /** \file optimization.c
  * Provides routines for optimization
  */
@@ -1505,7 +1506,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     int onbound = 0;
     int converged = 0;
     int res = 0;
-    double sc = 0.0;;
+    /* double sc = 0.0;; */
     opt->prev_eval = 0.0;
     enum c3opt_ls_alg alg = c3opt_ls_get_alg(opt);
     while (converged == 0){
@@ -1517,29 +1518,29 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         
         fvaltemp = *fval;
         if (alg == BACKTRACK){
-            sc = c3opt_ls_box(opt,workspace,fvaltemp,
-                              grad,workspace+d,
-                              x,fval,&res);
+            c3opt_ls_box(opt,workspace,fvaltemp,
+                         grad,workspace+d,
+                         x,fval,&res);
             c3opt_eval(opt,x,workspace+2*d);
         }
         else if (alg == STRONGWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_strong_wolfe(opt,workspace,
-                                       fvaltemp,
-                                       workspace+2*d,
-                                       workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_strong_wolfe(opt,workspace,
+                                  fvaltemp,
+                                  workspace+2*d,
+                                  workspace+d,
+                                  x,fval,&res);
         }
         else if (alg == WEAKWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
             res = -4;
             int round=0;
             while (res < 0){
-                sc = c3opt_ls_wolfe_bisect(opt,workspace,
-                                       fvaltemp,
-                                       workspace+2*d,
-                                       workspace+d,
-                                       x,fval,&res);
+                c3opt_ls_wolfe_bisect(opt,workspace,
+                                      fvaltemp,
+                                      workspace+2*d,
+                                      workspace+d,
+                                      x,fval,&res);
                 if (res == -4){
                     fprintf(stderr,"Round %d\n",round);
                     fprintf(stderr,"\t Warning line search did not move because lack of\n");
@@ -2138,7 +2139,7 @@ int c3_opt_lbfgs(struct c3Opt * opt,
     int onbound = 0;
     int converged = 0;
     int res = 0;
-    double sc = 0.0;;
+    /* double sc = 0.0;; */
     double eta;
     double * alpha = calloc_double(m);
     memmove(workspace+d,grad,d*sizeof(double));
@@ -2150,21 +2151,21 @@ int c3_opt_lbfgs(struct c3Opt * opt,
         memmove(workspace,x,d*sizeof(double));
         fvaltemp = *fval;
         if (alg == BACKTRACK){
-            sc = c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
+            c3opt_ls_box(opt,workspace,fvaltemp,grad,workspace+d,
                               x,fval,&res);
             c3opt_eval(opt,x,workspace+2*d);
         }
         else if (alg == STRONGWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
+            c3opt_ls_strong_wolfe(opt,workspace,fvaltemp,
                                        workspace+2*d,workspace+d,
                                        x,fval,&res);
         }
         else if (alg == WEAKWOLFE){
             memmove(workspace+2*d,grad,d*sizeof(double));
-            sc = c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
-                                       workspace+2*d,workspace+d,
-                                       x,fval,&res);
+            c3opt_ls_wolfe_bisect(opt,workspace,fvaltemp,
+                                  workspace+2*d,workspace+d,
+                                  x,fval,&res);
         }
         /* assert (*fval < fvaltemp); */
         assert (res > -1);
@@ -2261,7 +2262,8 @@ int c3_opt_lbfgs(struct c3Opt * opt,
 
     }
     free(alpha); alpha = NULL;
-    return 0;
+    c3opt_lbfgs_list_free(list); list = NULL;
+    return ret;
 }
 
 /***********************************************************//**

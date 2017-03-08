@@ -34,6 +34,7 @@
 
 //Code
 
+
 #include "legquadrules.h" 
 #include <string.h> 
  

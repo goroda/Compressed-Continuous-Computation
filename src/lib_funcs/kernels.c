@@ -37,6 +37,7 @@
 
 
 
+
 /** \file kernels.c
  * Provides routines for manipulating kernels
 */
