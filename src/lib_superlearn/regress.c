@@ -1,9 +1,9 @@
 // Copyright (c) 2015-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016, Sandia Corporation
+// Copyright (c) 2016-2017 Sandia Corporation
 
 // This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 
 /** \file regress.c
@@ -2039,21 +2040,25 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
 /***********************************************************//**
     Run regression with rank adaptation and return the result
 
-    \param[in,out] ftr       - regression parameters
-    \param[in]     tol       - rounding tolerance
-    \param[in]     maxrank   - upper bound on rank
-    \param[in]     kickrank  - size of rank increase
-    \param[in,out] optimizer - optimization arguments
-    \param[in]     N         - number of data points
-    \param[in]     x         - training samples
-    \param[in]     y         - training labels
+    \param[in,out] ftr                 - regression parameters
+    \param[in]     tol                 - rounding tolerance
+    \param[in]     maxrank             - upper bound on rank
+    \param[in]     kickrank            - size of rank increase
+    \param[in,out] optimizer           - optimization arguments
+    \parma[in]     opt_only_restricted - optimize on a restricted set of ranks
+    \param[in]     N                   - number of data points
+    \param[in]     x                   - training samples
+    \param[in]     y                   - training labels
 
     \returns function train
+
+    \note when optimizing over restricted set of ranks, only newly added
+    univariate functions from the kicking procedure are optimized over
 ***************************************************************/
 struct FunctionTrain *
 ft_regress_run_rankadapt(struct FTRegress * ftr,
                          double tol, size_t maxrank, size_t kickrank,
-                         struct c3Opt * optimizer,
+                         struct c3Opt * optimizer, /* int opt_only_restricted, */
                          size_t N, const double * x, const double * y)
 {
     assert (ftr != NULL);
@@ -2082,6 +2087,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     struct FunctionTrain * ftround = NULL;
     double * init_new = NULL;
     double * rounded_params = NULL;
+    int opt_only_restricted = 0;
     for (size_t jj = 0; jj < maxiter; jj++){
         printf("\n");
         ftround = function_train_round(ft,tol,ftr->ftp->approx_opts);
@@ -2124,18 +2130,22 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         function_train_get_params(ftround,rounded_params);
 
         ft_regress_reset_param(ftr,ftr->ftp->approx_opts,ranks);
-        /* ft_param_update_inside_restricted_ranks(ftr->ftp,rounded_params,ftr->regopts->restrict_rank_opt); */
-        /* size_t nnew_solve = ft_param_get_nparams_restrict(ftr->ftp,ftr->regopts->restrict_rank_opt); */
-        /* printf("Number of new unknowns = %zu\n",nnew_solve); */
-        /* init_new = calloc_double(nnew_solve); */
-        /* for (size_t ii = 0; ii < nnew_solve; ii++){ */
-        /*     init_new[ii] = 1e-4; */
-        /* } */
-        /* ft_param_update_restricted_ranks(ftr->ftp,init_new,ftr->regopts->restrict_rank_opt); */
 
-        
-        for (size_t ii = 0; ii < ftr->dim; ii++){
-            ftr->regopts->restrict_rank_opt[ii] = 0.0;
+        if (opt_only_restricted == 1){
+            ft_param_update_inside_restricted_ranks(ftr->ftp,rounded_params,
+                                                    ftr->regopts->restrict_rank_opt);
+            size_t nnew_solve = ft_param_get_nparams_restrict(ftr->ftp,ftr->regopts->restrict_rank_opt);
+            /* printf("Number of new unknowns = %zu\n",nnew_solve); */
+            init_new = calloc_double(nnew_solve);
+            for (size_t ii = 0; ii < nnew_solve; ii++){
+                init_new[ii] = 1e-4;
+            }
+            ft_param_update_restricted_ranks(ftr->ftp,init_new,ftr->regopts->restrict_rank_opt);
+        }
+        else{
+            for (size_t ii = 0; ii < ftr->dim; ii++){
+                ftr->regopts->restrict_rank_opt[ii] = 0.0;
+            }
         }
 
         function_train_free(ft); ft = NULL;

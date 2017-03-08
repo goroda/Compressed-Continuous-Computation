@@ -1,9 +1,9 @@
 // Copyright (c) 2015-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016, Sandia Corporation
+// Copyright (c) 2016-2017 Sandia Corporation
 
 // This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +33,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 #include "legquadrules.h" 
 #include <string.h> 
  
