@@ -233,6 +233,8 @@ struct FTparam
  * maximum number of sweeps for ALS
  * \var RegressOpts::als_active_core
  * flag for active core within ALS
+ * \var RegressOpts::als_conv_tol
+ * convergence tolerance for als
  * \var RegressOpts::restrict_rank_opt
  * Restrict optimization of ranks to those >= values here
  */
@@ -246,6 +248,7 @@ struct RegressOpts
     double regularization_weight;
     size_t max_als_sweeps;
     size_t als_active_core;
+    double als_conv_tol;
 
     size_t * restrict_rank_opt;
 };
@@ -283,6 +286,7 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     ropts->als_active_core = 0;
     ropts->max_als_sweeps = 10;
     ropts->dim = dim;
+    ropts->als_conv_tol = 1e-5;
     ropts->restrict_rank_opt = calloc_size_t(dim);
     return ropts;
 }
@@ -347,6 +351,18 @@ void regress_opts_set_max_als_sweep(struct RegressOpts * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
     opts->max_als_sweeps = maxsweeps;
+}
+
+/***********************************************************//**
+    Set the ALS convergence tolerance
+    
+    \param[in,out] opts      - regression options
+    \param[in]     maxsweeps - number of sweeps     
+***************************************************************/
+void regress_opts_set_als_conv_tol(struct RegressOpts * opts, double tol)
+{
+    assert (opts != NULL);
+    opts->als_conv_tol = tol;
 }
 
 /***********************************************************//**
@@ -940,17 +956,20 @@ struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
     Create a parameterization from a linear least squares fit to 
     x and y
 
-    \param[in,out] ftp - parameterized FTP
-    \param[in]     N   - number of data points
-    \param[in]     x   - features
-    \param[in]     y   - labels
+    \param[in,out] ftp     - parameterized FTP
+    \param[in]     N       - number of data points
+    \param[in]     x       - features
+    \param[in]     y       - labels
+    \param[in]     perturb - perturbation to zero elements
 
     \note
     If ranks are < 2 then performs a constant fit at the mean of the data
     Else creates top 2x2 blocks to be a linear least squares fit and sets everything
     else to 1e-12
 ***************************************************************/
-void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N, const double * x, const double * y)
+void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
+                                 const double * x, const double * y,
+                                 double perturb)
 {
 
     // perform LS
@@ -996,7 +1015,7 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N, const double * 
     free(ftp->params); ftp->params = NULL;
     ftp->params = calloc_double(ftp->nparams);
     for (size_t ii = 0; ii < ftp->nparams; ii++){
-        ftp->params[ii] = 1e-12;
+        ftp->params[ii] = perturb*(randu()*2.0-1.0);
     }
 
     size_t onparam = 0;
@@ -1037,7 +1056,8 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N, const double * 
                     minloop = maxloop;
                 }
                 for (size_t ll = 0; ll < minloop; ll++){
-                    ftp->params[onparam] = temp_params[onparam_temp];
+                    /* ftp->params[onparam] = temp_params[onparam_temp]; */
+                    ftp->params[onparam] += temp_params[onparam_temp];
                     /* ftp->params[onparam] += 0.001*randn(); */
                     onparam++;
                     onparam_temp++;
@@ -1510,7 +1530,8 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     \returns function train
 ***************************************************************/
 struct FunctionTrain *
-c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts, struct c3Opt * optimizer,
+c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
+                      struct c3Opt * optimizer,
                       size_t N, const double * x, const double * y)
 {
 
@@ -1719,7 +1740,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
         if (ropts->verbose > 0){
             printf("\n\t ||f||=%G, ||f-f_p||=%G ||f-f_p||/||f||=%G\n",no,diff,diff/no);
         }
+
         function_train_free(start); start = NULL;
+        if ( (diff / no) < ropts->als_conv_tol){
+            break;
+        }
     }
 
 
@@ -1800,6 +1825,15 @@ struct FTRegress
     struct MultiApproxOpts* approx_opts;
     struct FTparam* ftp;
     struct RegressOpts* regopts;    
+
+
+    int adapt;
+    size_t kickrank;
+    size_t maxrank;
+    double roundtol;
+    size_t kfold;
+    int finalize;
+    int opt_restricted;
     
 };
 
@@ -1827,15 +1861,110 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
     ftr->approx_opts = aopts;
     ftr->ftp = ft_param_alloc(dim,aopts,NULL,ranks);
     ftr->regopts = NULL;
+
+    ftr->adapt = 0;
+    ftr->kickrank = 1;
+    ftr->maxrank = 10;
+    ftr->roundtol = 1e-8;
+    ftr->kfold = 3;
+    ftr->finalize = 1;
+    ftr->opt_restricted = 0;
     
     return ftr;
 }
+
+/***********************************************************//**
+    Turn on/off adaptation
     
+    \param[in,out] ftr - regression structure
+    \param[in]     on  - 1 for yes, 0 for no
+***************************************************************/
+void ft_regress_set_adapt(struct FTRegress * ftr, int on)
+{
+    assert (ftr != NULL);
+    ftr->adapt = on;
+}
+
+/***********************************************************//**
+    Specify the maximum rank allowable within adaptation
+    
+    \param[in,out] ftr      - regression structure
+    \param[in]     maxrank  - maxrank
+***************************************************************/
+void ft_regress_set_maxrank(struct FTRegress * ftr, size_t maxrank)
+{
+    assert (ftr != NULL);
+    ftr->maxrank = maxrank;
+}
+
+
+/***********************************************************//**
+    Specify the rank increase parameter
+    
+    \param[in,out] ftr      - regression structure
+    \param[in]     kickrank - rank increase parameter
+***************************************************************/
+void ft_regress_set_kickrank(struct FTRegress * ftr, size_t kickrank)
+{
+    assert (ftr != NULL);
+    ftr->kickrank = kickrank;
+}
+
+/***********************************************************//**
+    Specify the rounding tolerance
+    
+    \param[in,out] ftr - regression structure
+    \param[in]     tol - rounding tolerance
+***************************************************************/
+void ft_regress_set_roundtol(struct FTRegress * ftr, double tol)
+{
+    assert (ftr != NULL);
+    ftr->roundtol = tol;
+}
+
+/***********************************************************//**
+    Specify the cross validation number within rank adaptation
+    
+    \param[in,out] ftr   - regression structure
+    \param[in]     kfold - number of cv sets
+***************************************************************/
+void ft_regress_set_kfold(struct FTRegress * ftr, size_t kfold)
+{
+    assert (ftr != NULL);
+    ftr->kfold = kfold;
+}
+
+/***********************************************************//**
+    Specify whether or not to finalize an approximation 
+    after rank adaptation after converging by reapproximating
+    
+    \param[in,out] ftr - regression structure
+    \param[in]     fin - 1 finalize 0 dont
+***************************************************************/
+void ft_regress_set_finalize(struct FTRegress * ftr, int fin)
+{
+    assert (ftr != NULL);
+    ftr->finalize = fin;
+}
+
+/***********************************************************//**
+    Specify whether or not to only optimize on a restricted set of ranks
+    after increaseing ranks in adaptation
+    
+    \param[in,out] ftr - regression structure
+    \param[in]     res - 0 dont, 1 do
+***************************************************************/
+void ft_regress_set_opt_restrict(struct FTRegress * ftr, int res)
+{
+    assert (ftr != NULL);
+    ftr->opt_restricted = res;
+}
+
 /***********************************************************//**
     Free memory allocated to FT regress structure
     
     \param[in,out] ftr - regression structure
-***************************************************************/
+.***************************************************************/
 void ft_regress_free(struct FTRegress * ftr)
 {
     if (ftr != NULL){
@@ -1954,6 +2083,20 @@ void ft_regress_update_params(struct FTRegress * ftr, const double * param)
     ft_param_update_params(ftr->ftp,param);
 }
 
+
+/***********************************************************//**
+    Set ALS convergence tolerance
+
+    \param[in,out] opts      - regression structuture
+    \param[in]     tolerance - convergence tolerance
+***************************************************************/
+void ft_regress_set_als_conv_tol(struct FTRegress * opts, double tol)
+{
+    assert (opts != NULL);
+    assert (opts->regopts != NULL);
+    regress_opts_set_als_conv_tol(opts->regopts,tol);
+}
+
 /***********************************************************//**
     Set maximum number of als sweeps
 
@@ -2025,15 +2168,21 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr != NULL);
     assert (ftr->ftp != NULL);
     assert (ftr->regopts != NULL);
-
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
     if (fabs(param_norm) <= 1e-15){
-        ft_param_create_from_lin_ls(ftr->ftp,N,x,y);
+        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
         /* fprintf(stderr, "Cannot run ft_regression with zeroed parameters\n"); */
         /* exit(1); */
     }
-    
-    struct FunctionTrain * ft = c3_regression_run(ftr->ftp,ftr->regopts,optimizer,N,x,y);
+    struct FunctionTrain * ft = NULL;
+    if (ftr->adapt == 1){
+        ft = ft_regress_run_rankadapt(ftr,ftr->roundtol,ftr->maxrank,ftr->kickrank,
+                                      optimizer,ftr->opt_restricted,N,x,y,ftr->finalize);
+    }
+    else{
+
+        ft = c3_regression_run(ftr->ftp,ftr->regopts,optimizer,N,x,y);
+    }
     return ft;
 }
 
@@ -2046,10 +2195,11 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     \param[in]     maxrank             - upper bound on rank
     \param[in]     kickrank            - size of rank increase
     \param[in,out] optimizer           - optimization arguments
-    \parma[in]     opt_only_restricted - optimize on a restricted set of ranks
+    \param[in]     opt_only_restricted - optimize on a restricted set of ranks
     \param[in]     N                   - number of data points
     \param[in]     x                   - training samples
     \param[in]     y                   - training labels
+    \param[in]     finalize            - specify whether or not to reapproximate at the end
 
     \returns function train
 
@@ -2059,26 +2209,38 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
 struct FunctionTrain *
 ft_regress_run_rankadapt(struct FTRegress * ftr,
                          double tol, size_t maxrank, size_t kickrank,
-                         struct c3Opt * optimizer, /* int opt_only_restricted, */
-                         size_t N, const double * x, const double * y)
+                         struct c3Opt * optimizer, int opt_only_restricted,
+                         size_t N, const double * x, const double * y,
+                         int finalize)
 {
     assert (ftr != NULL);
     assert (ftr->ftp != NULL);
     assert (ftr->regopts != NULL);
 
+    ftr->adapt = 0; // turn off adaptation since in here!
     size_t * ranks = calloc_size_t(ftr->dim+1);
 
     size_t kfold = 3;
-    int cvverbose = 2;
+    int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(N,ftr->dim,x,y,kfold,cvverbose);
 
+
+    if (ftr->regopts->verbose > 0){
+        printf("run initial  cv\n");
+    }
+
     double err = cross_validate_run(cv,ftr,optimizer);
-    printf("Initial CV Error: %G\n",err);    
+
+    if (ftr->regopts->verbose > 0){
+        printf("Initial CV Error: %G\n",err);
+    }
 
     struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,N,x,y);
     size_t * ftranks = function_train_get_ranks(ft);
     memmove(ranks,ftranks,(ftr->dim+1)*sizeof(size_t));
-    printf("Initial ranks: "); iprint_sz(ftr->dim+1,ftranks);
+    if (ftr->regopts->verbose > 0){
+        printf("Initial ranks: "); iprint_sz(ftr->dim+1,ftranks);
+    }
 
    
     int kicked = 1;
@@ -2088,12 +2250,17 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     struct FunctionTrain * ftround = NULL;
     double * init_new = NULL;
     double * rounded_params = NULL;
-    int opt_only_restricted = 0;
+    /* int opt_only_restricted = 0; */
     for (size_t jj = 0; jj < maxiter; jj++){
-        printf("\n");
+        if (ftr->regopts->verbose > 0){
+            printf("\n");
+        }
         ftround = function_train_round(ft,tol,ftr->ftp->approx_opts);
         size_t * ftr_ranks = function_train_get_ranks(ftround);
-        printf("Rounded ranks: "); iprint_sz(ftr->dim+1,ftr_ranks);
+
+        if (ftr->regopts->verbose > 0){
+            printf("Rounded ranks: "); iprint_sz(ftr->dim+1,ftr_ranks);
+        }
         
         kicked = 0;
 
@@ -2122,11 +2289,14 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
             free(ranks); ranks = NULL;
             break;
         }
-        printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
-        
-        printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
         size_t nparams_rounded = function_train_get_nparams(ftround);
-        printf("Nrounded params: %zu\n",nparams_rounded);
+        if (ftr->regopts->verbose > 0){
+            printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
+            printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            printf("Nrounded params: %zu\n",nparams_rounded);
+        }
+
+
         rounded_params = calloc_double(nparams_rounded);
         function_train_get_params(ftround,rounded_params);
 
@@ -2151,14 +2321,16 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
 
         function_train_free(ft); ft = NULL;
         double new_err = cross_validate_run(cv,ftr,optimizer);
-        printf("CV Error: %G\n",new_err);
+        if (ftr->regopts->verbose > 0){
+            printf("CV Error: %G\n",new_err);
+        }
         if (new_err > err){
-            printf("Cross validation larger than previous rank, so not keeping this run\n");
-            iprint_sz(ftr->dim+1,ftr_ranks);
+            if (ftr->regopts->verbose > 0){
+                printf("Cross validation larger than previous rank, so not keeping this run\n");
+                iprint_sz(ftr->dim+1,ftr_ranks);
+            }
             ft_regress_reset_param(ftr,ftr->ftp->approx_opts,ftr_ranks);
-            printf("updating parameters\n");
             ft_param_update_params(ftr->ftp,rounded_params);
-            printf("updated them\n");
             ft = function_train_copy(ftr->ftp->ft);
             function_train_free(ftround); ftround = NULL;
             break;
@@ -2176,16 +2348,22 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     free(rounded_params); rounded_params = NULL;
     free(init_new); init_new = NULL;
 
-    for (size_t ii = 0; ii < ftr->dim; ii++){
-        ftr->regopts->restrict_rank_opt[ii] = 0;
+    if (finalize == 1){
+        for (size_t ii = 0; ii < ftr->dim; ii++){
+            ftr->regopts->restrict_rank_opt[ii] = 0;
+        }
+        function_train_free(ft); ft = NULL;
+        if (ftr->regopts->verbose > 0){
+            printf("Final run\n");
+        }
+        /* c3opt_set_gtol(optimizer,1e-10); */
+        /* c3opt_set_relftol(optimizer,1e-10); */
+        ft = ft_regress_run(ftr,optimizer,N,x,y);
     }
-    function_train_free(ft); ft = NULL;
-    printf("Final run\n");
-    /* c3opt_set_gtol(optimizer,1e-10); */
-    /* c3opt_set_relftol(optimizer,1e-10); */
-    ft = ft_regress_run(ftr,optimizer,N,x,y);
+
     cross_validate_free(cv); cv = NULL;
     free(ranks); ranks = NULL;
+    ftr->adapt = 1; // turn adaptation back on
     return ft;
 }
 
@@ -2199,6 +2377,19 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
 /* //////////////////////////////////// */
 /* //////////////////////////////////// */
 
+/** \struct CrossValidate
+ * \brief Used to perform cross validation
+ * \var CrossValidate::N
+ * Number of training samples
+ * \var CrossValidate::x
+ * Features
+ * \var CrossValidate::y
+ * labels
+ * \var CrossValidate::kfold
+ * number of folds for cross validation
+ * \var CrossValidate::verbose
+ * verbosity level
+ */ 
 struct CrossValidate
 {
     size_t N;
@@ -2243,6 +2434,15 @@ void cross_validate_free(struct CrossValidate * cv)
 
 /***********************************************************//**
    Initialize cross validation
+
+   \param[in] N       - number of training samples
+   \param[in] dim     - dimension of feature space
+   \param[in] x       - features as a flattened vector
+   \param[in] y       - labels
+   \param[in] kfold   - number of folds in CV
+   \param[in] verbose - verbosity level
+
+   \return Cross validation structure
 ***************************************************************/
 struct CrossValidate * cross_validate_init(size_t N, size_t dim,
                                            const double * x,
@@ -2262,6 +2462,15 @@ struct CrossValidate * cross_validate_init(size_t N, size_t dim,
 
 /***********************************************************//**
    Cross validation separate data
+
+   \param[in]     cv          - CV structure
+   \param[in]     start       - index specifying the separation
+   \param[in]     num_extract - number of data to extract after *start* index
+   \param[in,out] xtest       - pointer to an allocated array for storing x[:start,:], y[:start]
+   \param[in,out] ytest       - point to an array for storing lables up to *start* index
+   \param[in,out] xtrain      - pointer to an array for storing features after start upto start+num_extract
+   \param[in,out] ytrain      - pointer to an array for storing labels after start upto start+num_extract
+   \param[in]     verbose     - verbosity level
 ***************************************************************/
 void extract_data(struct CrossValidate * cv, size_t start,
                   size_t num_extract,
@@ -2288,6 +2497,9 @@ void extract_data(struct CrossValidate * cv, size_t start,
 /***********************************************************//**
    Cross validation run
 
+   \param[in] cv        - cross validation structure
+   \param[in] reg       - regression options
+   \param[in] optimizer - optimizer
 
    \note
    FTregress parameters do not change as a result of running
@@ -2673,7 +2885,6 @@ void cvc_list_free(struct CVCList * cv)
 }
 
 
-
 struct CVOptGrid
 {
     size_t ncvparam;
@@ -2886,7 +3097,7 @@ void cross_validate_grid_opt(struct CrossValidate * cv,
     if (verbose > 0){
         char str[256];
         cv_case_string(temp->cv,str,256);
-        printf("Best Parameters are\n\t%s : cv_err=%G\n",str,besterr);
+        printf("\tBest Parameters are\n\t\t%s : cv_err=%G\n",str,besterr);
     }
 
     // set best parameters

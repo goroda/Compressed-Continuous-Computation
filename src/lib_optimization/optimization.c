@@ -262,6 +262,13 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
         opt->workspace = NULL; 
         opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
+    else if (alg == LBFGS){
+        opt->grad = 1;
+        opt->workspace = NULL;/* calloc_double(4*d); */
+        /* opt->ls = c3ls_alloc(BACKTRACK,0); */
+        /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
+        opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
     else if (alg==BATCHGRAD){
         opt->grad = 1;
         opt->workspace = NULL;
@@ -278,6 +285,9 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
     opt->nevals = 0;
     opt->ngvals = 0;
     opt->niters = 0;
+
+    opt->nvectors_store = 40;
+    opt->init_scale = 0;
 
     opt->store_grad = 0;
     opt->store_func = 0;
@@ -315,6 +325,10 @@ void c3opt_set_nvars(struct c3Opt * opt, size_t nvars)
     free(opt->workspace);
     opt->workspace = NULL;
     if (opt->alg == BFGS){
+        opt->grad = 1;
+        opt->workspace = calloc_double(4*opt->d);
+    }
+    else if (opt->alg == LBFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*opt->d);
     }
@@ -1631,10 +1645,13 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         }
 
         double xdiff = 0.0;
+        double xnorm = 0.0;
         for (size_t ii = 0; ii < d; ii++){
             xdiff += pow(x[ii]-workspace[ii],2);
+            xnorm += workspace[ii]*workspace[ii];
         }
         xdiff = sqrt(xdiff);
+        xnorm = sqrt(xnorm);
         if (onbound == 1){
 
             //dprint(2,grad);
@@ -1681,7 +1698,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             printf("Iteration:%zu/%zu\n",iter,maxiter);
             printf("\t f(x)          = %3.5G\n",*fval);
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
-            printf("\t |x - x_p|     = %3.5G\n",xdiff);
+            printf("\t |x - x_p|/|x_p| = %3.5G\n",xdiff/xnorm);
             printf("\t p^Tg =        = %3.5G\n",eta);
             printf("\t Onbound       = %d\n",onbound);
             if (verbose > 3){

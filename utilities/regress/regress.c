@@ -8,9 +8,11 @@
 
 #include "stringmanip.h"
 #include "array.h"
-#include "linalg.h"
-#include "lib_clinalg.h"
-#include "lib_funcs.h"
+/* #include "linalg.h" */
+/* #include "lib_clinalg.h" */
+/* #include "lib_funcs.h" */
+
+#include "regress.h"
 
 static char * program_name;
 
@@ -323,6 +325,13 @@ int main(int argc, char * argv[])
         ft_regress_set_regularization_weight(ftr,reg);
     }
 
+    if (adapt != 0){
+        ft_regress_set_adapt(ftr,1);
+        ft_regress_set_roundtol(ftr,1e-10);
+        ft_regress_set_maxrank(ftr,rank);
+        ft_regress_set_kickrank(ftr,2);        
+    }
+    
     struct c3Opt * optimizer = c3opt_create(BFGS);
     if (verbose > 5){
         c3opt_set_verbose(optimizer,1);
@@ -335,8 +344,7 @@ int main(int argc, char * argv[])
     // choose parameters using cross validation
     struct CrossValidate * cv = NULL;
     if ((cvrank > 0) || (cvnum > 0) || (cvreg > 0)){
-        assert (adapt == 0);
-        
+
         int cvverbose = 0;
         cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
 
@@ -362,15 +370,7 @@ int main(int argc, char * argv[])
     }
 
     struct FunctionTrain * ft = NULL;
-    if (adapt == 0){
-        ft = ft_regress_run(ftr,optimizer,ndata,x,y);
-    }
-    else{
-        double round_tol = 1e-13;
-        size_t maxrank = rank;
-        size_t kickrank = 2;
-        ft = ft_regress_run_rankadapt(ftr,round_tol,maxrank,kickrank,optimizer,ndata,x,y);
-    }
+    ft = ft_regress_run(ftr,optimizer,ndata,x,y);
     
     if (verbose > 0){
         double diff;
