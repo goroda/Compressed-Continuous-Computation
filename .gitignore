@@ -36,3 +36,4 @@ update_file_headers.py
 add_license_split.py
 
 profiling/regress/*/*.c3
+profiling/regress/bin/*
