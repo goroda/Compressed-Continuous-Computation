@@ -3066,6 +3066,10 @@ double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad
 }
 
 /********************************************************//**
+    L1 penality
+************************************************************/
+
+/********************************************************//**
     Create a generic function through regression of data
 
     \return gf - generic function
@@ -3116,9 +3120,10 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
             c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,opts);
         }
         else if (opts->rtype == RLS1){
-            printf("Parameteric regression with L1 regularization not yet implemented\n");
+            printf("L1 regularization not yet implemented\n");
             free(start); start = NULL;
             return NULL;
+            /* c3opt_add_objective(optimizer,param_RLS1regress_cost,opts); */
         }
         else{
             printf("Parameteric regression type %d is not recognized\n",opts->rtype);
