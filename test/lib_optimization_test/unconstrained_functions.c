@@ -45,7 +45,7 @@
 #include "linalg.h"
 #include "lib_optimization.h"
 
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

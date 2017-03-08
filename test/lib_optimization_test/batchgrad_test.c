@@ -49,7 +49,7 @@
 
 #include "CuTest.h"
 
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 void Test_bgrad1(CuTest * tc)
 {

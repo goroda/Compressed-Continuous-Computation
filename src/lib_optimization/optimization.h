@@ -41,7 +41,7 @@
 
 enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE, WEAKWOLFE};
 
-enum c3opt_alg {BFGS, BATCHGRAD, BRUTEFORCE};
+enum c3opt_alg {BFGS, LBFGS, BATCHGRAD, BRUTEFORCE};
 enum c3opt_return {
     C3OPT_LS_PARAM_INVALID=-4,
     C3OPT_LS_MAXITER_REACHED=-3,
@@ -59,6 +59,12 @@ void c3opt_set_nvars(struct c3Opt *, size_t);
 struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);
+
+void c3opt_set_nvectors_store(struct c3Opt *, size_t);
+size_t c3opt_get_nvectors_store(const struct c3Opt *);
+void c3opt_set_lbfgs_scale(struct c3Opt *, int);
+int c3opt_get_lbfgs_scale(struct c3Opt *);
+
 int c3opt_is_bruteforce(struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);
 void c3opt_add_ub(struct c3Opt *, double *);
@@ -114,6 +120,22 @@ double * c3opt_get_ub(struct c3Opt *);
 double c3opt_eval(struct c3Opt *, const double *, double *);
 double c3opt_check_deriv(struct c3Opt *, const double *, double);
 double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
+
+
+// LBFGS STUFF
+struct c3opt_lbfgs_list;
+struct c3opt_lbfgs_list * c3opt_lbfgs_list_alloc(size_t,size_t);
+void c3opt_lbfgs_list_insert(struct c3opt_lbfgs_list *, size_t,
+                             const double *, const double *,
+                             const double *, const double *);
+void c3opt_lbfgs_reset_step(struct c3opt_lbfgs_list *);
+void c3opt_lbfgs_list_step(struct c3opt_lbfgs_list *, size_t *, double **, double **, double *);
+void c3opt_lbfgs_list_step_back(struct c3opt_lbfgs_list *, size_t *, double **, double **, double *);
+void c3opt_lbfgs_list_print(struct c3opt_lbfgs_list *, FILE *, int, int);
+void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list *);
+/* int c3Opt_lbfgs(struct c3Opt * opt, */
+/*                 double * x, double * fval, double * grad) */
+
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),

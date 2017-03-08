@@ -1,9 +1,8 @@
-// Copyright (c) 2015-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016-2017 Sandia Corporation
-
-// This file is part of the Compressed Continuous Computation (C3) Library
+// Copyright (c) 2014-2016, Massachusetts Institute of Technology
+//
+// This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
-// Contact: alex@alexgorodetsky.com
+// Contact: goroda@mit.edu
 
 // All rights reserved.
 
@@ -35,8 +34,6 @@
 //Code
 
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +48,234 @@
 
 #include "unconstrained_functions.h"
 
-void Test_bfgs_unc1(CuTest * tc)
+void Test_c3opt_lbfgs_storage(CuTest * tc)
+{
+    printf("Testing Function: storage functions surrounding lbfgs\n");
+
+    double x[2] = {0.5, 0.3};
+    double xn[2] = {1.0, 0.3};
+    double g[2] = {0.4, 0.2};
+    double gn[2] = {2.0, 3.0};
+    size_t m = 5;
+
+    struct c3opt_lbfgs_list * list = c3opt_lbfgs_list_alloc(m,2);
+
+    double rhoinv[10];
+
+    double ss[10];
+    double yy[10];
+    for (size_t ii = 0; ii < 10; ii++){
+        /* printf("ii = %zu\n",ii); */
+        c3opt_lbfgs_list_insert(list,ii,xn,x,gn,g);
+        double rhoshould = 0.0;
+        for (size_t jj = 0; jj < 2; jj++){
+            rhoshould += (xn[jj]-x[jj])* (gn[jj]-g[jj]);
+        }
+        rhoinv[ii] = rhoshould;
+        /* printf("rhoinvshould = %G\n", rhoshould); */
+
+        if (ii > 4){
+            ss[(ii-5)*2+0] = xn[0]-x[0];
+            ss[(ii-5)*2+1] = xn[1]-x[1];
+            yy[(ii-5)*2+0] = gn[0]-g[0];
+            yy[(ii-5)*2+1] = gn[1]-g[1];
+        }
+        
+        x[0] = xn[0]; x[1] = xn[1];
+        g[0] = gn[0]; g[1] = gn[1];
+        xn[0] = x[0]+0.4*randu()*3; xn[1] = x[1]+0.3*randu()*3;
+        gn[0] = g[0]-0.2*randu()*3; gn[1] = g[1]+0.7*randu()*3;
+
+        
+    }
+
+    size_t iter;
+    double * s = NULL;
+    double * y = NULL;
+    double rhoi;
+
+    // most recent to oldest
+    for (size_t jj = 0; jj < 10; jj++)
+    {
+        /* printf("jj = %zu\n",jj); */
+        c3opt_lbfgs_list_step(list,&iter,&s,&y,&rhoi);
+        /* printf("iter = %zu\n",iter); */
+        if (jj < 5){
+            CuAssertIntEquals(tc,9-jj,iter);
+        }
+        else{
+            /* printf("%zu\n",9-jj+5); */
+            CuAssertIntEquals(tc,9-jj+5,iter);
+        }
+
+        size_t inds = (4-jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
+    }
+
+    c3opt_lbfgs_reset_step(list);
+    for (size_t jj = 0; jj < 10; jj++)
+    {
+        c3opt_lbfgs_list_step_back(list,&iter,&s,&y,&rhoi);
+        CuAssertIntEquals(tc,jj%m+m,iter);
+        /* printf("jj=%zu, iter=%zu, check=%zu\n",jj,iter,jj%m+m); */
+
+        size_t inds = (jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
+    }
+
+    c3opt_lbfgs_reset_step(list);
+    for (size_t jj = 9; jj > 9-m; jj--)
+    {
+        c3opt_lbfgs_list_step(list,&iter,&s,&y,&rhoi);
+        /* printf("rho=%G, rhoi=%G\n",rhoinv[jj],rhoi); */
+        CuAssertDblEquals(tc,rhoinv[jj],rhoi,1e-15);
+
+        size_t inds = (jj%5)*2;
+        CuAssertDblEquals(tc,s[0],ss[inds],1e-15);
+        CuAssertDblEquals(tc,s[1],ss[inds+1],1e-15);
+        CuAssertDblEquals(tc,y[0],yy[inds],1e-15);
+        CuAssertDblEquals(tc,y[1],yy[inds+1],1e-15);
+    }
+    
+    /* printf("\n\n\n"); */
+    /* c3opt_lbfgs_list_print(list,stdout,3,5); */
+    /* printf("\n\n\n"); */
+    c3opt_lbfgs_list_free(list); list = NULL;
+}
+
+static double sum_squares(size_t dim, const double * x, double * grad, void * arg)
+{
+
+    (void)(arg);
+    double ind = 1.0;
+    double out = 0.0;
+    for (size_t ii = 0; ii < dim; ii++){
+        out += (ind * pow(x[ii],2));
+        if (grad != NULL){
+            grad[ii] = ind * 2.0 * x[ii];
+        }
+        ind = ind + 1.0;
+    }
+
+    return out;
+}
+
+void Test_c3opt_lbfgs_ss(CuTest * tc)
+{
+    printf("Testing Function: lbfgs projected gradient with c3opt interface (1)\n");
+    
+    size_t dim = 5;
+
+    
+    double lb[6];
+    double ub[6];
+    double start[5];
+    for (size_t ii = 0; ii < dim; ii++)
+    {
+        lb[ii] = -10.0;
+        ub[ii] = 10.0;
+        start[ii] = 20.0*randu()-10;
+    }
+
+    int res;
+    double val;
+    size_t maxiter = 1000;
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,sum_squares,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    c3opt_set_absxtol(opt,1e-15);
+    c3opt_set_relftol(opt,1e-15);
+    c3opt_set_gtol(opt,1e-15);
+    c3opt_set_nvectors_store(opt,5);
+    c3opt_ls_set_alpha(opt,0.0001);
+    c3opt_ls_set_beta(opt,0.9);
+
+    res = c3opt_minimize(opt,start,&val);
+
+    /* printf("final x = "); dprint(dim,start); */
+    /* printf("final val = %G\n",val); */
+//    printf("res = %d",res);
+    CuAssertIntEquals(tc,1,res>-1);
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,0.0,start[ii],1e-7);
+    }
+    CuAssertDblEquals(tc,0.0,val,1e-7);
+
+    c3opt_free(opt);
+}
+
+void Test_c3opt_lbfgs_equiv_bfgs(CuTest * tc)
+{
+    printf("Testing Function: lbfgs equiv to bfgs \n");
+    
+    size_t dim = 5;
+
+    
+    double lb[6];
+    double ub[6];
+    double start[5];
+    double start2[5];
+    for (size_t ii = 0; ii < dim; ii++)
+    {
+        lb[ii] = -10.0;
+        ub[ii] = 10.0;
+        start[ii] = 20.0*randu()-10;
+        start2[ii] = start[ii];
+    }
+
+    int res;
+    double val;
+
+    size_t maxiter = 5;
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,sum_squares,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    c3opt_set_absxtol(opt,1e-15);
+    c3opt_set_relftol(opt,1e-15);
+    c3opt_set_gtol(opt,1e-15);
+    c3opt_set_nvectors_store(opt,1000);
+    c3opt_set_lbfgs_scale(opt,0);
+    c3opt_ls_set_alpha(opt,0.0001);
+    c3opt_ls_set_beta(opt,0.9);
+
+    res = c3opt_minimize(opt,start,&val);
+    /* printf("final val lbfgs = %G\n",val); */
+    c3opt_free(opt); opt = NULL;
+
+    opt = c3opt_alloc(BFGS,dim);
+    c3opt_add_lb(opt,lb);
+    c3opt_add_ub(opt,ub);
+    c3opt_add_objective(opt,sum_squares,NULL);
+    c3opt_set_verbose(opt,0);
+    c3opt_set_maxiter(opt,maxiter);
+    c3opt_set_absxtol(opt,1e-15);
+    c3opt_set_relftol(opt,1e-15);
+    c3opt_set_gtol(opt,1e-15);
+    c3opt_ls_set_alpha(opt,0.0001);
+    c3opt_ls_set_beta(opt,0.9);
+    
+    double val2;
+    res = c3opt_minimize(opt,start2,&val2);
+    /* printf("final val bfgs = %G\n",val2); */
+    c3opt_free(opt); opt = NULL;
+
+    /* printf("diff = %G\n",val2-val); */
+    CuAssertDblEquals(tc,val,val2,1e-13);
+}
+
+void Test_lbfgs_unc1(CuTest * tc)
 {
 
     printf("////////////////////////////////////////////\n");
@@ -62,7 +286,7 @@ void Test_bfgs_unc1(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,2,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_maxiter(opt,1000);
     c3opt_set_nvectors_store(opt,1000);
@@ -102,7 +326,7 @@ void Test_bfgs_unc1(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc2(CuTest * tc)
+void Test_lbfgs_unc2(CuTest * tc)
 {
 
     printf("////////////////////////////////////////////\n");
@@ -114,7 +338,7 @@ void Test_bfgs_unc2(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,2,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     /* c3opt_set_verbose(opt,1); */
 
@@ -152,7 +376,7 @@ void Test_bfgs_unc2(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc3(CuTest * tc)
+void Test_lbfgs_unc3(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 3\n");
@@ -162,7 +386,7 @@ void Test_bfgs_unc3(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,2,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_gtol(opt,1e-40);
@@ -202,7 +426,7 @@ void Test_bfgs_unc3(CuTest * tc)
     c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
-void Test_bfgs_unc4(CuTest * tc)
+void Test_lbfgs_unc4(CuTest * tc)
 {
 
     printf("////////////////////////////////////////////\n");
@@ -213,7 +437,7 @@ void Test_bfgs_unc4(CuTest * tc)
     struct UncTestProblem p = tprobs[f1];
     size_t dim = unc_test_problem_get_dim(&p);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
 
     c3opt_set_verbose(opt,0);
@@ -259,7 +483,7 @@ void Test_bfgs_unc4(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc5(CuTest * tc)
+void Test_lbfgs_unc5(CuTest * tc)
 {
 
     printf("////////////////////////////////////////////\n");
@@ -269,7 +493,7 @@ void Test_bfgs_unc5(CuTest * tc)
     struct UncTestProblem p = tprobs[f1];
     size_t dim = unc_test_problem_get_dim(&p);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     /* c3opt_set_verbose(opt,2); */
     /* c3opt_set_gtol(opt,1e-20); */
@@ -309,7 +533,7 @@ void Test_bfgs_unc5(CuTest * tc)
     c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
-void Test_bfgs_unc6(CuTest * tc)
+void Test_lbfgs_unc6(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 6\n");
@@ -319,7 +543,7 @@ void Test_bfgs_unc6(CuTest * tc)
     struct UncTestProblem p = tprobs[f1];
     size_t dim = unc_test_problem_get_dim(&p);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
 
 
@@ -369,7 +593,7 @@ void Test_bfgs_unc6(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc7(CuTest * tc)
+void Test_lbfgs_unc7(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 7\n");
@@ -380,7 +604,7 @@ void Test_bfgs_unc7(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     /* c3opt_set_gtol(opt,1e-20); */
@@ -426,7 +650,7 @@ void Test_bfgs_unc7(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc8(CuTest * tc)
+void Test_lbfgs_unc8(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 8\n");
@@ -437,7 +661,7 @@ void Test_bfgs_unc8(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     /* c3opt_set_gtol(opt,1e-20); */
@@ -485,7 +709,7 @@ void Test_bfgs_unc8(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc9(CuTest * tc)
+void Test_lbfgs_unc9(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 9\n");
@@ -496,7 +720,7 @@ void Test_bfgs_unc9(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     /* c3opt_set_gtol(opt,1e-20); */
@@ -544,7 +768,7 @@ void Test_bfgs_unc9(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc10(CuTest * tc)
+void Test_lbfgs_unc10(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 10\n");
@@ -554,7 +778,7 @@ void Test_bfgs_unc10(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -601,7 +825,7 @@ void Test_bfgs_unc10(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc11(CuTest * tc)
+void Test_lbfgs_unc11(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 11\n");
@@ -611,7 +835,7 @@ void Test_bfgs_unc11(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_gtol(opt,1e-20);
@@ -664,7 +888,7 @@ void Test_bfgs_unc11(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc12(CuTest * tc)
+void Test_lbfgs_unc12(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 12\n");
@@ -674,7 +898,7 @@ void Test_bfgs_unc12(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,3,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_gtol(opt,1e-20);
@@ -726,7 +950,7 @@ void Test_bfgs_unc12(CuTest * tc)
     c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
-void Test_bfgs_unc13(CuTest * tc)
+void Test_lbfgs_unc13(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 13\n");
@@ -736,7 +960,7 @@ void Test_bfgs_unc13(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     /* c3opt_set_gtol(opt,1e-20); */
@@ -791,7 +1015,7 @@ void Test_bfgs_unc13(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc14(CuTest * tc)
+void Test_lbfgs_unc14(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 14\n");
@@ -801,7 +1025,7 @@ void Test_bfgs_unc14(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_gtol(opt,1e-30);
@@ -860,7 +1084,7 @@ void Test_bfgs_unc14(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc15(CuTest * tc)
+void Test_lbfgs_unc15(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 15\n");
@@ -870,7 +1094,7 @@ void Test_bfgs_unc15(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     /* c3opt_set_gtol(opt,1e-30); */
@@ -922,7 +1146,7 @@ void Test_bfgs_unc15(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc16(CuTest * tc)
+void Test_lbfgs_unc16(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 16\n");
@@ -932,7 +1156,7 @@ void Test_bfgs_unc16(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -971,7 +1195,7 @@ void Test_bfgs_unc16(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc17(CuTest * tc)
+void Test_lbfgs_unc17(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 17\n");
@@ -981,7 +1205,7 @@ void Test_bfgs_unc17(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,5,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -1030,7 +1254,7 @@ void Test_bfgs_unc17(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc18(CuTest * tc)
+void Test_lbfgs_unc18(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 18\n");
@@ -1040,7 +1264,7 @@ void Test_bfgs_unc18(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,6,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
 
@@ -1082,7 +1306,7 @@ void Test_bfgs_unc18(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc19(CuTest * tc)
+void Test_lbfgs_unc19(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 19\n");
@@ -1092,7 +1316,7 @@ void Test_bfgs_unc19(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,11,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -1130,7 +1354,7 @@ void Test_bfgs_unc19(CuTest * tc)
     c3opt_free(opt); opt = NULL; free(start); start = NULL;
 }
 
-void Test_bfgs_unc20(CuTest * tc)
+void Test_lbfgs_unc20(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 20\n");
@@ -1140,7 +1364,7 @@ void Test_bfgs_unc20(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,9,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -1189,7 +1413,7 @@ void Test_bfgs_unc20(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc21(CuTest * tc)
+void Test_lbfgs_unc21(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 21\n");
@@ -1199,7 +1423,7 @@ void Test_bfgs_unc21(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,30,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,1000);
@@ -1245,7 +1469,7 @@ void Test_bfgs_unc21(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc22(CuTest * tc)
+void Test_lbfgs_unc22(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 22\n");
@@ -1255,7 +1479,7 @@ void Test_bfgs_unc22(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,400,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,10000);
@@ -1301,7 +1525,7 @@ void Test_bfgs_unc22(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc23(CuTest * tc)
+void Test_lbfgs_unc23(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 23\n");
@@ -1311,7 +1535,7 @@ void Test_bfgs_unc23(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_maxiter(opt,10000);
@@ -1347,7 +1571,7 @@ void Test_bfgs_unc23(CuTest * tc)
     free(start); start = NULL;
 }
 
-void Test_bfgs_unc24(CuTest * tc)
+void Test_lbfgs_unc24(CuTest * tc)
 {
     printf("////////////////////////////////////////////\n");
     printf("\t Unconstrained Test: 24\n");
@@ -1357,7 +1581,7 @@ void Test_bfgs_unc24(CuTest * tc)
     size_t dim = unc_test_problem_get_dim(&p);
     CuAssertIntEquals(tc,4,dim);
 
-    struct c3Opt * opt = c3opt_alloc(BFGS,dim);
+    struct c3Opt * opt = c3opt_alloc(LBFGS,dim);
     c3opt_add_objective(opt,unc_test_problem_eval,&p);
     c3opt_set_verbose(opt,0);
     c3opt_set_gtol(opt,1e-20);
@@ -1405,35 +1629,36 @@ void Test_bfgs_unc24(CuTest * tc)
     free(start); start = NULL;
 }
 
-CuSuite * BFGSGetSuite(){
+CuSuite * LBFGSGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-
-    SUITE_ADD_TEST(suite, Test_bfgs_unc1);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc2);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc3);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc4);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc5);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc6);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc7);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc8);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc9);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc10);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc11);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc12);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc13);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc14);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc15);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc16);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc17);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc18);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc19);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc20);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc21);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc22);
-    SUITE_ADD_TEST(suite, Test_bfgs_unc23);
-    /* SUITE_ADD_TEST(suite, Test_bfgs_unc24); */
-
+    SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_storage);
+    SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_ss);
+    SUITE_ADD_TEST(suite, Test_c3opt_lbfgs_equiv_bfgs);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc1);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc2);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc3);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc4);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc5);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc6);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc7);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc8);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc9);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc10);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc11);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc12);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc13);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc14);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc15);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc16);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc17);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc18);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc19);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc20);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc21);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc22);
+    SUITE_ADD_TEST(suite, Test_lbfgs_unc23);
+    /* SUITE_ADD_TEST(suite, Test_lbfgs_unc24); */
     return suite;
 }

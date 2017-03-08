@@ -40,10 +40,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "CuTest.h"
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 CuSuite * OptGetSuite();
 CuSuite * BFGSGetSuite();
+CuSuite * LBFGSGetSuite();
 CuSuite * BGradGetSuite();
 
 void RunAllTests(void) {
@@ -55,11 +56,14 @@ void RunAllTests(void) {
     
     CuSuite * opt = OptGetSuite();
     CuSuite * bfgs = BFGSGetSuite();
+    CuSuite * lbfgs = LBFGSGetSuite();
     CuSuite * bgrad = BGradGetSuite();
 
     CuSuiteAddSuite(suite, opt);
 
     create_unc_probs();
+
+    CuSuiteAddSuite(suite, lbfgs);
     CuSuiteAddSuite(suite, bfgs);
 
     // batch gradient doesn't work
@@ -72,6 +76,7 @@ void RunAllTests(void) {
     
     CuSuiteDelete(opt);
     CuSuiteDelete(bfgs);
+    CuSuiteDelete(lbfgs);
     CuSuiteDelete(bgrad);
     
     CuStringDelete(output);
