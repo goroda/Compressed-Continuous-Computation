@@ -9,6 +9,8 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
+#include "c3_interface.h"
+
 double otlcircuit(const double * x, void * args)
 {
     assert (args == NULL );

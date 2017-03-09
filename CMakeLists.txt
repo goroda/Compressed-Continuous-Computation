@@ -82,9 +82,9 @@ include_directories(include)
 
 add_subdirectory(src)
 add_subdirectory(test)
-# add_subdirectory(examples)
-# add_subdirectory(benchmarks)
-# add_subdirectory(profiling)
+add_subdirectory(examples)
+add_subdirectory(benchmarks)
+add_subdirectory(profiling)
 add_subdirectory(utilities)
 
 # include(cmake/c3-config.cmake)

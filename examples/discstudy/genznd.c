@@ -8,6 +8,8 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
+#include "c3_interface.h"
+
 double discnd(const double * x, void * args)
 {
      

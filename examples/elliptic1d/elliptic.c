@@ -9,6 +9,8 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 #include "lib_probability.h"
+
+#include "c3_interface.h"
 //#include "lib_funcs.h"
 //
 //

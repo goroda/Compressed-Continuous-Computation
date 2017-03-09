@@ -12,6 +12,8 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
+#include "regress.h"
+
 static char * program_name;
 
 void print_code_usage (FILE *, int) __attribute__ ((noreturn));

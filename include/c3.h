@@ -9,6 +9,7 @@
 #include "../src/lib_optimization/lib_optimization.h"
 #include "../src/lib_quadrature/lib_quadrature.h"
 #include "../src/lib_stringmanip/stringmanip.h"
+#include "../src/lib_interface/c3_interface.h"
 
 #endif
 

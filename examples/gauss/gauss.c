@@ -7,6 +7,8 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
+#include "c3_interface.h"
+
 struct gauss_opts
 {
     double m1;
