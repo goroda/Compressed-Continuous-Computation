@@ -327,9 +327,9 @@ int main(int argc, char * argv[])
 
     if (adapt != 0){
         ft_regress_set_adapt(ftr,1);
-        ft_regress_set_roundtol(ftr,1e-10);
+        ft_regress_set_roundtol(ftr,1e-8);
         ft_regress_set_maxrank(ftr,rank);
-        ft_regress_set_kickrank(ftr,2);        
+        ft_regress_set_kickrank(ftr,1);        
     }
     
     struct c3Opt * optimizer = c3opt_create(BFGS);
