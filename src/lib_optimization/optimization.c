@@ -1593,6 +1593,15 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             memmove(opt->stored_x+opt->niters*opt->d,x,d*sizeof(double));
         }
 
+        double xdiff = 0.0;
+        double xnorm = 0.0;
+        for (size_t ii = 0; ii < d; ii++){
+            xdiff += pow(x[ii]-workspace[ii],2);
+            xnorm += workspace[ii]*workspace[ii];
+        }
+        xdiff = sqrt(xdiff);
+        xnorm = sqrt(xnorm);
+        
         // compute s = xnew - xold
         cblas_dscal(d,-1.0,workspace,1);
         cblas_daxpy(d,1.0,x,1,workspace,1);
@@ -1644,14 +1653,6 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             diff /= fabs(fvaltemp);
         }
 
-        double xdiff = 0.0;
-        double xnorm = 0.0;
-        for (size_t ii = 0; ii < d; ii++){
-            xdiff += pow(x[ii]-workspace[ii],2);
-            xnorm += workspace[ii]*workspace[ii];
-        }
-        xdiff = sqrt(xdiff);
-        xnorm = sqrt(xnorm);
         if (onbound == 1){
 
             //dprint(2,grad);
