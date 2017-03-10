@@ -309,7 +309,7 @@ void Test_kernel_expansion_create_with_params_and_grad(CuTest * tc){
     double norm = 0.0;
     double eps = 1e-8;
     for (size_t zz = 0; zz < 2; zz++){
-        size_t zz = 0;
+        /* size_t zz = 0; */
         for (size_t ii = 0; ii < dim; ii++){
             x1[ii] += eps;
             x2[ii] -= eps;

@@ -1373,8 +1373,8 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
         double * core_eval = NULL;
         size_t runparam = totparam;
         double * post_vals = NULL;
-        for (size_t ii = 0; ii < dim; ii++){
-            backind = dim-1-ii;
+        for (size_t zz = 0; zz < dim; zz++){
+            backind = dim-1-zz;
 
             r1 = ft->cores[backind]->nrows;
             r2 = ft->cores[backind]->ncols;
@@ -1562,8 +1562,8 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
         double * core_eval = NULL;
         size_t runparam = totparam;
         double * post_vals = NULL;
-        for (size_t ii = 0; ii < dim; ii++){
-            backind = dim-1-ii;
+        for (size_t zz = 0; zz < dim; zz++){
+            backind = dim-1-zz;
 
             r1 = ft->cores[backind]->nrows;
             r2 = ft->cores[backind]->ncols;

@@ -455,7 +455,6 @@ size_t lin_elem_exp_get_num_params(const struct LinElemExp * lexp)
     Get the parameters of a linear element expansion
 
     \param[in] lexp  - expansion
-    \param[in] dim   - number of parameters
     \param[in] param - parameters
 
     \returns number of parameters
@@ -597,7 +596,7 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
 /********************************************************//**
 *   Evaluate the lin elem expansion
 *
-*   \param[in]     f    - function
+*   \param[in]     poly - function
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x
@@ -749,7 +748,7 @@ int lin_elem_exp_param_grad_eval(
     with respect to its parameters, and add a scaled version
     of this gradient to *grad*
 
-    \param[in]     poly  - polynomial
+    \param[in]     f     - linear element expansion
     \param[in]     scale - scaling for additional gradient
     \param[in,out] grad  - gradient, on output adds scale * new_grad
 
@@ -1663,10 +1662,10 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
 /********************************************************//**
     Return a zero function
 
-    \param[in] opts         - extra arguments depending on function_class, sub_type, etc.
-    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
-                                      defined by *get_nparams, for each approximation type
-                              if == 0 then it may be more compressed
+    \param[in] opts        - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_param - if == 1 then approximation will have the number of parameters
+                                     defined by *get_nparams, for each approximation type
+                             if == 0 then it may be more compressed
 
     \return p - zero function
 ************************************************************/

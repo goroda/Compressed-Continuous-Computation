@@ -356,8 +356,8 @@ void regress_opts_set_max_als_sweep(struct RegressOpts * opts, size_t maxsweeps)
 /***********************************************************//**
     Set the ALS convergence tolerance
     
-    \param[in,out] opts      - regression options
-    \param[in]     maxsweeps - number of sweeps     
+    \param[in,out] opts - regression options
+    \param[in]     tol  - number of sweeps     
 ***************************************************************/
 void regress_opts_set_als_conv_tol(struct RegressOpts * opts, double tol)
 {
@@ -767,8 +767,8 @@ void ft_param_update_params(struct FTparam * ftp, const double * params)
     Get the number of parameters of an FT for univariate functions
     >= ranks_start
 
-    \param[in] ftp         - parameterized FTP
-    \param[in] ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+    \param[in] ftp        - parameterized FTP
+    \param[in] rank_start - starting ranks for which to obtain number of parameters (dim-1,)
 ***************************************************************/
 size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * rank_start)
 {
@@ -798,14 +798,15 @@ size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * 
     Update the parameters of an FT for univariate functions
     >= ranks_start
 
-    \param[in,out] ftp         - parameterized FTP
-    \param[in]     params      - parameters for univariate functions at locations >= ranks_start
-    \param[in]     ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     params     - parameters for univariate functions at locations >= ranks_start
+    \param[in]     rank_start - starting ranks for which to obtain number of parameters (dim-1,)
 
     \note
     As always FORTRAN ordering (columns first, then rows)
 ***************************************************************/
-void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * params, const size_t * rank_start)
+void ft_param_update_restricted_ranks(struct FTparam * ftp,
+                                      const double * params, const size_t * rank_start)
 {
 
     size_t ind = 0;
@@ -842,9 +843,9 @@ void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * param
     Update the parameters of an FT for univariate functions
     < ranks_start
 
-    \param[in,out] ftp         - parameterized FTP
-    \param[in]     params      - parameters for univariate functions at locations < ranks_start
-    \param[in]     ranks_start - threshold of ranks at which not to update
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     params     - parameters for univariate functions at locations < ranks_start
+    \param[in]     rank_start - threshold of ranks at which not to update
 
     \note
     As always FORTRAN ordering (columns first, then rows)
@@ -1597,7 +1598,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     General ALS regression objective for c3opt optimizer
 
     \param[in]     nparam - number of parameters
-    \param[in]     param  - parameter values
+    \param[in]     params - parameter values
     \param[in,out] grad   - gradient (doesn't evaluate if NULL)
     \param[in,out] args   - additional arguments to optimizer
 
@@ -1758,7 +1759,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     Run regression and return the result
 
     \param[in,out] ftp       - parameterized function train
-    \param[in,out] ropts     - regression options
+    \param[in,out] regopts   - regression options
     \param[in,out] optimizer - optimization arguments
     \param[in]     N         - number of data points
     \param[in]     x         - training samples
@@ -2087,8 +2088,8 @@ void ft_regress_update_params(struct FTRegress * ftr, const double * param)
 /***********************************************************//**
     Set ALS convergence tolerance
 
-    \param[in,out] opts      - regression structuture
-    \param[in]     tolerance - convergence tolerance
+    \param[in,out] opts - regression structuture
+    \param[in]     tol  - convergence tolerance
 ***************************************************************/
 void ft_regress_set_als_conv_tol(struct FTRegress * opts, double tol)
 {
@@ -2470,7 +2471,6 @@ struct CrossValidate * cross_validate_init(size_t N, size_t dim,
    \param[in,out] ytest       - point to an array for storing lables up to *start* index
    \param[in,out] xtrain      - pointer to an array for storing features after start upto start+num_extract
    \param[in,out] ytrain      - pointer to an array for storing labels after start upto start+num_extract
-   \param[in]     verbose     - verbosity level
 ***************************************************************/
 void extract_data(struct CrossValidate * cv, size_t start,
                   size_t num_extract,
@@ -2518,7 +2518,7 @@ double cross_validate_run(struct CrossValidate * cv,
     }
 
     double err = 0.0;
-    double start_num = 0;
+    size_t start_num = 0;
     double * xtrain = calloc_double(cv->N * cv->dim);
     double * ytrain = calloc_double(cv->N);
     double * xtest = calloc_double(cv->N * cv->dim);
@@ -2604,7 +2604,7 @@ enum RDTYPE {RPUINT, RPDBL, RPINT};
 
 #define NRPARAM 4
 static char reg_param_names[NRPARAM][30] = {"rank","num_param","opt_maxiter","reg_weight"};
-static int reg_param_types[NRPARAM]={RPUINT,RPUINT,RPUINT,RPDBL};
+static enum RDTYPE reg_param_types[NRPARAM]={RPUINT,RPUINT,RPUINT,RPDBL};
 
 int get_reg_ind(char * name)
 {

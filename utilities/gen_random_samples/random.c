@@ -68,7 +68,7 @@ int main(int argc, char * argv[])
 {
     struct timeval t1;
     gettimeofday(&t1, NULL);
-    int seed = t1.tv_usec * t1.tv_sec;
+    unsigned int seed = t1.tv_usec * t1.tv_sec;
     srand(seed);
     // sample randomly to "clean things out"
     // could be just an old-wives thing
@@ -112,10 +112,10 @@ int main(int argc, char * argv[])
                 type = optarg;
                 break;
             case 'r':
-                nrows = strtol(optarg,NULL,10);
+                nrows = strtoul(optarg,NULL,10);
                 break;
             case 'c':
-                ncols = strtol(optarg,NULL,10);
+                ncols = strtoul(optarg,NULL,10);
                 break;
             case 'l':
                 lower = atof(optarg);
