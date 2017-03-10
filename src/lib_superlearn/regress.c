@@ -1182,6 +1182,12 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             /* printf("grad = "); dprint(ftp->nparams,mem->grad->vals + ii * ftp->nparams); */
             /* printf("eval = %G\n",mem->evals->vals[ii]); */
             resid = y[ii] - mem->evals->vals[ii];
+            /* printf("resid = %G\n",resid); */
+            /* if (fabs(resid) > 2){ */
+            /*     printf("x = "); dprint(ftp->dim,x); */
+            /*     printf("y = %G\n",y[ii]); */
+            /*     printf("vals = %G\n",mem->evals->vals[ii]); */
+            /* } */
             out += 0.5 * resid * resid;
             cblas_daxpy(ftp->nparams, -resid,
                         mem->grad->vals + ii * ftp->nparams, 1,
@@ -1389,10 +1395,15 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     struct RegressionMemManager * mem_here = mem;
     if (mem == NULL){
         alloc_mem=1;
+
+        enum FTPARAM_ST structure = NONE_ST;
+        if (regopts->stoch_obj == 0){
+            structure = LINEAR_ST;
+        }
         size_t * ranks = function_train_get_ranks(ftp->ft);
         mem_here = regress_mem_manager_alloc(ftp->dim,N,
                                              ftp->nparams_per_core,ranks,
-                                             ftp->max_param_uni,LINEAR_ST);
+                                             ftp->max_param_uni,structure);
         /* printf("SHOULD NOT BE HERE\n"); */
     }
     int check_mem = regress_mem_manager_enough(mem_here,N);

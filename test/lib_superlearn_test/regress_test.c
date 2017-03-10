@@ -1060,9 +1060,9 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     }
 
     struct c3Opt * optimizer = c3opt_create(SGD);
-    c3opt_set_verbose(optimizer,0);
+    c3opt_set_verbose(optimizer,1);
     c3opt_set_sgd_nsamples(optimizer,ndata);
-    c3opt_set_maxiter(optimizer,1000);
+    c3opt_set_maxiter(optimizer,10000);
     
     struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
     ft_regress_set_alg_and_obj(reg,AIO,FTLS);
@@ -1091,7 +1091,7 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     printf("\t  mse = %G\n",test_error);
 
     
-    CuAssertDblEquals(tc,0.0,diff,1e-4);
+    CuAssertDblEquals(tc,0.0,diff,1e-3);
     
     ft_regress_free(reg);     reg = NULL;
     function_train_free(ft2); ft2 = NULL;
