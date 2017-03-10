@@ -9,6 +9,8 @@
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
 
+#include "c3_interface.h"
+
 double otlcircuit(const double * x, void * args)
 {
     assert (args == NULL );
@@ -236,67 +238,67 @@ int main( int argc, char *argv[])
     }
 
     struct FunctionMonitor * fm = NULL;
-    double (*f)(const double * ,void *);
+    /* double (*f)(const double * ,void *); */
     size_t dim;
     if (strcmp(argv[1], "otl") == 0){
         printf("Running OTL circuit function \n");
         dim = 6;
-        f = otlcircuit;
+        /* f = otlcircuit; */
         fm = function_monitor_initnd(otlcircuit,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "borehole") == 0){
         printf("Running Borehole function \n");
         dim = 8;
-        f = borehole;
+        /* f = borehole; */
         fm = function_monitor_initnd(borehole,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "piston") == 0){
         printf("Running Piston function \n");
         dim = 7;
-        f = piston;
+        /* f = piston; */
         fm = function_monitor_initnd(piston,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "robotarm") == 0){
         printf("Running Piston function \n");
         dim = 8;
-        f = robotarm;
+        /* f = robotarm; */
         fm = function_monitor_initnd(robotarm,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "wingweight") == 0){
         printf("Running Wing Weight function \n");
         dim = 10;
-        f = wingweight;
+        /* f = wingweight; */
         fm = function_monitor_initnd(wingweight,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "friedman") == 0){
         printf("Running Friedman function \n");
         dim = 5;
-        f = friedman;
+        /* f = friedman; */
         fm = function_monitor_initnd(friedman,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "gramlee09") == 0){
         printf("Running Gramacy & Lee 2009 function \n");
         dim = 6;
-        f = gramlee09;
+        /* f = gramlee09; */
         fm = function_monitor_initnd(gramlee09,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "detpep10") == 0){
         printf("Running Dette & Peplyshev 2010 8 dimension function \n");
         dim = 8;
-        f = detpep10;
+        /* f = detpep10; */
         fm = function_monitor_initnd(detpep10,NULL,dim,1000*dim);
     }
     else if (strcmp(argv[1], "detpep10exp") == 0){
         printf("Running Dette & Peplyshev 2010 3 dimension exponential function \n");
         dim = 3;
-        f = detpep10exp;
+        /* f = detpep10exp; */
         fm = function_monitor_initnd(detpep10exp,NULL,dim,1000*dim);
     }
 
     else if (strcmp(argv[1], "xy") == 0){
         printf("Running XY function \n");
         dim = 2;
-        f = xy;
+        /* f = xy; */
         fm = function_monitor_initnd(xy,NULL,dim,1000*dim);
     }
     else{

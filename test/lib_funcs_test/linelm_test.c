@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -715,6 +719,240 @@ void Test_lin_elem_exp_savetxt(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+static void regress_func(size_t N, const double * x, double * out)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = -1.0 * pow(x[ii],7) + 2.0*pow(x[ii],2) + 0.2 * 0.5*x[ii]; 
+    }
+}
+
+void Test_LS_regress(CuTest * tc){
+    
+    printf("Testing functions: least squares regression with linear elements\n");
+
+    double lb = -1.0;
+    double ub =  1.0;
+    size_t nparams = 40;
+    double * params = linspace(lb,ub,nparams);
+
+    struct LinElemExpAopts * aopts =
+        lin_elem_exp_aopts_alloc(nparams,params);
+    
+    // create data
+    size_t ndata = 1000;
+    double * x = linspace(lb,ub,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    c3opt_set_relftol(optimizer,1e-20);
+    c3opt_set_absxtol(optimizer,1e-20);
+    c3opt_set_gtol(optimizer,1e-20);
+    
+    struct Regress1DOpts * regopts =
+        regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,LINELM,aopts);
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    /* printf("check deriv\n"); */
+    // check derivative
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
+    /* printf("start\n"); */
+    int info;
+    struct GenericFunction * gf =
+        generic_function_regress1d(regopts,optimizer,&info);
+    CuAssertIntEquals(tc,1,info>-1);
+    
+    double * xtest = linspace(lb,ub,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    /* CuAssertDblEquals(tc, 0.0, rat, 1e-3); */
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+    generic_function_free(gf); gf = NULL;;
+
+    
+    free(params);
+    free(x); x = NULL;
+    free(y); y = NULL;
+    lin_elem_exp_aopts_free(aopts);  aopts = NULL;
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+
+}
+
+void Test_RLS2_regress(CuTest * tc){
+    
+    printf("Testing functions: ridge regression with linear elements\n");
+
+    size_t nparams = 50;
+    double lb = -1.0;
+    double ub =  1.0;
+    double * params = linspace(lb,ub,nparams);
+
+    struct LinElemExpAopts * aopts =
+        lin_elem_exp_aopts_alloc(nparams,params);
+
+    // create data
+    size_t ndata = 1000;
+    double * x = linspace(-1,1,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    
+    struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,RLS2,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,LINELM,aopts);
+    /* regress_1d_opts_set_regularization_penalty(regopts,1e-2/sqrt(ndata)); */
+    regress_1d_opts_set_regularization_penalty(regopts,1);
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
+    int info;
+    struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
+    CuAssertIntEquals(tc,1,info>-1);
+    
+    double * xtest = linspace(lb,ub,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    /* CuAssertDblEquals(tc, 0.0, rat, 1e-3); */
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+
+    free(params); params = NULL;
+    free(x); x = NULL;
+    free(y); y = NULL;
+    lin_elem_exp_aopts_free(aopts);
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+    generic_function_free(gf); gf = NULL;;
+}
+
+void Test_RLSD2_regress(CuTest * tc){
+    
+    printf("Testing functions: ridge regression on second deriv with linear elements\n");
+
+    size_t nparams = 50;
+    double lb = -1.0;
+    double ub =  1.0;
+    double * params = linspace(lb,ub,nparams);
+
+    struct LinElemExpAopts * aopts =
+        lin_elem_exp_aopts_alloc(nparams,params);
+
+    // create data
+    size_t ndata = 1000;
+    double * x = linspace(-1,1,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    
+    struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,RLSD2,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,LINELM,aopts);
+    regress_1d_opts_set_regularization_penalty(regopts,1e-4/sqrt(ndata));
+    /* regress_1d_opts_set_regularization_penalty(regopts,1); */
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    c3opt_add_objective(optimizer,param_RLS2regress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    /* printf("gerr = %G\n",gerr); */
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+
+    int info;
+    struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
+    CuAssertIntEquals(tc,1,info>-1);
+    
+    double * xtest = linspace(lb,ub,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    /* CuAssertDblEquals(tc, 0.0, rat, 1e-3); */
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    free(params); params = NULL;
+    lin_elem_exp_aopts_free(aopts); aopts = NULL;
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+    generic_function_free(gf); gf = NULL;;
+}
+
+
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -736,5 +974,9 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt);
+
+    SUITE_ADD_TEST(suite, Test_LS_regress);
+    SUITE_ADD_TEST(suite, Test_RLS2_regress);
+    SUITE_ADD_TEST(suite, Test_RLSD2_regress);
     return suite;
 }

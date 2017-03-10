@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 /** \file qmarray.c
  * Provides algorithms for qmarray manipulation
@@ -161,7 +165,7 @@ qmarray_serialize(unsigned char * ser, const struct Qmarray * qma,
     ptr = serialize_size_t(ptr, qma->nrows);
     ptr = serialize_size_t(ptr, qma->ncols);
     for (ii = 0; ii < qma->nrows * qma->ncols; ii++){
-       //printf("on function number (%zu/%zu)\n",ii,qma->nrows * qma->nrows);
+       /* printf("on function number (%zu/%zu)\n",ii+1,qma->nrows * qma->ncols); */
        // print_generic_function(qma->funcs[ii],3,NULL);
         ptr = serialize_generic_function(ptr, qma->funcs[ii],NULL);
     }
@@ -184,6 +188,8 @@ qmarray_deserialize(unsigned char * ser, struct Qmarray ** qma)
     size_t nrows, ncols;
     ptr = deserialize_size_t(ptr, &nrows);
     ptr = deserialize_size_t(ptr, &ncols);
+    /* printf("deserialized rows,cols = (%zu,%zu)\n",nrows,ncols); */
+    
     *qma = qmarray_alloc(nrows, ncols);
 
     size_t ii;
@@ -3015,13 +3021,13 @@ void qmarray_roundt(struct Qmarray ** qma, double epsilon)
     }
 }
 
+
 /***********************************************************//**
     Evaluate a qmarray
 
     \param[in]     qma - quasimatrix array
     \param[in]     x   - location at which to evaluate
     \param[in,out] out - allocated array to store output (qma->nrows * qma->ncols)
-
 ***************************************************************/
 void qmarray_eval(struct Qmarray * qma, double x, double * out)
 {
@@ -3030,6 +3036,275 @@ void qmarray_eval(struct Qmarray * qma, double x, double * out)
         out[ii] = generic_function_1d_eval(qma->funcs[ii],x);
     }
 }
+
+/***********************************************************//**
+    Get number of parameters describing a particular function
+    within a quasimatrix array
+
+    \param[in] qma - quasimatrix array
+    \param[in] row - row
+    \param[in] col - col
+
+    \returns number of parameters
+***************************************************************/
+size_t qmarray_func_get_nparams(const struct Qmarray * qma,
+                                size_t row, size_t col)
+{
+    struct GenericFunction * gf = qma->funcs[row + col * qma->nrows];
+    return generic_function_get_num_params(gf);
+}
+                                
+
+/***********************************************************//**
+    Get number of parameters describing the qmarray
+
+    \param[in]     qma   - quasimatrix array
+    \param[in,out] nfunc - number of parameters in the 
+                           function with most parameters
+
+    \returns - total number of parameters
+***************************************************************/
+size_t qmarray_get_nparams(const struct Qmarray * qma, size_t * nfunc)
+{
+
+     size_t size = qma->nrows*qma->ncols;
+     size_t ntot = 0;
+     size_t maxfun = 0;
+     for (size_t ii = 0; ii < size; ii++){
+         size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+         ntot += nparam;
+         
+         if (nparam > maxfun){
+             maxfun = nparam;
+         }
+     }
+     if (nfunc != NULL){
+         *nfunc = maxfun;
+     }
+     
+     return ntot;
+}
+
+/***********************************************************//**
+    Get Qmarray parameters
+
+    \param[in]      qma     - quasimatrix array whose parameters to update
+    \param[in,out]  param   - location to store parameters
+
+    \returns total number of parameters
+***************************************************************/
+size_t qmarray_get_params(struct Qmarray * qma, double * param)
+{
+     size_t size = qma->nrows*qma->ncols;
+     size_t onind = 0;
+     size_t nparam;
+     for (size_t ii = 0; ii < size; ii++){
+         if (param == NULL){
+             nparam = generic_function_get_num_params(qma->funcs[ii]);
+         }
+         else{
+             nparam = generic_function_get_params(qma->funcs[ii],
+                                                  param+onind);
+         }
+         onind += nparam;
+     }
+     return onind;
+}
+
+/***********************************************************//**
+    Update Qmarray parameters
+
+    \param[in,out]  qma     - quasimatrix array whose parameters to update
+    \param[in]      nparams - total number of parameters
+    \param[in]      param   - parameters with which to update
+***************************************************************/
+void qmarray_update_params(struct Qmarray * qma, size_t nparams, const double * param)
+{
+
+     size_t size = qma->nrows*qma->ncols;
+     size_t onind = 0;
+     for (size_t ii = 0; ii < size; ii++){
+         size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+         generic_function_update_params(qma->funcs[ii],nparam,param+onind);
+         onind += nparam;
+     }
+     if (onind != nparams){
+         fprintf(stderr,"Error updating the parameters of a Qmarray\n");
+         fprintf(stderr,"number of parameters expected is not the\n");
+         fprintf(stderr,"number of actual parameters\n");
+         exit(1);
+     }
+}
+
+/***********************************************************//**
+    Evaluate the gradient of a qmarray with respect to the parameters
+    of the function at a set of evaluation locations
+
+    \param[in]     qma       - quasimatrix array
+    \param[in]     N         - number of locations at which to evaluate
+    \param[in]     x         - location at which to evaluate
+    \param[in]     incx      - increment between inputs
+    \param[in,out] out       - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     incout    - increment of output
+    \param[in,out] grad      - compute gradient if not null (store gradient here)
+    \param[in]     incg      - incremement of gradient
+    \param[in,out] workspace - big enough to handle the largest number of params of any one function 
+***************************************************************/
+void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
+                             const double * x, size_t incx,
+                             double * out, size_t incout,
+                             double * grad, size_t incg,
+                             double * workspace)
+{
+    size_t ii;
+    /* printf("\t cmoooonn\n"); */
+    size_t size = qma->nrows*qma->ncols;
+    /* printf("\t evaluate! size=%zu\n",size); */
+    if (out != NULL){
+        generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    }
+
+    if (grad != NULL){
+        for (size_t jj = 0; jj < N; jj++){
+            size_t onparam = 0;
+            for (ii = 0; ii < size; ii++){
+                size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+                generic_function_param_grad_eval(qma->funcs[ii],1,x + jj*incx,workspace);
+                for (size_t kk = 0; kk < nparam; kk++){
+                    // only one element changes so copy everything
+                    for(size_t zz = 0; zz < size; zz++){
+                        grad[onparam*size+zz + jj * incg] = 0.0;
+                    }
+                    // and change the one element
+                    grad[onparam*size+ii + jj * incg] = workspace[kk];
+                    onparam++;
+                }
+            }
+        }
+    }
+    /* printf("done there\n"); */
+}
+
+/***********************************************************//**
+    Sum the L2 norms of each function
+
+    \param[in]     qma   - quasimatrix array
+    \param[in]     scale - increment between inputs
+    \param[in,out] grad  - compute gradient if not null (store gradient here)
+
+    \returns sum of scale * inner_product of each function 
+    \note 
+    If gradient is not null then it adds scaled values of the new gradients to the
+    existing gradient. Gradient is stored function first, row second, column third
+***************************************************************/
+double qmarray_param_grad_sqnorm(struct Qmarray * qma, double scale, double * grad)
+{
+    /* printf("\t cmoooonn\n"); */
+    size_t size = qma->nrows*qma->ncols;
+    double out = 0.0;
+    if (grad == NULL){
+        for (size_t ii = 0; ii < size; ii++){
+            out += scale * generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+        }
+    }
+    else{
+        size_t runparam=0;
+        for (size_t ii = 0; ii < size; ii++){
+            out += scale * generic_function_inner(qma->funcs[ii],qma->funcs[ii]);
+            size_t nparam = generic_function_get_num_params(qma->funcs[ii]);
+            int res = generic_function_squared_norm_param_grad(qma->funcs[ii],
+                                                               scale, grad+runparam);
+            assert (res == 0);
+            runparam += nparam;
+        }
+    }
+
+    return out;
+}
+
+/***********************************************************//**
+    Evaluate the gradient of a qmarray with respect to the parameters
+    of the function, store gradient in sparse format, and multiply on the left
+    by vector
+
+    \param[in]     qma      - quasimatrix array
+    \param[in]     N        - number of locations at which to evaluate
+    \param[in]     x        - location at which to evaluate
+    \param[in]     incx     - increment between inputs
+    \param[in,out] out      - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     incout   - increment of output
+    \param[in,out] grad     - compute gradient if not null (store gradient here)
+    \param[in]     incg     - incremement of gradient between each evaluation
+    \param[in]     left     - set of vectors to multiply each gradient
+    \param[in,out] mult_out - multiplied out values 
+    \param[in]     nparam   - expected number of parameters
+
+
+    \note
+       mult_out is a flattened array, increment between values for different
+       *x* values is nparam * qma->ncols
+       mult_out[]
+       
+***************************************************************/
+void qmarray_param_grad_eval_sparse_mult(struct Qmarray * qma, size_t N,
+                                         const double * x, size_t incx,
+                                         double * out, size_t incout,
+                                         double * grad, size_t incg,
+                                         double * left, double * mult_out, size_t nparam)
+{
+
+    /* printf("\t cmoooonn\n"); */
+    size_t size = qma->nrows*qma->ncols;
+    /* printf("\t evaluate! size=%zu\n",size); */
+    if (out != NULL){
+        generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+    }
+
+    if (grad != NULL){
+        size_t inc_out = nparam * qma->ncols;
+        for (size_t jj = 0; jj < N; jj++){
+            // zero every output
+            if (mult_out != NULL){
+                for (size_t ii = 0; ii < nparam * qma->ncols; ii++){
+                    mult_out[jj * inc_out + ii] = 0.0;
+                }
+            }
+            
+            size_t onnum = 0;
+            for (size_t ii = 0; ii < qma->ncols; ii++){
+                for (size_t kk = 0; kk < qma->nrows; kk++){
+                    size_t onfunc = kk + ii * qma->nrows;
+                    size_t nparamf = generic_function_get_num_params(qma->funcs[onfunc]);
+                    generic_function_param_grad_eval(qma->funcs[onfunc],1,
+                                                     x + jj*incx,
+                                                     grad + onnum + jj * incg);
+
+                    if (left != NULL){
+                        /* printf("%zu,%zu,%zu\n",ii,kk,onnum); */
+                        size_t active_left = kk + jj * qma->nrows;
+
+
+                        // modifying onnum vector
+                        size_t on_output = onnum * qma->ncols + jj * inc_out;
+
+                        // only need to update *ith* element 
+                        for (size_t ll = 0; ll < nparamf; ll++){
+                            size_t modelem = ll * qma->ncols + ii;
+                            mult_out[on_output + modelem] =
+                                grad[onnum + jj * incg + ll] * left[active_left];
+                        }
+                    }
+                    onnum += nparamf;
+                }
+            }
+            if (mult_out != NULL){
+                assert (nparam == onnum);
+            }
+        }
+    }
+    /* printf("done there\n"); */
+}
+
 
 /***********************************************************//**
     Interpolate a qmarray using a nodal basis at particular values

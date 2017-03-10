@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,9 @@
 
 //Code
 
+
+
+
 /** \file lib_clinalg.h
  * Groups header files of clinalg library together
  */
@@ -41,20 +45,13 @@
 #ifndef LIB_CLINALG_H
 #define LIB_CLINALG_H
 
-#include "approximate.h"
+#include "ft.h"
 #include "dmrgprod.h"
 #include "diffusion.h"
+/* #include "regress.h" */
 //#include "dmrg.h"
 
 //#include "cross2d.h"
 
-/* #include "elements.h" */
-/* #include "indmanage.h" */
-/* #include "algs.h" */
-/* #include "dmrg.h" */
-/* #include "dmrgprod.h" */
-/* #include "qmarray_qr.h" */
-/* #include "diffusion.h" */
-/* #include "approximate.h" */
 
 #endif

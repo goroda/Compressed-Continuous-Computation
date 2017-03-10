@@ -1,7 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -31,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
+
 
 /** \file linelm.c
  * Provides routines for manipulating linear elements
@@ -97,7 +103,7 @@ struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
         fprintf(stderr,"Memory error allocate LinElemExpAopts\n");
         exit(1);
     }
-    aopts->num_nodes= N;
+    aopts->num_nodes = N;
     aopts->node_alloc = 0;
     aopts->nodes = x;
     aopts->lb = x[0];
@@ -179,6 +185,16 @@ void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts ** aopts)
 }
 
 /********************************************************//**
+    Get number of nodes
+*************************************************************/
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->num_nodes;
+}
+
+
+/********************************************************//**
     Sets new nodes (by reference) for approximation options.
     frees old ones if
     previously allocated
@@ -253,7 +269,33 @@ void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts * aopts, double hmin)
     aopts->hmin = hmin;
 }
 
+
 ///////////////////////////////////////////////
+
+
+/********************************************************//**
+*   Get number of free parameters
+*
+*   \note Can change this later to include knot locations
+*************************************************************/
+size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts* lexp)
+{
+    assert (lexp != NULL);
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
+*   Set number of free parameters
+*
+*   \note Can change this later to include knot locations
+*************************************************************/
+void lin_elem_exp_aopts_set_nparams(struct LinElemExpAopts* lexp, size_t num)
+{
+    assert (lexp != NULL);
+    lexp->num_nodes = num;
+    fprintf(stderr,"Warning: setting new nparams in linelem aopts. Do I need to adjust the node locations?\n");
+}
+
 
 /********************************************************//**
 *   Allocate a Linear Element Expansion
@@ -359,6 +401,89 @@ struct LinElemExp * lin_elem_exp_init(size_t num_nodes, double * nodes,
     /* compute_diff(lexp); */
     return lexp;
 }
+
+/********************************************************//**
+    Initialize a linear element expansion with particular parameters
+
+    \param[in] opts  - options
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+  
+    \return linear element expansion
+    
+    \note
+    makes a copy of nodes and coefficients
+*************************************************************/
+struct LinElemExp *
+lin_elem_exp_create_with_params(struct LinElemExpAopts * opts,
+                               size_t dim, const double * param)
+{
+    assert (opts != NULL);
+    assert (opts->num_nodes == dim);
+    assert (opts->nodes != NULL);
+    struct LinElemExp * lexp = lin_elem_exp_alloc();
+    
+    lexp->num_nodes = dim;;
+    lexp->nodes = calloc_double(dim);
+    lexp->coeff = calloc_double(dim);
+
+    memmove(lexp->nodes,opts->nodes,dim*sizeof(double));
+    memmove(lexp->coeff,param,dim*sizeof(double));
+    
+    return lexp;
+}
+
+/********************************************************//**
+    Get number of nodes
+*************************************************************/
+size_t lin_elem_exp_get_num_nodes(const struct LinElemExp * lexp)
+{
+    assert (lexp != NULL);
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
+    Get number of params
+*************************************************************/
+size_t lin_elem_exp_get_num_params(const struct LinElemExp * lexp)
+{
+    assert (lexp != NULL);
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
+    Get the parameters of a linear element expansion
+
+    \param[in] lexp  - expansion
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+
+    \returns number of parameters
+*************************************************************/
+size_t lin_elem_exp_get_params(const struct LinElemExp * lexp, double * param)
+{
+    assert (lexp != NULL);
+    memmove(param,lexp->coeff,lexp->num_nodes*sizeof(double));
+    return lexp->num_nodes;
+}
+
+/********************************************************//**
+    Update the parameters (coefficients) for a linear element expansion
+
+    \param[in] lexp  - expansion
+    \param[in] dim   - number of parameters
+    \param[in] param - parameters
+*************************************************************/
+void
+lin_elem_exp_update_params(struct LinElemExp * lexp,
+                           size_t dim, const double * param)
+{
+    assert (lexp != NULL);
+    assert (lexp->num_nodes == dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        lexp->coeff[ii] = param[ii];
+    }
+}
     
 /********************************************************//**
 *   Serialize a LinElemExp
@@ -414,6 +539,35 @@ unsigned char * deserialize_lin_elem_exp(unsigned char * ser,
 }
 
 /********************************************************//**
+*   Get index of the node immediately to the left of x
+*************************************************************/
+size_t lin_elem_exp_find_interval(const struct LinElemExp * f, double x)
+{   
+
+    size_t indmin = 0;
+    size_t indmax = f->num_nodes-1;
+    size_t indmid = indmin + (indmax - indmin)/2;
+    
+    while (indmid != indmin){
+        if (fabs(x - f->nodes[indmid]) <= 1e-15){
+            /* printf("eventually here!\n"); */
+            return indmid;
+        }
+        else if (x < f->nodes[indmid]){
+            indmax = indmid;
+        }
+        else { // x > f->nodes[indmid]
+            indmin = indmid;
+        }
+        indmid = indmin + (indmax-indmin)/2;
+        //  printf("indmid = %zu, indmin=%zu,indmax=%zu\n",indmid,indmin,indmax);
+    }
+
+    return indmin;
+}
+
+
+/********************************************************//**
 *   Evaluate the lin elem expansion
 *
 *   \param[in] f - function
@@ -426,46 +580,39 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
     if ((x < f->nodes[0]) || (x > f->nodes[f->num_nodes-1])){
         return 0.0;
     }
-    size_t indmin = 0;
-    size_t indmax = f->num_nodes-1;
-    size_t indmid = indmin + (indmax - indmin)/2;
     
-    while (indmid != indmin){
-        if (fabs(x - f->nodes[indmid]) <= 1e-15){
-            /* printf("eventually here!\n"); */
-            return f->coeff[indmid];
-        }
-        else if (x < f->nodes[indmid]){
-            indmax = indmid;
-        }
-        else { // x > f->nodes[indmid]
-            indmin = indmid;
-        }
-        indmid = indmin + (indmax-indmin)/2;
-        //  printf("indmid = %zu, indmin=%zu,indmax=%zu\n",indmid,indmin,indmax);
+    size_t indmin = lin_elem_exp_find_interval(f,x);
+    /* printf("indmin = %zu\n",indmin); */
+    /* printf("x = %G\n",x); */
+
+    if (fabs(x - f->nodes[indmin]) <= 1e-15){
+        return f->coeff[indmin];
     }
-    if (fabs(x - f->nodes[indmid]) <= 1e-15){
-        /* printf("eventually here!\n"); */
-        return f->coeff[indmid];
-    }
-    
-    /* printf("\n\n\nx=%3.15G\n",x); */
-    /* dprint(f->num_nodes,f->nodes); */
-    /* for (size_t ii = 0; ii < f->num_nodes; ii++){ */
-    /*     double diff = fabs(x-f->nodes[ii]); */
-    /*     fprintf(stdout,"diff[%zu] = %3.15G, diff<=1e-15=%d\n",ii,diff,diff<1e-15); */
-    /* } */
-    /* printf("indmid = %zu\n",indmid); */
-    /* printf("should not be here!\n"); */
-    /* exit(1); */
-//    printf("indmin = %zu,x=%G\n",indmin,x);
    
     double den = f->nodes[indmin+1]-f->nodes[indmin];
-    double t = (f->nodes[indmid+1]-x)/den;
-
+    double t = (f->nodes[indmin+1]-x)/den;
     double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
     return value;
 }
+/********************************************************//**
+*   Evaluate the lin elem expansion
+*
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y
+************************************************************/
+void lin_elem_exp_evalN(const struct LinElemExp * poly, size_t N,
+                        const double * x, size_t incx, double * y, size_t incy)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        y[ii*incy] = lin_elem_exp_eval(poly,x[ii*incx]);
+    }
+}
+
+
 
 /********************************************************//**
 *   Get the value of the expansion at a particular node
@@ -481,6 +628,8 @@ double lin_elem_exp_get_nodal_val(const struct LinElemExp * f, size_t node)
     assert (node < f->num_nodes);
     return f->coeff[node];
 }
+
+
 
 /********************************************************//**
 *   Take a derivative same nodes,
@@ -547,6 +696,97 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
     }
 
     return le;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   with respect to the coefficients of each basis
+*
+*   \param[in]     f    - polynomial expansion
+*   \param[in]     nx   - number of x points
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return out - polynomial value
+*************************************************************/
+int lin_elem_exp_param_grad_eval(
+    struct LinElemExp * f, size_t nx, const double * x, double * grad)
+{
+
+    
+    /* size_t nparam = lin_elem_exp_get_nparams(lexp); */
+    size_t nparam = f->num_nodes;
+    /* assert (nparam == lexp->nnodes); */
+    for (size_t ii = 0; ii < nx; ii++){
+        size_t indmin = lin_elem_exp_find_interval(f,x[ii]);
+
+        for (size_t jj = 0; jj < indmin; jj++)
+        {
+            grad[ii*nparam+jj] = 0.0;
+        }
+
+        for (size_t jj = indmin+2; jj < nparam; jj++)
+        {
+            grad[ii*nparam+jj] = 0.0;
+        }
+
+        double den = f->nodes[indmin+1]-f->nodes[indmin];
+        double t = (f->nodes[indmin+1]-x[ii])/den;
+        
+        grad[ii*nparam+indmin] = t;
+        grad[ii*nparam+indmin+1] = 1.0-t;
+   
+        /* double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t); */
+        /* fprintf(stderr,"Lin_elem_exp_param_grad_eval IS NOT YET IMPLEMENTED\n"); */
+        /* exit(1); */
+    }
+
+    return 0;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly  - polynomial
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+
+************************************************************/
+int
+lin_elem_exp_squared_norm_param_grad(const struct LinElemExp * f,
+                                     double scale, double * grad)
+{
+    if (grad == NULL){
+        return 0;
+    }
+
+    double dx = f->nodes[1]-f->nodes[0];
+    double term1 = ((f->coeff[0]-1.0)/3.0 + f->coeff[1]/2.0) * dx;
+    grad[0] += 2.0 * scale * term1;
+    double dx2,df;
+    for (size_t ii = 1; ii < f->num_nodes-1; ii++){
+        // left side of ii
+        df = f->coeff[ii] - f->coeff[ii-1];
+        grad[ii] += 2.0 * scale * (0.5 * f->coeff[ii] * dx + 1.0/3.0 * df * dx);
+
+        // right side
+        dx2 = dx * dx;
+        term1 = ((f->coeff[ii]-1.0)/3.0 + f->coeff[ii+1]/2.0) * dx;
+        grad[ii] += 2.0 * scale * term1;
+        
+        dx = dx2;
+    }
+
+    // left side of last node node
+    size_t ii = f->num_nodes-1;
+    df = f->coeff[ii] - f->coeff[ii-1];
+    grad[ii] += 2.0 * scale * (0.5 * f->coeff[ii] * dx + 1.0/3.0 * df * dx);
+
+    return 0;
 }
 
 /********************************************************//**
@@ -1419,6 +1659,44 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
     assert (lexp->num_nodes != 0);
     return lexp;
 }
+
+/********************************************************//**
+    Return a zero function
+
+    \param[in] opts         - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return p - zero function
+************************************************************/
+struct LinElemExp * 
+lin_elem_exp_zero(const struct LinElemExpAopts * opts, int force_param)
+{
+
+    struct LinElemExp * lexp = NULL;
+    if (force_param == 0){
+        lexp = lin_elem_exp_constant(0.0,opts);
+    }
+    else{
+        lexp = lin_elem_exp_alloc();    
+        if (opts->num_nodes == 0){
+            lexp->num_nodes = 2;
+            lexp->nodes = linspace(opts->lb,opts->ub,2);
+        }
+        else{
+            lexp->num_nodes = opts->num_nodes;
+            lexp->nodes = calloc_double(opts->num_nodes);
+            memmove(lexp->nodes,opts->nodes,opts->num_nodes*sizeof(double));
+        }
+        lexp->coeff = calloc_double(lexp->num_nodes);
+        for (size_t ii = 0; ii < lexp->num_nodes; ii++){
+            lexp->coeff[ii] = 0.0;
+        }
+    }
+    return lexp;
+}
+
 
 /********************************************************//**
     Create a constant function

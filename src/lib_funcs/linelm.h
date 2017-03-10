@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,10 @@
 
 //Code
 
+
+
+
+
 /** \file linelm.h
  * Provides header files and structure definitions for functions in linelm.c
  */
@@ -57,9 +62,14 @@ void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts **);
 void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
                                   size_t, double *);
+
 void lin_elem_exp_aopts_set_adapt(struct LinElemExpAopts *,double, double);
 void lin_elem_exp_aopts_set_delta(struct LinElemExpAopts *, double);
 void lin_elem_exp_aopts_set_hmin(struct LinElemExpAopts *, double);
+
+size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts *);
+size_t lin_elem_exp_aopts_get_nparams(const struct LinElemExpAopts *);
+void   lin_elem_exp_aopts_set_nparams(struct LinElemExpAopts*, size_t);
 
 /////////////////////////////////////////////////////////////////////
 
@@ -85,17 +95,34 @@ struct LinElemExp{
     double * inner;
 };
 
+size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
+size_t lin_elem_exp_get_num_params(const struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_alloc();
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
 void lin_elem_exp_free(struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_init(size_t, double *, double *);
+struct LinElemExp *
+lin_elem_exp_create_with_params(struct LinElemExpAopts *,
+                                size_t, const double *);
+void
+lin_elem_exp_update_params(struct LinElemExp *,
+                           size_t, const double *);
+size_t lin_elem_exp_get_params(const struct LinElemExp *, double *);
+
 unsigned char *
 serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
 unsigned char * deserialize_lin_elem_exp(unsigned char *, 
                                          struct LinElemExp **);
 double lin_elem_exp_eval(const struct LinElemExp *, double);
+void lin_elem_exp_evalN(const struct LinElemExp *, size_t,
+                        const double *, size_t, double *, size_t);
 double lin_elem_exp_get_nodal_val(const struct LinElemExp *, size_t);
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
+int lin_elem_exp_param_grad_eval(
+    struct LinElemExp *, size_t, const double *, double *);
+int
+lin_elem_exp_squared_norm_param_grad(const struct LinElemExp *,
+                                     double, double *);
 double lin_elem_exp_integrate(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
 int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);
@@ -124,6 +151,8 @@ lin_elem_exp_approx(struct LinElemExpAopts *, struct Fwrap *);
 void lin_elem_exp_scale(double, struct LinElemExp *);
 void lin_elem_exp_flip_sign(struct LinElemExp *);
 void lin_elem_exp_orth_basis(size_t,struct LinElemExp **, struct LinElemExpAopts *);
+struct LinElemExp * 
+lin_elem_exp_zero(const struct LinElemExpAopts *, int);
 struct LinElemExp *
 lin_elem_exp_constant(double,
                       const struct LinElemExpAopts *);

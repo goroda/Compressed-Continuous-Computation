@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,19 +34,29 @@
 
 //Code
 
+
+
+
 #include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
 
-#include "array.h"
-#include "CuTest.h"
+#ifndef UNCON_TEST_H
+#define UNCON_TEST_H
 
-#include "lib_funcs.h"
-#include "lib_clinalg.h"
-#include "lib_linalg.h"
+struct UncTestProblem {
+    size_t dim;
+    double (*eval)(size_t,const double *,double *, void *);
+    double * start;
+    double * sol;
+};
+
+size_t unc_test_problem_get_dim(void * arg);
+double * unc_test_problem_get_start(void * arg);
+double * unc_test_problem_get_sol(void * arg);
+double unc_test_problem_eval(size_t dim,const double * x,double * grad,void *arg);
+
+void create_unc_probs();
 
 
+extern struct UncTestProblem tprobs[34];
 
-
+#endif

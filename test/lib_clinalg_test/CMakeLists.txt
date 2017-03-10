@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 
 file(GLOB SRC_FILES
+  regress_test.c          
   dmrg_test.c          
   ftarray_test.c          
   ft_test.c
@@ -11,16 +12,18 @@ file(GLOB SRC_FILES
   main.c)
           
 add_executable(clinalg_test ${SRC_FILES})
-target_link_libraries(clinalg_test 
-    clinalg 
-    funcs 
-    quadrature 
-    linalg 
-    array 
-    stringmanip
-    cutest 
-    ${blas_lapack} 
-    -lm)
+target_link_libraries(clinalg_test
+  approx_interface
+  clinalg
+  funcs
+  opt 
+  quadrature 
+  linalg 
+  array 
+  stringmanip
+  cutest 
+  ${blas_lapack} 
+  -lm)
 
 
 

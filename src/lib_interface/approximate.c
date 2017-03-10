@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 /** \file approximate.c
  * Provides interface for approximation
@@ -66,9 +70,41 @@ struct C3Approx
     struct CrossIndex ** isr;
     struct FtCrossArgs * fca;
 
+
+    // Regression stuff
+    struct FTRegress * reg;
+    
     // reference function train (for various uses)
     struct FunctionTrain * ftref;
 };
+
+
+/***********************************************************//**
+    Allocate and set everything to NULL
+    \return allocated structure with NULL elements
+***************************************************************/
+struct C3Approx * c3approx_alloc()
+{
+    struct C3Approx * c3a = malloc(sizeof(struct C3Approx));
+    if (c3a == NULL){
+        fprintf(stderr, "Cannot allocate c3 approximation C3Approx structure\n");
+        exit(1);
+    }
+
+    c3a->dim = 0;
+    c3a->bds = NULL;
+    c3a->type = C3UNSPEC;
+    c3a->grid = NULL;
+    c3a->fapp = NULL;
+    c3a->fopt = NULL;
+    c3a->isl = NULL;
+    c3a->isr = NULL;
+    c3a->fca = NULL;
+    c3a->reg = NULL;
+    c3a->ftref = NULL;
+        
+    return c3a;
+}
 
 /***********************************************************//**
     Create an approximation structure
@@ -80,30 +116,35 @@ struct C3Approx
 ***************************************************************/
 struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
 {
+    struct C3Approx * c3a = c3approx_alloc();
     
-    struct C3Approx * c3a = malloc(sizeof(struct C3Approx));
-    if (c3a == NULL){
-        fprintf(stderr, "Cannot allocate c3 approximation C3Approx structure\n");
-        exit(1);
-    }
-
     c3a->type = type;
     c3a->dim = dim;
 
     c3a->fapp = multi_approx_opts_alloc(dim);
     c3a->fopt = fiber_opt_args_init(dim);
-    c3a->fca = NULL;
 
-    c3a->isl = malloc(dim *sizeof(struct CrossIndex * ));
-    if (c3a->isl == NULL){
-        fprintf(stderr,"Failure allocating memory for C3Approx\n");
-    }
-    c3a->isr = malloc(dim *sizeof(struct CrossIndex * ));
-    if (c3a->isr == NULL){
-        fprintf(stderr,"Failure allocating memory for C3Approx\n");
-    }
+    if (type == CROSS){
+        c3a->fca = NULL;
 
-    c3a->ftref = NULL;
+        c3a->isl = malloc(dim *sizeof(struct CrossIndex * ));
+        if (c3a->isl == NULL){
+            fprintf(stderr,"Failure allocating memory for C3Approx\n");
+        }
+        c3a->isr = malloc(dim *sizeof(struct CrossIndex * ));
+        if (c3a->isr == NULL){
+            fprintf(stderr,"Failure allocating memory for C3Approx\n");
+        }
+    }
+    else if (type == REGRESS){
+        assert (1 == 0);
+        /* c3a->reg = ft_regress_alloc(dim,c3a->fapp); */
+    }
+    else{
+        fprintf(stderr,"Unknown type %d for c3approx\n",type);
+        exit(1);
+    }
+    
     return c3a;
 }
 
@@ -117,20 +158,26 @@ void c3approx_destroy(struct C3Approx * c3a)
         multi_approx_opts_free(c3a->fapp); c3a->fapp = NULL; 
         free(c3a->fapp); c3a->fapp = NULL;
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
-        ft_cross_args_free(c3a->fca); c3a->fca = NULL;
-        if (c3a->isl != NULL){
-            for (size_t ii = 0; ii < c3a->dim; ii++){
-                cross_index_free(c3a->isl[ii]); c3a->isl[ii] = NULL;
-            }
-            free(c3a->isl); c3a->isl = NULL;
-        }
-        if (c3a->isr != NULL){
-            for (size_t ii = 0; ii < c3a->dim; ii++){
-                cross_index_free(c3a->isr[ii]); c3a->isr[ii] = NULL;
-            }
-            free(c3a->isr); c3a->isr = NULL;
-        }
 
+        if (c3a->type == CROSS){
+            ft_cross_args_free(c3a->fca); c3a->fca = NULL;
+            if (c3a->isl != NULL){
+                for (size_t ii = 0; ii < c3a->dim; ii++){
+                    cross_index_free(c3a->isl[ii]); c3a->isl[ii] = NULL;
+                }
+                free(c3a->isl); c3a->isl = NULL;
+            }
+            if (c3a->isr != NULL){
+                for (size_t ii = 0; ii < c3a->dim; ii++){
+                    cross_index_free(c3a->isr[ii]); c3a->isr[ii] = NULL;
+                }
+                free(c3a->isr); c3a->isr = NULL;
+            }
+        }
+        else if (c3a->type == REGRESS){
+            assert (1 == 0);
+            /* ft_regress_free(c3a->reg); c3a->reg = NULL; */
+        }
         function_train_free(c3a->ftref); c3a->ftref = NULL;
         free(c3a); c3a = NULL;
     }
@@ -189,6 +236,7 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
                          double ** start)
 {
     assert (c3a != NULL);
+    assert (c3a->type == CROSS);
     if (c3a->fca != NULL){
         fprintf(stdout,"Initializing cross approximation and\n");
         fprintf(stdout," destroying previous options\n");
@@ -294,6 +342,7 @@ struct FunctionTrain *
 c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw, int adapt)
 {
     assert (c3a != NULL);
+    assert (c3a->type == CROSS);
     assert (c3a->fca != NULL);
     assert (c3a->isl != NULL);
     assert (c3a->isr != NULL);
@@ -313,6 +362,79 @@ c3approx_do_cross(struct C3Approx * c3a, struct Fwrap * fw, int adapt)
     return ft;
 }
 
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// Regression Stuff
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+
+/* void c3approx_set_regress_type(struct C3Approx * c3a, enum REGTYPE rtype) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a -> type == REGRESS); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_type(c3a->reg,rtype); *\/ */
+/* } */
+
+/* void c3approx_set_regress_start_ranks(struct C3Approx * c3a, size_t rank) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_parameter(c3a->reg,"rank",&rank); *\/ */
+/* } */
+
+/* void c3approx_set_regress_num_param_per_func(struct C3Approx * c3a, size_t num) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_parameter(c3a->reg,"num_param",&num); *\/ */
+/* } */
+
+/***********************************************************//**
+    Initialize regression (tests everything is set up correctly)
+
+    \param[in,out] c3a   - approx structure
+***************************************************************/
+/* void c3approx_init_regress(struct C3Approx * c3a) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->fapp != NULL); */
+    
+/* } */
+ 
+/***********************************************************//**
+    Perform cross approximation of a function
+***************************************************************/
+/* struct FunctionTrain * */
+/* c3approx_do_regress(struct C3Approx *c3a, size_t N, */
+/*                     const double * x, size_t incx, */
+/*                     const double * y, size_t incy, */
+/*                     enum REGOBJ obj) */
+/* { */
+/*     assert (c3a != NULL); */
+/*     assert (c3a->type == REGRESS); */
+/*     assert (c3a->reg != NULL); */
+/*     /\* assert (c3a->ftref != NULL); *\/ */
+
+/*     assert (1 == 0); */
+/*     /\* ft_regress_set_obj(c3a->reg,obj); *\/ */
+/*     /\* ft_regress_set_data(c3a->reg,N,x,incx,y,incy); *\/ */
+/*     /\* ft_regress_process_parameters(c3a->reg); *\/ */
+
+/*     /\* assert (1 == 0); *\/ */
+/*     /\* struct FunctionTrain * ft = ft_regress_run(c3a->reg); *\/ */
+    
+/*     return ft; */
+/* } */
+
+    
 /////////////////////////////////////////////////////////////////////////
 
 

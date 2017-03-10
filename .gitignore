@@ -11,6 +11,8 @@ lib/*
 *.log
 *.aux
 *.#*
+*.c3
+*.svg
 
 doc/html/*
 doc/latex/*
@@ -35,4 +37,5 @@ fileheaders.txt
 update_file_headers.py
 add_license_split.py
 
-
+profiling/regress/*/*.c3
+profiling/regress/bin/*

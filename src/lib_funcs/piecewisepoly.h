@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,9 @@
 
 //Code
 
+
+
+
 /** \file piecewisepoly.h
  * Provides header files and structure definitions for functions in piecewisepoly.c
  */
@@ -58,10 +62,13 @@ enum poly_type pw_poly_opts_get_ptype(const struct PwPolyOpts *);
 void pw_poly_opts_set_minsize(struct PwPolyOpts *,double);
 void pw_poly_opts_set_maxorder(struct PwPolyOpts *, size_t);
 void pw_poly_opts_set_maxnum(struct PwPolyOpts *, size_t);
-void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
-void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
 void pw_poly_opts_set_nregions(struct PwPolyOpts *, size_t);
 void pw_poly_opts_set_pts(struct PwPolyOpts *, size_t, double *);
+void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
+void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
+
+size_t pw_poly_opts_get_nparams(const struct PwPolyOpts*);
+void   pw_poly_opts_set_nparams(struct PwPolyOpts*, size_t);
 
 
 /** \struct PiecewisePoly
@@ -115,6 +122,8 @@ void piecewise_poly_boundaries(const struct PiecewisePoly *,size_t *,double**,si
 
 //operations using one piecewise poly
 double piecewise_poly_eval(const struct PiecewisePoly *, double);
+void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
+                          const double *, size_t, double *, size_t);
 void piecewise_poly_scale(double, struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_deriv(const struct PiecewisePoly *);
 double piecewise_poly_integrate(const struct PiecewisePoly *);

@@ -9,6 +9,8 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 #include "lib_probability.h"
+
+#include "c3_interface.h"
 //#include "lib_funcs.h"
 //
 //
@@ -260,7 +262,7 @@ void proc_inputs(int argc, char * argv[], struct RunArgs * rargs)
        exit(1);
     }
 
-    size_t output = (size_t) floor( 0.7 * nfield) ;
+    size_t output = (size_t)llround(floor( 0.7 * nfield)); // fixed from cast to size_t
     double * xsol = linspace(0.0,1.0,nfield);
     if (sqrt_cov == NULL){
         printf("........Building sqrt\n");

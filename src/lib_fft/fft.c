@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,10 @@
 
 //Code
 
+
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -54,7 +59,8 @@ int fft_slow(size_t N, const double complex * xin, size_t sx,
     for (size_t ii = 0; ii < N; ii++){
         xout[ii*sX] = 0.0;
         for (size_t jj = 0; jj < N; jj++){
-            xout[ii*sX] += cexp(- 2 * M_PI * I * ii * jj / N) * xin[jj*sx];
+            xout[ii*sX] += cexp(- 2 * M_PI * (double complex)I * ii * jj / N)
+                                    * xin[jj*sx];
         }
     }
     return 0;
@@ -69,7 +75,8 @@ int ifft_slow(size_t N, const double complex * xin, size_t sx,
     for (size_t ii = 0; ii < N; ii++){
         xout[ii*sX] = 0.0;
         for (size_t jj = 0; jj < N; jj++){
-            xout[ii*sX] += cexp( 2 * M_PI * I * ii * jj / N) * xin[jj*sx];
+            xout[ii*sX] += cexp( 2 * M_PI * (double complex)I * ii * jj / N)
+                                     * xin[jj*sx];
         }
         xout[ii*sX] /= (double)N;
     }
@@ -100,7 +107,7 @@ int fft_base(size_t N, const double complex * x, size_t sx,
         }
 
         for (size_t ii = 0; ii < N/2; ii ++){
-            double complex twiddle = cexp(- 2 * M_PI * I * ii  / N);
+            double complex twiddle = cexp(- 2 * M_PI * (double complex)I * ii  / N);
             /* printf("ii=%zu, twiddle = (%G,%G)\n",ii,creal(twiddle),cimag(twiddle)); */
             
             /* printf("\t ind = %zu, %zu\n",ii*2*sX, ii*2*sX+sX); */

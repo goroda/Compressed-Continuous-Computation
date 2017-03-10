@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 /** \file monitoring.c
  * Provides routines for monitoring functions and storing/recalling their evaluations
@@ -103,7 +107,7 @@ double function_monitor_eval(const double * x, void * args)
     //printf("fm->dim=%zu\n",fm->dim);
     //dprint(fm->dim,x);
     //printf("ok!\n");
-    char * ser = serialize_darray_to_text(fm->dim,(double *)x);
+    char * ser = serialize_darray_to_text(fm->dim,x);
 
     char * sval = lookup_key(fm->evals,ser);
     //printf("sval = %s\n",sval);
@@ -114,7 +118,7 @@ double function_monitor_eval(const double * x, void * args)
         //printf("here! val=%3.5f\n",val);
     }
     else{
-        val = fm->f.fnd((double *)x,fm->args);
+        val = fm->f.fnd(x,fm->args);
         //printf("val=%G\n",val);
         sval = serialize_double_to_text(val);
         //printf("sval = %s\n",sval);

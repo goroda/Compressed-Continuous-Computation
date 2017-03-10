@@ -1,7 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -31,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 /** \file hpoly.c
  * Provides routines for manipulating hermite polynomials
@@ -120,6 +125,41 @@ double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
         p[1] = pnew;
     }
     return out;
+}
+
+/********************************************************//**
+*   Gradients with respect to parameters of an orthonormal polynomial
+*   expansion
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradients
+*   \param[in]     inc  - increment of gradient
+*
+*   \return 0=success
+*************************************************************/
+int hermite_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+{
+    double p[2];
+    double pnew;
+        
+    size_t iter = 0;
+    p[0] = 1.0;
+    grad[0*inc] = p[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = x;
+        grad[iter*inc] = p[1]; // * SQRTPIINV;
+        iter++;
+    }  
+    for (iter = 2; iter < poly->num_poly; iter++){
+        
+        pnew = x * p[1] - (double)(iter-1) * p[0];
+        grad[iter*inc] = pnew;// * SQRTPIINV;
+        p[0] = p[1];
+        p[1] = pnew;
+    }
+    return 0;    
 }
 
 /********************************************************//**

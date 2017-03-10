@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -7,6 +8,8 @@
 #include "array.h"
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
+
+#include "c3_interface.h"
 
 double sinsum(const double * x, void * args)
 {
@@ -50,7 +53,8 @@ int main( void )
         dim = min_dim + ii * delta_dim;
         printf("On dim (%zu/%zu) : %zu \n",ii,ndims,dim);
 
-        double shouldbe = cimag( cpow( (cexp(I) - 1)/I , dim));
+        double shouldbe = cimag( cpow( (cexp((double complex)I) - 1)/
+                                       (double complex)I , dim));
         //printf("shouldbe=%G\n",shouldbe);
 
         for (jj = 0; jj < ntols; jj++){

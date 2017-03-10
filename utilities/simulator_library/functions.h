@@ -1,5 +1,3 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
 // This file is part of the Compressed Continuous Computation (C3) toolbox
 // Author: Alex A. Gorodetsky 
 // Contact: goroda@mit.edu
@@ -33,24 +31,29 @@
 
 //Code
 
+#ifndef SIMULATOR_H
+#define SIMULATOR_H
+
 #include <stdlib.h>
+#include <stdio.h>
 
-#ifndef UNCON_TEST_H
-#define UNCON_TEST_H
-
-struct UncTestProblem {
+struct Function {
     size_t dim;
-    double (*eval)(size_t,double *,double *, void *);
-    double * start;
-    double * sol;
+    double lower;
+    double upper;
+    int (*eval)(size_t,const double *,double *, void *);
+    char * name;
+    char * message;
 };
 
-size_t unc_test_problem_get_dim(void * arg);
-double * unc_test_problem_get_start(void * arg);
-double * unc_test_problem_get_sol(void * arg);
-double unc_test_problem_eval(size_t dim,double * x,double * grad,void *arg);
+size_t function_get_dim(void *);
+char * function_get_name(void *);
+double function_get_lower(void *);
+double function_get_upper(void *);
+void function_eval(size_t, const double *, double *, void *);
 
-struct UncTestProblem tprobs[34];
-void create_unc_probs();
+void create_functions();
+extern size_t num_funcs;
+extern struct Function funcs[34];
 
 #endif

@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,10 @@
 
 //Code
 
+
+
+
+
 /** \file functions.c
  * Provides basic routines for interfacing specific functions to the outside world through
  * generic functions
@@ -51,6 +56,7 @@
 #include "piecewisepoly.h"
 #include "linelm.h"
 
+#include "optimization.h"
 
 /********************************************************//**
     Allocate memory for a generic function without specifying class or sub_type
@@ -137,7 +143,7 @@ generic_function_copy(const struct GenericFunction * gf)
     case POLYNOMIAL: out->f = orth_poly_expansion_copy(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_copy(gf->f);        break;
     case RATIONAL:                                             break;
-    case KERNEL:                                               break;
+    case KERNEL:     out->f = kernel_expansion_copy(gf->f);    break;
     }
     
     return out;
@@ -160,7 +166,7 @@ void generic_function_copy_pa(const struct GenericFunction * gf,
     case POLYNOMIAL: gfpa->f = orth_poly_expansion_copy(gf->f); break;
     case LINELM:     gfpa->f = lin_elem_exp_copy(gf->f);        break;
     case RATIONAL:                                              break;
-    case KERNEL:                                                break;
+    case KERNEL:     gfpa->f = kernel_expansion_copy(gf->f);     break;
     }
 }
 
@@ -178,7 +184,7 @@ void generic_function_free(struct GenericFunction * gf){
             case POLYNOMIAL: orth_poly_expansion_free(gf->f); break;
             case LINELM:     lin_elem_exp_free(gf->f);        break;
             case RATIONAL:                                    break;
-            case KERNEL:                                      break;
+            case KERNEL:     kernel_expansion_free(gf->f);    break;
             }
             gf->f = NULL;
         }
@@ -232,7 +238,7 @@ serialize_generic_function(unsigned char * ser,
         case POLYNOMIAL: serialize_orth_poly_expansion(NULL,gf->f, &sizef); break;
         case LINELM:     serialize_lin_elem_exp(NULL,gf->f, &sizef);        break;
         case RATIONAL:                                                      break;
-        case KERNEL:                                                        break;
+        case KERNEL:     serialize_kernel_expansion(NULL,gf->f, &sizef);    break;
         }
         totSize += sizef;
         *totSizeIn = totSize;
@@ -247,7 +253,7 @@ serialize_generic_function(unsigned char * ser,
         case POLYNOMIAL: ptr = serialize_orth_poly_expansion(ptr,gf->f, NULL); break;
         case LINELM:     ptr = serialize_lin_elem_exp(ptr,gf->f, NULL);        break;
         case RATIONAL:                                                         break;
-        case KERNEL:                                                           break;
+        case KERNEL:     ptr = serialize_kernel_expansion(ptr,gf->f, NULL);    break;
         }
     }
     return ptr;
@@ -276,22 +282,64 @@ deserialize_generic_function(unsigned char * ser,
     fc = (enum function_class) fci;
     *gf = generic_function_alloc(dim,fc);
 
+    /* printf("deserialize generic function %zu, %d\n",dim,fc); */
     struct PiecewisePoly * pw = NULL;
     struct OrthPolyExpansion * ope = NULL;
     struct LinElemExp * le = NULL;
+    struct KernelExpansion * ke = NULL;
     switch (fc){
     case CONSTANT:   printf("not ser const correct\n");                               break;
     case PIECEWISE:  ptr = deserialize_piecewise_poly(ptr,&pw);       (*gf)->f = pw;  break;
     case POLYNOMIAL: ptr = deserialize_orth_poly_expansion(ptr,&ope); (*gf)->f = ope; break;
     case LINELM:     ptr = deserialize_lin_elem_exp(ptr,&le);         (*gf)->f = le;  break;
     case RATIONAL:                                                                    break;
-    case KERNEL:                                                                      break;
+    case KERNEL:     ptr = deserialize_kernel_expansion(ptr,&ke);     (*gf)->f = ke;  break;
     }
     return ptr;
 }
 
 ////////////////////////////////////////////////////////////
 // Various Initializers
+
+/********************************************************//**
+    Return a zero function
+
+    \param[in] fc           - function class
+    \param[in] aopts        - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return gf - zero function
+************************************************************/
+struct GenericFunction * 
+generic_function_zero(enum function_class fc, void * aopts, int force_nparam)
+{   
+    
+    struct GenericFunction * gf = generic_function_alloc(1,fc);
+    if (force_nparam == 0){
+        switch (fc){
+        case CONSTANT:                                                  break;
+        case PIECEWISE:  gf->f = piecewise_poly_constant(0,aopts);      break;
+        case POLYNOMIAL: gf->f = orth_poly_expansion_constant(0,aopts); break;
+        case LINELM:     gf->f = lin_elem_exp_constant(0,aopts);        break;
+        case RATIONAL:                                                  break;
+        case KERNEL:     assert (1==0);                                break;
+        }
+    }
+    else{
+        switch (fc){
+        case CONSTANT:                                              break;
+        case PIECEWISE:  assert(1 == 0);                            break;
+        case POLYNOMIAL: gf->f = orth_poly_expansion_zero(aopts,1); break;
+        case LINELM:     gf->f = lin_elem_exp_zero(aopts,1);        break;
+        case RATIONAL:                                              break;
+        case KERNEL:     gf->f = kernel_expansion_zero(aopts,1);    break;
+        }
+    }
+    return gf;
+}
+
 
 /********************************************************//**
     Return a constant function
@@ -313,7 +361,7 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
     case POLYNOMIAL: gf->f = orth_poly_expansion_constant(a,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_constant(a,aopts);        break;
     case RATIONAL:                                                  break;
-    case KERNEL:                                                    break;
+    case KERNEL:     gf->f = kernel_expansion_linear(0.0,a,aopts);  break;
     }
     return gf;
 }
@@ -328,6 +376,9 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
                         sub_type, etc.
 
     \return gf - linear function
+
+    \note 
+    For kernel, this is only approximate
 ***********************************************************/
 struct GenericFunction * 
 generic_function_linear(double a, double offset,
@@ -340,7 +391,7 @@ generic_function_linear(double a, double offset,
     case POLYNOMIAL: gf->f = orth_poly_expansion_linear(a,offset,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_linear(a,offset,aopts);        break;
     case RATIONAL:                                                       break;
-    case KERNEL:                                                         break;
+    case KERNEL:     gf->f = kernel_expansion_linear(a,offset,aopts);    break;
     }
     return gf;
 }
@@ -366,7 +417,7 @@ generic_function_quadratic(double a, double offset,
     case POLYNOMIAL: gf->f = orth_poly_expansion_quadratic(a,offset,aopts);                   break;
     case LINELM:     fprintf(stderr,"Cannot make quadratic out of LINELM\n");                 exit(1);        
     case RATIONAL:                                                                            break;
-    case KERNEL:                                                                              break;
+    case KERNEL:     assert (1 == 0);                                                         break;        
     }
     return gf;
 }
@@ -410,7 +461,7 @@ generic_function_deriv(const struct GenericFunction * gf)
     case POLYNOMIAL: out->f = orth_poly_expansion_deriv(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
     case RATIONAL:                                              break;
-    case KERNEL:                                                break;
+    case KERNEL: assert(1==0);                                                break;
     }
     return out;
 }
@@ -445,24 +496,24 @@ generic_function_deriv(const struct GenericFunction * gf)
          assert ( y != NULL);
          out = generic_function_alloc(y->dim,y->fc);
          switch (y->fc) {
-         case CONSTANT:                                                                 break;
-         case PIECEWISE: out->f = piecewise_poly_daxpby(a, NULL, b, y->f);              break;
-         case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, NULL, b, y->f);        break;
-         case LINELM: out->f = lin_elem_exp_copy(y->f); lin_elem_exp_scale(b,out->f);   break;
-         case RATIONAL:                                                                 break;
-         case KERNEL:                                                                   break;
+         case CONSTANT:                                                                       break;
+         case PIECEWISE: out->f = piecewise_poly_daxpby(a, NULL, b, y->f);                    break;
+         case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, NULL, b, y->f);              break;
+         case LINELM: out->f = lin_elem_exp_copy(y->f); lin_elem_exp_scale(b,out->f);         break;
+         case RATIONAL:                                                                       break;
+         case KERNEL: out->f = kernel_expansion_copy(y->f); kernel_expansion_scale(b,out->f); break;
          }
      }
      else if (y == NULL){
          assert ( x != NULL );
          out = generic_function_alloc(x->dim,x->fc);
          switch (x->fc) {
-         case CONSTANT:                                                                 break;
-         case PIECEWISE: out->f = piecewise_poly_daxpby(a, x->f, b, NULL);              break;
-         case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, x->f, b, NULL);        break;
-         case LINELM: out->f = lin_elem_exp_copy(x->f); lin_elem_exp_scale(a,out->f);   break;
-         case RATIONAL:                                                                 break;
-         case KERNEL:                                                                   break;
+         case CONSTANT:                                                                       break;
+         case PIECEWISE: out->f = piecewise_poly_daxpby(a, x->f, b, NULL);                    break;
+         case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, x->f, b, NULL);              break;
+         case LINELM: out->f = lin_elem_exp_copy(x->f); lin_elem_exp_scale(a,out->f);         break;
+         case RATIONAL:                                                                       break;
+         case KERNEL: out->f = kernel_expansion_copy(x->f); kernel_expansion_scale(a,out->f); break;
          }
     }
     else {
@@ -479,13 +530,22 @@ generic_function_deriv(const struct GenericFunction * gf)
                 lin_elem_exp_axpy(b,y->f,out->f);
                 break;
             case RATIONAL:                                                                 break;
-            case KERNEL:                                                                   break;
+            case KERNEL:
+                out->f = kernel_expansion_copy(x->f);
+                kernel_expansion_scale(a,out->f);
+                kernel_expansion_axpy(b,y->f,out->f);
+                break;
             }
         }
         else if (x->fc != y->fc){
             if ((x->fc == LINELM) || (y->fc == LINELM)){
                 fprintf(stderr,
                         "Can't add linear elements with other stuff\n");
+                exit(1);
+            }
+            else if ((x->fc == KERNEL) || (y->fc == KERNEL)){
+                fprintf(stderr,
+                        "Can't add kernel expansions with other stuff\n");
                 exit(1);
             }
             //printf("dont match! a=%G, b=%G\n",a,b);
@@ -559,6 +619,8 @@ generic_function_deriv(const struct GenericFunction * gf)
      if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
          assert (a->fc != LINELM);
          assert (b->fc != LINELM);
+         assert (a->fc != KERNEL);
+         assert (b->fc != KERNEL);
          // everything to PIECEWISE!
          fc = PIECEWISE;
          if (a->fc == POLYNOMIAL){
@@ -609,7 +671,8 @@ generic_function_deriv(const struct GenericFunction * gf)
          break;
      case RATIONAL:
          break;
-     case KERNEL:
+     case KERNEL: 
+         out = kernel_expansion_inner(a->f,b->f);
          break;
      }
 
@@ -726,7 +789,7 @@ double generic_function_norm(const struct GenericFunction * f){
      case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
      case LINELM:     out = lin_elem_exp_integrate(f->f);        break;
      case RATIONAL:                                              break;
-     case KERNEL:                                                break;
+     case KERNEL:     out = kernel_expansion_integrate(f->f);    break;
      }
      return out;
  }
@@ -1032,6 +1095,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      case RATIONAL:
          break;
      case KERNEL:
+         assert(1 == 0);     
          break;
      }
 
@@ -1082,7 +1146,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      case POLYNOMIAL: orth_poly_expansion_flip_sign(f->f); break;
      case LINELM:     lin_elem_exp_flip_sign(f->f);        break;
      case RATIONAL:                                        break;
-     case KERNEL  :                                        break;
+     case KERNEL:     kernel_expansion_scale(-1.0,f->f);   break;
      }
  }
 
@@ -1119,7 +1183,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      case POLYNOMIAL: lb = ((struct OrthPolyExpansion *) f->f)->lower_bound; break;
      case LINELM:     lb = lin_elem_exp_lb(f->f);          break;
      case RATIONAL:                                        break;
-     case KERNEL:                                        break;
+     case KERNEL:     lb = kernel_expansion_get_lb(f->f);  break;
      }
      return lb;
  }
@@ -1139,7 +1203,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      case POLYNOMIAL: ub = ((struct OrthPolyExpansion *) f->f)->upper_bound; break;
      case LINELM:     ub = lin_elem_exp_ub(f->f);          break;
      case RATIONAL:                                        break;
-     case KERNEL:                                          break;
+     case KERNEL:     ub = kernel_expansion_get_ub(f->f);  break;
      }
 
      return ub;
@@ -1173,10 +1237,35 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
      case POLYNOMIAL: out = orth_poly_expansion_eval(f->f,x); break;
      case LINELM:     out = lin_elem_exp_eval(f->f,x);        break;
      case RATIONAL:                                           break;
-     case KERNEL:                                             break;
+     case KERNEL:     out = kernel_expansion_eval(f->f,x);    break;
      }
 
      return out;
+ }
+
+ /********************************************************//**
+ *   Evaluate a generic function at multiple locations
+ *
+ *   \param[in]     f    - function
+ *   \param[in]     N    - number of evaluations
+ *   \param[in]     x    - location at which to evaluate
+ *   \param[in]     incx - increment of x
+ *   \param[in,out] y    - allocated space for evaluations
+ *   \param[in]     incy - increment of y
+ ************************************************************/
+void generic_function_1d_evalN(const struct GenericFunction * f, size_t N,
+                               const double * x, size_t incx, double * y, size_t incy)
+{
+     assert (f != NULL);
+     assert (f->f != NULL);
+     switch (f->fc){
+     case CONSTANT:   assert(1 == 0);                                  break;
+     case PIECEWISE:  piecewise_poly_evalN(f->f,N,x,incx,y,incy);      break;
+     case POLYNOMIAL: orth_poly_expansion_evalN(f->f,N,x,incx,y,incy); break;
+     case LINELM:     lin_elem_exp_evalN(f->f,N,x,incx,y,incy);        break;
+     case RATIONAL:                                                    break;
+     case KERNEL:     kernel_expansion_evalN(f->f,N,x,incx,y,incy);    break;
+     }
  }
 
  /********************************************************//**
@@ -1314,12 +1403,12 @@ double generic_function_1darray_eval_piv(struct GenericFunction ** f,
 
      int out = 1;
      switch (x->fc){
-     case CONSTANT:                                                break;
-     case PIECEWISE:                                               break;
+     case CONSTANT:   assert(1 == 0);                              break;
+     case PIECEWISE:  assert(1 == 0);                              break;
      case POLYNOMIAL: out = orth_poly_expansion_axpy(a,x->f,y->f); break;
      case LINELM:     out = lin_elem_exp_axpy(a,x->f,y->f);        break;
-     case RATIONAL:                                                break;
-     case KERNEL:                                                  break;
+     case RATIONAL:   assert (1 == 0);                             break;
+     case KERNEL:     out = 0; kernel_expansion_axpy(a,x->f,y->f); break;
      }
      return out;
  }
@@ -1570,7 +1659,7 @@ void generic_function_roundt(struct GenericFunction ** gf, double thresh)
     case POLYNOMIAL: ope = (*gf)->f; orth_poly_expansion_roundt(&ope,thresh); break;
     case LINELM:                                                              break;
     case RATIONAL:                                                            break;
-    case KERNEL:                                                              break;
+    case KERNEL: assert (1==0);                                               break;
     }
 }
 
@@ -1612,6 +1701,53 @@ generic_function_1darray_eval2(size_t n,
         }
     }
 }
+
+/********************************************************//**
+*   Evaluate an array of functions at an array of points
+*
+*   \param[in]     n    - number of functions
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y*
+*
+*   \note Currently just calls the single evaluation code
+*         Note sure if this is optimal, cache-wise
+*************************************************************/
+void
+generic_function_1darray_eval2N(size_t n, 
+                                struct GenericFunction ** f,
+                                size_t N, const double * x, size_t incx,
+                                double * y, size_t incy)
+{
+
+    int allpoly = 1;
+    struct OrthPolyExpansion * parr[1000];
+    for (size_t ii = 0; ii < n; ii++){
+        if (f[ii]->fc != POLYNOMIAL){
+            allpoly = 0;
+            break;
+        }
+        parr[ii] = f[ii]->f;
+    }
+    if ((allpoly == 1) && (n <= 1000)){
+        int res = legendre_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        if (res == 1){ //something when wrong
+            size_t ii;
+            for (ii = 0; ii < n; ii++){
+                generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+            }
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < N; ii++){
+            generic_function_1darray_eval2(n,f,x[ii*incx],y+ii*incy);
+        }
+    }
+}
+
 
 /********************************************************//**
 *   Evaluate an array of generic functions which should be
@@ -1736,7 +1872,7 @@ double generic_function_absmax(const struct GenericFunction * f, double * x, voi
     case POLYNOMIAL: out = orth_poly_expansion_absmax(f->f,x,optargs); break;
     case LINELM:     out = lin_elem_exp_absmax(f->f,x,dsize,optargs);  break;
     case RATIONAL:                                                     break;
-    case KERNEL:                                                       break;
+    case KERNEL: assert (1==0);                                        break;
     }
     return out;
 }
@@ -1763,7 +1899,7 @@ double generic_function_absmax_gen(const struct GenericFunction * f,
     case POLYNOMIAL: assert (size == dsize); out = orth_poly_expansion_absmax(f->f,x,optargs); break;
     case LINELM:     out = lin_elem_exp_absmax(f->f,x,size,optargs);        break;
     case RATIONAL:                                                     break;
-    case KERNEL:                                                       break;
+    case KERNEL: assert (1==0);                                        break;
     }
     return out;
 }
@@ -1876,7 +2012,7 @@ void generic_function_scale(double a, struct GenericFunction * gf)
     case POLYNOMIAL: orth_poly_expansion_scale(a,gf->f); break;
     case LINELM:     lin_elem_exp_scale(a,gf->f);        break;
     case RATIONAL:                                       break;
-    case KERNEL:                                         break;
+    case KERNEL:     kernel_expansion_scale(a,gf->f);    break;
     }
 }
 
@@ -2184,7 +2320,7 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     case POLYNOMIAL: print_orth_poly_expansion(gf->f,prec,args); break;
     case LINELM:     print_lin_elem_exp(gf->f,prec,args,stdout); break;
     case RATIONAL:                                               break;
-    case KERNEL:                                                 break;
+    case KERNEL:     print_kernel_expansion(gf->f,prec,args);    break;
     }
 }
 
@@ -2208,7 +2344,7 @@ void generic_function_savetxt(const struct GenericFunction * gf,
     case POLYNOMIAL: orth_poly_expansion_savetxt(gf->f,stream,prec); break; 
     case LINELM:     lin_elem_exp_savetxt(gf->f,stream,prec);        break;
     case RATIONAL:                                                   break;
-    case KERNEL:                                                     break;
+    case KERNEL:     assert(1==0);                                   break;
     }
 }
 
@@ -2236,7 +2372,7 @@ generic_function_loadtxt(FILE * stream)
     case POLYNOMIAL: gf->f = orth_poly_expansion_loadtxt(stream); break;
     case LINELM:     gf->f = lin_elem_exp_loadtxt(stream);        break;
     case RATIONAL:                                                break;
-    case KERNEL:                                                  break;
+    case KERNEL: assert (1 == 0);                                 break;
     }
 
     return gf;
@@ -2263,10 +2399,9 @@ generic_function_approximate1d(enum function_class fc, void * aopts,
     case POLYNOMIAL: gf->f = orth_poly_expansion_approx_adapt(aopts,f);  break;
     case LINELM:     gf->f = lin_elem_exp_approx(aopts,f);               break;
     case RATIONAL:                                                       break;
-    case KERNEL:                                                         break;
+    case KERNEL: assert (1 == 0);                                        break;
     }
 
-    //print_generic_function(gf,0,NULL);
     return gf;
 }
 
@@ -2398,6 +2533,7 @@ generic_function_array_orth(size_t n,
     size_t ii;
     /* double lb, ub; */
     struct LinElemExp ** b = NULL;
+    struct KernelExpansion ** ke = NULL;
     switch (fc){
     case CONSTANT: break;
     case PIECEWISE:
@@ -2431,7 +2567,728 @@ generic_function_array_orth(size_t n,
     case RATIONAL:
         break;
     case KERNEL:
+        /* assert(1==0); */
+        ke = malloc(n * sizeof(struct KernelExpansion *));
+        for (ii = 0 ; ii < n; ii++){
+            gfarray[ii] = generic_function_alloc(1,fc);
+            ke[ii] = NULL;
+        }
+        kernel_expansion_orth_basis(n,ke,args);
+        for (ii = 0; ii < n; ii++){
+            gfarray[ii]->f = ke[ii];
+        }
+        free(ke); ke = NULL;
+ 
         break;
     }
 
 }
+
+
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+/////               Regression          //////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+
+/** \struct Regress1DOpts
+ * \brief One dimensional regression options
+ * \var Regress1DOpts:atype
+ * approximation type
+ * \var Regress1DOpts:rtype
+ * regression problem
+ * \var Regress1DOpts:fc
+ * function class of the approximation
+ * \var Regress1DOpts:reg_param_set
+ * indicator of whethe the regularization parameter is set
+ * \var Regress1DOpts:lambda
+ * regularization parameter
+ * \var Regress1DOpts:decay_type
+ * decay type (used for regularized RKHS regression)
+ * \var Regress1DOpts:coeff_decay_opt
+ * parameter specifying decay rate
+ * \var Regress1DOpts:N
+ * number of training samples
+ * \var Regress1DOpts:x
+ * location of training samples
+ * \var Regress1DOpts:y
+ * value of training samples
+ * \var Regress1DOpts:aopts
+ * approximation options for function class
+ * \var Regress1DOpts:nparam
+ * number of parameters for parametric regression
+ * \var Regress1DOpts:init_param
+ * initial parameters
+ * \var Regress1DOpts:gf
+ * Generic function currently being worked with
+ * \var Regress1DOpts:eval
+ * Storage locations for evaluation of current guess
+ * \var Regress1DOpts:grad
+ * Storage location for gradient
+ * \var Regress1DOpts:resid
+ * Storage location for residual
+ */
+struct Regress1DOpts
+{
+    enum approx_type  atype;
+    enum regress_type rtype;
+    enum function_class fc;
+
+    // Regularization options
+    int reg_param_set;
+    double lambda;
+    enum coeff_decay_type decay_type;
+    double coeff_decay_param;
+
+    size_t N;
+    const double * x;
+    const double * y;
+
+    void * aopts; // approximation options
+
+    // parameteric stuff
+    size_t nparam; // for parametric
+    const double * init_param;
+
+    // store current generic funciton
+    struct GenericFunction * gf;
+
+    // stuff to speed up storage
+    double * eval;
+    double * grad;
+    double * resid;
+};
+
+/********************************************************//**
+    Create a regression options
+
+    \param[in] atype - approximation type
+    \param[in] rtype - regression problem type
+    \param[in] N     - number of training samples
+    \param[in] x     - location of training samples
+    \param[in] y     - values at training samples
+
+    \return opts     - regression options
+************************************************************/
+struct Regress1DOpts *
+regress_1d_opts_create(enum approx_type atype, enum regress_type rtype,
+                       size_t N, const double * x, const double * y)
+{
+    struct Regress1DOpts * opts = malloc(sizeof(struct Regress1DOpts));
+    if (opts == NULL){
+        fprintf(stderr, "Error allocating regression options\n");
+        exit(1);
+    }
+    opts->atype = atype;
+    opts->rtype = rtype;
+    opts->N = N;
+    opts->x = x;
+    opts->y = y;
+    
+    opts->aopts = NULL;
+
+    opts->nparam = 0;
+    opts->init_param = NULL;
+
+    opts->gf = NULL;
+    
+    opts->eval  = calloc_double(N);
+    opts->grad  = NULL;
+    opts->resid = calloc_double(N);
+
+    // regularization options
+    opts->reg_param_set     = 0;
+    opts->lambda            = 0.0;
+    opts->decay_type        = NONE;
+    opts->coeff_decay_param = 1.0;
+    
+    return opts;
+}
+
+/********************************************************//**
+    Destroy regression options
+************************************************************/
+void regress_1d_opts_destroy(struct Regress1DOpts * opts)
+{
+    if (opts != NULL){
+        generic_function_free(opts->gf); opts->gf    = NULL;
+        free(opts->eval);                opts->eval  = NULL;
+        free(opts->grad);                opts->grad  = NULL;
+        free(opts->resid);               opts->resid = NULL; 
+        free(opts);                      opts        = NULL;
+    }
+}
+
+
+/********************************************************//**
+    Get the number of parameters describing the generic function
+************************************************************/
+size_t generic_function_get_num_params(const struct GenericFunction * gf)
+{
+
+    assert (gf != NULL);
+    size_t nparam = 0;
+    switch (gf->fc){
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        assert (1 == 0);
+        break;
+    case POLYNOMIAL:
+        nparam = orth_poly_expansion_get_num_params(gf->f);
+        break;
+    case LINELM:
+        nparam = lin_elem_exp_get_num_params(gf->f);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        nparam = kernel_expansion_get_num_params(gf->f);
+        break;
+    }   
+
+    return nparam;
+}
+
+/********************************************************//**
+    Get the parameters of generic function
+
+    \param[in] gf         - generic function
+    \param[in,out] params - location to write parameters
+
+    \returns number of parameters
+************************************************************/
+size_t generic_function_get_params(const struct GenericFunction * gf, double * params)
+{
+
+    assert (gf != NULL);
+    size_t nparam = 0;
+    switch (gf->fc){
+    case CONSTANT:                                                           break;
+    case PIECEWISE:  assert (1 == 0);                                        break;
+    case POLYNOMIAL: nparam = orth_poly_expansion_get_params(gf->f,params);  break;
+    case LINELM:     nparam = lin_elem_exp_get_params(gf->f,params);         break;
+    case RATIONAL:                                                           break;
+    case KERNEL:     nparam = kernel_expansion_get_params(gf->f,params);     break;
+    }   
+
+    return nparam;
+}
+
+/********************************************************//**
+    Add a parametric form to learn
+
+    \param[in] opts  - regression options structure
+    \param[in] fc    - regression problem type
+    \param[in] aopts - parametric approximation options
+************************************************************/
+void regress_1d_opts_set_parametric_form(
+    struct Regress1DOpts * opts, enum function_class fc, void * aopts)
+{
+    assert(opts != NULL);
+    assert(aopts != NULL);
+
+    opts->fc = fc;
+    opts->aopts = aopts;
+    
+    switch (fc){
+    case CONSTANT:                                                            break;
+    case PIECEWISE:                                                           break;
+    case POLYNOMIAL: opts->nparam = ope_opts_get_nparams(aopts);              break;
+    case LINELM:     opts->nparam = lin_elem_exp_aopts_get_nparams(aopts);    break;
+    case RATIONAL:                                                            break;
+    case KERNEL:     opts->nparam = kernel_approx_opts_get_nparams(aopts);    break;
+    }   
+
+    opts->grad = calloc_double(opts->nparam);
+}
+
+/********************************************************//**
+    Add starting parameters for optimization   
+************************************************************/
+void regress_1d_opts_set_initial_parameters(
+    struct Regress1DOpts * opts, const double * param)
+{
+    assert (opts != NULL);
+    opts->init_param = param;
+    
+    opts->gf = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,param);
+}
+
+/********************************************************//**
+    Set regularization penalty
+************************************************************/
+void regress_1d_opts_set_regularization_penalty(
+    struct Regress1DOpts * opts, double lambda)
+{
+    assert (opts != NULL);
+    opts->reg_param_set = 1;
+    opts->lambda = lambda;
+}
+
+/********************************************************//**
+    Set RKHS decay
+************************************************************/
+void regress_1d_opts_set_RKHS_decay_rate(
+    struct Regress1DOpts * opts, enum coeff_decay_type decay_type, double lambda)
+{
+    assert (opts != NULL);
+    opts->decay_type = decay_type;
+
+    if (decay_type == ALGEBRAIC){
+        if ((lambda < 1e-15) || (lambda > 1)){
+            fprintf(stderr,"For algebraic decay of RKHS must specify decay rate in (0,1)\n");
+            fprintf(stderr,"\t Currently specified as %G\n",lambda);
+            exit(1);
+        }
+        else{
+            opts->coeff_decay_param = lambda;
+        }
+    }
+    else if (decay_type == EXPONENTIAL){
+        if (lambda < 0){
+            fprintf(stderr,"For exponential decay of RKHS must specify decay rate > 0\n");
+            fprintf(stderr,"\t Currently specified as %G\n",lambda);
+            exit(1);
+        }
+        else{
+            opts->coeff_decay_param = lambda;
+        }
+    }
+    else{
+        fprintf(stderr,"Do not recognized RKHS decay type %d\n",decay_type);
+        exit(1);
+    }
+}
+
+/********************************************************//**
+    Create a generic function with particular parameters
+
+    \param[in] fc    - function class
+    \param[in] aopts - approximation options
+    \param[in] dim   - number of parameters
+    \param[in] param - parameter values to set
+
+    \return generic function
+************************************************************/
+struct GenericFunction *
+generic_function_create_with_params(enum function_class fc, void * aopts, size_t dim,
+                                    const double * param)
+{
+
+    struct GenericFunction * gf = generic_function_alloc(1,fc);
+
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL: gf->f = orth_poly_expansion_create_with_params(aopts,dim,param);  break;
+    case LINELM:     gf->f = lin_elem_exp_create_with_params(aopts,dim,param);         break;
+    case RATIONAL:                                                                     break;
+    case KERNEL:     gf->f = kernel_expansion_create_with_params(aopts,dim,param);     break;
+    }
+
+    //print_generic_function(gf,0,NULL);
+    return gf;
+}
+
+/********************************************************//**
+    Update a generic function with particular parameters
+
+    \param[in] f     - function to update
+    \param[in] dim   - number of parameters
+    \param[in] param - parameter values to set
+************************************************************/
+void
+generic_function_update_params(struct GenericFunction * f, size_t dim,
+                               const double * param)
+{
+
+
+    switch (f->fc){
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        orth_poly_expansion_update_params(f->f,dim,param);
+        break;
+    case LINELM:
+        lin_elem_exp_update_params(f->f,dim,param);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        kernel_expansion_update_params(f->f,dim,param);
+        break;
+    }
+}
+
+
+/********************************************************//**
+    Take a gradient with respect to function parameters
+
+    \param[in]     gf   - generic function
+    \param[in]     nx   - number of x values
+    \param[in]     x    - x values
+    \param[in,out] grad - gradient (N,nx)
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int generic_function_param_grad_eval(const struct GenericFunction * gf,
+                                     size_t nx, const double * x,
+                                     double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_param_grad_eval(gf->f,nx,x,grad);
+        break;
+    case LINELM:
+        res = lin_elem_exp_param_grad_eval(gf->f,nx,x,grad);
+        /* printf("res in here is! %d\n",res); */
+        assert (res == 0);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        res = kernel_expansion_param_grad_eval(gf->f,nx,x,grad);
+        break;
+    }
+    assert (res == 0);
+    return res;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm of a generic function
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     gf    - generic function
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+generic_function_squared_norm_param_grad(const struct GenericFunction * gf,
+                                         double scale, double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:
+        break;
+    case PIECEWISE:
+        break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_squared_norm_param_grad(gf->f,scale,grad);
+        break;
+    case LINELM:
+        res = lin_elem_exp_squared_norm_param_grad(gf->f,scale,grad);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL:
+        res = kernel_expansion_squared_norm_param_grad(gf->f,scale,grad);
+        break;
+    }
+
+    return res;
+}
+
+/********************************************************//**
+    Norm in the RKHS (instead of L2)
+
+    \param[in]     gf          - generic function
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+
+    \return  0 - success, 1 -failure
+************************************************************/
+double
+generic_function_rkhs_squared_norm(const struct GenericFunction * gf,
+                                   enum coeff_decay_type decay_type,
+                                   double decay_param)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    double out = 0.0;
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL:
+        out = orth_poly_expansion_rkhs_squared_norm(gf->f,decay_type,decay_param);
+        break;
+    case LINELM:
+        fprintf(stderr,"No RKHS squared norm for linelm yet\n");
+        exit(1);
+    case RATIONAL:                                                                     break;
+    case KERNEL:  assert(1==0);                                                        break;
+    }
+
+    return out;
+}
+
+
+/********************************************************//**
+    Take a gradient of the norm in the RKHS (instead of L2)
+
+    \param[in]     gf          - generic function
+    \param[in]     scale       - scaling for additional gradient
+    \param[in]     decay_type  - type of decay
+    \param[in]     decay_param - parameter of decay
+    \param[in,out] grad        - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+************************************************************/
+int
+generic_function_rkhs_squared_norm_param_grad(const struct GenericFunction * gf,
+                                         double scale, enum coeff_decay_type decay_type,
+                                         double decay_param, double * grad)
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    int res = 1;
+    switch (fc){
+    case CONSTANT:                                                                     break;
+    case PIECEWISE:                                                                    break;
+    case POLYNOMIAL:
+        res = orth_poly_expansion_rkhs_squared_norm_param_grad(
+                       gf->f,scale,decay_type,decay_param,grad);
+        break;
+    case LINELM:     fprintf(stderr,"No deriv of RKHS squared norm for linelm yet\n"); exit(1);
+    case RATIONAL:                                                                     break;
+    case KERNEL:     assert (1 == 0);                                                  break;
+    }
+
+    return res;
+}
+
+
+/********************************************************//**
+    LS regression objective function
+************************************************************/
+double param_LSregress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+
+    assert (opts->nparam == dim);
+    assert (opts->gf != NULL);
+    // update function
+    /* printf("update param\n"); */
+    /* printf("\t old = "); */
+    /* print_generic_function(opts->gf,0,NULL); */
+    /* printf("\t param = "); dprint(dim,param); */
+    generic_function_update_params(opts->gf,dim,param);
+
+    /* printf("evaluate\n"); */
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->eval[ii] = generic_function_1d_eval(opts->gf,opts->x[ii]);
+    }
+
+    /* printf("compute resid\n"); */
+    double out = 0.0;
+    for (size_t ii = 0; ii < opts->N; ii++){
+        opts->resid[ii] = opts->y[ii]-opts->eval[ii];
+        out += opts->resid[ii] * opts->resid[ii];
+    }
+    out *= 0.5;
+    
+    if (grad != NULL){
+        /* printf("grad is not null!\n"); */
+        for (size_t ii = 0; ii < dim; ii++){
+            grad[ii] = 0.0;
+        }
+        for (size_t jj = 0; jj < opts->N; jj++){
+            int res = generic_function_param_grad_eval(opts->gf,1,
+                                                       opts->x+jj,
+                                                       opts->grad);
+            assert (res == 0);
+            for (size_t ii = 0; ii < dim; ii++){
+                grad[ii] += opts->resid[jj] * (-1.0)*opts->grad[ii];
+            }
+        }
+        /* printf("done\n"); */
+    }
+
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression
+************************************************************/
+double param_RLS2regress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this function updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    double regularization  = generic_function_inner(opts->gf,opts->gf);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_squared_norm_param_grad(opts->gf,0.5*opts->lambda,grad);
+        assert (res == 0);
+    }
+
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression penalizing second derivative
+************************************************************/
+double param_RLSD2regress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this function updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    struct GenericFunction * gf1 = generic_function_deriv(opts->gf);
+    struct GenericFunction * gf2 = generic_function_deriv(gf1);
+    double regularization = generic_function_inner(gf2,gf2);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_squared_norm_param_grad(gf2,0.5*opts->lambda,grad);
+        assert (res == 0);
+    }
+
+    generic_function_free(gf1); gf1 = NULL;
+    generic_function_free(gf2); gf2 = NULL;
+    return out;
+}
+
+/********************************************************//**
+    Ridge regression with an RKHS penalty
+************************************************************/
+double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad, void * arg)
+{
+
+    struct Regress1DOpts * opts = arg;
+    
+    // first part (recall this function updates parameters already!)
+    double ls_portion = param_LSregress_cost(dim,param,grad,arg);
+
+    // second part
+    double regularization =
+        generic_function_rkhs_squared_norm(opts->gf,
+                                           opts->decay_type,
+                                           opts->coeff_decay_param);
+
+    double out = ls_portion + 0.5*opts->lambda * regularization;
+    
+    if (grad != NULL){
+        int res = generic_function_rkhs_squared_norm_param_grad(opts->gf,opts->lambda,
+                                                                opts->decay_type,
+                                                                opts->coeff_decay_param,grad);
+        assert (res == 0);
+    }
+
+    return out;
+}
+
+/********************************************************//**
+    L1 penality
+************************************************************/
+
+/********************************************************//**
+    Create a generic function through regression of data
+
+    \return gf - generic function
+************************************************************/
+struct GenericFunction *
+generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer, int *info)
+{
+
+    struct GenericFunction * func = NULL;
+    // perform linear regression to generate the starting point
+
+    // Initialize generic function to this linear function
+
+    double val;
+    if (opts->atype == PARAMETRIC){
+        double * start = calloc_double(opts->nparam);
+        memmove(start,opts->init_param,opts->nparam*sizeof(double));
+        if (opts->rtype == LS) {
+            c3opt_add_objective(optimizer,param_LSregress_cost,opts);
+        }
+        else if (opts->rtype == RLS2){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLS2 regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            c3opt_add_objective(optimizer,param_RLS2regress_cost,opts);
+        }
+        else if (opts->rtype == RLSD2){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLSD2 regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            c3opt_add_objective(optimizer,param_RLSD2regress_cost,opts);
+        }
+        else if (opts->rtype == RLSRKHS){
+            if (opts->reg_param_set == 0){
+                printf("Must set regularization parameter for RLSRKHS regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            else if (opts->decay_type == NONE){
+                printf("Must set decay type for parameter for RLSRKHS regression\n");
+                free(start); start = NULL;
+                return NULL;
+            }
+            c3opt_add_objective(optimizer,param_RLSRKHSregress_cost,opts);
+        }
+        else if (opts->rtype == RLS1){
+            printf("L1 regularization not yet implemented\n");
+            free(start); start = NULL;
+            return NULL;
+            /* c3opt_add_objective(optimizer,param_RLS1regress_cost,opts); */
+        }
+        else{
+            printf("Parameteric regression type %d is not recognized\n",opts->rtype);
+            free(start); start = NULL;
+            return NULL;
+        }
+        
+
+        *info = c3opt_minimize(optimizer,start,&val);
+        /* if (*info > -1){ */
+            func = generic_function_create_with_params(opts->fc,opts->aopts,opts->nparam,start);
+        /* } */
+        free(start); start = NULL;
+    }
+    else if (opts->atype == NONPARAMETRIC){
+        printf("Non-parametric regression is not yet implemented\n");
+        return NULL;
+    }
+    else{
+        printf("Regression of type %d is not recognized\n",opts->atype);
+        return NULL;
+    }
+
+    return func;
+}
+
+
+

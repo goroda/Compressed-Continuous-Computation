@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 
 
@@ -107,7 +111,8 @@
 
                    
 #else
-    #include <gsl/gsl_cblas.h>
+    /* #include <gsl/gsl_cblas.h> */
+    #include <cblas.h>
     #include "f2c.h" // this is worrysome because it redfines ints and such 
     #include "clapack.h"
 
@@ -177,11 +182,26 @@
                    I,J,(integer *)K,(integer *)L,M,(integer *)N, \
                    (integer *)O,(integer *)P,(integer *)Q))
 
+    #define dgels_(X,Y,Z,A,B,C,D,E,F,G,H)                                   \
+            ( dgels_(X,(integer * )Y,(integer *)Z,(integer *)A,B,(integer *)C, \
+                       D, (integer *) E,F,(integer *)G,(integer *)H))
+
+    #define dgelsd_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K)                         \
+            ( dgelsd_( (integer *)X, (integer *)Y, (integer *)Z, \
+                       (doublereal *)A, (integer *)B, (doublereal *)C,  \
+                       (integer *)D, (doublereal *) E,                  \
+	                   (doublereal *)F, (integer *)G, (doublereal *)H, (integer *)I, \
+                           (integer *)J, (integer *)K))
+
 
 #endif
 
 #include "matrix_util.h"
 
+void c3linalg_multiple_vec_mat(size_t, size_t, size_t, const double *, size_t,
+                               const double *, size_t, double *,size_t);
+void c3linalg_multiple_mat_vec(size_t, size_t, size_t, const double *, size_t,
+                               const double *, size_t, double *,size_t);
 int qr(size_t, size_t, double *, size_t);
 void rq_with_rmult(size_t, size_t, double *, size_t, size_t, size_t, double *, size_t);
 void svd(size_t, size_t, size_t, double *, double *, double *, double *);
@@ -242,5 +262,5 @@ skeleton_func2(int (*Ap)(double *, double, size_t, size_t, double *,
                 void *),
                    void *, struct sk_decomp **,  double *, double *, 
                    double);
-
+void linear_ls(size_t, size_t, double *, double *, double *);
 #endif

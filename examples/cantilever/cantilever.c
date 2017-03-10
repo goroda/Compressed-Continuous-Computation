@@ -10,6 +10,8 @@
 #include "lib_funcs.h"
 #include "lib_probability.h"
 
+#include "c3_interface.h"
+
 static const double w = 4.0; // width
 static const double t = 2.0; // thickness
 static const double L = 100.0; // length

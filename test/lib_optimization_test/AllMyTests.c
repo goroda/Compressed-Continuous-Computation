@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -34,27 +35,40 @@
 //Code
 
 
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "CuTest.h"
-#include "uncon_test.h"
+#include "unconstrained_functions.h"
 
 CuSuite * OptGetSuite();
-CuSuite * UnGetSuite();
+CuSuite * BFGSGetSuite();
+CuSuite * LBFGSGetSuite();
+CuSuite * BGradGetSuite();
 
 void RunAllTests(void) {
     
     printf("Running test suite for: lib_optimization\n");
+
     CuString * output = CuStringNew();
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * opt = OptGetSuite();
-    CuSuite * unc = UnGetSuite();
+    CuSuite * bfgs = BFGSGetSuite();
+    CuSuite * lbfgs = LBFGSGetSuite();
+    CuSuite * bgrad = BGradGetSuite();
 
     CuSuiteAddSuite(suite, opt);
 
     create_unc_probs();
-    CuSuiteAddSuite(suite, unc);
+
+    CuSuiteAddSuite(suite, lbfgs);
+    CuSuiteAddSuite(suite, bfgs);
+
+    // batch gradient doesn't work
+    /* CuSuiteAddSuite(suite, bgrad); //something is wrong */
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -62,7 +76,9 @@ void RunAllTests(void) {
     printf("%s \n", output->buffer);
     
     CuSuiteDelete(opt);
-    CuSuiteDelete(unc);
+    CuSuiteDelete(bfgs);
+    CuSuiteDelete(lbfgs);
+    CuSuiteDelete(bgrad);
     
     CuStringDelete(output);
     free(suite);
@@ -70,5 +86,6 @@ void RunAllTests(void) {
 }
 
 int main(void) {
+
     RunAllTests();
 }

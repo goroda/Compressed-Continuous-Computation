@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,9 @@
 
 //Code
 
+
+
+
 /** \file fapprox.h
  * Provides header files and structure definitions for functions in fapprox.c 
  */
@@ -57,6 +61,8 @@ struct OneApproxOpts *
 one_approx_opts_ref(enum function_class, void **);
 void one_approx_opts_free(struct OneApproxOpts *);
 void one_approx_opts_free_deep(struct OneApproxOpts **);
+size_t one_approx_opts_get_nparams(const struct OneApproxOpts *);
+void   one_approx_opts_set_nparams(struct OneApproxOpts *, size_t);
 
 struct MultiApproxOpts;
 struct MultiApproxOpts * multi_approx_opts_alloc(size_t);
@@ -65,6 +71,8 @@ void multi_approx_opts_free_deep(struct MultiApproxOpts **);
 void multi_approx_opts_set_dim(struct MultiApproxOpts *,
                                size_t ,
                                struct OneApproxOpts *);
+void multi_approx_opts_set_dim_ref(struct MultiApproxOpts *,size_t,
+                                   struct OneApproxOpts **);
 void
 multi_approx_opts_set_all_same(struct MultiApproxOpts *,
                                struct OneApproxOpts *);
@@ -72,8 +80,8 @@ enum function_class
 multi_approx_opts_get_fc(const struct MultiApproxOpts *, size_t);
 void * multi_approx_opts_get_aopts(const struct MultiApproxOpts *, size_t);
 size_t multi_approx_opts_get_dim(const struct MultiApproxOpts *);
-void multi_approx_opts_set_dim_ref(struct MultiApproxOpts *,size_t,
-                                   struct OneApproxOpts **);
+size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts *, size_t);
+void   multi_approx_opts_set_dim_nparams(struct MultiApproxOpts *, size_t, size_t);
 
 struct FiberOptArgs;
 struct FiberOptArgs * fiber_opt_args_alloc();

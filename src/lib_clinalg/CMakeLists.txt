@@ -5,7 +5,6 @@ file(GLOB SRC_FILES
   diffusion.c
   dmrgprod.c
   dmrg.c
-  approximate.c
   indmanage.c
   ft.c
   qmarray.c

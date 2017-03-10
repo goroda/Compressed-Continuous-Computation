@@ -3,15 +3,19 @@ cmake_minimum_required (VERSION 2.6)
 add_subdirectory(lib_stringmanip)
 add_subdirectory(lib_array)
 add_subdirectory(lib_linalg)
+add_subdirectory(lib_optimization)
 add_subdirectory(lib_fft)
 add_subdirectory(lib_quadrature)
 add_subdirectory(lib_funcs)
 
 add_subdirectory(lib_clinalg)
+add_subdirectory(lib_superlearn)
+add_subdirectory(lib_interface)
+
 #add_subdirectory(lib_twodfuncs)
 add_subdirectory(lib_tensor)
 add_subdirectory(lib_tensdecomp)
-add_subdirectory(lib_optimization)
+
 add_subdirectory(lib_probability)
 
 
@@ -20,7 +24,8 @@ add_subdirectory(lib_probability)
 #set headers
 set(header lib_stringmanip/stringmanip.h
            lib_array/array.h
-           lib_clinalg/approximate.h
+           lib_superlearn/regress.h
+           lib_interface/c3_interface.h
            lib_clinalg/diffusion.h
            lib_clinalg/dmrg.h
            lib_clinalg/dmrgprod.h
@@ -37,6 +42,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_funcs/legtens.h
            lib_funcs/lib_funcs.h
            lib_funcs/linelm.h
+           lib_funcs/kernels.h
            lib_funcs/monitoring.h
            lib_funcs/piecewisepoly.h
            lib_funcs/pivoting.h
@@ -63,7 +69,8 @@ set(header lib_stringmanip/stringmanip.h
 
 
 set(src lib_array/array.c
-        lib_clinalg/approximate.c
+        lib_superlearn/regress.c
+        lib_interface/approximate.c
         lib_clinalg/diffusion.c
         lib_clinalg/dmrg.c
         lib_clinalg/dmrgprod.c
@@ -78,6 +85,7 @@ set(src lib_array/array.c
         lib_funcs/fwrap.c
         lib_funcs/hpoly.c
         lib_funcs/linelm.c
+        lib_funcs/kernels.c
         lib_funcs/monitoring.c
         lib_funcs/piecewisepoly.c
         lib_funcs/pivoting.c
@@ -119,6 +127,7 @@ target_link_libraries(c3
   ${blas_lapack}
   -lm
   )
+
 target_include_directories(c3 PUBLIC 
                      $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
                      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

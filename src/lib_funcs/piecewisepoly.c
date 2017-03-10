@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
+
 
 /** \file piecewisepoly.c
  * Provides routines for using piecewise polynomials
@@ -310,6 +315,30 @@ void pw_poly_opts_set_tol(struct PwPolyOpts * pw, double tol)
     assert (pw != NULL);
     pw->epsilon = tol;
 }
+
+
+/********************************************************//**
+*   Get number of free parameters
+*************************************************************/
+size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
+{
+    assert (opts != NULL);
+    fprintf(stderr, "Error: Cannot yet get number of free parameters from pw poly opts\n");
+    assert (1 == 0);
+    return 0;
+}
+
+/********************************************************//**
+*   Set number of free parameters
+*************************************************************/
+void pw_poly_opts_set_nparams(struct PwPolyOpts* opts, size_t num)
+{
+    (void)(num);
+    assert (opts != NULL);
+    fprintf(stderr, "Error: Cannot yet set number of free parameters from pw poly opts\n");
+    assert (1 == 0);
+}
+
 
 //////////////////////////////////////////////////////////////////
 
@@ -796,6 +825,27 @@ piecewise_poly_eval(const struct PiecewisePoly * poly, double x){
         }
     }
     return out;
+}
+
+/********************************************************//**
+*   Evaluate a piecewise polynomial
+*
+*   \param[in]     f    - function
+*   \param[in]     N    - number of evaluations
+*   \param[in]     x    - location at which to evaluate
+*   \param[in]     incx - increment of x
+*   \param[in,out] y    - allocated space for evaluations
+*   \param[in]     incy - increment of y*
+*
+*   \note Currently just calls the single evaluation code
+*         Note sure if this is optimal, cache-wise
+*************************************************************/
+void piecewise_poly_evalN(const struct PiecewisePoly * poly, size_t N,
+                          const double * x, size_t incx, double * y, size_t incy)
+{
+    for (size_t ii = 0; ii < N; ii++){
+        y[ii*incy] = piecewise_poly_eval(poly,x[ii*incx]);
+    }
 }
 
 /********************************************************//**

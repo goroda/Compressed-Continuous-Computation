@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,10 @@
 
 //Code
 
+
+
+
+
 /** \file hpoly.h
  * Provides header files and structure definitions for functions in in hpoly.c
  */
@@ -51,5 +56,7 @@
 struct OrthPoly * init_hermite_poly();
 double hermite_poly_expansion_eval(struct OrthPolyExpansion *, double);
 double hermite_integrate(struct OrthPolyExpansion *);
+int hermite_poly_expansion_param_grad_eval(
+    struct OrthPolyExpansion *, double, double *, size_t);
 
 #endif

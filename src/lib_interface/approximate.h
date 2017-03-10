@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,9 @@
 
 //Code
 
+
+
+
 /** \file approximate.h
  * Provides header files and structure definitions for functions in in approximate.c
  */
@@ -40,9 +44,10 @@
 #ifndef C3_APPROX_H
 #define C3_APPROX_H
 
-#include "ft.h"
+#include "lib_clinalg.h"
+#include "regress.h"
 
-enum C3ATYPE { CROSS, REGRESS };
+enum C3ATYPE { CROSS, REGRESS, C3UNSPEC };
 
 struct C3Approx;
 struct C3Approx * c3approx_create(enum C3ATYPE, size_t);
@@ -52,24 +57,43 @@ void c3approx_set_approx_opts_dim(struct C3Approx *,size_t,
                                   struct OneApproxOpts *);
 void c3approx_set_opt_opts_dim(struct C3Approx *, size_t,void *);
 
-//setting cross approximation arguments
+void c3approx_set_round_tol(struct C3Approx *, double);
+void c3approx_set_verbose(struct C3Approx *, int);
+
+///////////////////////////////////////
+// Cross approximation
+///////////////////////////////////////
 void c3approx_init_cross(struct C3Approx * c3a, size_t, int,
                         double **);
-void c3approx_set_round_tol(struct C3Approx *, double);
 void c3approx_set_cross_tol(struct C3Approx *, double);
-void c3approx_set_verbose(struct C3Approx *, int);
 void c3approx_set_adapt_kickrank(struct C3Approx *, size_t);
 void c3approx_set_adapt_maxrank_all(struct C3Approx *, size_t);
 //void c3approx_set_adapt_maxiter(struct C3Approx *, size_t);
 void c3approx_set_cross_maxiter(struct C3Approx *, size_t);
-
 // perform cross approximation
-struct FunctionTrain *
-c3approx_do_cross(struct C3Approx *,struct Fwrap *,int);
+struct FunctionTrain * c3approx_do_cross(struct C3Approx *,struct Fwrap *,int);
 
-//getting
+///////////////////////////////////////
+// Regression
+///////////////////////////////////////
+/* void c3approx_set_regress_type(struct C3Approx *, enum REGTYPE); */
+/* void c3approx_set_regress_start_ranks(struct C3Approx *, const size_t *); */
+/* void c3approx_set_regress_start_ranks(struct C3Approx *, size_t); */
+/* void c3approx_set_regress_num_param_per_func(struct C3Approx *, size_t); */
+/* void c3approx_init_regress(struct C3Approx *); */
+/* struct FunctionTrain * */
+/* c3approx_do_regress(struct C3Approx *, size_t, */
+/*                     const double *, size_t, */
+/*                     const double *, size_t, enum REGOBJ); */
+
+
+////////////////////
+// Getting
+////////////////////
 struct MultiApproxOpts * c3approx_get_approx_args(const struct C3Approx *);
 size_t c3approx_get_dim(const struct C3Approx *);
+
+
 
 
 #endif

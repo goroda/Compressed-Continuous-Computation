@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,13 +34,14 @@
 
 //Code
 
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "CuTest.h"
 #include "functest.h"
-
-
 
 void RunAllTests(void) {
     
@@ -49,19 +51,17 @@ void RunAllTests(void) {
     CuSuite * suite = CuSuiteNew();
     
     CuSuite * cheb = ChebGetSuite();
-    CuSuite * leg = LegGetSuite();
+    CuSuite * leg  = LegGetSuite();
     CuSuite * herm = HermGetSuite();
-    CuSuite * sp = StandardPolyGetSuite();
-    CuSuite * alg = PolyAlgorithmsGetSuite();
-    CuSuite * ser = PolySerializationGetSuite();
-    
+    CuSuite * sp   = StandardPolyGetSuite();
+    CuSuite * alg  = PolyAlgorithmsGetSuite();
+    CuSuite * ser  = PolySerializationGetSuite();
     CuSuite * lelm = LelmGetSuite();
-
-    CuSuite * ll = LinkedListGetSuite();
-
-    
-    CuSuite * pp = PiecewisePolyGetSuite();
-    CuSuite * pap = PolyApproxSuite();
+    CuSuite * ll   = LinkedListGetSuite();
+    CuSuite * pp   = PiecewisePolyGetSuite();
+    CuSuite * pap  = PolyApproxSuite();
+    CuSuite * preg = PolyRegressionSuite();
+    CuSuite * kern = KernGetSuite();
 
     // polynomials
     CuSuiteAddSuite(suite, cheb);
@@ -70,15 +70,18 @@ void RunAllTests(void) {
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
-
     // linear elements
     CuSuiteAddSuite(suite, lelm);
-
     // other stuff
     CuSuiteAddSuite(suite, ll);
-    
     CuSuiteAddSuite(suite, pp);
     CuSuiteAddSuite(suite, pap);
+
+    // Regression
+    CuSuiteAddSuite(suite, preg);
+
+    // Kernels
+    CuSuiteAddSuite(suite, kern);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
@@ -91,14 +94,13 @@ void RunAllTests(void) {
     CuSuiteDelete(sp);
     CuSuiteDelete(alg);
     CuSuiteDelete(ser);
-    
     CuSuiteDelete(lelm);
-    
     CuSuiteDelete(ll);
-    
     CuSuiteDelete(pp);
-
     CuSuiteDelete(pap);
+    CuSuiteDelete(preg);
+    CuSuiteDelete(kern);
+        
     CuStringDelete(output);
     free(suite);
 }

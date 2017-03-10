@@ -20,6 +20,7 @@ add_subdirectory(lib_quadrature_test)
 add_subdirectory(lib_funcs_test)
 
 add_subdirectory(lib_clinalg_test)
+add_subdirectory(lib_superlearn_test)
 add_subdirectory(lib_optimization_test)
 
 # add_subdirectory(lib_clinalg_test2)

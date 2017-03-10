@@ -3,9 +3,11 @@ cmake_minimum_required (VERSION 2.6)
 
 add_executable(functest functest.c)
 target_link_libraries(functest -g
+  approx_interface
   prob
   clinalg 
-  funcs 
+  funcs
+  opt 
   quadrature 
   linalg 
   array 

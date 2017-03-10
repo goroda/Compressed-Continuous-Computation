@@ -5,6 +5,7 @@ file(GLOB SRC_FILES
     piecewisepoly.c
     hpoly.c
     linelm.c
+    kernels.c
     fapprox.c
     functions.c
     monitoring.c
@@ -18,7 +19,8 @@ if ( ${static_libs} )
 else ()
     add_library(funcs SHARED ${SRC_FILES} )
     target_link_libraries(funcs 
-        -fPIC 
+        -fPIC
+        opt
         quadrature 
         array
         stringmanip

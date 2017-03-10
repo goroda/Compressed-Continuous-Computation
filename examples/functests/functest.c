@@ -10,6 +10,7 @@
 #include "lib_funcs.h"
 #include "lib_probability.h"
 
+#include "c3_interface.h"
 
 double doug(const double * x, void * args)
 {

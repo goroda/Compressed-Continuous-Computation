@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,9 @@
 
 //Code
 
+
+
+
 /** \file ft.h 
  Provides header files for ft.c 
 */
@@ -42,6 +46,8 @@
 
 #include "qmarray.h"
 #include "indmanage.h"
+
+struct FTMemSpace;
 
 /** \struct FunctionTrain
  * \brief Functrain train
@@ -57,9 +63,15 @@ struct FunctionTrain {
     size_t * ranks;
     struct Qmarray ** cores;
     
-    double * evalspace1;
-    double * evalspace2;
-    double * evalspace3;
+    /* double * evalspace1; */
+    /* double * evalspace2; */
+    /* double * evalspace3; */
+
+    struct FTMemSpace * evalspace1;
+    struct FTMemSpace * evalspace2;
+    struct FTMemSpace * evalspace3;
+
+    struct FTMemSpace ** evalspace4;
 
     double ** evaldd1;
     double ** evaldd2;
@@ -90,7 +102,78 @@ size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
 
 // evaluators
+void function_train_eval_up_to_core(struct FunctionTrain *,
+                                    size_t, const double *,
+                                    double *, size_t *);
 double function_train_eval(struct FunctionTrain *, const double *);
+
+size_t function_train_func_get_nparams(const struct FunctionTrain *,
+                                     size_t, size_t, size_t);
+size_t function_train_core_get_nparams(const struct FunctionTrain *,
+                                       size_t,size_t *);
+size_t function_train_get_nparams(const struct FunctionTrain *);
+size_t function_train_core_get_params(const struct FunctionTrain *,
+                                      size_t,double *);
+size_t function_train_get_params(const struct FunctionTrain *,
+                                 double *);
+void function_train_core_update_params(struct FunctionTrain *, size_t,
+                                       size_t, const double *);
+size_t function_train_update_params(struct FunctionTrain *, const double *);
+
+struct RunningCoreTotal;
+struct RunningCoreTotal * running_core_total_alloc(size_t);
+struct RunningCoreTotal ** running_core_total_arr_alloc(size_t,size_t);
+void running_core_total_free(struct RunningCoreTotal *);
+void running_core_total_arr_free(size_t, struct RunningCoreTotal **);
+void running_core_total_restart(struct RunningCoreTotal *);
+void running_core_total_arr_restart(size_t, struct RunningCoreTotal **);
+struct RunningCoreTotal * ftutil_running_tot_space(struct FunctionTrain *);
+struct RunningCoreTotal ** ftutil_running_tot_space_eachdim(struct FunctionTrain *);
+void function_train_param_grad_eval(struct FunctionTrain *, size_t,
+                                    const double *,
+                                    struct RunningCoreTotal *,
+                                    struct RunningCoreTotal *,
+                                    struct RunningCoreTotal **, size_t *,
+                                    double *, double *,
+                                    double *,
+                                    size_t, double *);
+void function_train_linparam_grad_eval(struct FunctionTrain *, size_t,
+                                       const double *,
+                                       struct RunningCoreTotal *,
+                                       struct RunningCoreTotal *,
+                                       struct RunningCoreTotal **, size_t *,
+                                       double *, double *,
+                                       double **,
+                                       size_t *);
+
+void function_train_core_pre_post_run(struct FunctionTrain *, size_t,
+                                      size_t, const double *,
+                                      struct RunningCoreTotal *,
+                                      struct RunningCoreTotal *);
+void function_train_core_param_grad_eval(struct FunctionTrain *,
+                                         size_t,
+                                         size_t,
+                                         const double *,
+                                         struct RunningCoreTotal *,
+                                         struct RunningCoreTotal *,
+                                         struct RunningCoreTotal *, size_t,
+                                         double *, double *, double *,
+                                         size_t, double *);
+
+void function_train_core_linparam_grad_eval(
+    struct FunctionTrain *,
+    size_t, size_t,
+    const double *,
+    struct RunningCoreTotal *,
+    struct RunningCoreTotal *,
+    struct RunningCoreTotal *,
+    size_t,
+    double *, double *,
+    double *,
+    size_t);
+
+double function_train_param_grad_sqnorm(struct FunctionTrain *, double *, double *);
+
 double function_train_eval_ind(struct FunctionTrain *, const size_t *);
 double function_train_eval_co_perturb(struct FunctionTrain *, 
                                       const double *, const double *, 
@@ -112,6 +195,8 @@ struct FunctionTrain *
 function_train_rankone(struct MultiApproxOpts *, struct Fwrap *);
 struct FunctionTrain *
 function_train_initsum(struct MultiApproxOpts *, struct Fwrap *);
+struct FunctionTrain *
+function_train_zeros(struct MultiApproxOpts *, const size_t *);
 struct FunctionTrain *
 function_train_constant(double a, struct MultiApproxOpts *);
 struct FunctionTrain *

@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,11 +33,16 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
 
-enum c3opt_alg {NEWTON, BFGS, BRUTEFORCE};
+enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE, WEAKWOLFE};
+
+enum c3opt_alg {BFGS, LBFGS, BATCHGRAD, BRUTEFORCE};
 enum c3opt_return {
     C3OPT_LS_PARAM_INVALID=-4,
     C3OPT_LS_MAXITER_REACHED=-3,
@@ -49,14 +55,22 @@ enum c3opt_return {
 };
 
 struct c3Opt;
+struct c3Opt * c3opt_create(enum c3opt_alg);
+void c3opt_set_nvars(struct c3Opt *, size_t);
 struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);
+
+void c3opt_set_nvectors_store(struct c3Opt *, size_t);
+size_t c3opt_get_nvectors_store(const struct c3Opt *);
+void c3opt_set_lbfgs_scale(struct c3Opt *, int);
+int c3opt_get_lbfgs_scale(struct c3Opt *);
+
 int c3opt_is_bruteforce(struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);
 void c3opt_add_ub(struct c3Opt *, double *);
 void c3opt_add_objective(struct c3Opt *,
-                         double (*)(size_t, double *, double *,void *),
+                         double (*)(size_t, const double *, double *,void *),
                          void *);
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
@@ -68,12 +82,35 @@ size_t c3opt_get_ngvals(struct c3Opt *);
 
 void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
-void c3opt_ls_set_alpha(struct c3Opt *,double);
+
+void c3opt_set_storage_options(struct c3Opt *, int, int, int);
+void c3opt_print_stored_values(struct c3Opt *, FILE *, int, int);
+    
+int c3opt_ls_get_initial(const struct c3Opt *);
+
+void c3opt_ls_set_alg(struct c3Opt *, enum c3opt_ls_alg);
+enum c3opt_ls_alg c3opt_ls_get_alg(const struct c3Opt *);
+
+void   c3opt_ls_set_alpha(struct c3Opt *,double);
 double c3opt_ls_get_alpha(struct c3Opt *);
-void c3opt_ls_set_beta(struct c3Opt *,double);
+
+void   c3opt_ls_set_beta(struct c3Opt *,double);
 double c3opt_ls_get_beta(struct c3Opt *);
-void c3opt_ls_set_maxiter(struct c3Opt *,size_t);
+
+void   c3opt_ls_set_maxiter(struct c3Opt *,size_t);
 size_t c3opt_ls_get_maxiter(struct c3Opt *);
+
+void c3opt_ls_set_alg(struct c3Opt *, enum c3opt_ls_alg);
+
+
+
+double c3opt_ls_wolfe_bisect(struct c3Opt *, double *, double,
+                             double *, double *,
+                             double *, double *, int *);
+double c3opt_ls_strong_wolfe(struct c3Opt *, double *, double,
+                             double *, double *,
+                             double *, double *, int *);
+
 
 void c3opt_set_brute_force_vals(struct c3Opt *, size_t, double *);
 
@@ -81,8 +118,25 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
-double c3opt_eval(struct c3Opt *, double *, double *);
-double c3opt_check_deriv(struct c3Opt *, double *, double);
+double c3opt_eval(struct c3Opt *, const double *, double *);
+double c3opt_check_deriv(struct c3Opt *, const double *, double);
+double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
+
+
+// LBFGS STUFF
+struct c3opt_lbfgs_list;
+struct c3opt_lbfgs_list * c3opt_lbfgs_list_alloc(size_t,size_t);
+void c3opt_lbfgs_list_insert(struct c3opt_lbfgs_list *, size_t,
+                             const double *, const double *,
+                             const double *, const double *);
+void c3opt_lbfgs_reset_step(struct c3opt_lbfgs_list *);
+void c3opt_lbfgs_list_step(struct c3opt_lbfgs_list *, size_t *, double **, double **, double *);
+void c3opt_lbfgs_list_step_back(struct c3opt_lbfgs_list *, size_t *, double **, double **, double *);
+void c3opt_lbfgs_list_print(struct c3opt_lbfgs_list *, FILE *, int, int);
+void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list *);
+/* int c3Opt_lbfgs(struct c3Opt * opt, */
+/*                 double * x, double * fval, double * grad) */
+
 void
 newton(double **, size_t, double, double,
         double * (*)(double *, void *),

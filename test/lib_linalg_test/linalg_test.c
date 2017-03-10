@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2015, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -32,6 +33,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
+
+
 
 
 
@@ -305,6 +309,37 @@ void Test_kron_col(CuTest * tc)
     }
 }
 
+
+void Test_linear_ls(CuTest * tc)
+{
+    printf("Testing Function: linear_ls\n");
+
+    size_t nparam = 5;
+    double param[5] = { 0.2, 0.3, 0.9, -0.2, 0.1};
+
+    size_t nrows = 8;
+    double * x = calloc_double(nparam*nrows);
+    double * y = calloc_double(nrows);
+    for (size_t ii = 0; ii < nrows; ii++){
+        for (size_t jj = 0; jj < nparam; jj++){
+            x[jj*nrows+ii] = randn();
+            y[ii] += param[jj]*x[jj*nrows+ii];
+        }
+    }
+
+    double * sol = calloc_double(nparam);
+    linear_ls(nrows,nparam,x,y,sol);
+
+    /* dprint(nparam,sol); */
+    for (size_t ii = 0; ii < nparam; ii++){
+        CuAssertDblEquals(tc,param[ii],sol[ii],1e-14);
+    }
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    free(sol); sol = NULL;
+}
+
 CuSuite * LinalgGetSuite(){
     //printf("----------------------------\n");
 
@@ -316,5 +351,6 @@ CuSuite * LinalgGetSuite(){
     SUITE_ADD_TEST(suite, Test_vec_kron);
     SUITE_ADD_TEST(suite, Test_maxvol_rhs);
     SUITE_ADD_TEST(suite, Test_kron_col);
+    SUITE_ADD_TEST(suite, Test_linear_ls);
     return suite;
 }

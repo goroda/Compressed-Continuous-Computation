@@ -7,6 +7,7 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 #include "lib_funcs.h"
+#include "c3_interface.h"
 
 double disc2d(const double * xy, void * args)
 {

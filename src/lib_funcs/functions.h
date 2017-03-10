@@ -1,8 +1,9 @@
-// Copyright (c) 2014-2016, Massachusetts Institute of Technology
-//
-// This file is part of the Compressed Continuous Computation (C3) toolbox
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+
+// This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
-// Contact: goroda@mit.edu
+// Contact: alex@alexgorodetsky.com
 
 // All rights reserved.
 
@@ -33,6 +34,10 @@
 
 //Code
 
+
+
+
+
 /** \file functions.h
  * Provides header files and structure definitions for functions in functions.c 
  */
@@ -46,8 +51,11 @@
 #include "piecewisepoly.h"
 #include "hpoly.h"
 #include "linelm.h"
+#include "kernels.h"
 #include "fwrap.h"
 #include "pivoting.h"
+
+#include "lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -114,6 +122,8 @@ deserialize_generic_function(unsigned char *, struct GenericFunction ** );
 
 // special initializers
 struct GenericFunction * 
+generic_function_zero(enum function_class, void *, int);
+struct GenericFunction * 
 generic_function_constant(double, enum function_class,void *);
 struct GenericFunction * 
 generic_function_linear(double, double,enum function_class, void *);
@@ -150,6 +160,8 @@ void generic_function_roundt(struct GenericFunction **, double);
 
 
 double generic_function_1d_eval(const struct GenericFunction *, double);
+void generic_function_1d_evalN(const struct GenericFunction *, size_t,
+                               const double *, size_t, double *, size_t);
 double generic_function_1d_eval_ind(const struct GenericFunction *, size_t);
 double * generic_function_1darray_eval(size_t, 
                                        struct GenericFunction **, 
@@ -157,8 +169,14 @@ double * generic_function_1darray_eval(size_t,
 double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
                                          struct Pivot * piv);
 void generic_function_1darray_eval2(size_t, 
-                                    struct GenericFunction **, 
+                                    struct GenericFunction **,
                                     double,double *);
+void
+generic_function_1darray_eval2N(size_t, 
+                                struct GenericFunction **,
+                                size_t, const double *, size_t,
+                                double *, size_t);
+
 void
 generic_function_1darray_eval2_ind(size_t, 
                                    struct GenericFunction **, 
@@ -273,8 +291,60 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
                                              size_t,size_t,
                                              struct c3Vector *);
 
+
+
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+// Regression functions
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+enum approx_type {PARAMETRIC, NONPARAMETRIC};
+// least squares, L2 Regularized Least Squares, L2 with 2nd derivative penalized
+//  RKHS regularized LS
+enum regress_type {LS, RLS2, RLSD2 , RLSRKHS, RLS1};
+
+
+struct Regress1DOpts;
+struct Regress1DOpts *
+regress_1d_opts_create(enum approx_type, enum regress_type,
+                       size_t, const double *, const double *);
+void regress_1d_opts_destroy(struct Regress1DOpts *);
+size_t generic_function_get_num_params(const struct GenericFunction *);
+size_t generic_function_get_params(const struct GenericFunction *, double *);
+void regress_1d_opts_set_parametric_form(struct Regress1DOpts *, enum function_class, void *);
+void regress_1d_opts_set_initial_parameters(struct Regress1DOpts *, const double *);
+
+
+struct GenericFunction *
+generic_function_create_with_params(enum function_class,void *,size_t,const double*);
+void
+generic_function_update_params(struct GenericFunction *, size_t,const double *);
+
+int generic_function_param_grad_eval(const struct GenericFunction *, size_t,
+                                     const double *, double *);
+int
+generic_function_squared_norm_param_grad(const struct GenericFunction *,
+                                         double, double *);
+void regress_1d_opts_set_regularization_penalty(struct Regress1DOpts *, double);
+void regress_1d_opts_set_RKHS_decay_rate(struct Regress1DOpts *, enum coeff_decay_type, double);
+
+
+double param_LSregress_cost(size_t, const double *, double *, void *);
+double param_RLS2regress_cost(size_t, const double *, double *, void *);
+double param_RLSD2regress_cost(size_t, const double *, double *, void *);
+double param_RLSRKHSregress_cost(size_t, const double *, double *, void *);
+struct GenericFunction *
+generic_function_regress1d(struct Regress1DOpts *, struct c3Opt *, int *);
+
 ////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 // High dimensional helper functions
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 
 /** \struct FiberCut
  *  \brief Interface to convert a multidimensional function to a one dimensional function
