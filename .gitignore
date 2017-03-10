@@ -31,6 +31,8 @@ benchmarks/scalardiffusion/dat/*
 benchmarks/scalardiffusion/bin/*
 benchmarks/linelmconv/bin/*
 
+*.c3
+
 fileheaders.txt
 update_file_headers.py
 add_license_split.py

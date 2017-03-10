@@ -46,7 +46,7 @@
 #define FUNCTIONS_H
 
 /* #include "../lib_array/array.h" */
-#include "array.h"
+#include "../lib_array/array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
 #include "hpoly.h"
