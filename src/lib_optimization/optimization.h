@@ -42,7 +42,7 @@
 
 enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE, WEAKWOLFE};
 
-enum c3opt_alg {BFGS, LBFGS, BATCHGRAD, BRUTEFORCE};
+enum c3opt_alg {BFGS, LBFGS, BATCHGRAD, BRUTEFORCE, SGD};
 enum c3opt_return {
     C3OPT_LS_PARAM_INVALID=-4,
     C3OPT_LS_MAXITER_REACHED=-3,
@@ -61,6 +61,8 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);
 
+void c3opt_set_sgd_nsamples(struct c3Opt *, size_t);
+size_t c3opt_get_sgd_nsamples(const struct c3Opt *);
 void c3opt_set_nvectors_store(struct c3Opt *, size_t);
 size_t c3opt_get_nvectors_store(const struct c3Opt *);
 void c3opt_set_lbfgs_scale(struct c3Opt *, int);
@@ -72,6 +74,10 @@ void c3opt_add_ub(struct c3Opt *, double *);
 void c3opt_add_objective(struct c3Opt *,
                          double (*)(size_t, const double *, double *,void *),
                          void *);
+void c3opt_add_objective_stoch(
+    struct c3Opt *,
+    double(*)(size_t,size_t,const double *,double *,void *),
+    void *);
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
 void c3opt_set_absxtol(struct c3Opt *, double);
@@ -119,6 +125,7 @@ int c3opt_minimize(struct c3Opt *, double *, double *);
 double * c3opt_get_lb(struct c3Opt *);
 double * c3opt_get_ub(struct c3Opt *);
 double c3opt_eval(struct c3Opt *, const double *, double *);
+double c3opt_eval_stoch(struct c3Opt *, size_t, const double *, double *);
 double c3opt_check_deriv(struct c3Opt *, const double *, double);
 double c3opt_check_deriv_each(struct c3Opt *, const double *, double, double *);
 

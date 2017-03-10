@@ -251,6 +251,9 @@ struct RegressOpts
     double als_conv_tol;
 
     size_t * restrict_rank_opt;
+
+
+    int stoch_obj; // 1 for stochastic obj, 0 for not
 };
 
 
@@ -288,9 +291,10 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     ropts->dim = dim;
     ropts->als_conv_tol = 1e-5;
     ropts->restrict_rank_opt = calloc_size_t(dim);
+
+    ropts->stoch_obj = 0;
     return ropts;
 }
-
 
 /***********************************************************//**
     Allocate default regression options for a problem type
@@ -340,6 +344,18 @@ regress_opts_create(size_t dim, enum REGTYPE type, enum REGOBJ obj)
     return opts;
 }
 
+
+/***********************************************************//**
+    Set option specifying will use a stochastic optimizer
+    
+    \param[in,out] ropts - regression structure
+    \param[in]     on  - 1 for yes, 0 for no
+***************************************************************/
+void regress_opts_set_stoch_obj(struct RegressOpts * ropts, int on)
+{
+    assert (ropts != NULL);
+    ropts->stoch_obj = on;
+}
 
 /***********************************************************//**
     Set maximum number of als sweeps
@@ -1382,10 +1398,9 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
 
 
     double out = 0.0;
-    if (regopts->obj == FTLS){
-        out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
-    }
-    else if (regopts->obj == FTLS_SPARSEL2){        
+    out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
+    
+    if (regopts->obj == FTLS_SPARSEL2){        
         out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
 
         double * weights = calloc_double(ftp->dim);
@@ -1396,9 +1411,7 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
         out += regval;
         free(weights); weights = NULL;
     }
-    else{
-        assert (1 == 0);
-    }
+    
 
     if (alloc_mem == 1){
         regression_mem_manager_free(mem_here); mem_here = NULL;
@@ -1516,6 +1529,61 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     return eval;
 }
 
+/***********************************************************//**
+    General all-at-once regression objective for c3opt optimizer
+    when stochastic optimization used
+
+    \param[in]     nparam - number of parameters
+    \param[in]     ind    - index of data point
+    \param[in]     param  - parameter values
+    \param[in,out] grad   - gradient (doesn't evaluate if NULL)
+    \param[in,out] args   - additional arguments to optimizer
+
+    \returns evaluation
+***************************************************************/
+double regress_opts_stoch_minimize_aio(size_t nparam, size_t ind,
+                                       const double * param,
+                                       double * grad, void * args)
+{
+    (void)(nparam);
+
+    printf("ind = %zu\n",ind);
+    struct PP * pp = args;
+
+    // check if special structure exists / initialized
+    regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);
+    regress_mem_manager_reset_running(pp->mem);
+
+    size_t dim = pp->ftp->dim;
+    
+    int restrict_needed = restrict_ranksp(pp->opts);
+    double eval;
+    if (restrict_needed == 0){
+        ft_param_update_params(pp->ftp,param);
+        if (grad != NULL){
+            for (size_t ii = 0; ii < nparam; ii++){
+                grad[ii] = 0.0;
+            }
+        }
+        eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad);
+        printf("eval = %G\n",eval);
+    }
+    else{
+        ft_param_update_restricted_ranks(pp->ftp,param,pp->opts->restrict_rank_opt);
+        if (grad != NULL){
+            double * grad_use = calloc_double(pp->ftp->nparams);
+            eval = ft_param_eval_objective_aio_ls(pp->ftp,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad_use);
+            extract_restricted_vals(pp->opts,pp->ftp,grad_use,grad);
+            free(grad_use); grad_use = NULL;
+        }
+        else{
+            eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad);
+        }
+    }
+
+    return eval;
+}
+
 
 /***********************************************************//**
     Run all-at-once regression and return the result
@@ -1568,7 +1636,15 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 
     double val;
     c3opt_set_nvars(optimizer,nparams);
-    c3opt_add_objective(optimizer,regress_opts_minimize_aio,&pp);
+
+    if (ropts->stoch_obj == 0){
+        c3opt_add_objective(optimizer,regress_opts_minimize_aio,&pp);
+    }
+    else{
+        printf("adding stochastic minimizer!\n");
+        c3opt_add_objective_stoch(optimizer,regress_opts_stoch_minimize_aio,&pp);
+    }
+    
     int res = c3opt_minimize(optimizer,guess,&val);
     if (res < -1){
         fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
@@ -1676,6 +1752,8 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             pp.y = y;
 
             c3opt_set_nvars(optimizer,ftp->nparams_per_core[ii]);
+
+            assert (ropts->stoch_obj == 0);
             c3opt_add_objective(optimizer,regress_opts_minimize_als,&pp);
             
             double * guess = calloc_double(ftp->nparams_per_core[ii]);
@@ -1834,7 +1912,7 @@ struct FTRegress
     size_t kfold;
     int finalize;
     int opt_restricted;
-    
+
 };
 
 /***********************************************************//**
@@ -1869,9 +1947,23 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
     ftr->kfold = 3;
     ftr->finalize = 1;
     ftr->opt_restricted = 0;
-    
+
     return ftr;
 }
+
+/***********************************************************//**
+    Set option specifying will use a stochastic optimizer
+    
+    \param[in,out] ftr - regression structure
+    \param[in]     on  - 1 for yes, 0 for no
+***************************************************************/
+void ft_regress_set_stoch_obj(struct FTRegress * ftr, int on)
+{
+    assert (ftr != NULL);
+    assert (ftr->regopts != NULL);
+    regress_opts_set_stoch_obj(ftr->regopts,on);
+}
+
 
 /***********************************************************//**
     Turn on/off adaptation

@@ -1009,6 +1009,84 @@ void Test_LS_AIO_new(CuTest * tc)
 }
 
 
+void Test_LS_AIO_new_sgd(CuTest * tc)
+{
+    srand(seed);
+    printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n");
+    printf("with stochastic gradient descent\n");
+    printf("\t  Dimensions: 5\n");
+    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
+    printf("\t  LPOLY order: 3\n");
+    printf("\t  nunknowns:   108\n");
+    printf("\t  ndata:       500\n");
+
+    size_t dim = 5;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    /* size_t ranks[3] = {1,3,1}; */
+    size_t ranks[6] = {1,3,2,4,2,1};
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a =
+        function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    
+    // create data
+    size_t ndata = 500;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        y[ii] = function_train_eval(a,x+ii*dim);
+    }
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    struct c3Opt * optimizer = c3opt_create(SGD);
+    c3opt_set_sgd_nsamples(optimizer,ndata);
+    c3opt_set_maxiter(optimizer,10);
+    
+    struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
+    ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+    ft_regress_set_stoch_obj(reg,1);
+    struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y);
+
+    double diff = function_train_relnorm2diff(ft2,a);
+    printf("\t  Relative Error from higher level interface = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-4);
+    
+    ft_regress_free(reg);     reg = NULL;
+    function_train_free(ft2); ft2 = NULL;
+
+    c3opt_free(optimizer); optimizer = NULL;
+    bounding_box_free(bds);   bds  = NULL;
+    function_train_free(a);   a    = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
+
 static double lin_func(double * x){
     double w[5] = {0.2, -0.2, 0.4, 0.3, -0.1};
 
@@ -2820,42 +2898,43 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     // next 3 are good
-    SUITE_ADD_TEST(suite, Test_LS_ALS);
-    SUITE_ADD_TEST(suite, Test_LS_ALS2);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
 
-    /* // next 5 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
-    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
-    SUITE_ADD_TEST(suite, Test_LS_AIO);
-    SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO3);
+    /* /\* // next 5 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
 
-    /* // next 4 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
+    /* /\* // next 4 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     
-    /* /\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\/ */
+    /* /\* /\\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\\/ *\/ */
 
-    /* // Next 2 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
+    /* /\* // Next 2 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
 
-    /* // next 2 are good */
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
+    /* /\* // next 2 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
 
-    /* // Next 3 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rounding);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
+    /* /\* // Next 3 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rounding); */
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt); */
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
         
     // takes too many points
 
