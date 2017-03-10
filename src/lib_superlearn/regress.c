@@ -483,6 +483,7 @@ struct RegressionMemManager
 
     double ** lin_structure_vals;
     size_t * lin_structure_inc;
+
 };
 
 
@@ -1165,6 +1166,7 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
                 mem->lin_structure_vals, mem->lin_structure_inc);
         }
         else{
+            /* printf("in here\n"); */
             function_train_param_grad_eval(
                 ftp->ft,
                 N, x,
@@ -1177,7 +1179,8 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
         }
         
         for (size_t ii = 0; ii < N; ii++){
-            /* printf("grad = "); dprint(ftp->nparams,regopts->mem->grad->vals + ii * ftp->nparams); */
+            /* printf("grad = "); dprint(ftp->nparams,mem->grad->vals + ii * ftp->nparams); */
+            /* printf("eval = %G\n",mem->evals->vals[ii]); */
             resid = y[ii] - mem->evals->vals[ii];
             out += 0.5 * resid * resid;
             cblas_daxpy(ftp->nparams, -resid,
@@ -1390,12 +1393,12 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
         mem_here = regress_mem_manager_alloc(ftp->dim,N,
                                              ftp->nparams_per_core,ranks,
                                              ftp->max_param_uni,LINEAR_ST);
+        /* printf("SHOULD NOT BE HERE\n"); */
     }
     int check_mem = regress_mem_manager_enough(mem_here,N);
     if (check_mem == 0){
         assert (1 == 0);
     }
-
 
     double out = 0.0;
     out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
@@ -1547,7 +1550,7 @@ double regress_opts_stoch_minimize_aio(size_t nparam, size_t ind,
 {
     (void)(nparam);
 
-    printf("ind = %zu\n",ind);
+    /* printf("ind = %zu\n",ind); */
     struct PP * pp = args;
 
     // check if special structure exists / initialized
@@ -1566,7 +1569,15 @@ double regress_opts_stoch_minimize_aio(size_t nparam, size_t ind,
             }
         }
         eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad);
-        printf("eval = %G\n",eval);
+        /* printf("eval = %G\n",eval); */
+        /* if (isnan(eval)){ */
+        /*     fprintf(stderr,"eval is NaN\n"); */
+        /*     exit(1); */
+        /* } */
+        /* if (isinf(eval)){ */
+        /*     fprintf(stderr,"eval is inf\n"); */
+        /*     exit(1); */
+        /* } */
     }
     else{
         ft_param_update_restricted_ranks(pp->ftp,param,pp->opts->restrict_rank_opt);
@@ -1604,7 +1615,11 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 {
 
     size_t * ranks = function_train_get_ranks(ftp->ft);
-    enum FTPARAM_ST structure = LINEAR_ST;
+
+    enum FTPARAM_ST structure = NONE_ST;
+    if (ropts->stoch_obj == 0){
+        structure = LINEAR_ST;
+    }
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
                                   ftp->nparams_per_core,ranks,
@@ -1641,7 +1656,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
         c3opt_add_objective(optimizer,regress_opts_minimize_aio,&pp);
     }
     else{
-        printf("adding stochastic minimizer!\n");
+        /* printf("adding stochastic minimizer!\n"); */
         c3opt_add_objective_stoch(optimizer,regress_opts_stoch_minimize_aio,&pp);
     }
     

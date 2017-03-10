@@ -1587,19 +1587,126 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
     // shuffle the order, first half will be training set, second will be validation test
     shuffle(ndata,order);
-    size_t ndata_train = ndata / 2;
+    size_t ndata_train = ndata / 1.1;
     size_t ndata_validate = ndata - ndata_train;
 
+    if (verbose > 0){
+        printf("Stochastic Gradient descent\n");
+        printf("---------------------------\n\n");
+        
+        printf("ndata = %zu\n",ndata);
+        printf("ndata_train = %zu\n",ndata_train);
+        printf("ndata_validate = %zu\n",ndata_validate);
+    }
+    
     int ret = C3OPT_SUCCESS;
     
     size_t iter = 0;
     double train_error = 0;
     double test_error = 0;
-    double learn_rate = 0.1;
+    double learn_rate = 1e0;
 
-    printf("\n");
-    printf("%22s|%22s|%22s\n","Epoch         "," Training Error    ", "    Validation Error     ");
-    printf("---------------------------------------------------------------\n");
+
+    if (verbose > 0){
+        printf("Finding best learning rate\n");
+    }
+    int learn_found = 0;
+    int learn_iter = 0;
+
+    while (learn_found == 0){
+        memmove(workspace+d,x,d*sizeof(double));
+        int decreased = 0;
+
+        if (verbose > 0){
+            printf("\t Current rate = %G\n",learn_rate);
+        }
+        size_t nfind = ndata_train/2;
+        shuffle(nfind,order);
+        for (size_t ii = 0; ii < nfind; ii++){
+            *fval = c3opt_eval_stoch(opt,order[ii],workspace+d,workspace);
+            if (isnan(*fval)){
+                if (verbose > 0){
+                    printf("\t\t eval is NaN, decreasing learning rate\n");
+                }
+                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
+                learn_rate /= 10.0;
+                decreased = 1;
+                break;
+                /* exit(1); */
+            }
+            if (isinf(*fval)){
+                if (verbose > 0){
+                    printf("\t\t eval is Inf, decreasing learning rate\n");
+                }
+                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
+                learn_rate /= 10.0;
+                decreased = 1;
+                break;
+            }
+            cblas_daxpy(d,-learn_rate,workspace,1,workspace+d,1);
+        }
+
+        if (decreased == 0){
+            // no infs or NaNs, now check if there is divergence
+            double hyp_train_err_old = 10;
+            double hyp_train_err;
+            size_t nhyp_error_increase = 0;
+            for (size_t jj = 0; jj < 100; jj++){
+
+                for (size_t jj = 0; jj < nfind; jj++){
+                    *fval = c3opt_eval_stoch(opt,order[jj],workspace+d,workspace);
+                    cblas_daxpy(d,-learn_rate,workspace,1,workspace+d,1);
+                }
+                
+                hyp_train_err = 0.0;
+                for (size_t ii = 0; ii < nfind; ii++){
+                    hyp_train_err += c3opt_eval_stoch(opt,order[ii],x,NULL);
+                }
+
+                if (jj > 0){
+                    if (hyp_train_err > hyp_train_err_old){
+                        nhyp_error_increase+=1;
+                    }
+                    else{
+                        nhyp_error_increase = 0;
+                    }
+                    hyp_train_err_old = hyp_train_err;
+                }
+
+                if (nhyp_error_increase > 3){
+                    if (verbose > 0){
+                        printf("\t\t training error diverges, decreasing learning rate\n");
+                    }
+                    learn_rate /= 10.0;
+                    decreased = 1;
+                    break;
+                }
+            }
+        }
+
+
+        if (decreased == 0){
+            learn_found = 1;            
+        }
+
+        learn_iter++;
+        if (learn_iter > 10){
+            fprintf(stderr,"Could not learn good training rate after 10 attempts\n");
+            exit(1);
+        }
+        
+    }
+    
+
+    if (verbose > 0){
+        printf("\nBegin optimization with learn rate = %G\n",learn_rate);
+        printf("\n");
+        printf("%22s|%22s|%22s\n","Epoch         "," Training Error    ", "    Validation Error     ");
+        printf("---------------------------------------------------------------\n");
+    }
+
+    double test_error_old = 10;
+    int ntest_error_increase = 0;
     while (iter < maxiter)
     {
         if (verbose > 0){
@@ -1611,6 +1718,16 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         
         for (size_t ii = 0; ii < ndata_train; ii++){
             *fval = c3opt_eval_stoch(opt,order[ii],x,workspace);
+            if (isnan(*fval)){
+                fprintf(stderr,"eval is NaN, decreasing learning rate\n");
+                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
+                /* learn_rate /= 3.0; */
+                exit(1);
+            }
+            if (isinf(*fval)){
+                fprintf(stderr,"eval is inf\n");
+                exit(1);
+            }
             cblas_daxpy(d,-learn_rate,workspace,1,x,1);
         }
 
@@ -1624,24 +1741,47 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         // check test error
         test_error = 0;
         for (size_t ii = ndata_train; ii < ndata; ii++){
+            /* printf("order[%zu] = %zu",ii,order[ii]); */
             test_error += c3opt_eval_stoch(opt,order[ii],x,NULL);
         }
         test_error /= (double)(ndata_validate);
-        
-        printf("   %-19.7G|   %-19.7G|",train_error,test_error);
-        /* printf("x = "); dprint(d,x); */
-        printf("\n");
 
+        if (verbose > 0){
+            printf("   %-19.7G|   %-19.7G|",train_error,test_error);
+            /* printf("x = "); dprint(d,x); */
+            printf("\n");
+        }
+
+        if (iter > 0){
+            if (test_error > test_error_old){
+                ntest_error_increase += 1;
+            }
+            else{
+                ntest_error_increase = 0;
+            }
+        }
+        
+        if (ntest_error_increase > 3){
+            learn_rate /= 2;
+            ntest_error_increase = 0;
+            /* break; */
+        }
+        test_error_old = test_error;
+        
         if (test_error < relftol){
             ret = C3OPT_FTOL_REACHED;
             break;
         }
+        
+        
         iter += 1;
         opt->niters++;
     }
 
     free(order); order = NULL;
-    printf("\n");
+    if (verbose > 0){
+        printf("\n");
+    }
     return ret;
 }
 
