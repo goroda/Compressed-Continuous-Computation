@@ -1042,6 +1042,9 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
         y[ii] = function_train_eval(a,x+ii*dim);
+        if (ii == 351){
+            printf("y[351] = %G\n",y[ii]);
+        }
     }
 
 
@@ -1062,7 +1065,7 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     struct c3Opt * optimizer = c3opt_create(SGD);
     c3opt_set_verbose(optimizer,1);
     c3opt_set_sgd_nsamples(optimizer,ndata);
-    c3opt_set_maxiter(optimizer,10000);
+    c3opt_set_maxiter(optimizer,500);
     
     struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
     ft_regress_set_alg_and_obj(reg,AIO,FTLS);

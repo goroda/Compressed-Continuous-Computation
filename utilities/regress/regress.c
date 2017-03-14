@@ -343,6 +343,7 @@ int main(int argc, char * argv[])
     c3opt_set_maxiter(optimizer,opt_maxiter);
     c3opt_set_gtol(optimizer,tol);
     c3opt_set_relftol(optimizer,tol);
+    c3opt_set_absxtol(optimizer,tol);
     /* c3opt_ls_set_maxiter(optimizer,10); */
     
     // choose parameters using cross validation

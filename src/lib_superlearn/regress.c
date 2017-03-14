@@ -1182,6 +1182,22 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             /* printf("grad = "); dprint(ftp->nparams,mem->grad->vals + ii * ftp->nparams); */
             /* printf("eval = %G\n",mem->evals->vals[ii]); */
             resid = y[ii] - mem->evals->vals[ii];
+            /* printf("\ny = %G, val = %G \n",y[ii],mem->evals->vals[ii]); */
+            /* if (isnan(resid) || isinf(resid)){ */
+            /*     printf("\ny = %G, val = %G \n",y[ii],mem->evals->vals[ii]); */
+            /*     printf("x = "); */
+            /*     for (size_t zz = 0; zz < ftp->dim; zz++){ */
+            /*         printf("%G ", x[zz]); */
+            /*     } */
+            /*     printf("\n"); */
+            /*     printf("params = "); */
+            /*     for (size_t zz = 0; zz < ftp->nparams; zz++){ */
+            /*         printf("%G ", ftp->params[zz]); */
+            /*     } */
+            /*     printf("\n"); */
+            /*     fprintf(stderr,"Residual in aio_ls is NaN\n"); */
+            /*     exit(1); */
+            /* } */
             /* printf("resid = %G\n",resid); */
             /* if (fabs(resid) > 2){ */
             /*     printf("x = "); dprint(ftp->dim,x); */
@@ -1413,7 +1429,14 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
 
     double out = 0.0;
     out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
-    
+    /* if (isnan(out)){ */
+    /*     fprintf(stderr,"Result from aio_ls is NaN\n"); */
+    /*     exit(1); */
+    /* } */
+    /* if (isinf(out)){ */
+    /*     fprintf(stderr,"Result from aio_ls is inf\n"); */
+    /*     exit(1); */
+    /* } */
     if (regopts->obj == FTLS_SPARSEL2){        
         out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
 
@@ -1563,6 +1586,12 @@ double regress_opts_stoch_minimize_aio(size_t nparam, size_t ind,
 
     /* printf("ind = %zu\n",ind); */
     struct PP * pp = args;
+    
+    if (ind >= pp->N){
+        fprintf(stderr, "Stochastic optimization index is greater than the number of data points\n");
+        exit(1);
+    }
+
 
     // check if special structure exists / initialized
     regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);

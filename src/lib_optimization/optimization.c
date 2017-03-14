@@ -1594,112 +1594,18 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         printf("Stochastic Gradient descent\n");
         printf("---------------------------\n\n");
         
-        printf("ndata = %zu\n",ndata);
-        printf("ndata_train = %zu\n",ndata_train);
-        printf("ndata_validate = %zu\n",ndata_validate);
+        printf("\t ndata = %zu\n",ndata);
+        printf("\t ndata_train = %zu\n",ndata_train);
+        printf("\t ndata_validate = %zu\n",ndata_validate);
     }
     
     int ret = C3OPT_SUCCESS;
     
-    size_t iter = 0;
+
     double train_error = 0;
     double test_error = 0;
-    double learn_rate = 1e-2;
+    double learn_rate = 1e-3;
 
-
-    if (verbose > 0){
-        printf("Finding best learning rate\n");
-    }
-    int learn_found = 0;
-    int learn_iter = 0;
-
-    while (learn_found == 0){
-        memmove(workspace+d,x,d*sizeof(double));
-        int decreased = 0;
-
-        if (verbose > 0){
-            printf("\t Current rate = %G\n",learn_rate);
-        }
-        size_t nfind = ndata_train/5;
-        shuffle(nfind,order);
-        for (size_t ii = 0; ii < nfind; ii++){
-            *fval = c3opt_eval_stoch(opt,order[ii],workspace+d,workspace);
-            if (isnan(*fval)){
-                if (verbose > 0){
-                    printf("\t\t eval is NaN, decreasing learning rate\n");
-                }
-                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
-                learn_rate /= 10.0;
-                decreased = 1;
-                break;
-                /* exit(1); */
-            }
-            if (isinf(*fval)){
-                if (verbose > 0){
-                    printf("\t\t eval is Inf, decreasing learning rate\n");
-                }
-                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
-                learn_rate /= 10.0;
-                decreased = 1;
-                break;
-            }
-            cblas_daxpy(d,-learn_rate,workspace,1,workspace+d,1);
-        }
-
-        if (decreased == 0){
-            // no infs or NaNs, now check if there is divergence
-            double hyp_train_err_old = 10;
-            double hyp_train_err;
-            size_t nhyp_error_increase = 0;
-            for (size_t jj = 0; jj < 100; jj++){
-
-                for (size_t jj = 0; jj < nfind; jj++){
-                    *fval = c3opt_eval_stoch(opt,order[jj],workspace+d,workspace);
-                    cblas_daxpy(d,-learn_rate,workspace,1,workspace+d,1);
-                }
-                
-                hyp_train_err = 0.0;
-                for (size_t ii = 0; ii < nfind; ii++){
-                    hyp_train_err += c3opt_eval_stoch(opt,order[ii],x,NULL);
-                }
-
-                if (jj > 0){
-                    if (hyp_train_err > hyp_train_err_old){
-                        nhyp_error_increase+=1;
-                    }
-                    else{
-                        nhyp_error_increase = 0;
-                    }
-
-                    
-                    hyp_train_err_old = hyp_train_err;
-                }
-
-                
-                if (nhyp_error_increase > 3){
-                    if (verbose > 0){
-                        printf("\t\t training error diverges, decreasing learning rate\n");
-                    }
-                    learn_rate /= 2.0;
-                    decreased = 1;
-                    break;
-                }
-            }
-        }
-
-
-        if (decreased == 0){
-            learn_found = 1;            
-        }
-
-        learn_iter++;
-        if (learn_iter > 10){
-            fprintf(stderr,"Could not learn good training rate after 10 attempts\n");
-            exit(1);
-        }
-        
-    }
-    
 
     if (verbose > 0){
         printf("\nBegin optimization with learn rate = %G\n",learn_rate);
@@ -1712,143 +1618,206 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     int ntest_error_increase = 0;
     int invalid_due_to_decrease = 0;
 
-    int do_momentum = 0;
-    double nesterov_mu = 0.3;
+    int do_momentum = 2; // 1 regular , 2 nesterov accerlated
+    double nesterov_mu = 0.9;
     // momentum vector for nesterov
-    /* memmove(workspace+2*d,x,d*sizeof(double));  */
+    // stores the previous iterate
 
-    for (size_t ii = 0; ii < d;ii++){ workspace[2*d+ii] = 0.0; }
-    while (iter < maxiter)
-    {
-        if (verbose > 0){
-            printf("          %-12zu|",iter+1);
-        }
+    double * current_step = calloc_double(d);
+    double * previous_step = calloc_double(d);
+    double * next_step = calloc_double(d);
+    double * inter_step = calloc_double(d);
+    memmove(next_step,x,d*sizeof(double));
+    memmove(current_step,x,d*sizeof(double));
+    memmove(previous_step,x,d*sizeof(double));
 
-        // shuffle only the training set
-        shuffle(ndata_train,order);
-        memmove(workspace+d,x,d*sizeof(double));
-        invalid_due_to_decrease = 0;
+    for (size_t iter = 0; iter < maxiter; iter++){
+
         for (size_t ii = 0; ii < ndata_train; ii++){
-            /* dprint(d,x); */
-            *fval = c3opt_eval_stoch(opt,order[ii],x,workspace);
-            /* double grad_norm = cblas_ddot(d,workspace,1,workspace,1); */
-            /* cblas_dscal(d,1e-2,workspace,1); */
-            /* if (grad_norm >1e2){ */
-            /*     printf("datapt=%zu, *fval = %G, grad norm = %3.5G\n",order[ii],*fval,grad_norm); */
-            /*     exit(1); */
-            /* } */
+            memmove(previous_step,current_step,d*sizeof(double));
+            memmove(current_step,next_step,d*sizeof(double));
 
-            if (isnan(*fval)){
-                fprintf(stderr,"eval is NaN, decreasing learning rate\n");
-                /* cblas_daxpy(d,learn_rate,workspace,1,x,1); */
-                learn_rate /= 3.0;
-                for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; }
-                invalid_due_to_decrease = 1;
-                break;
-                /* exit(1); */
-            }
-            if (isinf(*fval)){
-                fprintf(stderr,"eval is inf\n");
-                learn_rate /= 3.0;
-                for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; }
-                invalid_due_to_decrease = 1;
-                break;
-                /* exit(1); */
+            if (do_momentum > 0){
+                for (size_t jj = 0; jj < d; jj++){
+                    workspace[d+jj] = nesterov_mu*(current_step[jj]-previous_step[jj]);
+                    /* printf("workspace[%zu] = %G\n",d+jj,workspace[d+jj]); */
+                    if (isnan(workspace[d+jj])){
+                        exit(1);
+                    }
+                }
             }
 
-            if ( (do_momentum == 1) && (iter > 10) ){
-                // backup for nesterov momentum
-                memmove(workspace+3*d,workspace+2*d,d*sizeof(double));
+            // for regular momentum and no momentum
+            if (do_momentum <= 1){
+                *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
+            }
+            else{ //nesterov momentum
+                // generate an intermediate step
+                memmove(inter_step,current_step,d*sizeof(double));
+                cblas_daxpy(d,1.0,workspace+d,1,inter_step,1);
 
-                // update momentum
-                cblas_dscal(d,nesterov_mu,workspace+2*d,1);
-                cblas_daxpy(d,-learn_rate,workspace,1,workspace + 2*d,1);
-
-                // regular momentum
-                cblas_daxpy(d,1,workspace+2*d,1,x,1);
+                // evaluate gradient at intermediate step
+                *fval = c3opt_eval_stoch(opt,order[ii],inter_step,workspace);
                 
-                /* // update nesterov */
-                /* cblas_daxpy(d,-nesterov_mu,workspace+3*d,1,x,1); */
-                /* cblas_daxpy(d,(1.0+nesterov_mu),workspace+2*d,1,x,1); */
-            }
-            else{
-                cblas_daxpy(d,-learn_rate,workspace,1,x,1);
-            }
-
-        }
-        if (invalid_due_to_decrease == 1){
-            memmove(x,workspace+d,d*sizeof(double));
-        }
-        else{
-            double xdiff = 0.0;
-            for (size_t ii = 0; ii < d; ii++){
-                xdiff += (x[ii]-workspace[d+ii]) * (x[ii] - workspace[d+ii]);
-            }
-        
-            // check training set error
-            train_error = 0;
-            for (size_t ii = 0; ii < ndata_train; ii++){
-                train_error += c3opt_eval_stoch(opt,order[ii],x,NULL);
-            }
-            train_error /= (double)(ndata_train);
-
-            // check test error
-            test_error = 0;
-            for (size_t ii = ndata_train; ii < ndata; ii++){
-                /* printf("order[%zu] = %zu",ii,order[ii]); */
-                test_error += c3opt_eval_stoch(opt,order[ii],x,NULL);
-            }
-            test_error /= (double)(ndata_validate);
-
-            if (verbose > 0){
-                printf("   %-19.7G|   %-19.7G| %-19.7G|",train_error,test_error,xdiff);
-                /* printf("x = "); dprint(d,x); */
-            }
-
-            if (iter > 0){
-                if (test_error > test_error_old){
-                    ntest_error_increase += 1;
-                }
-                else{
-                    ntest_error_increase = 0;
-                }
-
-                
-                if ( fabs((test_error - test_error_old)/test_error_old) < relftol){
-                    for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; }
-                    learn_rate /= 2.0;
-                }
-            }
-        
-            if (ntest_error_increase > 3){
-                for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; }
-                learn_rate /= 2;
-                ntest_error_increase = 0;
-                /* break; */
-            }
-            if (verbose > 0){
-                printf("%-10.7G",learn_rate);
             }
             
-            test_error_old = test_error;
-        
-            if (test_error < relftol){
-                ret = C3OPT_FTOL_REACHED;
-                break;
-            }
+            cblas_daxpy(d,-learn_rate,workspace,1,next_step,1);
 
-            if (xdiff < absxtol){
-                ret = C3OPT_XTOL_REACHED;
-                break;
+            // for any momenumt algorithm we have this
+            if (do_momentum > 0){
+                cblas_daxpy(d,1.0,workspace+d,1,next_step,1);
             }
+        }        
+
+        double xdiff = 0.0;
+        for (size_t ii = 0; ii < d; ii++){
+            xdiff += (next_step[ii]-current_step[ii])*(next_step[ii]-current_step[ii]);
         }
+
+        // check training set error
+        train_error = 0;
+        for (size_t ii = 0; ii < ndata_train; ii++){
+            train_error += c3opt_eval_stoch(opt,order[ii],next_step,NULL);
+        }
+        train_error /= (double)(ndata_train);
+
+        // check test error
+        test_error = 0;
+        for (size_t ii = ndata_train; ii < ndata; ii++){
+            /* printf("order[%zu] = %zu",ii,order[ii]); */
+            test_error += c3opt_eval_stoch(opt,order[ii],next_step,NULL);
+        }
+        test_error /= (double)(ndata_validate);
 
         if (verbose > 0){
+            printf("          %-12zu|",iter+1);
+            printf("   %-19.7G|   %-19.7G| %-19.7G|",train_error,test_error,xdiff);
+            /* printf("x = "); dprint(d,x); */
             printf("\n");
         }
-        iter += 1;
+
         opt->niters++;
+
     }
+
+    memmove(x,next_step,d*sizeof(double));
+    
+    /* while (iter < maxiter) */
+    /* { */
+ 
+    /*     // shuffle only the training set */
+    /*     shuffle(ndata_train,order); */
+
+    /*     invalid_due_to_decrease = 0; */
+
+    /*     // loop through all the training data */
+    /*     for (size_t ii = 0; ii < ndata_train; ii++){ */
+
+    /*         *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace); */
+    /*         /\* double grad_norm = cblas_ddot(d,workspace,1,workspace,1); *\/ */
+    /*         /\* if (grad_norm >1e2){ *\/ */
+    /*         /\*     /\\* printf("datapt=%zu, *fval = %G, grad norm = %3.5G\n",order[ii],*fval,grad_norm); *\\/ *\/ */
+    /*         /\*     /\\* exit(1); *\\/ *\/ */
+    /*         /\*     cblas_dscal(d,1.0/sqrt(grad_norm),workspace,1); *\/ */
+                
+    /*         /\* } *\/ */
+
+    /*         if (isnan(*fval)){ */
+    /*             fprintf(stderr,"eval is NaN, decreasing learning rate\n"); */
+    /*             /\* cblas_daxpy(d,learn_rate,workspace,1,x,1); *\/ */
+    /*             learn_rate /= 3.0; */
+    /*             invalid_due_to_decrease = 1; */
+    /*             exit(1); */
+    /*             break; */
+    /*         } */
+    /*         if (isinf(*fval)){ */
+    /*             fprintf(stderr,"eval is inf\n"); */
+    /*             learn_rate /= 3.0; */
+    /*             invalid_due_to_decrease = 1; */
+    /*             exit(1); */
+    /*             break; */
+    /*         } */
+
+    /*         if ( (do_momentum == 1) && (iter > 10) ){ */
+
+    /*             //compute difference between previous iterates */
+    /*             for (size_t zz = 0; zz < d; zz++){ */
+    /*                 workspace[3*d+zz] = current_step[zz] - previous_step[zz]; */
+    /*             } */
+
+                
+    /*             memmove(workspace+2*d,x,d*sizeof(double)); */
+    /*             /\* printf("difference = "); dprint(d,workspace+3*d); *\/ */
+                
+    /*             // regular momentum */
+    /*             cblas_daxpy(d,-learn_rate,workspace,1,x,1); */
+    /*             cblas_daxpy(d,nesterov_mu,workspace+3*d,1,x,1); */
+                
+                
+    /*             /\* // update nesterov *\/ */
+    /*             /\* cblas_daxpy(d,-nesterov_mu,workspace+3*d,1,x,1); *\/ */
+    /*             /\* cblas_daxpy(d,(1.0+nesterov_mu),workspace+2*d,1,x,1); *\/ */
+    /*         } */
+    /*         else{ */
+    /*             memmove(next_step,current_step, d * sizeof(double)); */
+
+    /*         } */
+
+    /*     } */
+
+        
+    /*     if (invalid_due_to_decrease == 1){ */
+    /*         memmove(x,workspace+d,d*sizeof(double)); */
+    /*         memmove(workspace+2*d,x,d*sizeof(double)); */
+    /*     } */
+    /*     else{ */
+
+
+
+    /*         if (iter > 0){ */
+    /*             if (test_error > test_error_old){ */
+    /*                 ntest_error_increase += 1; */
+    /*             } */
+    /*             else{ */
+    /*                 ntest_error_increase = 0; */
+    /*             } */
+
+                
+    /*             if ( fabs((test_error - test_error_old)/test_error_old) < relftol){ */
+    /*                 for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; } */
+    /*                 learn_rate /= 2.0; */
+    /*             } */
+    /*         } */
+        
+    /*         if (ntest_error_increase > 3){ */
+    /*             for (size_t zz = 0; zz < d; zz++){ workspace[2*d+zz] = 0.0; } */
+    /*             learn_rate /= 2; */
+    /*             ntest_error_increase = 0; */
+    /*             /\* break; *\/ */
+    /*         } */
+    /*         if (verbose > 0){ */
+    /*             printf("%-10.7G",learn_rate); */
+    /*         } */
+            
+    /*         test_error_old = test_error; */
+        
+    /*         if (test_error < relftol){ */
+    /*             ret = C3OPT_FTOL_REACHED; */
+    /*             break; */
+    /*         } */
+
+    /*         if (xdiff < absxtol){ */
+    /*             ret = C3OPT_XTOL_REACHED; */
+    /*             break; */
+    /*         } */
+    /*     } */
+
+    /*     if (verbose > 0){ */
+    /*         printf("\n"); */
+    /*     } */
+    /*     iter += 1; */
+    /*     opt->niters++; */
+    /* } */
 
     free(order); order = NULL;
     if (verbose > 0){
