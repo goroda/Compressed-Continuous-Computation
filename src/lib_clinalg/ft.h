@@ -205,6 +205,10 @@ function_train_linear(const double *, size_t, const double *, size_t,
 struct FunctionTrain *
 function_train_quadratic(const double *,const double *,
                              struct MultiApproxOpts *);
+
+struct FunctionTrain *
+function_train_quadratic_aligned(const double *, const double *,
+                                 struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_create_nodal(const struct FunctionTrain *, size_t *, double **);
 

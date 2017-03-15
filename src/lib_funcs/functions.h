@@ -55,7 +55,7 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
-#include "lib_optimization.h"
+#include "../lib_optimization/lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
