@@ -3162,6 +3162,18 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     /* printf("\t evaluate! size=%zu\n",size); */
     if (out != NULL){
         generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+        for (size_t ii = 0; ii < size; ii++){
+            if (isnan(out[ii*incout])){
+                fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval is nan\n");
+                fprintf(stderr,"ii=%zu,size=%zu,incout=%zu\n",ii,size,incout);
+                fprintf(stderr,"x = %G\n",x[ii*incx]);
+                exit(1);
+            }
+            else if (isinf(out[ii*incout])){
+                fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval inf\n");
+                exit(1);
+            }
+        }
     }
 
     if (grad != NULL){
@@ -3177,6 +3189,15 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
                     }
                     // and change the one element
                     grad[onparam*size+ii + jj * incg] = workspace[kk];
+                    if (isnan(workspace[kk])){
+                        fprintf(stderr,"Warning, gradient in qmarray_param_grad_eval is nan\n");
+                        exit(1);
+                    }
+                    else if (isinf(workspace[kk])){
+                        fprintf(stderr,"Warning, gradient in qmarray_param_grad_eval is inf\n");
+                        exit(1);
+                    }
+
                     onparam++;
                 }
             }

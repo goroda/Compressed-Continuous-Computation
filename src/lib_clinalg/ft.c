@@ -1048,7 +1048,7 @@ void running_core_total_update(struct RunningCoreTotal * rct, size_t n,
         fprintf(stderr, "Dimensions within core update do not match (for update)\n");
         exit(1);
     }
-
+    
     running_core_total_check_size(rct,n*r2new*rct->No);
 
     if (rct->r2 == 0){
@@ -1410,7 +1410,6 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
                                 val = grads[backind]->vals1[on_output + modelem]
                                                 * post_vals[ii + jj * r2];
                                 grad[jj*totparam + runparam-nparam[backind]+onnum+ll] = val;
-                                /* printf("val = %G\n",val); */
                             }
                             onnum += nparamf;
                         }
@@ -1495,6 +1494,7 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
             }
             else{
                 double * vals = running_core_total_get_vals(evals_lr);
+
                 /* size_t nvals = r1; */
 
                 grads[ii]->No = nparam[ii];
