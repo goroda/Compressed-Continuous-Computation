@@ -61,6 +61,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg, size_t);
 struct c3Opt * c3opt_copy(struct c3Opt *);
 void c3opt_free(struct c3Opt *);
 
+void c3opt_set_sgd_learn_rate(struct c3Opt *, double);
 void c3opt_set_sgd_nsamples(struct c3Opt *, size_t);
 size_t c3opt_get_sgd_nsamples(const struct c3Opt *);
 void c3opt_set_nvectors_store(struct c3Opt *, size_t);
