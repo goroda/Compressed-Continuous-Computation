@@ -2833,6 +2833,57 @@ function_train_linear(const double * c, size_t ldc,
     return ft;
 }
 
+/***********************************************************//**
+    Compute a function train representation of \f$ \prod_{i=1}^d(a_ix_i) \f$
+
+    \param[in] coeffs   - coefficients
+    \param[in] aopts    - approximation options
+
+    \returns function train
+
+***************************************************************/
+struct FunctionTrain *
+function_train_rankone_prod(const double * coeffs,
+                            struct MultiApproxOpts * aopts)
+{
+    assert (aopts != NULL);
+    size_t dim = multi_approx_opts_get_dim(aopts);
+    assert (dim > 1); //
+
+    struct FunctionTrain * ft = function_train_alloc(dim);
+    struct OneApproxOpts * o = NULL;
+
+    size_t onDim = 0;
+    ft->ranks[onDim] = 1;
+    ft->cores[onDim] = qmarray_alloc(1,1);
+
+    o = multi_approx_opts_get_aopts(aopts,onDim);
+
+    // should be quadratic
+    ft->cores[onDim]->funcs[0] = 
+        generic_function_linear(coeffs[onDim],0.0,o->fc,o->aopts);
+
+    for (onDim = 1; onDim < dim-1; onDim++){
+        //printf("on dimension (%zu/%zu)\n",onDim+1,dim);
+
+        o = multi_approx_opts_get_aopts(aopts,onDim);
+        ft->ranks[onDim] = 1;
+        ft->cores[onDim] = qmarray_alloc(1,1);
+        ft->cores[onDim]->funcs[0] = 
+            generic_function_linear(coeffs[onDim],0.0,o->fc,o->aopts);
+    }
+
+    onDim = dim-1;
+    o = multi_approx_opts_get_aopts(aopts,onDim);
+    ft->ranks[onDim] = 1;
+    ft->cores[onDim] = qmarray_alloc(1,1);
+
+    ft->cores[onDim]->funcs[0] =
+        generic_function_linear(coeffs[onDim],0.0,o->fc,o->aopts);
+
+    ft->ranks[dim] = 1;
+    return ft;
+}
 
 /***********************************************************//**
     Compute a function train representation of \f$ (x-m)^T Q (x-m) \f$
@@ -3060,6 +3111,61 @@ function_train_integrate(const struct FunctionTrain * ft)
     double * t3 = NULL;
     for (ii = 1; ii < dim; ii++){
         t2 = qmarray_integrate(ft->cores[ii]);
+        if (ii%2 == 1){
+            // previous times new core
+            t3 = calloc_double(ft->ranks[ii+1]);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
+                ft->ranks[ii+1], ft->ranks[ii], 1.0, t1, 1, t2,
+                ft->ranks[ii], 0.0, t3, 1);
+            free(t2); t2 = NULL;
+            free(t1); t1 = NULL;
+        }
+        else {
+            t1 = calloc_double(ft->ranks[ii+1]);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, 1,
+                ft->ranks[ii+1], ft->ranks[ii], 1.0, t3, 1, t2,
+                ft->ranks[ii], 0.0, t1, 1);
+            free(t2); t2 = NULL;
+            free(t3); t3 = NULL;
+        }
+    }
+    
+    double out = 0.123456789;
+    if (t1 == NULL){
+        out = t3[0];
+        free(t3); t3 = NULL;
+    }
+    else if ( t3 == NULL){
+        out = t1[0];
+        free(t1); t1 = NULL;
+    }
+    
+    return out;
+}
+
+/********************************************************//**
+    Integrate a function in function train format with respect
+    to an appropriately weight
+
+    \param[in] ft - Function train 1
+
+    \return Integral \f$ \int f(x) w(x) dx \f$
+    
+    \note w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+***********************************************************/
+double
+function_train_integrate_weighted(const struct FunctionTrain * ft)
+{
+    size_t dim = ft->dim;
+    size_t ii = 0;
+    double * t1 = qmarray_integrate_weighted(ft->cores[ii]);
+
+    double * t2 = NULL;
+    double * t3 = NULL;
+    for (ii = 1; ii < dim; ii++){
+        t2 = qmarray_integrate_weighted(ft->cores[ii]);
         if (ii%2 == 1){
             // previous times new core
             t3 = calloc_double(ft->ranks[ii+1]);

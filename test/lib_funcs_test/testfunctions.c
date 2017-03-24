@@ -100,3 +100,13 @@ int maxminpoly(size_t N, const double * x, double * out, void * args)
     }
     return 0;
 }
+
+
+int x3minusx(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = 3*x[ii]*x[ii]*x[ii] - x[ii];
+    }
+    return 0;
+}

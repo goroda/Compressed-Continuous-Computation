@@ -55,8 +55,8 @@ endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
-set(static_libs 1)
-#set(static_libs 0)
+#set(static_libs 1)
+set(static_libs 0)
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
