@@ -367,7 +367,7 @@ size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts * f, size_
 void multi_approx_opts_set_dim_nparams(struct MultiApproxOpts * f, size_t ind, size_t val)
 {
     assert (f != NULL);
-    return one_approx_opts_set_nparams(f->aopts[ind],val);
+    one_approx_opts_set_nparams(f->aopts[ind],val);
 }
 
 

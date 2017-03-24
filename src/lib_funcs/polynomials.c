@@ -1631,7 +1631,6 @@ int legendre_poly_expansion_arr_eval(size_t n,
 *   \param[in]     incx       - increment between locations
 *   \param[in,out] y          - evaluations
 *   \param[in]     incy       - increment between evaluations of array (at least n)
-*   \param[in,out] workspace  - workspace 
 *
 *   \return 0 - successful
 *           1 - not all legendre polynomials
@@ -1886,7 +1885,7 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
 *   order polynomials from the same family.
 *
-*   \param[in]     f    - function
+*   \param[in]     poly - function
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x
@@ -2988,6 +2987,35 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
     }
     return out;
 }
+
+/********************************************************//**
+*   Integrate an orthogonal polynomial expansion 
+*
+*   \param[in] poly - polynomial to integrate
+*
+*   \return out - Integral of approximation
+*
+    \note Computes  \f$ \int f(x) w(x) dx \f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+*************************************************************/
+double
+orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion * poly)
+{
+    double out = 0.0;
+    switch (poly->p->ptype){
+    case LEGENDRE:  out = poly->coeff[0];  break;
+    case HERMITE:   out = poly->coeff[0];  break;
+    case CHEBYSHEV: out = poly->coeff[0];  break;
+    case STANDARD:  fprintf(stderr, "Cannot integrate STANDARD type\n"); break;
+    }
+
+    return out;
+}
+
 
 /********************************************************//**
 *   Weighted inner product between two polynomial 

@@ -513,6 +513,62 @@ void Test_function_train_integrate(CuTest * tc)
     function_train_free(ft);
 }
 
+
+void Test_function_train_integrate_weighted(CuTest * tc)
+{
+    printf("Testing Function: function_train_integrate_weighted \n");
+    size_t dim = 4;
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    double lb1 = 0.0;
+    double lb2 = -1.0;
+    double lb3 = -5.0;
+    double lb4 = -5.0;
+    double ub = 1.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb1);
+    struct OpeOpts * opts2 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts2,lb2);
+    struct OpeOpts * opts3 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts3,lb3);
+    struct OpeOpts * opts4 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts4,lb4);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct OneApproxOpts * qmopts2 = one_approx_opts_alloc(POLYNOMIAL,opts2);
+    struct OneApproxOpts * qmopts3 = one_approx_opts_alloc(POLYNOMIAL,opts3);
+    struct OneApproxOpts * qmopts4 = one_approx_opts_alloc(POLYNOMIAL,opts4);
+
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_dim(fopts,0,qmopts);
+    multi_approx_opts_set_dim(fopts,1,qmopts2);
+    multi_approx_opts_set_dim(fopts,2,qmopts3);
+    multi_approx_opts_set_dim(fopts,3,qmopts4);
+
+    struct FunctionTrain * ft = function_train_initsum(fopts,fw);
+    double out =  function_train_integrate_weighted(ft);
+
+
+    double shouldbe = 110376.0/5.0 / (ub-lb1) / (ub-lb2) / 
+                          (ub-lb3) / (ub-lb4);
+    /* printf(" Is: %G\n",out); */
+    /* printf(" Should: %G\n",shouldbe); */
+    double rel_error = pow(out-shouldbe,2)/fabs(shouldbe);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-15);
+
+    all_opts_free(fw,opts,qmopts,fopts);
+    all_opts_free(NULL,opts2,qmopts2,NULL);
+    all_opts_free(NULL,opts3,qmopts3,NULL);
+    all_opts_free(NULL,opts4,qmopts4,NULL);
+    function_train_free(ft);
+}
+
 void Test_function_train_inner(CuTest * tc)
 {
     printf("Testing Function: function_train_inner \n");
@@ -1541,6 +1597,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_scale);
     SUITE_ADD_TEST(suite, Test_function_train_product);
     SUITE_ADD_TEST(suite, Test_function_train_integrate);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_function_train_inner);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);

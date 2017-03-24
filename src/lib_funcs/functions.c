@@ -795,6 +795,48 @@ double generic_function_norm(const struct GenericFunction * f){
  }
 
  /********************************************************//**
+    Compute the integral of a generic function
+ 
+    \param[in] f - generic function
+ 
+    \return out - integral
+
+    \note Computes \f$ \int f(x) w(x) dx\f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+ ************************************************************/
+ double generic_function_integral_weighted(
+     const struct GenericFunction * f){
+     
+     assert (f != NULL);
+     /* printf("integrating fc = %d\n",f->fc); */
+     double out = 0.0;
+     switch (f->fc){
+     case CONSTANT:
+         assert(1==0);
+         break;
+     case PIECEWISE:
+         assert(1==0);
+         break;
+     case POLYNOMIAL:
+         out = orth_poly_expansion_integrate_weighted(f->f);
+         break;
+     case LINELM:
+         assert(1==0);
+         break;
+     case RATIONAL:
+         break;
+     case KERNEL:
+         assert(1==0);
+         break;
+     }
+     return out;
+ }
+
+ /********************************************************//**
  *   Compute the integral of all the functions in a generic function array
  *
  *   \param[in] n   - number of functions

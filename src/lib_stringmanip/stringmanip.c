@@ -373,10 +373,10 @@ double * readtxt_double_array(char * str,size_t *nrows, size_t *ncols)
 double * readfile_double_array(FILE * fp, size_t *nrows, size_t *ncols)
 {
     fseek(fp, 0L, SEEK_END);  /* Position to end of file */
-    size_t lFileLen = ftell(fp);     /* Get file length */
+    long lFileLen = ftell(fp);     /* Get file length */
     rewind(fp);
 
-    char * cFile = calloc(lFileLen + 1, sizeof(char));
+    char * cFile = calloc((unsigned long)lFileLen + 1, sizeof(char));
 
     if(cFile == NULL )
     {
@@ -384,7 +384,8 @@ double * readfile_double_array(FILE * fp, size_t *nrows, size_t *ncols)
         return NULL;
     }
 
-    size_t ret = fread(cFile, lFileLen, 1, fp); /* Read the entire file into cFile */
+    /* Read the entire file into cFile */
+    size_t ret = fread(cFile, (unsigned long) lFileLen, 1, fp); 
     if (ret != 1){
         fprintf(stderr, "Error reading file containing double array\n");
         free(cFile); cFile = NULL;

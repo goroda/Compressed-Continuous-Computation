@@ -1415,6 +1415,35 @@ double * qmarray_integrate(const struct Qmarray * a)
 }
 
 /***********************************************************//**
+    Weighted integration of all the elements of a qmarray
+
+    \param[in] a - qmarray to integrate
+
+    \return out - array containing integral of every function in a
+
+    \note Computes \f$ \int f(x) w(x) dx \f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+***************************************************************/
+double * qmarray_integrate_weighted(const struct Qmarray * a)
+{
+    
+    double * out = calloc_double(a->nrows*a->ncols);
+    size_t ii, jj;
+    for (ii = 0; ii < a->ncols; ii++){
+        for (jj = 0; jj < a->nrows; jj++){
+            out[ii*a->nrows + jj] = 
+                generic_function_integral_weighted(a->funcs[ii*a->nrows+jj]);
+        }
+    }
+    
+    return out;
+}
+
+/***********************************************************//**
     Norm of a qmarray
 
     \param[in] a - first qmarray

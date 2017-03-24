@@ -109,6 +109,13 @@
                    I,J,(__CLPK_integer *)K,(__CLPK_integer *)L,M,(__CLPK_integer *)N, \
                    (__CLPK_integer *)O,(__CLPK_integer *)P,(__CLPK_integer *)Q))
 
+    #define dgelsd_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K)                         \
+            ( dgelsd_( (__CLPK_integer *)X, (__CLPK_integer *)Y, (__CLPK_integer *)Z, \
+                       (__CLPK_doublereal *)A, (__CLPK_integer *)B, (__CLPK_doublereal *)C,  \
+                       (__CLPK_integer *)D, (__CLPK_doublereal *) E, \
+	                   (__CLPK_doublereal *)F, (__CLPK_integer *)G, (__CLPK_doublereal *)H, \
+                       (__CLPK_integer *)I, (__CLPK_integer *)J, (__CLPK_integer *)K))
+
                    
 #else
     /* #include <gsl/gsl_cblas.h> */

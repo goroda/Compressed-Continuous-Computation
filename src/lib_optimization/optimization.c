@@ -2040,7 +2040,7 @@ void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list * list)
     \param[in]     iter    - iteration
     \param[in]     m       - number of stored vectors
     \param[in]     hoscale - scale for initial Ho
-    \parma[in]     scale   - 0 then just hoscale, 1 then s^Ty/y^Ty
+    \param[in]     scale   - 0 then just hoscale, 1 then s^Ty/y^Ty
     \param[in,out] alpha   - space for evlaluation of rho s^T q (at most m)
     \param[in]     g       - object to multiply by
     \param[in,out] q       - space for evaluation of Hg (at least d)

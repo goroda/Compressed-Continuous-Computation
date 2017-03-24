@@ -51,7 +51,7 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
-#define ZEROTHRESH  1e0 * DBL_EPSILON
+/* #define ZEROTHRESH  1e0 * DBL_EPSILON */
 //#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
@@ -229,7 +229,7 @@ deserialize_kernel(unsigned char * ser, struct Kernel ** kern)
 
     /* printf("deserializing nparam = %zu\n",nparam); */
     *kern = kernel_alloc(nparam);
-    (*kern)->type = type;
+    (*kern)->type = (enum KernelType) type;
     free((*kern)->params); (*kern)->params = NULL;
     ptr = deserialize_doublep(ptr,&((*kern)->params),&((*kern)->nparams));
 
@@ -821,8 +821,8 @@ kernel_expansion_create_with_params(struct KernelApproxOpts * opts,
 /********************************************************//**
     Return a zero function
 
-    \param[in] opts         - options
-    \param[in] force_nparam - nothing yet
+    \param[in] opts        - options
+    \param[in] force_param - nothing yet
 
     \return ke - zero function
 ************************************************************/
@@ -863,7 +863,7 @@ kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts *
     }
 
     // weird bounds
-    size_t nregress = 100.0 * ke->nkernels;
+    size_t nregress = 100 * ke->nkernels;
     double lb = opts->prac_lb;
     double ub = opts->prac_ub;
     
@@ -930,7 +930,7 @@ int check_same_nodes_kernels(struct KernelExpansion * x, struct KernelExpansion 
 *   Evaluate a kernel expansion consisting of sequentially increasing 
 *   order kernels from the same family.
 *
-*   \param[in]     f    - function
+*   \param[in]     ke   - function
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x
@@ -940,11 +940,11 @@ int check_same_nodes_kernels(struct KernelExpansion * x, struct KernelExpansion 
 *   \note Currently just calls the single evaluation code
 *         Note sure if this is optimal, cache-wise
 *************************************************************/
-void kernel_expansion_evalN(struct KernelExpansion * poly, size_t N,
+void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
                             const double * x, size_t incx, double * y, size_t incy)
 {
     for (size_t ii = 0; ii < N; ii++){
-        y[ii*incy] = kernel_expansion_eval(poly,x[ii*incx]);
+        y[ii*incy] = kernel_expansion_eval(ke,x[ii*incx]);
     }
 }
 
@@ -1038,7 +1038,7 @@ kernel_expansion_inner(struct KernelExpansion * a,
 *   Multiply by scalar and overwrite expansion
 *
 *   \param[in] a - scaling factor for first polynomial
-*   \param[in] k - kernel expansion to scale
+*   \param[in] x - kernel expansion to scale
 *************************************************************/
 void kernel_expansion_scale(double a, struct KernelExpansion * x)
 {
@@ -1080,9 +1080,9 @@ int kernel_expansion_param_grad_eval(
     with respect to its parameters, and add a scaled version
     of this gradient to *grad*
 
-    \param[in]     kernel - kernel
-    \param[in]     scale  - scaling for additional gradient
-    \param[in,out] grad   - gradient, on output adds scale * new_grad
+    \param[in]     ke    - kernel
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
 
     \return  0 - success, 1 -failure
 

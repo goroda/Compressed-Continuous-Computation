@@ -68,7 +68,7 @@ void print_code_usage (FILE * stream, int exit_code)
 
 int main(int argc, char * argv[])
 {
-    int seed = 4;
+    unsigned int seed = 4;
     srand(seed);
     
     int next_option;
@@ -96,7 +96,7 @@ int main(int argc, char * argv[])
             case 'h': 
                 print_code_usage(stdout, 0);
             case 'f':
-                function = strtol(optarg,NULL,10);
+                function = strtoul(optarg,NULL,10);
                 break;
             case 'i':
                 infile = optarg;
@@ -105,10 +105,10 @@ int main(int argc, char * argv[])
                 outfile = optarg;
                 break;
             case 'n':
-                num = strtol(optarg,NULL,10);
+                num = strtoul(optarg,NULL,10);
                 break;
             case 'v':
-                verbose = strtol(optarg,NULL,10);
+                verbose = strtoul(optarg,NULL,10);
                 break;
             case '?': // The user specified an invalid option 
                 print_code_usage (stderr, 1);

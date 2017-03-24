@@ -45,7 +45,7 @@
 #include "regress.h"
 
 
-static int seed = 3;
+static unsigned int seed = 3;
 
 void Test_LS_ALS(CuTest * tc)
 {
@@ -248,7 +248,7 @@ void Test_LS_ALS_SPARSE2(CuTest * tc)
     printf("\t  Ranks:      [1 2 3 2 5 1]\n");
     printf("\t  LPOLY order: 5\n");
     printf("\t  nunknowns:   174\n");
-    printf("\t  ndata:       550\n");
+    printf("\t  ndata:       1000\n");
 
     /* printf("Testing Function: regress_als with sparse reg (5 dimensional, max rank = 5, max order = 8) \n"); */
 
@@ -263,7 +263,7 @@ void Test_LS_ALS_SPARSE2(CuTest * tc)
 
 
     // create data
-    size_t ndata = 550;
+    size_t ndata = 1000;
     /* printf("\t ndata = %zu\n",ndata); */
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -1686,13 +1686,13 @@ void Test_function_train_param_grad_sqnorm(CuTest * tc)
     size_t running = 0;
     size_t notused;
     for (size_t zz = 0; zz < dim; zz++){
-        double h = 1e-8;
+        double h = 1e-7;
         /* printf("nparam[%zu] = %zu\n",zz,nparam[zz]); */
-        size_t nparam = function_train_core_get_nparams(a,zz,&notused);
-        for (size_t jj = 0; jj < nparam; jj++){
+        size_t nparam_core = function_train_core_get_nparams(a,zz,&notused);
+        for (size_t jj = 0; jj < nparam_core; jj++){
             /* printf("jj = %zu\n",jj); */
             guess[running+jj] += h;
-            function_train_core_update_params(a,zz,nparam,guess + running);
+            function_train_core_update_params(a,zz,nparam_core,guess + running);
             /* printf("here?!\n"); */
             double val2 = function_train_param_grad_sqnorm(a,weights,NULL);
             /* printf("val2 = %3.15G\n",val2); */
@@ -1700,9 +1700,9 @@ void Test_function_train_param_grad_sqnorm(CuTest * tc)
             /* printf("\t (%3.5G,%3.5G)\n",fd,grad[running+jj]); */
             CuAssertDblEquals(tc,fd,grad[running+jj],1e-5);
             guess[running+jj] -= h;
-            function_train_core_update_params(a,zz,nparam,guess + running);
+            function_train_core_update_params(a,zz,nparam_core,guess + running);
         }
-        running += nparam;
+        running += nparam_core;
         
     }
 
@@ -1821,7 +1821,7 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 200;
+    size_t ndata = 400;
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -2166,7 +2166,7 @@ void Test_LS_AIO_rounding(CuTest * tc)
     size_t ranks[6] = {1,10,10,10,10,1};
     
     // create data
-    size_t ndata = 1000;
+    size_t ndata = 1500;
     /* size_t ndata = 500;     */
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
@@ -2226,7 +2226,7 @@ void Test_LS_AIO_rounding(CuTest * tc)
 
     struct c3Opt * optimizer = c3opt_create(BFGS);
     c3opt_set_verbose(optimizer,0);
-    c3opt_set_gtol(optimizer,1e-3);
+    c3opt_set_gtol(optimizer,1e-4);
     /* c3opt_ls_set_maxiter(optimizer,50); */
     c3opt_set_maxiter(optimizer,2000);
     

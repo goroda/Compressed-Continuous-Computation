@@ -104,6 +104,7 @@ void getrows(const double * A, double * top, size_t * rows, size_t arows, size_t
     \param[in]     incc - increment between rows of output
 
     \note
+    Computes
     \f[
         C[j,:] = A[j,:]B[:,:,j]
     \f]
@@ -134,6 +135,7 @@ void c3linalg_multiple_vec_mat(size_t N, size_t r1, size_t r2,
     \param[in]     incc - increment between rows of output
 
     \note
+    Computes
     \f[
         (C[j,:])^T = B[:,:,j](A[j,:])^T
     \f]
