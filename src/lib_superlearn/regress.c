@@ -2244,7 +2244,15 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr->regopts != NULL);
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
     if (fabs(param_norm) <= 1e-15){
+        /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
+        /* yavg /= (double) N; */
+
         ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
+
+        
+        /* ft_param_create_from_constant */
+
+
         /* fprintf(stderr, "Cannot run ft_regression with zeroed parameters\n"); */
         /* exit(1); */
     }
