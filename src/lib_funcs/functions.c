@@ -815,12 +815,23 @@ double generic_function_norm(const struct GenericFunction * f){
      /* printf("integrating fc = %d\n",f->fc); */
      double out = 0.0;
      switch (f->fc){
-     case CONSTANT:   assert(1==0);                              break;
-     case PIECEWISE:  assert(1==0);                              break;
-     case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
-     case LINELM:     assert(1==0);                              break;
-     case RATIONAL:                                              break;
-     case KERNEL:     assert(1==0);                              break;
+     case CONSTANT:
+         assert(1==0);
+         break;
+     case PIECEWISE:
+         assert(1==0);
+         break;
+     case POLYNOMIAL:
+         out = orth_poly_expansion_integrate_weighted(f->f);
+         break;
+     case LINELM:
+         assert(1==0);
+         break;
+     case RATIONAL:
+         break;
+     case KERNEL:
+         assert(1==0);
+         break;
      }
      return out;
  }

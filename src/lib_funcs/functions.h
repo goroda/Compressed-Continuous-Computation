@@ -152,6 +152,7 @@ double generic_function_array_norm2diff(
                 struct GenericFunction **, size_t);
 
 double generic_function_integral(const struct GenericFunction *);
+double generic_function_integral_weighted(const struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
 
