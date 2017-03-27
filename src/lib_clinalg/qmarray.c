@@ -1415,6 +1415,35 @@ double * qmarray_integrate(const struct Qmarray * a)
 }
 
 /***********************************************************//**
+    Weighted integration of all the elements of a qmarray
+
+    \param[in] a - qmarray to integrate
+
+    \return out - array containing integral of every function in a
+
+    \note Computes \f$ \int f(x) w(x) dx \f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+***************************************************************/
+double * qmarray_integrate_weighted(const struct Qmarray * a)
+{
+    
+    double * out = calloc_double(a->nrows*a->ncols);
+    size_t ii, jj;
+    for (ii = 0; ii < a->ncols; ii++){
+        for (jj = 0; jj < a->nrows; jj++){
+            out[ii*a->nrows + jj] = 
+                generic_function_integral_weighted(a->funcs[ii*a->nrows+jj]);
+        }
+    }
+    
+    return out;
+}
+
+/***********************************************************//**
     Norm of a qmarray
 
     \param[in] a - first qmarray
@@ -3162,6 +3191,18 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     /* printf("\t evaluate! size=%zu\n",size); */
     if (out != NULL){
         generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+        for (size_t ii = 0; ii < size; ii++){
+            if (isnan(out[ii*incout])){
+                fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval is nan\n");
+                fprintf(stderr,"ii=%zu,size=%zu,incout=%zu\n",ii,size,incout);
+                fprintf(stderr,"x = %G\n",x[ii*incx]);
+                exit(1);
+            }
+            else if (isinf(out[ii*incout])){
+                fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval inf\n");
+                exit(1);
+            }
+        }
     }
 
     if (grad != NULL){
@@ -3177,6 +3218,15 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
                     }
                     // and change the one element
                     grad[onparam*size+ii + jj * incg] = workspace[kk];
+                    if (isnan(workspace[kk])){
+                        fprintf(stderr,"Warning, gradient in qmarray_param_grad_eval is nan\n");
+                        exit(1);
+                    }
+                    else if (isinf(workspace[kk])){
+                        fprintf(stderr,"Warning, gradient in qmarray_param_grad_eval is inf\n");
+                        exit(1);
+                    }
+
                     onparam++;
                 }
             }

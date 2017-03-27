@@ -53,7 +53,7 @@ void print_code_usage (FILE * stream, int exit_code)
 #define CVREG 2001
 int main(int argc, char * argv[])
 {
-    int seed = 3;
+    unsigned int seed = 3;
     srand(seed);
 
     int next_option;
@@ -136,10 +136,10 @@ int main(int argc, char * argv[])
                 upper = atof(optarg);
                 break;
             case 'n':
-                numparam = strtol(optarg,NULL,10);
+                numparam = strtoul(optarg,NULL,10);
                 break;
             case 'r':
-                rank = strtol(optarg,NULL,10);
+                rank = strtoul(optarg,NULL,10);
                 break;
             case 't':
                 tol = atof(optarg);
@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
                 strcpy(alg,optarg);
                 break;
             case 'd':
-                adapt = strtol(optarg,NULL,10);
+                adapt = strtoul(optarg,NULL,10);
                 break;
             case 'b':
                 if (strcmp(optarg,"kernel") == 0){
@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
                 reg = atof(optarg);
                 break;
             case CVK:
-                kfold = strtol(optarg,NULL,10);
+                kfold = strtoul(optarg,NULL,10);
                 break;
             case CVR:
                 cvrank += 1;
@@ -182,7 +182,7 @@ int main(int argc, char * argv[])
                     free(nnew); nnew = NULL;
                     nranksalloc = 2 * nranksalloc;
                 }
-                CVranks[cvrank-1] = strtol(optarg,NULL,10);
+                CVranks[cvrank-1] = strtoul(optarg,NULL,10);
                 break;
             case CVN:
                 cvnum += 1;
@@ -195,7 +195,7 @@ int main(int argc, char * argv[])
                     free(nnew); nnew = NULL;
                     nnumsalloc = 2 * nnumsalloc;
                 }
-                CVnums[cvnum-1] = strtol(optarg,NULL,10);
+                CVnums[cvnum-1] = strtoul(optarg,NULL,10);
                 break;
             case CVREG:
                 cvreg += 1;

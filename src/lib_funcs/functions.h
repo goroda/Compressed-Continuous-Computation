@@ -55,7 +55,7 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
-#include "lib_optimization.h"
+#include "../lib_optimization/lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -152,6 +152,7 @@ double generic_function_array_norm2diff(
                 struct GenericFunction **, size_t);
 
 double generic_function_integral(const struct GenericFunction *);
+double generic_function_integral_weighted(const struct GenericFunction *);
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
 

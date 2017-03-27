@@ -795,6 +795,48 @@ double generic_function_norm(const struct GenericFunction * f){
  }
 
  /********************************************************//**
+    Compute the integral of a generic function
+ 
+    \param[in] f - generic function
+ 
+    \return out - integral
+
+    \note Computes \f$ \int f(x) w(x) dx\f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+ ************************************************************/
+ double generic_function_integral_weighted(
+     const struct GenericFunction * f){
+     
+     assert (f != NULL);
+     /* printf("integrating fc = %d\n",f->fc); */
+     double out = 0.0;
+     switch (f->fc){
+     case CONSTANT:
+         assert(1==0);
+         break;
+     case PIECEWISE:
+         assert(1==0);
+         break;
+     case POLYNOMIAL:
+         out = orth_poly_expansion_integrate_weighted(f->f);
+         break;
+     case LINELM:
+         assert(1==0);
+         break;
+     case RATIONAL:
+         break;
+     case KERNEL:
+         assert(1==0);
+         break;
+     }
+     return out;
+ }
+
+ /********************************************************//**
  *   Compute the integral of all the functions in a generic function array
  *
  *   \param[in] n   - number of functions
@@ -1240,6 +1282,15 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
      case KERNEL:     out = kernel_expansion_eval(f->f,x);    break;
      }
 
+
+     if (isnan(out)){
+         fprintf(stderr,"Warning, evaluation of generic_function is nan\n");
+         exit(1);
+     }
+     else if (isinf(out)){
+         fprintf(stderr,"Warning, evaluation of generic_function is inf\n");
+         exit(1);
+     }
      return out;
  }
 
@@ -2905,6 +2956,16 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
                                const double * param)
 {
 
+    for (size_t ii = 0; ii < dim; ii++){
+        if (isnan(param[ii])){
+            fprintf(stderr,"Updating generic functions with params that are NaN\n");
+            exit(1);
+        }
+        else if (isinf(param[ii])){
+            fprintf(stderr,"Updating generic functions with params that are inf\n");
+            exit(1);
+        }
+    }
 
     switch (f->fc){
     case CONSTANT:

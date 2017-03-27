@@ -890,6 +890,8 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
                                   size_t nparams, const double * param)
 {
 
+    
+
     size_t nold = ope->num_poly;
     ope->num_poly = nparams;
     if (nold >= nparams){
@@ -1016,6 +1018,9 @@ orth_poly_expansion_zero(struct OpeOpts * opts, int force_nparam)
 struct OrthPolyExpansion * 
 orth_poly_expansion_constant(double a, struct OpeOpts * opts)
 {
+    assert (isnan(a) == 0);
+    assert (isinf(a) == 0);
+    assert (fabs(a) < 1e100);
 
     assert (opts != NULL);
     struct OrthPolyExpansion * p = NULL;
@@ -1037,6 +1042,12 @@ orth_poly_expansion_constant(double a, struct OpeOpts * opts)
 struct OrthPolyExpansion * 
 orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 {
+    assert (isnan(a) == 0);
+    assert (isinf(a) == 0);
+    assert (isnan(offset) == 0);
+    assert (isinf(offset) == 0);
+
+    
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(opts->ptype, 2, opts->lb, opts->ub);
     if (opts->ptype == LEGENDRE){
@@ -1066,7 +1077,7 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 }
 
 /********************************************************//**
-*   Generate a linear orthonormal polynomial expansion
+*   Generate a quadratic orthonormal polynomial expansion
     a * (x-offset)^2
 *
 *   \param[in] a      - value of the slope function
@@ -1078,6 +1089,13 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 struct OrthPolyExpansion * 
 orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 {
+
+    assert (isnan(a) == 0);
+    assert (isinf(a) == 0);
+    assert (isnan(offset) == 0);
+    assert (isinf(offset) == 0);
+
+
     struct OrthPolyExpansion * p = 
             orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
 
@@ -1613,7 +1631,6 @@ int legendre_poly_expansion_arr_eval(size_t n,
 *   \param[in]     incx       - increment between locations
 *   \param[in,out] y          - evaluations
 *   \param[in]     incy       - increment between evaluations of array (at least n)
-*   \param[in,out] workspace  - workspace 
 *
 *   \return 0 - successful
 *           1 - not all legendre polynomials
@@ -1678,6 +1695,22 @@ int legendre_poly_expansion_arr_evalN(size_t n,
             p[1] = pnew;
         }
     }
+
+    for (size_t jj = 0; jj < N; jj++){
+        for (size_t ii = 0; ii < n; ii++){
+            if (isnan(y[ii + jj* incy]) || y[ii+jj * incy] > 1e100){
+                fprintf(stderr,"Warning, evaluation in legendre_array_eval is nan\n");
+                fprintf(stderr,"Polynomial %zu, evaluation %zu\n",ii,jj);
+                print_orth_poly_expansion(parr[ii],0,NULL);
+                exit(1);
+            }
+            else if (isinf(y[ii + jj * incy])){
+                fprintf(stderr,"Warning, evaluation in legendre_array_eval inf\n");
+                exit(1);
+            }        
+        }
+    }
+    
     
     return 0;
 }
@@ -1852,7 +1885,7 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
 *   order polynomials from the same family.
 *
-*   \param[in]     f    - function
+*   \param[in]     poly - function
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x
@@ -2954,6 +2987,35 @@ orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
     }
     return out;
 }
+
+/********************************************************//**
+*   Integrate an orthogonal polynomial expansion 
+*
+*   \param[in] poly - polynomial to integrate
+*
+*   \return out - Integral of approximation
+*
+    \note Computes  \f$ \int f(x) w(x) dx \f$ for every univariate function
+    in the qmarray
+    
+    w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+*************************************************************/
+double
+orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion * poly)
+{
+    double out = 0.0;
+    switch (poly->p->ptype){
+    case LEGENDRE:  out = poly->coeff[0];  break;
+    case HERMITE:   out = poly->coeff[0];  break;
+    case CHEBYSHEV: out = poly->coeff[0];  break;
+    case STANDARD:  fprintf(stderr, "Cannot integrate STANDARD type\n"); break;
+    }
+
+    return out;
+}
+
 
 /********************************************************//**
 *   Weighted inner product between two polynomial 

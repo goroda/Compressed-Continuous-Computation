@@ -830,7 +830,7 @@ piecewise_poly_eval(const struct PiecewisePoly * poly, double x){
 /********************************************************//**
 *   Evaluate a piecewise polynomial
 *
-*   \param[in]     f    - function
+*   \param[in]     poly - function
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x

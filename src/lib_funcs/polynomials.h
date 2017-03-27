@@ -316,6 +316,7 @@ orth_poly_expansion_sum_prod(size_t, size_t,
         struct OrthPolyExpansion **);
 
 double orth_poly_expansion_integrate(struct OrthPolyExpansion *);
+double orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion *);
 double orth_poly_expansion_inner_w(struct OrthPolyExpansion *,
                             struct OrthPolyExpansion *);
 double orth_poly_expansion_inner(struct OrthPolyExpansion *,

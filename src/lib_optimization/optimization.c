@@ -951,6 +951,15 @@ double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
     assert (opt != NULL);
     assert (opt->f != NULL);
     double out = opt->f(opt->d,x,grad,opt->farg);
+    if (isnan(out)){
+        fprintf(stderr,"Optimization function valueis NaN\n");
+        exit(1);
+    }
+    else if (isinf(out)){
+        fprintf(stderr,"Optimization function value is inf\n");
+        exit(1);
+    }
+    
     opt->nevals+=1;
     if (grad != NULL){
         opt->ngvals += 1;
@@ -1918,6 +1927,15 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     opt->niters = 1;    
 
     *fval = c3opt_eval(opt,x,grad);
+    if (isnan(*fval)){
+        fprintf(stderr,"Initial optimization function valueis NaN\n");
+        exit(1);
+    }
+    else if (isinf(*fval)){
+        fprintf(stderr,"Initial optimization function value is inf\n");
+        exit(1);
+    }
+    
     if (opt->store_func == 1){
         opt->stored_func[opt->niters-1] = *fval;
     }
@@ -2453,7 +2471,7 @@ void c3opt_lbfgs_list_free(struct c3opt_lbfgs_list * list)
     \param[in]     iter    - iteration
     \param[in]     m       - number of stored vectors
     \param[in]     hoscale - scale for initial Ho
-    \parma[in]     scale   - 0 then just hoscale, 1 then s^Ty/y^Ty
+    \param[in]     scale   - 0 then just hoscale, 1 then s^Ty/y^Ty
     \param[in,out] alpha   - space for evlaluation of rho s^T q (at most m)
     \param[in]     g       - object to multiply by
     \param[in,out] q       - space for evaluation of Hg (at least d)

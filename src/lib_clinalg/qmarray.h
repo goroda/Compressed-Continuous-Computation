@@ -148,6 +148,7 @@ void qmarray_block_kron_mat(char, int, size_t,
         struct Qmarray **, struct Qmarray *, size_t,
         double *, struct Qmarray *);
 double * qmarray_integrate(const struct Qmarray *);
+double * qmarray_integrate_weighted(const struct Qmarray *);
 double qmarray_norm2diff(const struct Qmarray *,const struct Qmarray *);
 double qmarray_norm2(const struct Qmarray *);
 void qmarray_axpy(double,const struct Qmarray *, struct Qmarray *);

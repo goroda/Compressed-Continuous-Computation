@@ -49,4 +49,5 @@ int TwoPowX3(size_t, const double *, double *, void *);
 
 int polyroots(size_t, const double *, double *, void *);
 int maxminpoly(size_t, const double *, double *, void *);
+int x3minusx(size_t, const double *, double *, void *);
 #endif

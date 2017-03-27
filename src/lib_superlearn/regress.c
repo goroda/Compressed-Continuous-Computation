@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file regress.c
  * Provides routines for FT-regression
  */
@@ -372,8 +369,8 @@ void regress_opts_set_max_als_sweep(struct RegressOpts * opts, size_t maxsweeps)
 /***********************************************************//**
     Set the ALS convergence tolerance
     
-    \param[in,out] opts      - regression options
-    \param[in]     maxsweeps - number of sweeps     
+    \param[in,out] opts - regression options
+    \param[in]     tol  - number of sweeps     
 ***************************************************************/
 void regress_opts_set_als_conv_tol(struct RegressOpts * opts, double tol)
 {
@@ -784,8 +781,8 @@ void ft_param_update_params(struct FTparam * ftp, const double * params)
     Get the number of parameters of an FT for univariate functions
     >= ranks_start
 
-    \param[in] ftp         - parameterized FTP
-    \param[in] ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+    \param[in] ftp        - parameterized FTP
+    \param[in] rank_start - starting ranks for which to obtain number of parameters (dim-1,)
 ***************************************************************/
 size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * rank_start)
 {
@@ -815,14 +812,15 @@ size_t ft_param_get_nparams_restrict(const struct FTparam * ftp, const size_t * 
     Update the parameters of an FT for univariate functions
     >= ranks_start
 
-    \param[in,out] ftp         - parameterized FTP
-    \param[in]     params      - parameters for univariate functions at locations >= ranks_start
-    \param[in]     ranks_start - starting ranks for which to obtain number of parameters (dim-1,)
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     params     - parameters for univariate functions at locations >= ranks_start
+    \param[in]     rank_start - starting ranks for which to obtain number of parameters (dim-1,)
 
     \note
     As always FORTRAN ordering (columns first, then rows)
 ***************************************************************/
-void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * params, const size_t * rank_start)
+void ft_param_update_restricted_ranks(struct FTparam * ftp,
+                                      const double * params, const size_t * rank_start)
 {
 
     size_t ind = 0;
@@ -859,9 +857,9 @@ void ft_param_update_restricted_ranks(struct FTparam * ftp, const double * param
     Update the parameters of an FT for univariate functions
     < ranks_start
 
-    \param[in,out] ftp         - parameterized FTP
-    \param[in]     params      - parameters for univariate functions at locations < ranks_start
-    \param[in]     ranks_start - threshold of ranks at which not to update
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     params     - parameters for univariate functions at locations < ranks_start
+    \param[in]     rank_start - threshold of ranks at which not to update
 
     \note
     As always FORTRAN ordering (columns first, then rows)
@@ -1016,6 +1014,9 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     linear_ls(N,ftp->dim+1,A,b,weights);
 
     /* printf("weights = "); dprint(ftp->dim,weights); */
+    /* for (size_t ii = 0; ii < ftp->dim;ii++){ */
+    /*     weights[ii] = randn(); */
+    /* } */
     
     // now create the approximation
     double * a = calloc_double(ftp->dim);
@@ -1054,16 +1055,17 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
         struct FunctionTrain * temp = linear_temp;
         if ((mincol == 1) && (minrow == 1)){
             temp = const_temp;
-        }
+        }        
 
         size_t nparam_temp = function_train_core_get_nparams(temp,ii,NULL);
         double * temp_params = calloc_double(nparam_temp);
         function_train_core_get_params(temp,ii,temp_params);
         size_t onparam_temp = 0;
 
-
+        /* printf("on core = %zu\n,ii"); */
         for (size_t col = 0; col < mincol; col++){
             for (size_t row = 0; row < minrow; row++){
+
 
                 size_t nparam_temp_func = function_train_func_get_nparams(temp,ii,row,col);
 
@@ -1182,29 +1184,36 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             /* printf("grad = "); dprint(ftp->nparams,mem->grad->vals + ii * ftp->nparams); */
             /* printf("eval = %G\n",mem->evals->vals[ii]); */
             resid = y[ii] - mem->evals->vals[ii];
+
             /* printf("\ny = %G, val = %G \n",y[ii],mem->evals->vals[ii]); */
-            /* if (isnan(resid) || isinf(resid)){ */
-            /*     printf("\ny = %G, val = %G \n",y[ii],mem->evals->vals[ii]); */
-            /*     printf("x = "); */
-            /*     for (size_t zz = 0; zz < ftp->dim; zz++){ */
-            /*         printf("%G ", x[zz]); */
-            /*     } */
-            /*     printf("\n"); */
-            /*     printf("params = "); */
-            /*     for (size_t zz = 0; zz < ftp->nparams; zz++){ */
-            /*         printf("%G ", ftp->params[zz]); */
-            /*     } */
-            /*     printf("\n"); */
-            /*     fprintf(stderr,"Residual in aio_ls is NaN\n"); */
-            /*     exit(1); */
-            /* } */
-            /* printf("resid = %G\n",resid); */
-            /* if (fabs(resid) > 2){ */
-            /*     printf("x = "); dprint(ftp->dim,x); */
-            /*     printf("y = %G\n",y[ii]); */
-            /*     printf("vals = %G\n",mem->evals->vals[ii]); */
-            /* } */
+            if (isnan(resid) || isinf(resid)){
+                printf("\ny = %G, val = %G \n",y[ii],mem->evals->vals[ii]);
+                printf("x = ");
+                for (size_t zz = 0; zz < ftp->dim; zz++){
+                    printf("%G ", x[zz]);
+                }
+                printf("\n");
+                printf("params = ");
+                for (size_t zz = 0; zz < ftp->nparams; zz++){
+                    printf("%G ", ftp->params[zz]);
+                }
+                printf("\n");
+                fprintf(stderr,"Residual in aio_ls is NaN\n");
+                exit(1);
+            }
+            printf("resid = %G\n",resid);
+            if (fabs(resid) > 2){
+                printf("x = "); dprint(ftp->dim,x);
+                printf("y = %G\n",y[ii]);
+                printf("vals = %G\n",mem->evals->vals[ii]);
+            }
+
             out += 0.5 * resid * resid;
+            if (isinf(out)){
+                fprintf(stderr,"out = %G,resid=%G,memeval=%G,y=%G\n",out,resid,mem->evals->vals[ii],y[ii]);
+                dprint(ftp->dim,x+ii*ftp->dim);
+                exit(1);
+            }
             cblas_daxpy(ftp->nparams, -resid,
                         mem->grad->vals + ii * ftp->nparams, 1,
                         grad,1);
@@ -1212,6 +1221,16 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
         out /= (double) N;
         for (size_t ii = 0; ii < ftp->nparams; ii++){
             grad[ii] /= (double) N;
+        }
+
+        if (isnan(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad != NULL) is NaN\n");
+            exit(1);
+        }
+        else if (isinf(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad != NULL) is Inf\n");
+            fprintf(stderr,"N = %zu\n",N);
+            exit(1);
         }
     }
     else{
@@ -1228,6 +1247,15 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             out += 0.5 * resid * resid;
         }
         out /= (double) N;
+
+        if (isnan(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad = NULL) is NaN\n");
+            exit(1);
+        }
+        else if (isinf(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad = NULL) is Inf\n");
+            exit(1);
+        }
     }
     return out;
 }
@@ -1454,6 +1482,14 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
         regression_mem_manager_free(mem_here); mem_here = NULL;
     }
 
+    if (isnan(out)){
+        fprintf(stderr,"Regress aio eval objective is NaN\n");
+        exit(1);
+    }
+    else if (isinf(out)){
+        fprintf(stderr,"Regress aio eval objective is Inf\n");
+        exit(1);
+    }
     return out;
 }
 
@@ -1531,7 +1567,18 @@ struct PP
 double regress_opts_minimize_aio(size_t nparam, const double * param,
                                  double * grad, void * args)
 {
-    (void)(nparam);
+
+    for (size_t ii = 0; ii < nparam; ii++){
+        if (isnan(param[ii])){
+            fprintf(stderr,"Optimizer requesting params that are NaN\n");
+            fprintf(stderr,"param[%zu] = nan\n",ii);
+            exit(1);
+        }
+        else if (isinf(param[ii])){
+            fprintf(stderr,"Optimizer requesting params that are inf\n");
+            exit(1);
+        }
+    }
 
     struct PP * pp = args;
 
@@ -1563,6 +1610,15 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
         }
     }
 
+    if (isnan(eval)){
+        fprintf(stderr,"Regress aio objective is NaN\n");
+        exit(1);
+    }
+    else if (isinf(eval)){
+        fprintf(stderr,"Regress aio objective is Inf\n");
+        exit(1);
+    }
+    
     return eval;
 }
 
@@ -1689,6 +1745,19 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
         extract_restricted_vals(ropts,ftp,ftp->params,guess);
     }
 
+    for (size_t ii = 0; ii < nparams; ii++){
+        if (isnan(guess[ii])){
+            fprintf(stderr,"Initial guess for AIO regression is NaN\n");
+            fprintf(stderr,"param[%zu] = nan\n",ii);
+            exit(1);
+        }
+        else if (isinf(guess[ii])){
+            fprintf(stderr,"Initial guess for AIO regression is inf\n");
+            exit(1);
+        }
+    }
+
+
     double val;
     c3opt_set_nvars(optimizer,nparams);
 
@@ -1728,7 +1797,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     General ALS regression objective for c3opt optimizer
 
     \param[in]     nparam - number of parameters
-    \param[in]     param  - parameter values
+    \param[in]     params - parameter values
     \param[in,out] grad   - gradient (doesn't evaluate if NULL)
     \param[in,out] args   - additional arguments to optimizer
 
@@ -1891,7 +1960,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     Run regression and return the result
 
     \param[in,out] ftp       - parameterized function train
-    \param[in,out] ropts     - regression options
+    \param[in,out] regopts   - regression options
     \param[in,out] optimizer - optimization arguments
     \param[in]     N         - number of data points
     \param[in]     x         - training samples
@@ -2234,8 +2303,8 @@ void ft_regress_update_params(struct FTRegress * ftr, const double * param)
 /***********************************************************//**
     Set ALS convergence tolerance
 
-    \param[in,out] opts      - regression structuture
-    \param[in]     tolerance - convergence tolerance
+    \param[in,out] opts - regression structuture
+    \param[in]     tol  - convergence tolerance
 ***************************************************************/
 void ft_regress_set_als_conv_tol(struct FTRegress * opts, double tol)
 {
@@ -2317,7 +2386,15 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr->regopts != NULL);
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
     if (fabs(param_norm) <= 1e-15){
+        /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
+        /* yavg /= (double) N; */
+
         ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
+
+        
+        /* ft_param_create_from_constant */
+
+
         /* fprintf(stderr, "Cannot run ft_regression with zeroed parameters\n"); */
         /* exit(1); */
     }
@@ -2617,7 +2694,6 @@ struct CrossValidate * cross_validate_init(size_t N, size_t dim,
    \param[in,out] ytest       - point to an array for storing lables up to *start* index
    \param[in,out] xtrain      - pointer to an array for storing features after start upto start+num_extract
    \param[in,out] ytrain      - pointer to an array for storing labels after start upto start+num_extract
-   \param[in]     verbose     - verbosity level
 ***************************************************************/
 void extract_data(struct CrossValidate * cv, size_t start,
                   size_t num_extract,
@@ -2665,7 +2741,7 @@ double cross_validate_run(struct CrossValidate * cv,
     }
 
     double err = 0.0;
-    double start_num = 0;
+    size_t start_num = 0;
     double * xtrain = calloc_double(cv->N * cv->dim);
     double * ytrain = calloc_double(cv->N);
     double * xtest = calloc_double(cv->N * cv->dim);
@@ -2751,7 +2827,7 @@ enum RDTYPE {RPUINT, RPDBL, RPINT};
 
 #define NRPARAM 4
 static char reg_param_names[NRPARAM][30] = {"rank","num_param","opt_maxiter","reg_weight"};
-static int reg_param_types[NRPARAM]={RPUINT,RPUINT,RPUINT,RPDBL};
+static enum RDTYPE reg_param_types[NRPARAM]={RPUINT,RPUINT,RPUINT,RPDBL};
 
 int get_reg_ind(char * name)
 {

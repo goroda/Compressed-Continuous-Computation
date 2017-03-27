@@ -202,15 +202,25 @@ function_train_constant(double a, struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_linear(const double *, size_t, const double *, size_t,
                       struct MultiApproxOpts *);
+
+struct FunctionTrain *
+function_train_rankone_prod(const double *,
+                            struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_quadratic(const double *,const double *,
                              struct MultiApproxOpts *);
+
+struct FunctionTrain *
+function_train_quadratic_aligned(const double *, const double *,
+                                 struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_create_nodal(const struct FunctionTrain *, size_t *, double **);
 
 // computations
 double
 function_train_integrate(const struct FunctionTrain *);
+double
+function_train_integrate_weighted(const struct FunctionTrain *);
 double function_train_inner(const struct FunctionTrain *, 
                             const struct FunctionTrain * );
 double function_train_norm2(const struct FunctionTrain *);

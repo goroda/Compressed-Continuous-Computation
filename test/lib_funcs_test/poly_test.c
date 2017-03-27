@@ -608,6 +608,34 @@ void Test_legendre_integrate(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_legendre_integrate_weighted(CuTest * tc){
+
+    printf("Testing function: legendre_integrate_weighted\n");
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,x3minusx,NULL);
+
+    // approximation
+    double lb = -3.0, ub = 9.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-8);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
+
+    double ubterm = 3.0/4.0 * pow(ub,4) - 1.0/2.0 * pow(ub,2);
+    double lbterm = 3.0/4.0 * pow(lb,4) - 1.0/2.0 * pow(lb,2);
+    double intshould = (ubterm-lbterm)/(ub-lb);
+    double intis = orth_poly_expansion_integrate_weighted(cpoly);
+    CuAssertDblEquals(tc, intshould, intis, 1e-13);
+    
+    POLY_FREE(cpoly);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+}
+
 
 void Test_legendre_inner(CuTest * tc){
 
@@ -866,6 +894,7 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_derivative);
     SUITE_ADD_TEST(suite, Test_legendre_derivative_consistency);
     SUITE_ADD_TEST(suite, Test_legendre_integrate);
+    SUITE_ADD_TEST(suite, Test_legendre_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_legendre_inner);
     SUITE_ADD_TEST(suite, Test_legendre_norm_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm);
