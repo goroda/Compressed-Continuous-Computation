@@ -1726,7 +1726,6 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     double test_error = 0;
     double learn_rate = opt->sgd->learn_rate;
 
-
     if (verbose > 0){
         printf("\nBegin optimization with learn rate = %G\n",learn_rate);
         printf("\n");
@@ -1756,102 +1755,139 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     double best_valid_err = 0.0;
     double prev_error = 0.0;
     double prev_ten_err = 0.0;
+    double new_ten_err = 0.0;
     size_t nincrease = 0;
+    double * first_moment = calloc_double(d);
+    double * bias_corrected_first = calloc_double(d);
+    double * second_moment = calloc_double(d);
+    double * bias_corrected_second = calloc_double(d);
+    double beta_1 = 0.9;
+    double beta_2 = 0.999;
+    double eps = 1e-8;
+    size_t time = 1;
     for (size_t iter = 0; iter < maxiter; iter++){
 
         for (size_t ii = 0; ii < ndata_train; ii++){
             memmove(previous_step,current_step,d*sizeof(double));
             memmove(current_step,next_step,d*sizeof(double));
 
-            if (do_momentum > 0){
-                for (size_t jj = 0; jj < d; jj++){
-                    workspace[d+jj] = nesterov_mu*(current_step[jj]-previous_step[jj]);
-                    /* printf("workspace[%zu] = %G\n",d+jj,workspace[d+jj]); */
-                    if (isnan(workspace[d+jj])){
-                        exit(1);
-                    }
-                }
-            }
+            *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
 
-            // for regular momentum and no momentum
-            if (do_momentum <= 1){
-                *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
-            }
-            else{ //nesterov momentum
-                // generate an intermediate step
-                memmove(inter_step,current_step,d*sizeof(double));
-                cblas_daxpy(d,1.0,workspace+d,1,inter_step,1);
+            // update first moment
+            for (size_t jj = 0; jj < d; jj++){
+                first_moment[jj] = beta_1 * first_moment[jj] + (1.0 - beta_1) * workspace[jj];
+                second_moment[jj] = beta_2 * second_moment[jj] + (1.0 - beta_2) * workspace[jj] * workspace[jj];
 
-                // evaluate gradient at intermediate step
-                *fval = c3opt_eval_stoch(opt,order[ii],inter_step,workspace);
-                
+                bias_corrected_first[jj] = first_moment[jj] / ( 1.0 - pow(beta_1,time));
+                bias_corrected_second[jj] = second_moment[jj] / ( 1.0 - pow(beta_2,time));
+                next_step[jj] += -learn_rate * bias_corrected_first[jj] / (sqrt(bias_corrected_second[jj]) + eps);
             }
-            
-            cblas_daxpy(d,-learn_rate,workspace,1,next_step,1);
-
-            // for any momenumt algorithm we have this
-            if (do_momentum > 0){
-                cblas_daxpy(d,1.0,workspace+d,1,next_step,1);
-            }
-
-
-            if (isnan (*fval) ){
-                sgd_inter_clean(&current_step,&previous_step,&inter_step,&next_step,&order);
-                opt->sgd->learn_rate *= opt->sgd->learn_rate_decay;
-                *fval = 0;
-                return c3_opt_sgd(opt,x,fval);
-                /* mid_sgd_exit(prev_step,current_step,next_step) */
-            }
-            else if (isinf (*fval)){
-                sgd_inter_clean(&current_step,&previous_step,&inter_step,&next_step,&order);
-                opt->sgd->learn_rate *= opt->sgd->learn_rate_decay;
-                *fval = 0;
-                return c3_opt_sgd(opt,x,fval);
-            }
-
+            time++;
         }
-        if ((iter > 0) && (iter % opt->sgd->nepochs_between_increase == 0)){
-            /* printf("here?! %zu\n",iter); */
-            if (nesterov_mu * momentum_increase <= 0.9){
-                nesterov_mu *= momentum_increase;
-            }
-
-            /* learn_rate *= opt->sgd->learn_rate_decay; */
-        }
-
-        /* if ((iter > 0) && (iter % 300 == 0)){ */
-        /*     /\* printf("here?! %zu\n",iter); *\/ */
-        /*      learn_rate *= opt->sgd->learn_rate_decay; */
-        /*      opt->sgd->learn_rate = learn_rate; */
-        /* } */
 
         
-        sgd_term_check(opt,d,next_step,current_step,ndata_train,ndata,order,&xdiff,&train_error,&test_error);
-        if (iter == 0){
-            best_valid_err = test_error;
-            prev_error = test_error;
-            prev_ten_err = test_error;
-        }
-        else{
-            if (test_error < best_valid_err){
-                memmove(x,next_step,d*sizeof(double));
-                best_valid_err = test_error;
-            }
+        /* for (size_t ii = 0; ii < ndata_train; ii++){ */
+        /*     memmove(previous_step,current_step,d*sizeof(double)); */
+        /*     memmove(current_step,next_step,d*sizeof(double)); */
 
-            if (test_error > prev_error){
-                nincrease+=1;
-            }
-            else{
-                nincrease = 0;
-            }
-            prev_error = test_error;
-            prev_ten_err += test_error;
-            /* if (nincrease > 100){ */
-            /*     learn_rate *= opt->sgd->learn_rate_decay; */
-            /*     opt->sgd->learn_rate = learn_rate; */
-            /*     nincrease = 0; */
-            /* } */
-        }
+        /*     if ((do_momentum > 0) && (iter > 50)){ */
+        /*         for (size_t jj = 0; jj < d; jj++){ */
+        /*             workspace[d+jj] = nesterov_mu*(current_step[jj]-previous_step[jj]); */
+        /*             /\* printf("workspace[%zu] = %G\n",d+jj,workspace[d+jj]); *\/ */
+        /*             if (isnan(workspace[d+jj])){ */
+        /*                 exit(1); */
+        /*             } */
+        /*         } */
+        /*     } */
+
+        /*     // for regular momentum and no momentum */
+        /*     if ((do_momentum <= 1) || (iter < 50)){ */
+        /*         *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace); */
+        /*     } */
+        /*     else{ //nesterov momentum */
+        /*         // generate an intermediate step */
+        /*         memmove(inter_step,current_step,d*sizeof(double)); */
+        /*         cblas_daxpy(d,1.0,workspace+d,1,inter_step,1); */
+
+        /*         // evaluate gradient at intermediate step */
+        /*         *fval = c3opt_eval_stoch(opt,order[ii],inter_step,workspace); */
+                
+        /*     } */
+
+        /*     double norm_prev = cblas_ddot(d,next_step,1,next_step,1); */
+        /*     double norm_grad = cblas_ddot(d,workspace,1,workspace,1); */
+        /*     printf("norm_grad = %G\n",norm_grad); */
+        /*     cblas_daxpy(d,-learn_rate,workspace,1,next_step,1); */
+
+        /*     // for any momenumt algorithm we have this */
+        /*     if ((do_momentum > 0) && (iter < 50)){ */
+        /*         cblas_daxpy(d,1.0,workspace+d,1,next_step,1); */
+        /*     } */
+
+
+        /*     if (isnan (*fval) ){ */
+        /*         sgd_inter_clean(&current_step,&previous_step, */
+        /*                         &inter_step,&next_step,&order); */
+        /*         opt->sgd->learn_rate *= opt->sgd->learn_rate_decay; */
+        /*         *fval = 0; */
+        /*         return c3_opt_sgd(opt,x,fval); */
+        /*         /\* mid_sgd_exit(prev_step,current_step,next_step) *\/ */
+        /*     } */
+        /*     else if (isinf (*fval)){ */
+        /*         sgd_inter_clean(&current_step,&previous_step, */
+        /*                         &inter_step,&next_step,&order); */
+        /*         opt->sgd->learn_rate *= opt->sgd->learn_rate_decay; */
+        /*         *fval = 0; */
+        /*         return c3_opt_sgd(opt,x,fval); */
+        /*     } */
+
+        /* } */
+        /* if ((iter > 50) && (iter % opt->sgd->nepochs_between_increase == 0)){ */
+        /*     /\* printf("here?! %zu\n",iter); *\/ */
+        /*     if (nesterov_mu * momentum_increase <= 0.9){ */
+        /*         nesterov_mu *= momentum_increase; */
+        /*     } */
+
+        /*     /\* learn_rate *= opt->sgd->learn_rate_decay; *\/ */
+        /* } */
+
+        /* /\* if ((iter > 0) && (iter % 300 == 0)){ *\/ */
+        /* /\*     /\\* printf("here?! %zu\n",iter); *\\/ *\/ */
+        /* /\*      learn_rate *= opt->sgd->learn_rate_decay; *\/ */
+        /* /\*      opt->sgd->learn_rate = learn_rate; *\/ */
+        /* /\* } *\/ */
+
+        
+        sgd_term_check(opt,d,next_step,current_step,ndata_train,
+                       ndata,order,&xdiff,&train_error,&test_error);
+        /* if (iter == 0){ */
+        /*     best_valid_err = test_error; */
+        /*     prev_error = test_error; */
+        /*     prev_ten_err = test_error; */
+        /*     new_ten_err = 0.0; */
+        /* } */
+        /* else{ */
+        /*     if (test_error < best_valid_err){ */
+        /*         memmove(x,next_step,d*sizeof(double)); */
+        /*         best_valid_err = test_error; */
+        /*     } */
+
+        /*     if (test_error > prev_error){ */
+        /*         nincrease+=1; */
+        /*     } */
+        /*     else{ */
+        /*         nincrease = 0; */
+        /*     } */
+        /*     prev_error = test_error; */
+
+        /*     new_ten_err += test_error; */
+            
+        /*     /\* if (nincrease > 100){ *\/ */
+        /*     /\*     learn_rate *= opt->sgd->learn_rate_decay; *\/ */
+        /*     /\*     opt->sgd->learn_rate = learn_rate; *\/ */
+        /*     /\*     nincrease = 0; *\/ */
+        /*     /\* } *\/ */
+        /* } */
         
         if (verbose > 0){
             printf("          %-12zu|",iter+1);
@@ -1866,9 +1902,16 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
             printf("\n");
         }
 
-        if ((iter > 0) && (iter % 10) == 0){
-            prev_ten_err = 0;
-        }
+        /* if ((iter > 0) && (iter % 50) == 0){ */
+        /*     if ((new_ten_err > prev_ten_err) && (iter > 100)){ */
+        /*         learn_rate *= opt->sgd->learn_rate_decay; */
+        /*     } */
+        /*     printf("new_ten_err = %G\n",new_ten_err/50.0); */
+        /*     prev_ten_err = new_ten_err; */
+        /*     new_ten_err = 0.0; */
+
+            
+        /* } */
 
         if (learn_rate < 1e-20){
             break;

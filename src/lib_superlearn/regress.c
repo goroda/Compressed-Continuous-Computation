@@ -1201,17 +1201,12 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
                 fprintf(stderr,"Residual in aio_ls is NaN\n");
                 exit(1);
             }
-            printf("resid = %G\n",resid);
-            if (fabs(resid) > 2){
-                printf("x = "); dprint(ftp->dim,x);
-                printf("y = %G\n",y[ii]);
-                printf("vals = %G\n",mem->evals->vals[ii]);
-            }
 
             out += 0.5 * resid * resid;
             if (isinf(out)){
                 fprintf(stderr,"out = %G,resid=%G,memeval=%G,y=%G\n",out,resid,mem->evals->vals[ii],y[ii]);
                 dprint(ftp->dim,x+ii*ftp->dim);
+                dprint(ftp->nparams,ftp->params);
                 exit(1);
             }
             cblas_daxpy(ftp->nparams, -resid,
