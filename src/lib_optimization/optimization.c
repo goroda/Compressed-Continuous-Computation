@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file optimization.c
  * Provides routines for optimization
  */
