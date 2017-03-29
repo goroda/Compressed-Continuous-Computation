@@ -8,17 +8,17 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 
-# set(include_dest "include/c3-${C3_VERSION}")
-# set(main_lib_dest "lib/c3-${C3_VERSION}")
-# set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+#set(include_dest "/usr/local/include/c3-${C3_VERSION}")
+#set(main_lib_dest "/usr/local/lib/c3-${C3_VERSION}")
+#set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 
-# set(include_dest "include/c3")
-# set(main_lib_dest "lib/c3")
+#set(include_dest "include/c3")
+#set(main_lib_dest "lib/c3")
 set (include_dest "~/Software/c3_installed/include/c3")
 set (main_lib_dest "~/Software/c3_installed/lib/c3")
 set (bin_dest "~/Software/c3_installed/bin")
-set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+#set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+#set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 
 if (APPLE)
     option(USE_CLANG "build application with clang" ON)
