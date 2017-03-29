@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file regress.c
  * Provides routines for FT-regression
  */
@@ -1000,6 +997,9 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     linear_ls(N,ftp->dim+1,A,b,weights);
 
     /* printf("weights = "); dprint(ftp->dim,weights); */
+    /* for (size_t ii = 0; ii < ftp->dim;ii++){ */
+    /*     weights[ii] = randn(); */
+    /* } */
     
     // now create the approximation
     double * a = calloc_double(ftp->dim);
@@ -1038,16 +1038,17 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
         struct FunctionTrain * temp = linear_temp;
         if ((mincol == 1) && (minrow == 1)){
             temp = const_temp;
-        }
+        }        
 
         size_t nparam_temp = function_train_core_get_nparams(temp,ii,NULL);
         double * temp_params = calloc_double(nparam_temp);
         function_train_core_get_params(temp,ii,temp_params);
         size_t onparam_temp = 0;
 
-
+        /* printf("on core = %zu\n,ii"); */
         for (size_t col = 0; col < mincol; col++){
             for (size_t row = 0; row < minrow; row++){
+
 
                 size_t nparam_temp_func = function_train_func_get_nparams(temp,ii,row,col);
 
@@ -1164,7 +1165,20 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
         for (size_t ii = 0; ii < N; ii++){
             /* printf("grad = "); dprint(ftp->nparams,regopts->mem->grad->vals + ii * ftp->nparams); */
             resid = y[ii] - mem->evals->vals[ii];
+            if (isnan(mem->evals->vals[ii])){
+                fprintf(stderr,"Warning, evaluation of FT is nan in aio_ls\n");
+                exit(1);
+            }
+            else if (isinf(mem->evals->vals[ii])){
+                fprintf(stderr,"Warning, evaluation of FT is inf in aio_ls\n");
+                exit(1);
+            }
             out += 0.5 * resid * resid;
+            if (isinf(out)){
+                fprintf(stderr,"out = %G,resid=%G,memeval=%G,y=%G\n",out,resid,mem->evals->vals[ii],y[ii]);
+                dprint(ftp->dim,x+ii*ftp->dim);
+                exit(1);
+            }
             cblas_daxpy(ftp->nparams, -resid,
                         mem->grad->vals + ii * ftp->nparams, 1,
                         grad,1);
@@ -1172,6 +1186,16 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
         out /= (double) N;
         for (size_t ii = 0; ii < ftp->nparams; ii++){
             grad[ii] /= (double) N;
+        }
+
+        if (isnan(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad != NULL) is NaN\n");
+            exit(1);
+        }
+        else if (isinf(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad != NULL) is Inf\n");
+            fprintf(stderr,"N = %zu\n",N);
+            exit(1);
         }
     }
     else{
@@ -1188,6 +1212,15 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             out += 0.5 * resid * resid;
         }
         out /= (double) N;
+
+        if (isnan(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad = NULL) is NaN\n");
+            exit(1);
+        }
+        else if (isinf(out)){
+            fprintf(stderr,"Regress aio eval objective ls (with grad = NULL) is Inf\n");
+            exit(1);
+        }
     }
     return out;
 }
@@ -1405,6 +1438,14 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
         regression_mem_manager_free(mem_here); mem_here = NULL;
     }
 
+    if (isnan(out)){
+        fprintf(stderr,"Regress aio eval objective is NaN\n");
+        exit(1);
+    }
+    else if (isinf(out)){
+        fprintf(stderr,"Regress aio eval objective is Inf\n");
+        exit(1);
+    }
     return out;
 }
 
@@ -1482,7 +1523,18 @@ struct PP
 double regress_opts_minimize_aio(size_t nparam, const double * param,
                                  double * grad, void * args)
 {
-    (void)(nparam);
+
+    for (size_t ii = 0; ii < nparam; ii++){
+        if (isnan(param[ii])){
+            fprintf(stderr,"Optimizer requesting params that are NaN\n");
+            fprintf(stderr,"param[%zu] = nan\n",ii);
+            exit(1);
+        }
+        else if (isinf(param[ii])){
+            fprintf(stderr,"Optimizer requesting params that are inf\n");
+            exit(1);
+        }
+    }
 
     struct PP * pp = args;
 
@@ -1514,6 +1566,15 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
         }
     }
 
+    if (isnan(eval)){
+        fprintf(stderr,"Regress aio objective is NaN\n");
+        exit(1);
+    }
+    else if (isinf(eval)){
+        fprintf(stderr,"Regress aio objective is Inf\n");
+        exit(1);
+    }
+    
     return eval;
 }
 
@@ -1566,6 +1627,19 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
         guess = calloc_double(nparams);
         extract_restricted_vals(ropts,ftp,ftp->params,guess);
     }
+
+    for (size_t ii = 0; ii < nparams; ii++){
+        if (isnan(guess[ii])){
+            fprintf(stderr,"Initial guess for AIO regression is NaN\n");
+            fprintf(stderr,"param[%zu] = nan\n",ii);
+            exit(1);
+        }
+        else if (isinf(guess[ii])){
+            fprintf(stderr,"Initial guess for AIO regression is inf\n");
+            exit(1);
+        }
+    }
+
 
     double val;
     c3opt_set_nvars(optimizer,nparams);
@@ -2171,7 +2245,15 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr->regopts != NULL);
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
     if (fabs(param_norm) <= 1e-15){
+        /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
+        /* yavg /= (double) N; */
+
         ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
+
+        
+        /* ft_param_create_from_constant */
+
+
         /* fprintf(stderr, "Cannot run ft_regression with zeroed parameters\n"); */
         /* exit(1); */
     }

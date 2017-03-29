@@ -1282,6 +1282,15 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
      case KERNEL:     out = kernel_expansion_eval(f->f,x);    break;
      }
 
+
+     if (isnan(out)){
+         fprintf(stderr,"Warning, evaluation of generic_function is nan\n");
+         exit(1);
+     }
+     else if (isinf(out)){
+         fprintf(stderr,"Warning, evaluation of generic_function is inf\n");
+         exit(1);
+     }
      return out;
  }
 
@@ -2947,6 +2956,16 @@ generic_function_update_params(struct GenericFunction * f, size_t dim,
                                const double * param)
 {
 
+    for (size_t ii = 0; ii < dim; ii++){
+        if (isnan(param[ii])){
+            fprintf(stderr,"Updating generic functions with params that are NaN\n");
+            exit(1);
+        }
+        else if (isinf(param[ii])){
+            fprintf(stderr,"Updating generic functions with params that are inf\n");
+            exit(1);
+        }
+    }
 
     switch (f->fc){
     case CONSTANT:
