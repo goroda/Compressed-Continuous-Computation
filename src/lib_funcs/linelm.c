@@ -712,13 +712,26 @@ int lin_elem_exp_param_grad_eval(
     struct LinElemExp * f, size_t nx, const double * x, double * grad)
 {
 
-    
-    /* size_t nparam = lin_elem_exp_get_nparams(lexp); */
+
+    if (grad != NULL){
+        size_t nparam = lin_elem_exp_get_num_params(f);
+        /* printf ("nparam = %zu\n",nparam); */
+        /* dprint(nparam,f->nodes); */
+        /* printf(" x = "); */
+        /* /\* if (x[0] < 0){ *\/ */
+        /* /\*     fprintf(stderr, "x should not be negative %G \n",x[0]); *\/ */
+        /* /\*     assert (x[0] > 0.0); *\/ */
+        /* /\* } *\/ */
+        /* dprint(nx,x); */
+    }
+
+
     size_t nparam = f->num_nodes;
     /* assert (nparam == lexp->nnodes); */
     for (size_t ii = 0; ii < nx; ii++){
         size_t indmin = lin_elem_exp_find_interval(f,x[ii]);
 
+        /* printf("x = %G, indmin = %zu\n",x[ii],indmin); */
         for (size_t jj = 0; jj < indmin; jj++)
         {
             grad[ii*nparam+jj] = 0.0;
@@ -740,6 +753,10 @@ int lin_elem_exp_param_grad_eval(
         /* exit(1); */
     }
 
+    if (grad != NULL){
+        /* dprint(nparam*nx,grad); */
+        /* exit(1); */
+    }
     return 0;
 }
 

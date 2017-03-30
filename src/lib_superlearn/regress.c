@@ -1181,7 +1181,7 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             }
             cblas_daxpy(ftp->nparams, -resid,
                         mem->grad->vals + ii * ftp->nparams, 1,
-                        grad,1);
+                        grad,1);            
         }
         out /= (double) N;
         for (size_t ii = 0; ii < ftp->nparams; ii++){
@@ -1197,6 +1197,10 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             fprintf(stderr,"N = %zu\n",N);
             exit(1);
         }
+
+        /* printf("\n"); */
+        /* dprint(nparam,param); */
+        /* printf("eval = %G\n",eval); */
     }
     else{
         function_train_param_grad_eval(
@@ -1524,6 +1528,7 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
                                  double * grad, void * args)
 {
 
+
     for (size_t ii = 0; ii < nparam; ii++){
         if (isnan(param[ii])){
             fprintf(stderr,"Optimizer requesting params that are NaN\n");
@@ -1539,7 +1544,9 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     struct PP * pp = args;
 
     // check if special structure exists / initialized
+    /* printf("check structure\n"); */
     regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);
+    /* printf("done\n"); */
     regress_mem_manager_reset_running(pp->mem);
 
     int restrict_needed = restrict_ranksp(pp->opts);
@@ -1574,7 +1581,9 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
         fprintf(stderr,"Regress aio objective is Inf\n");
         exit(1);
     }
-    
+
+
+
     return eval;
 }
 
