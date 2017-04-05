@@ -1607,7 +1607,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 {
 
     size_t * ranks = function_train_get_ranks(ftp->ft);
-    enum FTPARAM_ST structure = LINEAR_ST;
+    enum FTPARAM_ST structure = NONE_ST;/* LINEAR_ST; */
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
                                   ftp->nparams_per_core,ranks,

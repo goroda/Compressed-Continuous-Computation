@@ -2146,6 +2146,153 @@ void Test_LS_AIO_kernel(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
+void Test_LS_AIO_kernel_nonlin(CuTest * tc)
+{
+    srand(seed);
+    printf("\nTesting Function: least squares regression with kernel basis and moving centers\n");
+
+    size_t dim = 5;
+    double lb = -1.0;
+    double ub = 1.0;
+    /* size_t maxorder = 2; */
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    /* size_t ranks[3] = {1,3,1}; */
+    /* size_t ranks[6] = {1,2,3,5,5,1}; */
+    size_t ranks[6] = {1,7,5,4,3,1};
+    
+    // create data
+    size_t ndata = 100;
+    /* size_t ndata = 500; */
+    printf("\t ndata = %zu\n",ndata);
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+
+    // // add noise
+    double maxy = 0.0;
+    double miny = 0.0;
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = ff_reg(x+ii*dim);
+        if (y[ii] > maxy){
+            maxy = y[ii];
+        }
+        else if (y[ii] < miny){
+            miny = y[ii];
+        }
+        y[ii] += 0.001*randn();
+    }
+    
+    /* for (size_t ii = 0; ii < ndata; ii++){ */
+    /*     y[ii] = (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+    /* } */
+    
+
+    // Initialize Approximation Structure
+    size_t nparams = 20;
+    double * centers = linspace(lb,ub,nparams);
+    double scale = 1.0;
+    double width = pow(nparams,-0.2)*2.0/12.0;
+    width *= 20;
+
+    /* printf("\t width = %G\n",width); */
+
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
+    kernel_approx_opts_set_center_adapt(opts,1);
+    
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+        nunknowns += ranks[ii]*ranks[ii+1]*nparams*2;
+    }
+
+    /* double * params = calloc_double(nunknowns); */
+    /* for (size_t ii = 0; ii < nunknowns; ii++){ */
+    /*     params[ii] = randu()*2.0-1.0; */
+    /* } */
+    printf("\t nunknowns = %zu\n",nunknowns);
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    size_t * npercore = ft_param_get_nparams_per_core(ftp);
+    for (size_t jj = 0; jj < dim; jj++){
+        CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams*2,npercore[jj]);
+                          
+    }
+    
+    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
+
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    c3opt_set_verbose(optimizer,1);
+    c3opt_set_gtol(optimizer,1e-5);
+    c3opt_set_relftol(optimizer,1e-20);
+    c3opt_set_absxtol(optimizer,0);
+    c3opt_ls_set_maxiter(optimizer,50);
+    c3opt_set_maxiter(optimizer,2000);
+    
+
+    double resid = 0.0;
+    struct FunctionTrain * ft = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
+
+    
+    for (size_t ii = 0; ii < ndata; ii++){
+        double eval = function_train_eval(ft,x+ii*dim);
+        /* printf("x = ");dprint(dim,x+ii*dim); */
+        /* printf(" y = %G, ft = %G\n",y[ii],eval); */
+        resid += pow(y[ii]-eval,2);
+    }
+    resid /= (double) ndata;
+    printf("\t resid = %G\n",resid);
+    /* CuAssertDblEquals(tc,0,resid,1e-3); */
+
+    double diff = 0.0;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < 1000; ii++){
+        double pt[5];
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double v1 = ff_reg(pt);
+        /* v1 = (2*v1-maxy-miny)/(maxy-miny); */
+        double v2 = function_train_eval(ft,pt);
+
+        /* dprint(5,pt); */
+        /* printf(" v1 = %G, v2 = %G\n",v1,v2); */
+        /* v2 *= (maxy-miny); */
+        /* v2 += maxy + miny; */
+        /* v2 /= 2.0; */
+        diff += pow(v1-v2,2);
+
+        norm += pow(v1,2);
+
+        /* (2.0*y[ii]-maxy-miny)/(maxy-miny); */
+
+    }
+    printf("\n\t Error = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
+    CuAssertDblEquals(tc,0.0,diff/norm,1e-1);
+                                         
+    free(centers); centers = NULL;
+    function_train_free(ft);  ft = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+    
+    c3opt_free(optimizer); optimizer = NULL;
+
+    
+    free(x); x = NULL;
+    free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
 double fff_reg(double * x)
 {
     return sin(x[0]*2.0) + cos(x[1] + x[2] + x[3]*x[4]*x[1]) + x[3]*x[2]*x[2] + pow(x[4]*x[0],4);
@@ -2820,42 +2967,43 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     // next 3 are good
-    SUITE_ADD_TEST(suite, Test_LS_ALS);
-    SUITE_ADD_TEST(suite, Test_LS_ALS2);
-    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
 
     /* // next 5 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
-    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
-    SUITE_ADD_TEST(suite, Test_LS_AIO);
-    SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO3);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
 
     /* // next 4 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     
     /* /\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\/ */
 
     /* // Next 2 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
 
     /* // next 2 are good */
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
 
     /* // Next 3 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rounding);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt);
-    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rounding); */
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt); */
+    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
         
     // takes too many points
 
