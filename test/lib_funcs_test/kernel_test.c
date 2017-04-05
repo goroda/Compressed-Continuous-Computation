@@ -532,6 +532,248 @@ void Test_kernel_LSregress(CuTest * tc){
     int info;
     struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
     /* CuAssertIntEquals(tc,1,info>-1); */
+
+    /* print_generic_function(gf,5,NULL); */
+    
+    double * xtest = linspace(-1.0,1.0,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    CuAssertDblEquals(tc, 0.0, rat, 1e-2);
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    kernel_approx_opts_free(opts); opts = NULL;
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+    generic_function_free(gf); gf = NULL;;
+    free(params); params = NULL;
+}
+
+void Test_kernel_LSregress2(CuTest * tc){
+    
+    printf("Testing functions: least squares regression with kernel expansion (2)\n");
+
+    // create data
+    size_t ndata = 200;
+    double * x = linspace(-1,1,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+
+    size_t nparams = 40;
+    double * params = linspace(-1.0,1.0,nparams);
+
+
+    double scale = 0.1;
+    double width = pow(nparams,-0.2)/12.0;
+    width *= 5.0;
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,params,scale,width);
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_gtol(optimizer,1e-6);
+    
+    struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,KERNEL,opts);
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    // check derivative
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+    
+    int info;
+    struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
+    /* CuAssertIntEquals(tc,1,info>-1); */
+
+    /* print_generic_function(gf,5,NULL); */
+    
+    double * xtest = linspace(-1.0,1.0,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    CuAssertDblEquals(tc, 0.0, rat, 1e-2);
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    kernel_approx_opts_free(opts); opts = NULL;
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+    generic_function_free(gf); gf = NULL;;
+    free(params); params = NULL;
+}
+
+void Test_kernel_LSregress_with_centers(CuTest * tc){
+    
+    printf("Testing functions: least squares regression with kernel expansion and moving centers\n");
+
+    // create data
+    size_t ndata = 200;
+    double * x = linspace(-1,1,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+
+    size_t nparams = 2*ndata;
+    double * params = calloc_double(2*ndata);
+    memmove(params,y,ndata*sizeof(double));
+    memmove(params+ndata,x,ndata*sizeof(double));
+
+    double scale = 0.1;
+    double width = pow(ndata,-0.2)/12.0;
+    width *= 5.0;
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams/2,x,scale,width);
+    kernel_approx_opts_set_center_adapt(opts,1);
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_gtol(optimizer,1e-6);
+    
+    struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,KERNEL,opts);
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    // check derivative
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+    
+    int info;
+    struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
+    /* CuAssertIntEquals(tc,1,info>-1); */
+
+    /* print_generic_function(gf,5,NULL); */
+    
+    double * xtest = linspace(-1.0,1.0,1000);
+    double * vals = calloc_double(1000);
+    regress_func(1000,xtest,vals);
+    size_t ii;
+    double err = 0.0;
+    double norm = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(gf,xtest[ii]) - vals[ii],2);
+        norm += vals[ii]*vals[ii];
+    }
+    err = sqrt(err);
+    norm = sqrt(norm);
+    double rat = err/norm;
+    printf("\t error = %G, norm=%G, rat=%G\n",err,norm,rat);
+    CuAssertDblEquals(tc, 0.0, rat, 1e-2);
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    kernel_approx_opts_free(opts); opts = NULL;
+    regress_1d_opts_destroy(regopts); regopts = NULL;
+    c3opt_free(optimizer); optimizer = NULL;
+    generic_function_free(gf); gf = NULL;;
+    free(params); params = NULL;
+}
+
+
+void Test_kernel_LSregress_with_centers2(CuTest * tc){
+    
+    printf("Testing functions: least squares regression with kernel expansion and moving centers (2)\n");
+
+    // create data
+    size_t ndata = 200;
+    double * x = linspace(-1,1,ndata);
+    double * y = calloc_double(ndata);
+    regress_func(ndata,x,y);
+    // // add noise
+
+    for (size_t ii =0 ; ii < ndata; ii++){
+        y[ii] += randn()*0.01;
+    }
+
+    size_t nparams = 40;
+    double * params = calloc_double(nparams);
+    for (size_t ii = 0; ii < nparams; ii++){
+        params[ii] = randu()*2.0-1.0;
+    }
+
+    double scale = 0.1;
+    double width = pow(nparams,-0.2)/12.0;
+    width *= 5.0;
+    /* printf("width = %G\n",width); */
+    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams/2,params+nparams/2,scale,width);
+    kernel_approx_opts_set_center_adapt(opts,1);
+    
+    struct c3Opt * optimizer = c3opt_alloc(BFGS,nparams);
+    c3opt_set_verbose(optimizer,0);
+    c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_gtol(optimizer,1e-6);
+    
+    struct Regress1DOpts * regopts = regress_1d_opts_create(PARAMETRIC,LS,ndata,x,y);
+    regress_1d_opts_set_parametric_form(regopts,KERNEL,opts);
+    regress_1d_opts_set_initial_parameters(regopts,params);
+
+    // check derivative
+    c3opt_add_objective(optimizer,param_LSregress_cost,regopts);
+    double * deriv_diff = calloc_double(nparams);
+    double gerr = c3opt_check_deriv_each(optimizer,params,1e-8,deriv_diff);
+    for (size_t ii = 0; ii < nparams; ii++){
+        /* printf("ii = %zu, diff=%G\n",ii,deriv_diff[ii]); */
+        /* CuAssertDblEquals(tc,0.0,deriv_diff[ii],1e-3); */
+    }
+    CuAssertDblEquals(tc,0.0,gerr,1e-3);
+    free(deriv_diff); deriv_diff = NULL;
+    
+    int info;
+    struct GenericFunction * gf = generic_function_regress1d(regopts,optimizer,&info);
+    /* CuAssertIntEquals(tc,1,info>-1); */
+
+    /* print_generic_function(gf,5,NULL); */
     
     double * xtest = linspace(-1.0,1.0,1000);
     double * vals = calloc_double(1000);
@@ -591,7 +833,7 @@ void Test_kernel_linear(CuTest * tc){
     }
     free(pts); pts = NULL;
 
-    print_kernel_expansion(ke,5,NULL);
+    /* print_kernel_expansion(ke,5,NULL); */
     
     kernel_expansion_free(ke); ke = NULL;
     free(x); x = NULL;
@@ -602,18 +844,21 @@ void Test_kernel_linear(CuTest * tc){
 CuSuite * KernGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_gauss_eval); */
-    /* SUITE_ADD_TEST(suite, Test_gauss_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_gauss_inner); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_mem); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_copy); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_inner); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis); */
-    /* SUITE_ADD_TEST(suite, Test_kernel_LSregress); */
+    SUITE_ADD_TEST(suite, Test_gauss_eval);
+    SUITE_ADD_TEST(suite, Test_gauss_integrate);
+    SUITE_ADD_TEST(suite, Test_gauss_inner);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_mem);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_copy);
+    SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion);
+    SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_inner);
+    SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis);
+    SUITE_ADD_TEST(suite, Test_kernel_LSregress);
+    SUITE_ADD_TEST(suite, Test_kernel_LSregress2);
+    SUITE_ADD_TEST(suite, Test_kernel_LSregress_with_centers);
+    SUITE_ADD_TEST(suite, Test_kernel_LSregress_with_centers2);
     SUITE_ADD_TEST(suite, Test_kernel_linear);
     return suite;
 }
