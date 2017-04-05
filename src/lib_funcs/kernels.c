@@ -144,6 +144,8 @@ struct Kernel
     double * params;
 };
 
+
+
 /********************************************************//**
 *   Check if same kernel
 *************************************************************/
@@ -278,6 +280,14 @@ struct Kernel * kernel_gaussian(double scale, double width, double center)
     return kern;
 }
 
+void kernel_to_string(struct Kernel * kern, char * output)
+{
+    if (kern->type == KernGauss){
+        sprintf(output,"Squared Exponential: scale=%G, width^2=%G, center=%G",
+                kern->params[0],kern->params[1],kern->params[2]);
+    }
+}
+
 /********************************************************//**
 *   Evaluate a kernel
 *************************************************************/
@@ -397,6 +407,9 @@ struct KernelApproxOpts
     // bounds for approximation
     double lb; 
     double ub;
+
+    // additional
+    int adapt_center;
 };
 
 /********************************************************//**
@@ -423,6 +436,8 @@ struct KernelApproxOpts * kernel_approx_opts_alloc()
 
     ko->lb = -DBL_MAX;
     ko->ub = DBL_MAX;
+
+    ko->adapt_center = 0;
     return ko;
 }
 
@@ -475,6 +490,16 @@ kernel_approx_opts_gauss(size_t ncenters, double * centers, double scale, double
 }
 
 
+/********************************************************//**
+*   Set location adaptation (1 = yes, 0 = no)
+*************************************************************/
+void kernel_approx_opts_set_center_adapt(struct KernelApproxOpts * opts,int adapt)
+{
+    assert (opts != NULL);
+    opts->adapt_center = adapt;
+    opts->nregress_params = 2*opts->nnodes;
+}
+
 
 /********************************************************//**
 *   Get number of parameters used for regression
@@ -493,7 +518,17 @@ void kernel_approx_opts_set_nparams(struct KernelApproxOpts * opts, size_t npara
 {
     assert (opts != NULL);
     opts->nregress_params = nparam;
-    opts->nnodes = nparam;
+    if (opts->adapt_center == 0){
+        opts->nnodes = nparam;
+    }
+    else{
+        if (nparam %2 != 0){
+            fprintf(stderr, "Adapting of kernel centers is turned on\n");
+            fprintf(stderr, "Therefore must set an even number of parameters\n");
+            exit(1);
+        }
+        opts->nnodes = nparam/2;
+    }
 
     free(opts->centers); opts->centers = NULL;
     assert (opts->prac_lb < DBL_MAX);
@@ -1242,18 +1277,20 @@ void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct K
     }
 }
 
-
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 
                             void * args)
 {
 
     (void)(prec);
+    char kern[256];
     if (args == NULL){
         printf("Kernel Expansion:\n");
         printf("--------------------------------\n");
         printf("Number of kernels = %zu\n",k->nkernels);
         for (size_t ii = 0; ii < k->nkernels; ii++){
-            printf("Kernel %zu: weight=%G \n\n",ii,k->coeff[ii]);
+            kernel_to_string(k->kernels[ii],kern);
+            printf("Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
+            printf("\t %s\n\n",kern);
             /* print_kernel(k); */
         }
     }

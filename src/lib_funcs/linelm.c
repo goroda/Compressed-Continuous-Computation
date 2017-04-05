@@ -713,8 +713,8 @@ int lin_elem_exp_param_grad_eval(
 {
 
 
-    if (grad != NULL){
-        size_t nparam = lin_elem_exp_get_num_params(f);
+    /* if (grad != NULL){ */
+        /* size_t nparam = lin_elem_exp_get_num_params(f); */
         /* printf ("nparam = %zu\n",nparam); */
         /* dprint(nparam,f->nodes); */
         /* printf(" x = "); */
@@ -723,7 +723,7 @@ int lin_elem_exp_param_grad_eval(
         /* /\*     assert (x[0] > 0.0); *\/ */
         /* /\* } *\/ */
         /* dprint(nx,x); */
-    }
+    /* } */
 
 
     size_t nparam = f->num_nodes;

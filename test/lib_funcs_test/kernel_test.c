@@ -590,6 +590,8 @@ void Test_kernel_linear(CuTest * tc){
         CuAssertDblEquals(tc, 0.0, diff, 1e-5);
     }
     free(pts); pts = NULL;
+
+    print_kernel_expansion(ke,5,NULL);
     
     kernel_expansion_free(ke); ke = NULL;
     free(x); x = NULL;
@@ -600,18 +602,18 @@ void Test_kernel_linear(CuTest * tc){
 CuSuite * KernGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_gauss_eval);
-    SUITE_ADD_TEST(suite, Test_gauss_integrate);
-    SUITE_ADD_TEST(suite, Test_gauss_inner);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_mem);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_copy);
-    SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion);
-    SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_inner);
-    SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis);
-    SUITE_ADD_TEST(suite, Test_kernel_LSregress);
+    /* SUITE_ADD_TEST(suite, Test_gauss_eval); */
+    /* SUITE_ADD_TEST(suite, Test_gauss_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_gauss_inner); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_mem); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_copy); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_kernel_expansion); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_create_with_params_and_grad); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_inner); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_expansion_orth_basis); */
+    /* SUITE_ADD_TEST(suite, Test_kernel_LSregress); */
     SUITE_ADD_TEST(suite, Test_kernel_linear);
     return suite;
 }
