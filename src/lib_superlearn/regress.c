@@ -214,6 +214,30 @@ struct FTparam
     struct MultiApproxOpts * approx_opts;
 };
 
+
+/***********************************************************//**
+    Specify what type of structure exists in the parameterization
+    
+    \param[in] ftp - parameterized function train
+    
+    \returns LINEAR_ST if linear or NONE_ST if nonlinear
+***************************************************************/
+enum FTPARAM_ST ft_param_extract_structure(const struct FTparam * ftp)
+{
+    enum FTPARAM_ST structure = LINEAR_ST;
+
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+        int islin = multi_approx_opts_linear_p(ftp->approx_opts,ii);
+        if (islin == 0){
+            structure = NONE_ST;
+            break;
+        }
+    }
+
+    return structure;
+    
+}
+
 /** \struct RegressOpts
  * \brief Options for regression
  * \var RegressOpts::type
@@ -1607,7 +1631,11 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 {
 
     size_t * ranks = function_train_get_ranks(ftp->ft);
-    enum FTPARAM_ST structure = NONE_ST;/* LINEAR_ST; */
+
+    
+    enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
+
+    /* assert (structure == NONE_ST); */
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
                                   ftp->nparams_per_core,ranks,
@@ -1727,8 +1755,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
                       size_t N, const double * x, const double * y)
 {
 
-    /* enum FTPARAM_ST structure = NONE_ST; */
-    enum FTPARAM_ST structure = LINEAR_ST;
+    enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
     size_t * ranks = function_train_get_ranks(ftp->ft);
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,

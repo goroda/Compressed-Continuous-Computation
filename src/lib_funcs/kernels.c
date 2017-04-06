@@ -552,6 +552,20 @@ void kernel_approx_opts_set_center_adapt(struct KernelApproxOpts * opts,int adap
 }
 
 /********************************************************//**
+*   Check if linear parameterization (0 if no, 1 if yes)
+*************************************************************/
+int kernel_approx_opts_linear_p(const struct KernelApproxOpts * opts)
+{
+    assert (opts != NULL);
+    int lin = 1;
+    /* printf(" adapt->center = %d\n",opts->adapt_center); */
+    if (opts->adapt_center == 1){
+        lin = 0;
+    }
+    return lin;
+}
+
+/********************************************************//**
 *   Get number of parameters used for regression
 *************************************************************/
 size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts * opts)

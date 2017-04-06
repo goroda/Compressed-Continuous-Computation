@@ -182,6 +182,37 @@ void one_approx_opts_set_nparams(struct OneApproxOpts * oa, size_t num)
 }
 
 
+/***********************************************************//**
+  Check whether the unknowns are linearly related to the function output.
+  Typically used for regression to extract particular structure
+***************************************************************/
+int one_approx_opts_linear_p(const struct OneApproxOpts * oa)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    int lin = 0;
+    if (oa->fc == POLYNOMIAL){
+        lin = 1;
+    }
+    else if (oa->fc == PIECEWISE){
+        assert (1 == 0);
+    }
+    else if (oa->fc == LINELM){
+        assert (1 == 0);
+    }
+    else if (oa->fc == KERNEL){
+        lin = kernel_approx_opts_linear_p(oa->aopts);
+    }
+    else{
+        fprintf(stderr,"Cannot get number of parameters for one_approx options of type %d\n",
+                oa->fc);
+    }
+    return lin;
+}
+
+
+
+
 //////////////////////////////////////////////////////
 /** \struct MultiApproxOpts
  * \brief Stores approximation options for multiple one dimensional functions
@@ -327,6 +358,20 @@ enum function_class
 multi_approx_opts_get_fc(const struct MultiApproxOpts * fargs, size_t dim)
 {
     return fargs->aopts[dim]->fc;
+}
+
+/***********************************************************//**
+    Determine whether the unknowns for a particular dimension
+    are linearly related to the output
+
+    \param[in] fargs - function train approximation arguments
+    \param[in] dim   - dimension to extract
+
+    \return 1 if linear 0 if not linear
+***************************************************************/
+int multi_approx_opts_linear_p(const struct MultiApproxOpts * fargs, size_t dim)
+{
+    return one_approx_opts_linear_p(fargs->aopts[dim]);
 }
 
 /***********************************************************//**

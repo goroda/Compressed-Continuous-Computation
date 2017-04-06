@@ -2154,10 +2154,6 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     size_t dim = 5;
     double lb = -1.0;
     double ub = 1.0;
-    /* size_t maxorder = 2; */
-    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
-    /* size_t ranks[3] = {1,3,1}; */
-    /* size_t ranks[6] = {1,2,3,5,5,1}; */
     size_t ranks[6] = {1,7,5,4,3,1};
     
     // create data
@@ -2167,32 +2163,18 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
-
-    // // add noise
-    double maxy = 0.0;
-    double miny = 0.0;
     for (size_t ii = 0 ; ii < ndata; ii++){
         for (size_t jj = 0; jj < dim; jj++){
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
         // no noise!
         y[ii] = ff_reg(x+ii*dim);
-        if (y[ii] > maxy){
-            maxy = y[ii];
-        }
-        else if (y[ii] < miny){
-            miny = y[ii];
-        }
-        y[ii] += 0.001*randn();
+        y[ii] += 0.01*randn();
     }
-    
-    /* for (size_t ii = 0; ii < ndata; ii++){ */
-    /*     y[ii] = (2.0*y[ii]-maxy-miny)/(maxy-miny); */
-    /* } */
     
 
     // Initialize Approximation Structure
-    size_t nparams = 20;
+    size_t nparams = 30;
     double * centers = linspace(lb,ub,nparams);
     double scale = 1.0;
     double width = pow(nparams,-0.2)*2.0/12.0;
@@ -2230,7 +2212,7 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
 
     struct c3Opt * optimizer = c3opt_create(BFGS);
-    c3opt_set_verbose(optimizer,1);
+    c3opt_set_verbose(optimizer,0);
     c3opt_set_gtol(optimizer,1e-5);
     c3opt_set_relftol(optimizer,1e-20);
     c3opt_set_absxtol(optimizer,0);
@@ -2244,8 +2226,6 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     
     for (size_t ii = 0; ii < ndata; ii++){
         double eval = function_train_eval(ft,x+ii*dim);
-        /* printf("x = ");dprint(dim,x+ii*dim); */
-        /* printf(" y = %G, ft = %G\n",y[ii],eval); */
         resid += pow(y[ii]-eval,2);
     }
     resid /= (double) ndata;
@@ -2260,19 +2240,10 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
             pt[jj] = randu()*(ub-lb) + lb;
         }
         double v1 = ff_reg(pt);
-        /* v1 = (2*v1-maxy-miny)/(maxy-miny); */
         double v2 = function_train_eval(ft,pt);
 
-        /* dprint(5,pt); */
-        /* printf(" v1 = %G, v2 = %G\n",v1,v2); */
-        /* v2 *= (maxy-miny); */
-        /* v2 += maxy + miny; */
-        /* v2 /= 2.0; */
         diff += pow(v1-v2,2);
-
         norm += pow(v1,2);
-
-        /* (2.0*y[ii]-maxy-miny)/(maxy-miny); */
 
     }
     printf("\n\t Error = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
@@ -2967,43 +2938,43 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     // next 3 are good
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
+    SUITE_ADD_TEST(suite, Test_LS_ALS);
+    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
-    /* // next 5 are good */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    // next 5 are good
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
+    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
-    /* // next 4 are good */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
+    // next 4 are good
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
     
-    /* /\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
 
-    /* // Next 2 are good */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    // Next 2 are good
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
-    /* // next 2 are good */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    // next 2 are good
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
-    /* // Next 3 are good */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
+    // Next 3 are good
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
-    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rounding); */
-    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt); */
-    /* SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite,Test_LS_AIO_rounding);
+    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt);
+    SUITE_ADD_TEST(suite,Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
         
     // takes too many points
 
