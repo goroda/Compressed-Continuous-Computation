@@ -22,7 +22,6 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
@@ -35,10 +34,8 @@ else ()
     find_package(LAPACK REQUIRED)
 
     include_directories(/usr/include)
-    set(blas_lapack "-lblas -llapack")
+    set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
-    #find_package(SWIG REQUIRED)
-    #include(${SWIG_USE_FILE})
 endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
