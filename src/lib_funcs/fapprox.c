@@ -198,7 +198,7 @@ int one_approx_opts_linear_p(const struct OneApproxOpts * oa)
         assert (1 == 0);
     }
     else if (oa->fc == LINELM){
-        assert (1 == 0);
+        lin = 1;
     }
     else if (oa->fc == KERNEL){
         lin = kernel_approx_opts_linear_p(oa->aopts);
