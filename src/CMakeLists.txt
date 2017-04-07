@@ -109,24 +109,24 @@ set(src lib_array/array.c
         )
 
 #create a libray containing everything!
-# file(GLOB SRC_FILES */*.c)
-# if (${static_libs} )
-#     add_library(c3 ${SRC_FILES})
-# else ()
-#     add_library(c3 SHARED ${SRC_FILES})
-#     target_link_libraries(c3
-#         ${blas_lapack}
-#         -lm
-#         )
-#  endif()
+file(GLOB SRC_FILES */*.c)
+if (${static_libs} )
+    add_library(c3 ${SRC_FILES})
+else ()
+    add_library(c3 SHARED ${SRC_FILES})
+    target_link_libraries(c3
+        ${blas_lapack}
+        -lm
+        )
+ endif()
 
 
 # configure_file("config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config_impl.h")
-add_library(c3 SHARED ${header} ${src})
-target_link_libraries(c3
-  ${blas_lapack}
-  -lm
-  )
+# add_library(c3 SHARED ${header} ${src})
+# target_link_libraries(c3
+#   ${blas_lapack}
+#   -lm
+#   )
 
 target_include_directories(c3 PUBLIC 
                      $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
