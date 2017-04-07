@@ -35,7 +35,7 @@ else ()
     find_package(LAPACK REQUIRED)
 
     include_directories(/usr/include)
-    set(blas_lapack "-lblas -llapack")
+    set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
     #find_package(SWIG REQUIRED)
     #include(${SWIG_USE_FILE})
