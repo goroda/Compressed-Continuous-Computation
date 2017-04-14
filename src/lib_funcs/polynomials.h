@@ -149,8 +149,8 @@ struct OrthPoly
 
 };
 
-struct OrthPoly * init_cheb_poly();
-struct OrthPoly * init_leg_poly();
+struct OrthPoly * init_cheb_poly(void);
+struct OrthPoly * init_leg_poly(void);
 void free_orth_poly(struct OrthPoly *);
 unsigned char * serialize_orth_poly(struct OrthPoly *);
 struct OrthPoly * deserialize_orth_poly(unsigned char *);

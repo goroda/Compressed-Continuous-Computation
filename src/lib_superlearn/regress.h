@@ -134,9 +134,9 @@ void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
 void regress_opts_set_regularization_weight(struct RegressOpts *, double);
 double regress_opts_get_regularization_weight(const struct RegressOpts *);
-void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
-                                    size_t *, size_t,
-                                    enum FTPARAM_ST);
+/* void regress_opts_initialize_memory(struct RegressOpts *, size_t *, */
+/*                                     size_t *, size_t, */
+/*                                     enum FTPARAM_ST); */
 
 double ft_param_eval_objective_aio(struct FTparam *,
                                    struct RegressOpts *,

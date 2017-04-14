@@ -166,9 +166,9 @@ int qmarray_householder_rows(struct Qmarray *, struct Qmarray *,
                              struct Qmarray *, double *);
 struct Qmarray *
 qmarray_householder_simple(char *, struct Qmarray *, double *,struct OneApproxOpts *);
-struct Qmarray *
-qmarray_householder_simple_grid(char *, struct Qmarray *, double *,
-                                struct c3Vector *);
+/* struct Qmarray * */
+/* qmarray_householder_simple_grid(char *, struct Qmarray *, double *, */
+/*                                 struct c3Vector *); */
 
 int qmarray_svd(struct Qmarray *, struct Qmarray **, double *, double *,
                 struct OneApproxOpts *);

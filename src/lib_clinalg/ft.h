@@ -341,10 +341,10 @@ struct FT1DArray * function_train_hessian(const struct FunctionTrain *);
 void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
 double * ft1d_array_eval(const struct FT1DArray *, const double *);
 void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);
-struct FunctionTrain *
-ft1d_array_sum_prod(size_t, double *,
-                    const struct FT1DArray *, const struct FT1DArray *,
-                    double);
+/* struct FunctionTrain * */
+/* ft1d_array_sum_prod(size_t, double *, */
+/*                     const struct FT1DArray *, const struct FT1DArray *, */
+/*                     double); */
 
 
 
