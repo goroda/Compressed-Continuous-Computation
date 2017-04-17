@@ -57,13 +57,59 @@ typedef long unsigned int size_t;
 %include "numpy.i"
 
 %init %{
-    import_array();
-    
+    import_array();    
 %}
 
-/* %include "carrays.i" */
-/* %array_class(size_t,intArray); */
-%apply (double* IN_ARRAY1) {(const double* xdata)};
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len2, const double * ydata)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len1, const double * xdata)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len1, const double * evalnd_pt)
+};
+
+
+%rename (ft_regress_run) my_ft_regress_run;
+%exception my_ft_regress_run{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    struct FunctionTrain * my_ft_regress_run(struct FTRegress * ftr ,struct c3Opt * opt ,size_t len1, const double* xdata, size_t len2, const double * ydata){
+        if (len1 != len2*ft_regress_get_dim(ftr)){
+            PyErr_Format(PyExc_ValueError,
+                         "Arrays of lengths (%d,%d) given",
+                         len1, len2);
+            return NULL;
+        }
+        return ft_regress_run(ftr,opt,len2,xdata,ydata);
+    }
+%}
+%ignore ft_regress_run;
+
+
+%rename (function_train_eval) my_function_train_eval;
+%exception my_function_train_eval{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    double my_function_train_eval(struct FunctionTrain * ft ,size_t len1, const double* evalnd_pt){
+        if (len1 != function_train_get_dim(ft)){
+            PyErr_Format(PyExc_ValueError,
+                         "Evaluation point has incorrect dimensions (%d) instead of %d",
+                         len1,function_train_get_dim(ft));
+            return 0.0;
+        }
+        return function_train_eval(ft,evalnd_pt);
+    }
+%}
+%ignore function_train_eval;
+
 
 %typemap(in) size_t * ranks {
     if (!PyList_Check($input)) {

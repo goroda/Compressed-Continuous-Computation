@@ -1985,6 +1985,18 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
 }
 
 /***********************************************************//**
+    Get dimension
+    
+    \param[in] ftr - regression structure
+    \returns dimension
+***************************************************************/
+size_t ft_regress_get_dim(const struct FTRegress * ftr)
+{
+    assert (ftr != NULL);
+    return ftr->dim;
+}
+
+/***********************************************************//**
     Turn on/off adaptation
     
     \param[in,out] ftr - regression structure

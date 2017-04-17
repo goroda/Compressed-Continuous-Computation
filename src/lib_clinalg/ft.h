@@ -105,7 +105,7 @@ double function_train_get_avgrank(const struct FunctionTrain *);
 void function_train_eval_up_to_core(struct FunctionTrain *,
                                     size_t, const double *,
                                     double *, size_t *);
-double function_train_eval(struct FunctionTrain *, const double *);
+double function_train_eval(struct FunctionTrain *, const double * evalnd_pt);
 
 size_t function_train_func_get_nparams(const struct FunctionTrain *,
                                      size_t, size_t, size_t);

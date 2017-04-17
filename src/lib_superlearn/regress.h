@@ -50,6 +50,7 @@ enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
+size_t ft_regress_get_dim(const struct FTRegress *);
 void ft_regress_set_adapt(struct FTRegress *, int);
 void ft_regress_set_maxrank(struct FTRegress *, size_t);
 void ft_regress_set_kickrank(struct FTRegress *, size_t);
