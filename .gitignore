@@ -43,3 +43,5 @@ profiling/regress/*/*.c3
 profiling/regress/bin/*
 
 wrappers/python/build*
+wrappers/python/c3.py
+wrappers/python/c3_wrap.c

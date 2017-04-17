@@ -48,7 +48,11 @@
     /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_multilinalg.h" */
     /* #include "/home/aagorod/Software/c3/src/lib_tensor/tensor.h" */
 
+
+    typedef long unsigned int size_t;
 %}
+
+typedef long unsigned int size_t;
 
 %include "numpy.i"
 
@@ -56,6 +60,34 @@
     import_array();
     
 %}
+
+/* %include "carrays.i" */
+/* %array_class(size_t,intArray); */
+%apply (double* IN_ARRAY1) {(const double* xdata)};
+
+%typemap(in) size_t * ranks {
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_ValueError,"Expecting a list");
+        return NULL;
+    }
+    int size = PyList_Size($input);
+    $1 = (size_t *) malloc(size * sizeof(size_t));
+    for (int i = 0; i < size; i++){
+        PyObject *s = PyList_GetItem($input,i);
+        if (!PyInt_Check(s)) {
+            free($1);
+            PyErr_SetString(PyExc_ValueError, "List items must be integers");
+            return NULL;
+        }
+        $1[i] = PyInt_AsLong(s);
+    }
+ }
+
+%typemap(freearg) (size_t * ranks){
+    if ($1) free($1);
+}
+
+
 
 %include "/home/aagorod/Software/c3/src/lib_interface/approximate.h"
 /* %include "/home/aagorod/Software/c3/include/c3.h" */
@@ -98,3 +130,6 @@
 /* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_integrate.h" */
 /* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_multilinalg.h" */
 /* %include "/home/aagorod/Software/c3/src/lib_tensor/tensor.h" */
+
+
+
