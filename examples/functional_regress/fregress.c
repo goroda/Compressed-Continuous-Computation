@@ -34,7 +34,7 @@ void print_code_usage (FILE * stream, int exit_code)
             "               >0: radial basis function kernels\n"
             " -s --rankspace Rank between spatial and paramter variables (default 4)\n"
             " -r --rankparam Rank between parameters (default 2)\n"
-            " -v --verbose   Output words (default 0).\n"
+            " -v --verbose   Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
             " \n\n"
             " Outputs four files\n"
             " training_funcs.dat  -- training samples"
@@ -73,7 +73,7 @@ static void other(prob_t * prob, double * input, double * output)
         coeff += (input[ii+dx/2]+1)/2.0;
     }
     for (size_t ii = 0; ii < prob->noutput; ii++){
-        output[ii] = sin(sum * prob->x[ii])  + 0.1 * coeff * exp(-pow(prob->x[ii]-0.5,2)/0.01);
+        output[ii] = sin(sum * prob->x[ii])  + 0.05 * coeff * exp(-pow(prob->x[ii]-0.5,2)/0.01);
     }
 }
 
@@ -82,8 +82,9 @@ static double * generate_inputs(size_t n)
     double * x = calloc_double(dx * n);
         
     for (size_t ii = 0; ii < n; ii++){
-        x[0 + ii*dx] = randu()*2.0-1.0;
-        x[1 + ii*dx] = randu()*2.0-1.0;
+        for (size_t jj = 0; jj < dx; jj++){
+            x[jj + ii*dx] = randu()*2.0-1.0;
+        }
     }
 
     return x;
@@ -102,6 +103,10 @@ static double * generate_outputs(prob_t * prob, size_t n, double * inputs)
             other(prob,inputs + ii*dx,y+ii*dy);
         }
     }
+
+    /* for (size_t ii = 0; ii < n*dy; ii++){ */
+    /*     y[ii] += randn()*0.01; */
+    /* } */
 
     return y;
 }
@@ -200,7 +205,7 @@ int main(int argc, char * argv[])
 
 
     if (function == 1){
-        dx = 100;
+        dx = 32;
     }
     else{
         dx = 2;
@@ -253,6 +258,7 @@ int main(int argc, char * argv[])
 
     double width = pow(dy,-0.2)/sqrt(12.0);
     width *= 0.5;
+    /* width *= 20; */
     struct KernelApproxOpts * kopts =
         kernel_approx_opts_gauss(prob.noutput,prob.x,1.0,width);
     struct LinElemExpAopts * lopts =
@@ -282,23 +288,28 @@ int main(int argc, char * argv[])
     }
     ranks[dx] = rank_space;
 
-    struct FTparam * ftp = ft_param_alloc(dx+1,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata*dy,x,y,1e-6);
-    struct RegressOpts * ropts = regress_opts_create(dx+1,AIO,FTLS);
     struct c3Opt * optimizer = c3opt_create(BFGS);
-    if (verbose > 0){
+    if (verbose > 1){
         c3opt_set_verbose(optimizer,1);
     }
-    c3opt_set_maxiter(optimizer,10000);
-    c3opt_set_gtol(optimizer,1e-15);
-    c3opt_set_relftol(optimizer,1e-12);
-
-    struct FunctionTrain * ft_final =
-        c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
-
-
+    c3opt_set_maxiter(optimizer,1000);
+    c3opt_set_gtol(optimizer,1e-6);
+    c3opt_set_relftol(optimizer,1e-5);
     
-    size_t ntest = 100;
+    struct FTRegress * ftr = ft_regress_alloc(dx+1,fapp,ranks);
+    ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+    ft_regress_set_adapt(ftr,1);
+    ft_regress_set_roundtol(ftr,1e-7);
+    ft_regress_set_maxrank(ftr,10);
+    ft_regress_set_kickrank(ftr,1);
+    if (verbose > 0){
+        ft_regress_set_verbose(ftr,1);
+    }
+    struct FunctionTrain * ft_final = ft_regress_run(ftr,optimizer,ndata*dy,x,y);
+
+    function_train_save(ft_final,"ft_saved.c3");
+
+    size_t ntest = 1000;
     double * test_inputs = generate_inputs(ntest);
     double * test_outputs = generate_outputs(&prob,ntest,test_inputs);
 
@@ -320,6 +331,8 @@ int main(int argc, char * argv[])
     double diff_se = cblas_ddot(dy*ntest,diff,1,diff,1);
     double norm_total = cblas_ddot(dy*ntest,test_outputs,1,test_outputs,1);
     printf("\n\n\n\t===================================\n\n");
+    printf("\tFinal ranks: "); iprint_sz(dx+2,function_train_get_ranks(ft_final));
+
     printf("\tDifference squared error = %G\n",diff_se);
     printf("\tSquared norm = %G\n",norm_total);
     printf("\n\n\n\n");
@@ -345,8 +358,8 @@ int main(int argc, char * argv[])
     one_approx_opts_free_deep(&ko); ko = NULL; 
     multi_approx_opts_free(fapp); fapp = NULL;
     free(ranks); ranks = NULL;
-    ft_param_free(ftp); ftp = NULL;
-    regress_opts_free(ropts); ropts = NULL;
+
+    ft_regress_free(ftr); ftr = NULL;
     c3opt_free(optimizer); optimizer = NULL;
     function_train_free(ft_final); ft_final = NULL;
     free(test_inputs); test_inputs = NULL;

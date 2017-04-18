@@ -2284,7 +2284,7 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
         /* yavg /= (double) N; */
 
-        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
+        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-3);
 
         
         /* ft_param_create_from_constant */
@@ -2339,7 +2339,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     ftr->adapt = 0; // turn off adaptation since in here!
     size_t * ranks = calloc_size_t(ftr->dim+1);
 
-    size_t kfold = 3;
+    size_t kfold = 5;
     int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(N,ftr->dim,x,y,kfold,cvverbose);
 
