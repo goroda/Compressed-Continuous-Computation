@@ -134,6 +134,10 @@ target_include_directories(c3 PUBLIC
                      $<INSTALL_INTERFACE:${include_dest}>
                      $<INSTALL_INTERFACE:${lib_dest}>)
 
-install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
-install(FILES ${header} DESTINATION "${include_dest}")
+# install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
+# install(FILES ${header} DESTINATION "${include_dest}")
+
+# install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
+install(TARGETS c3 DESTINATION lib)
+install(FILES ${header} DESTINATION include)
 

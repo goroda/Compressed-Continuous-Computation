@@ -40,8 +40,12 @@ endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
-set(static_libs 1)
-# set(static_libs 0)
+option(BUILD_STATIC_LIB "Build a static library" OFF)
+if (BUILD_STATIC_LIB)
+  set(static_libs 1)  
+else ()
+  set(static_libs 0)
+endif()
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
@@ -74,10 +78,10 @@ include_directories(include)
 
 # set(include_dest "include/c3")
 # set(main_lib_dest "lib/c3")
-set (include_dest "~/Software/c3_installed/include/c3")
-set (main_lib_dest "~/Software/c3_installed/lib/c3")
-set (bin_dest "~/Software/c3_installed/bin")
-set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+# set (include_dest "~/Software/c3_installed/include/c3")
+# set (main_lib_dest "~/Software/c3_installed/lib/c3")
+# set (bin_dest "~/Software/c3_installed/bin")
+# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 # set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 
 
@@ -89,6 +93,6 @@ add_subdirectory(profiling)
 add_subdirectory(utilities)
 
 
-install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
-install(EXPORT c3 DESTINATION ${lib_dest})
+# install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
+# install(EXPORT c3 DESTINATION ${lib_dest})
 

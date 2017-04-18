@@ -7,5 +7,5 @@ target_link_libraries(ftstats
     ${blas_lapack}
     -lm)
 
-install(TARGETS ftstats EXPORT ftstats DESTINATION "${bin_dest}")
-
+  # install(TARGETS ftstats EXPORT ftstats DESTINATION "${bin_dest}")
+install(TARGETS ftstats DESTINATION bin)
