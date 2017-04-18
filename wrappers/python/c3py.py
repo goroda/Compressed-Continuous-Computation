@@ -7,12 +7,9 @@ class FunctionTrain:
 
     """ 
     Need to clean up memory
-    1) optimizer
-    2) ft
     3) multipts
-    4) opts
 
-    Handling multiopts is not ideal. Need a way to copy multiopts
+    Handling multiopts is not ideal. Need a way to copy multiopts, right now its memory is not freed
     """
     def __init__(self,din,filename=None,multiopts=None):
 
@@ -20,9 +17,11 @@ class FunctionTrain:
 
         self.dim = din
         self.opts = []
+        self.onedopts = []
         self.ranks = [1]
         for ii in range(din):
             self.opts.append(None)
+            self.onedopts.append(None)
             self.ranks.append(1)
             
         self.ranks.insert(din,1)
@@ -41,16 +40,33 @@ class FunctionTrain:
             raise AttributeError('cannot call set_dim_opts because was already called')
 
         if ftype == "legendre":
-            self.opts.insert(dim,("poly",c3.ope_opts_alloc(c3.LEGENDRE)))
+            self.opts.insert(dim,["poly",c3.ope_opts_alloc(c3.LEGENDRE)])
             c3.ope_opts_set_lb(self.opts[dim][1],lb)
             c3.ope_opts_set_ub(self.opts[dim][1],ub)
             c3.ope_opts_set_nparams(self.opts[dim][1],nparam)
         elif ftype == "hermite":
-            self.opts.insert(dim,("poly",c3.ope_opts_alloc(c3.HERMITE)))
+            self.opts.insert(dim,["poly",c3.ope_opts_alloc(c3.HERMITE)])
+            c3.ope_opts_set_nparams(self.opts[dim][1],nparam)
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
             
 
+    def _build_multiopts(self):
+        for ii in range(self.dim):
+            if self.onedopts is not None:
+                c3.one_approx_opts_free(self.onedopts[ii])
+            
+            if self.opts[ii][0] == "poly":
+                self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.POLYNOMIAL,self.opts[ii][1]))
+            elif self.opts[ii][0] == "linelm":
+                self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.LINELM,self.opts[ii][1]))
+            elif self.opts[ii][0] == "kernel":
+                self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.KERNEL,self.opts[ii][1]))
+            else:
+                raise AttributeError("Don't know what to do here")
+
+            c3.multi_approx_opts_set_dim(self.multiopts,ii,self.onedopts[ii])
+     
     def set_ranks(self,ranks):
 
         if (isinstance(ranks,list)):
@@ -71,19 +87,8 @@ class FunctionTrain:
 
         if verbose > 1:
             c3.c3opt_set_verbose(self.optimizer,1)
-        
-        self.qmopts = []
-        for ii in range(self.dim):
-            if self.opts[ii][0] == "poly":
-                self.qmopts.append(c3.one_approx_opts_alloc(c3.POLYNOMIAL,self.opts[ii][1]))
-            elif self.opts[ii][0] == "linelm":
-                self.qmopts.append(c3.one_approx_opts_alloc(c3.LINELM,self.opts[ii][1]))
-            elif self.opts[ii][0] == "kernel":
-                self.qmopts.append(c3.one_approx_opts_alloc(c3.KERNEL,self.opts[ii][1]))
-            else:
-                raise AttributeError("Don't know what to do here")
 
-            c3.multi_approx_opts_set_dim(self.multiopts,ii,self.qmopts[ii])
+        self._build_multiopts()
                 
         reg = c3.ft_regress_alloc(self.dim,self.multiopts,self.ranks)
         if alg == "AIO" and obj == "LS":
@@ -116,13 +121,13 @@ class FunctionTrain:
     def __add__(self,other,eps=1e-14):
         out = FunctionTrain(self.dim,multiopts=self.multiopts)
         out.ft = c3.function_train_sum(self.ft,other.ft)
-        out.round()
+        out.round(eps)
         return out
         
     def __mul__(self,other,eps=1e-14):
         out = FunctionTrain(self.dim,multiopts=self.multiopts)
         out.ft = c3.function_train_product(self.ft,other.ft)
-        out.round()
+        out.round(eps)
         return out
 
     def integrate(self):
@@ -136,3 +141,39 @@ class FunctionTrain:
 
     def expectation(self):
         return c3.function_train_integrate_weighted(self.ft)
+
+    def close(self):
+
+        if self.optimizer is not None:
+            c3.c3opt_free(self.optimizer)
+            self.optimizer = None
+
+        if self.ft is not None:
+            c3.function_train_free(self.ft)
+            self.ft = None
+
+            
+        for ii in range(self.dim):
+            if self.opts[ii] is not None:
+                if (self.opts[ii][0] == "poly"):
+                    c3.ope_opts_free(self.opts[ii][1])
+                elif (self.opts[ii][0] == "kernel"):
+                    c3.kernel_approx_opts_free(self.opts[ii][1])
+                elif (self.opts[ii][0] == "linelm"):
+                    c3.lin_elem_exp_aopts_free(self.opts[ii][1])
+                elif (self.opts[ii][0] == "piecewise"):
+                    c3.piecewise_poly_opts_free(self.opts[ii][1])
+
+                self.opts[ii] = None
+
+            if self.onedopts[ii] is not None:
+                c3.one_approx_opts_free(self.onedopts[ii])
+                self.onedopts[ii] = None
+
+        # print ("free multiopts")
+        # if self.multiopts is not None:
+        #     c3.multi_approx_opts_free(self.multiopts)
+        #     self.multiopts = None
+
+        # print ("done closing")
+        
