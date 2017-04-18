@@ -2423,7 +2423,9 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         size_t nparams_rounded = function_train_get_nparams(ftround);
         if (ftr->regopts->verbose > 0){
             printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
-            printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            if (opt_only_restricted == 1){
+                printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            }
             printf("Nrounded params: %zu\n",nparams_rounded);
         }
 

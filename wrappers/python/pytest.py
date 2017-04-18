@@ -1,48 +1,57 @@
-import c3
+import c3py
 import numpy as np
 
 
-optimizer = c3.c3opt_create(c3.BFGS)
-c3.c3opt_set_verbose(optimizer,1)
+def func1(x):
+    return np.sum(x,axis=1)
 
-a = np.random.randn(5)
-#print(a)
+def func2(x):
+    return np.prod(x+1,axis=1)
+
+dim = 20
+ndata = 200
+x = np.random.rand(ndata,dim)*2.0-1.0
+y1 = func1(x)
+y2 = func2(x)
 
 lb = -1
 ub = 1
-dim = 3
+nparam = 2
 
-opts = c3.ope_opts_alloc(c3.LEGENDRE)
-c3.ope_opts_set_lb(opts,lb)
-c3.ope_opts_set_ub(opts,ub)
 
-qmopts = c3.one_approx_opts_alloc(c3.POLYNOMIAL,opts)
-multiopts = c3.multi_approx_opts_alloc(dim)
-
+ft = c3py.FunctionTrain(dim)
 for ii in range(dim):
-    c3.multi_approx_opts_set_dim(multiopts,ii,qmopts)
+    ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
 
-ranks=[1,5,5,1]
-reg = c3.ft_regress_alloc(dim,multiopts,ranks)
-c3.ft_regress_set_alg_and_obj(reg,c3.AIO,c3.FTLS);
-c3.ft_regress_set_kickrank(reg,2)
+# ft.set_ranks(ranks)
+ft.build_data_model(ndata,x,y1,alg="AIO",obj="LS",adaptrank=1,verbose=0)
 
-ndata = 20
-x = np.random.randn(ndata,dim)
-y = np.sum(x,axis=1)**2 + np.random.randn(ndata)*0.01
-# print (x.flatten())
+ft2 = c3py.FunctionTrain(dim)
+for ii in range(dim):
+    ft2.set_dim_opts(ii,"legendre",lb,ub,nparam)
 
-ft = c3.ft_regress_run(reg,optimizer,x.flatten(order='C'),y)    
+ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",adaptrank=1,verbose=0)
+
+ft3 = ft + ft2
+ft4 = ft * ft2
 
 test_pt = np.random.randn(dim)
+ft1eval = ft.eval(test_pt)
+ft2eval = ft2.eval(test_pt)
+ft3eval = ft3.eval(test_pt)
+ft4eval = ft4.eval(test_pt)
+eval1s = func1(test_pt.reshape((1,dim)))
+eval2s = func2(test_pt.reshape((1,dim)))
+eval3s = eval1s + eval2s
+eval4s = eval1s * eval2s
 
-fteval = c3.function_train_eval(ft,test_pt)
-evalshould = np.sum(test_pt)**2
+print("Fteval =",ft1eval, "Should be =",eval1s)
+print("Fteval =",ft2eval, "Should be =",eval2s)
+print("Fteval =",ft3eval, "Should be =",eval3s)
+print("Fteval =",ft4eval, "Should be =",eval4s)
 
-print("Fteval =",fteval, "Should be =",evalshould)
-
-mr = c3.function_train_get_maxrank(ft)
+# mr = c3.function_train_get_maxrank(ft)
 
 
-print("max rank", mr)
-print("Integral ", c3.function_train_integrate(ft), "Should be = 8")
+# print("max rank", mr)
+# print("Integral ", c3.function_train_integrate(ft), "Should be = 8")
