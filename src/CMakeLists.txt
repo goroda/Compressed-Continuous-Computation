@@ -31,9 +31,9 @@ set(header lib_stringmanip/stringmanip.h
            lib_clinalg/dmrgprod.h
            lib_clinalg/ft.h
            lib_clinalg/indmanage.h
-           lib_clinalg/lib_clinalg.h
            lib_clinalg/qmarray.h
            lib_clinalg/quasimatrix.h
+           lib_clinalg/lib_clinalg.h
            lib_fft/fft.h
            lib_funcs/fapprox.h
            lib_funcs/functions.h
@@ -64,7 +64,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_tensdecomp/tt_integrate.h
            lib_tensdecomp/tt_multilinalg.h
            lib_tensor/tensor.h
-           c3.h
+           ../include/c3.h
            )
 
 
@@ -139,5 +139,5 @@ target_include_directories(c3 PUBLIC
 
 # install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
 install(TARGETS c3 DESTINATION lib)
-install(FILES ${header} DESTINATION include)
+install(FILES ${header} DESTINATION include/c3)
 

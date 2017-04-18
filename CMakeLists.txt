@@ -45,6 +45,7 @@ if (BUILD_STATIC_LIB)
   set(static_libs 1)  
 else ()
   set(static_libs 0)
+  set(compiler_flags "${compiler_flags} -fPIC")
 endif()
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
@@ -53,6 +54,7 @@ set(CMAKE_C_FLAGS "${compiler_flags}")
 
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
+include_directories(src)
 include_directories(src/lib_stringmanip)
 include_directories(src/lib_array)
 include_directories(src/lib_linalg)

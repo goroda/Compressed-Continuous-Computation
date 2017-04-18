@@ -41,4 +41,9 @@
  * Provides single header interface to (majority of) c3 library
  */
 
+#ifndef C3_INTERFACE_H
+#define C3_INTERFACE_H
+
 #include "approximate.h"
+
+#endif

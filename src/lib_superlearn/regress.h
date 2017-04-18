@@ -44,7 +44,7 @@
 #ifndef C3_FT_REGRESSION
 #define C3_FT_REGRESSION
 
-#include "../lib_clinalg/ft.h"
+#include "ft.h"
 
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};

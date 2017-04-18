@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <getopt.h>
 
-#include "c3.h"
+#include "lib_interface/c3_interface.h"
 
 static char * program_name;
 

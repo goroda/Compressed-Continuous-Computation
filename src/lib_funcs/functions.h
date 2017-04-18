@@ -46,7 +46,7 @@
 #define FUNCTIONS_H
 
 /* #include "../lib_array/array.h" */
-#include "../lib_array/array.h"
+#include "array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
 #include "hpoly.h"
@@ -55,7 +55,7 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
-#include "../lib_optimization/lib_optimization.h"
+#include "lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
