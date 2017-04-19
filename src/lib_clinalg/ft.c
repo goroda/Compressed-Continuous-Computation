@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file ft.c
  * Provides algorithms for function train manipulation
  */
@@ -3246,6 +3243,114 @@ function_train_integrate_weighted(const struct FunctionTrain * ft)
     }
     
     return out;
+}
+
+
+/********************************************************//**
+    Contract the function along certain dimensions with respect
+    to an appropriate reight
+
+    \param[in] ft            - Function train 1
+    \param[in] ndim_contract - number of dimensions to contract
+    \param[in] dims_contract - dimensions over which to contract (increasing order)
+    
+    \return  \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
+    
+    \note w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+***********************************************************/
+struct FunctionTrain *
+function_train_integrate_weighted_subset(
+    const struct FunctionTrain * ft,
+    size_t ndim_contract,
+    size_t * dims_contract)
+{
+
+    size_t newdim = ft->dim - ndim_contract;
+    assert (newdim > 0);
+    /* printf("newdim = %zu\n",newdim); */
+    struct FunctionTrain * newft = function_train_alloc(newdim);
+    newft->ranks[0] = 1;
+    newft->ranks[newdim] = 1;
+
+    double * left_mult = NULL;
+    size_t ncols = 0;
+
+    size_t on_contract = 0;
+    size_t ii = 0;
+    while ((dims_contract[on_contract] == ii ) && (on_contract < ndim_contract)){
+        double * mat = qmarray_integrate_weighted(ft->cores[ii]);
+
+        if (left_mult == NULL){
+            ncols = ft->cores[ii]->ncols;
+            left_mult = calloc_double(ncols);
+            memmove(left_mult,mat,ncols * sizeof(double));
+        }
+        else{
+            double * new_left_mult = calloc_double(ft->cores[ii]->ncols);
+            c3linalg_multiple_vec_mat(1,ft->cores[ii]->nrows,ft->cores[ii]->ncols,
+                                      left_mult,ncols,
+                                      mat,ft->cores[ii]->nrows*ft->cores[ii]->ncols,
+                                      new_left_mult,ft->cores[ii]->ncols);
+            free(left_mult); left_mult = NULL;
+
+            ncols = ft->cores[ii]->ncols;
+            left_mult = calloc_double(ncols);
+            memmove(left_mult,new_left_mult,ncols*sizeof(double));
+            free(new_left_mult); new_left_mult = NULL;
+        }
+
+        free(mat); mat = NULL;
+        ii++;
+        on_contract++;
+
+        if (on_contract == ndim_contract){
+            break;
+        }
+    }
+
+    size_t on_new_core = 0;
+    int done = 0;
+    if (on_contract == ndim_contract){
+        on_contract--;
+        done = 1;
+    }
+    for (; ii < ft->dim; ii++){
+        if ((dims_contract[on_contract] == ii) && (done == 0)){
+            double * mat = qmarray_integrate_weighted(ft->cores[ii]);
+
+            struct Qmarray * newcore = qmam(newft->cores[on_new_core-1],mat,ft->cores[ii]->ncols);
+            qmarray_free(newft->cores[on_new_core-1]);
+            newft->cores[on_new_core-1] = qmarray_copy(newcore);
+
+            on_contract++;
+            if (on_contract == ndim_contract){
+                done = 1;
+                on_contract--;
+            }
+            free(mat); mat = NULL;
+            qmarray_free(newcore); newcore = NULL;
+        }
+        else{
+            if (left_mult != NULL){
+                newft->cores[on_new_core] = mqma(left_mult,ft->cores[ii],1);
+                free(left_mult); left_mult = NULL;
+            }
+            else{
+                newft->cores[on_new_core] = qmarray_copy(ft->cores[ii]);
+            }
+            on_new_core++;
+        }
+    }
+
+    
+    for (size_t ii = 0; ii < newdim; ii++){
+        newft->ranks[ii]   = newft->cores[ii]->nrows;
+        newft->ranks[ii+1] = newft->cores[ii]->ncols;
+    }
+    
+    return newft;
 }
 
 
