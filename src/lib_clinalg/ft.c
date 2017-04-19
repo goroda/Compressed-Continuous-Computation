@@ -1428,6 +1428,56 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
 }
 
 /***********************************************************//**
+    Evaluate a function train and gradients with respect to
+    FT parameters at a set of inputs
+
+    \param[in]     ft                   - function train
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in,out] out                  - evaluations
+    \param[in,out] grad                 - gradient at every evaluation 
+                                          (could be NULL to not compute)
+***************************************************************/
+void function_train_param_grad_eval_simple(struct FunctionTrain * ft, size_t n,
+                                           const double * x,
+                                           double * out, double * grad)
+{
+
+    size_t dim  = ft->dim;
+    size_t * nparams_per_core = calloc_size_t(dim);
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t max_param_within_core = 0;
+    size_t maxparam_func;
+    for (size_t ii = 0; ii < dim; ii++){
+        nparams_per_core[ii] = function_train_core_get_nparams(ft,ii,&maxparam_func);
+        if (nparams_per_core[ii] > max_param_within_core){
+            max_param_within_core = nparams_per_core[ii];
+        }
+    }
+    double * core_grad_space = calloc_double(max_param_within_core * maxrank * maxrank * n);
+    double * max_func_param_space = calloc_double(max_param_within_core);
+    
+    struct RunningCoreTotal *  evals_lr = running_core_total_alloc(maxrank * maxrank);
+    struct RunningCoreTotal *  evals_rl = running_core_total_alloc(maxrank * maxrank);
+    struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,maxrank * maxrank);
+
+
+    function_train_param_grad_eval(ft,n,x,evals_lr,evals_rl,grads,nparams_per_core,
+                                   out,grad,
+                                   core_grad_space,maxrank * maxrank * max_param_within_core,
+                                   max_func_param_space);
+                                   
+
+    free(nparams_per_core);                 nparams_per_core     = NULL;
+    running_core_total_free(evals_lr);      evals_lr             = NULL;
+    running_core_total_free(evals_rl);      evals_rl             = NULL;
+    running_core_total_arr_free(dim,grads); grads                = NULL;
+    free(core_grad_space);                  core_grad_space      = NULL;
+    free(max_func_param_space);             max_func_param_space = NULL;
+
+}
+
+/***********************************************************//**
     Evaluate a function train and gradients with respect to parameter
     for cores that have functions that are linear mappings from parameters
     to outputs at a set of inputs

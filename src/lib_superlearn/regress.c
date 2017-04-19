@@ -973,6 +973,94 @@ struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
     return ftp->ft;
 }
 
+/***********************************************************//**
+    Create a parameterization that is initialized to a constant
+
+    \param[in,out] ftp     - parameterized FTP
+    \param[in]     val     - number of data points
+    \param[in]     perturb - perturbation to zero elements
+***************************************************************/
+void ft_param_create_constant(struct FTparam * ftp, double val,
+                              double perturb)
+{
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+
+    struct FunctionTrain * const_ft =
+        function_train_constant(val,ftp->approx_opts);
+
+    // free previous parameters
+    free(ftp->params); ftp->params = NULL;
+    ftp->params = calloc_double(ftp->nparams);
+    for (size_t ii = 0; ii < ftp->nparams; ii++){
+        ftp->params[ii] = perturb*(randu()*2.0-1.0);
+    }
+
+    size_t onparam = 0;
+    size_t onfunc = 0;
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+
+        size_t mincol = 1;
+        size_t maxcol = ranks[ii+1];
+        if (mincol > maxcol){
+            mincol = maxcol;
+        }
+
+        size_t minrow = 1;
+        size_t maxrow = ranks[ii];
+        if (minrow > maxrow ){
+            minrow = maxrow;
+        }
+
+        size_t nparam_temp = function_train_core_get_nparams(const_ft,ii,NULL);
+        double * temp_params = calloc_double(nparam_temp);
+        function_train_core_get_params(const_ft,ii,temp_params);
+        size_t onparam_temp = 0;
+
+        /* printf("on core = %zu\n,ii"); */
+        for (size_t col = 0; col < mincol; col++){
+            for (size_t row = 0; row < minrow; row++){
+
+                size_t nparam_temp_func =
+                    function_train_func_get_nparams(const_ft,ii,row,col);
+
+                size_t minloop = nparam_temp_func;
+                size_t maxloop = ftp->nparams_per_uni[onfunc];
+                if (maxloop < minloop){
+                    minloop = maxloop;
+                }
+                for (size_t ll = 0; ll < minloop; ll++){
+                    /* ftp->params[onparam] = temp_params[onparam_temp]; */
+                    ftp->params[onparam] += temp_params[onparam_temp];
+                    /* ftp->params[onparam] += 0.001*randn(); */
+                    onparam++;
+                    onparam_temp++;
+                }
+                for (size_t ll = minloop; ll < maxloop; ll++){
+                    /* ftp->params[onparam] = 0.0; */
+                    onparam++;
+                }
+                onfunc++;
+            }
+            
+            for (size_t row = minrow; row < maxrow; row++){
+                onparam += ftp->nparams_per_uni[onfunc];
+                onfunc++;
+            }
+        }
+        for (size_t col = mincol; col < maxcol; col++){
+            for (size_t row = 0; row < maxrow; row++){
+                onparam += ftp->nparams_per_uni[onfunc];
+                onfunc++;
+            }
+        }
+
+        free(temp_params); temp_params = NULL;
+    }
+
+    // update the function train
+    function_train_update_params(ftp->ft,ftp->params);
+    function_train_free(const_ft); const_ft = NULL;
+}
 
 /***********************************************************//**
     Create a parameterization from a linear least squares fit to 
@@ -2673,7 +2761,6 @@ double cross_validate_run(struct CrossValidate * cv,
 
         struct FunctionTrain * ft = ft_regress_run(reg,optimizer,ntrain,xtrain,ytrain);
         
-
         double newerr = 0.0;
         double newnorm = 0.0;
         for (size_t jj = 0; jj < batch; jj++){
