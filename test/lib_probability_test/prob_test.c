@@ -102,6 +102,12 @@ void Test_sobol(CuTest * tc)
     CuAssertDblEquals(tc,7.0363551328e-01,total_effects[0],1e-9);
     CuAssertDblEquals(tc,5.0253108617e-01,total_effects[1],1e-9);
     CuAssertDblEquals(tc,2.0616659946e-01,main_effects[2],1e-9);
+
+
+    struct C3SobolSensitivity * sobol_indices = c3_sobol_sensitivity_alloc(3,1);
+    c3_sobol_sensitivity_print(sobol_indices);
+    
+
     
     function_train_free(ft);
     c3approx_destroy(c3a);

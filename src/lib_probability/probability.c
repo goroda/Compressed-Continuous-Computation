@@ -56,50 +56,63 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 
-typedef struct C3_SSInteract
+struct SInteract
 {
-    size_t ninteract;
-    size_t nfixed;
-    size_t * i_vars;
-    size_t * ni_vars;
-    double sensitivity;
-} ssi_t;
+    size_t val;
+    struct SInteract * next;
+};
 
-static struct C3_SSInteract * c3_ss_interact_alloc(size_t ninteract, size_t nfixed)
+struct SInteract * sinteract_create(size_t val)
 {
-    ssi_t * si = malloc(sizeof(ssi_t));
+    struct SInteract * si = malloc(sizeof(struct SInteract));
     if (si == NULL){
-        fprintf(stderr, "Failure to allocate space for sobol interaction\n");
+        fprintf(stderr, "Failure to allocate sobol interaction list\n");
         exit(1);
     }
-    si->ninteract = ninteract;
-    si->nfixed = nfixed;
 
-    si->i_vars = calloc_size_t(ninteract); // interacting variables
-    si->ni_vars = calloc_size_t(nfixed); // non interacting variables
-    si->sensitivity = 0;
+    si->val = val;
+    si->next = NULL;
 
     return si;
 }
 
-static void c3_ss_interact_free(ssi_t * si)
+void sinteract_push(struct SInteract ** si, size_t val)
+{
+    struct SInteract * new_element = sinteract_create(val);
+    new_element->next = *si;
+    *si = new_element;
+}
+
+void sinteract_print(struct SInteract * si)
 {
     if (si != NULL){
-        free(si->i_vars); si->ivars = NULL;
-        free(si->ni_vars); si->ni_vars = NULL;
-        free(si); si = NULL;
+        struct SInteract * temp = si;
+        while (temp != NULL){
+            printf("%zu ",temp->val);
+            temp = temp->next;
+        }
+        printf("\n");
     }
 }
 
-static void c3_ss_interact_add_ivar(ssi_t * si, size_t var)
+void get_combination(size_t n, size_t k, size_t start, struct SInteract ** elements, size_t * index)
 {
-    assert (ind < si->ninteract);
-    si->interacting_vars[ind] = var;
-}
-
-static void c3_ss_interact_add_sensitivity(ssi_t * si, double sensitivity)
-{
-    si->sensitivity = sensitivity;
+    if (k == 1){
+        printf("start = %zu, end = %zu\n",start,n);
+        for (size_t ii = start; ii < n; ii++){
+            sinteract_push(&elements[*index],ii);
+            printf("finished element: "); sinteract_print(elements[*index]);
+            
+            *index = *index + 1;
+        }
+    }
+    else{
+        for (size_t ii = start; ii < n; ii++){
+            printf("ii = %zu, k = %zu\n",ii,k);
+            sinteract_push(elements + *index,ii);
+            get_combination(n,k-1,start+1,elements,index);
+        }
+    }
 }
 
 typedef struct C3SobolSensitivity
@@ -109,13 +122,12 @@ typedef struct C3SobolSensitivity
 
     size_t max_order;
     size_t num_sobol_indices;
-    struct SSInteract ** interactions;
+    struct SInteract ** interactions;
 } c3_sobol_t;
 
-static c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
+
+c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
 {
-
-
     c3_sobol_t * sobol = malloc(sizeof(c3_sobol_t));
     if (sobol == NULL){
         fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
@@ -123,54 +135,31 @@ static c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
     }
     sobol->dim = dim;
 
-    assert (order < 2);
     sobol->max_order = order;
 
-    sobol->num_sobol_indices = 0;
-    for (size_t ii = 1; ii < order; ii++){
-
-        if (ii == 1){
-            sobol->num_sobol_indices += dim;
-        }
-
-        else if (ii == 2){
-            for (size_t jj = 1; jj < dim; jj++){
-                sobol->num_sobol_indices += (dim-jj);
-            }
-        }
-    }
-
-    sobol->interactions = malloc(sobol->num_sobol_indices * sizeof(ssi_t *));
+    sobol->num_sobol_indices = 200;
+    sobol->interactions = malloc(sobol->num_sobol_indices * sizeof(struct SInteract *));
     if (sobol->interactions == NULL){
         fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
         exit(1);        
     }
+    
+    for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){
+        sobol->interactions[ii] = NULL;
+    }
 
-    size_t onindex = 1;
-    for (size_t ii = 1; ii < order; ii++){
-        
-        sobol->interactions[onindex] = c3_ss_interact_alloc(ii,dim-ii);
-        
-        if (ii == 1){
-            for (size_t jj == 0; jj < dim; jj++){
-                for (size_t kk = 0; kk < dim; kk++){
-                    if (jj = kk){
-                        c3_ss_interact_add_ivar(sobol->interactions[onindex],jj);
-                    }
-                    else{
-                        c3_ss_interact_add_nivar(sobol->interactions[onindex],kk);
-                    }
-                }
-            }
-            onindex++;
-        }
-        else if (ii == 2){
-            
-        }
-            
+    size_t onindex = 0;
+    get_combination(dim,dim-order,0,sobol->interactions,&onindex);
+
+    return sobol;
+}
+
+void c3_sobol_sensitivity_print(c3_sobol_t * sobol)
+{
+    for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){
+        sinteract_print(sobol->interactions[ii]);
     }
 }
-    
 
 /***********************************************************//**
     Compute sobol sensitivity indices assuming a function-train
