@@ -61,34 +61,37 @@
     as mapping input random variables to an output random variable
 
     \param[in]     ft            - function_train
-    \param[in,out] main_effects  - allocated space for main effect sensitivities
     \param[in,out] total_effects - allocated space for total effect sensitivies
-    \param[in,out] main_interact - allocated space for 2d interaction main effects
+    \param[in,out] main_effects  - allocated space for main effect sensitivities
+    \param[in]     order         - order of interactions to go up to (>=1)
 
     \note
     if any of the inputs are NULL, then they are not computed
 ***************************************************************/
-void function_train_sobol_sensitivites(
+void function_train_sobol_sensitivities(
     const struct FunctionTrain * ft,
-    double * main_effects, double * total_effects, double * main_interact)
+    double * total_effects, double * main_effects, size_t order)
 {
 
-    assert (main_interact == NULL);
+    assert (order >= 1);
     double mean = function_train_integrate_weighted(ft);
     double second_moment = function_train_inner_weighted(ft,ft);
     double variance = second_moment - mean*mean;
+    /* printf("mean = %G\n",mean); */
+    /* printf("std = %G\n",sqrt(variance)); */
     struct FunctionTrain * ft_1 = NULL;
-    if (main_effects != NULL){
+    if (total_effects != NULL){
         for (size_t ii = 0; ii < ft->dim; ii++){
             ft_1 = function_train_integrate_weighted_subset(ft,1,&ii);
         
             double fm = function_train_integrate_weighted(ft_1);
             double sm = function_train_inner_weighted(ft_1,ft_1);
             double vari = sm - fm*fm;
-            main_effects[ii] = vari/variance;
+            total_effects[ii] = (variance - vari)/variance;
+            function_train_free(ft_1); ft_1 = NULL;
         }
     }
-    if (total_effects != NULL){
+    if (main_effects != NULL){
         size_t * ind_contract = calloc_size_t(ft->dim-1);
         size_t onind;
         for (size_t ii = 0; ii < ft->dim; ii++){
@@ -99,14 +102,47 @@ void function_train_sobol_sensitivites(
                     onind++;
                 }
             }
-            ft_1 = function_train_integrate_weighted_subset(ft,1,ind_contract);
+            ft_1 = function_train_integrate_weighted_subset(ft,ft->dim-1,ind_contract);
 
             double fm = function_train_integrate_weighted(ft_1);
             double sm = function_train_inner_weighted(ft_1,ft_1);
             double vari = sm - fm*fm;
-            total_effects[ii] = (variance - vari)/variance;
+            main_effects[ii] = vari/variance;
+            function_train_free(ft_1); ft_1 = NULL;
         }
-        free(ind_contract); ind_contract = NULL;
+
+        if (order > 1){
+            size_t start2 = ft->dim;
+            size_t oneffect = start2;
+            for (size_t ii = 0; ii < ft->dim; ii++){
+                for (size_t jj = ii+1; jj < ft->dim; jj++){
+                    onind = 0;
+                    for (size_t kk = 0; kk < ft->dim; kk++){
+                        if ((ii != kk) && (jj != kk)){
+                            ind_contract[onind] = kk;
+                        }
+                    }
+                    if (ft->dim-2 > 0){
+                        ft_1 = function_train_integrate_weighted_subset(ft,ft->dim-2,ind_contract);
+                    }
+                    else{
+                        ft_1 = function_train_copy(ft);
+                    }
+                    
+                    double fm = function_train_integrate_weighted(ft_1);
+                    double sm = function_train_inner_weighted(ft_1,ft_1);
+                    double vari = sm - fm*fm;
+                    main_effects[oneffect] = vari/variance - main_effects[ii] - main_effects[jj];
+                    oneffect++;
+                    function_train_free(ft_1); ft_1 = NULL;
+                }
+            }
+            free(ind_contract); ind_contract = NULL;
+            if (order > 2){
+                fprintf(stderr, "Higher order (>2) sobol indices not yet implemented\n");
+            }
+        }
+ 
     }
 
     function_train_free(ft_1); ft_1 = NULL;

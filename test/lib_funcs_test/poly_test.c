@@ -670,6 +670,39 @@ void Test_legendre_inner(CuTest * tc){
     fwrap_destroy(fw2);
 }
 
+void Test_legendre_inner_w(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_inner with legendre poly \n");
+
+    // function
+    struct Fwrap * fw1 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw1,powX2,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw2,TwoPowX3,NULL);
+
+    double lb = -2.0, ub = 3.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-10);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    
+    opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw1);
+    opoly_t cpoly2 = orth_poly_expansion_approx_adapt(opts,fw2);
+    
+    double intshould = (pow(ub,6) - pow(lb,6))/3/5;
+    double intis = orth_poly_expansion_inner_w(cpoly,cpoly2);
+    CuAssertDblEquals(tc, intshould, intis, 1e-10);
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(cpoly2);
+    ope_opts_free(opts);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
+}
+
 void Test_legendre_norm_w(CuTest * tc){
     
     printf("Testing function: orth_poly_expansion_norm_w with legendre poly\n");
@@ -688,7 +721,7 @@ void Test_legendre_norm_w(CuTest * tc){
 
     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw1);
     
-    double intshould = (pow(ub,5) - pow(lb,5))/5/2.0;
+    double intshould = sqrt((pow(ub,5) - pow(lb,5))/5/5);
     double intis = orth_poly_expansion_norm_w(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-10);
     
@@ -896,6 +929,7 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_integrate);
     SUITE_ADD_TEST(suite, Test_legendre_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_legendre_inner);
+    SUITE_ADD_TEST(suite, Test_legendre_inner_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm_w);
     SUITE_ADD_TEST(suite, Test_legendre_norm);
     SUITE_ADD_TEST(suite, Test_legendre_product);
@@ -1137,7 +1171,7 @@ void Test_hermite_norm_w(CuTest * tc){
     ope_opts_set_tol(opts,1e-15);
     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
 
-    double intshould = 5*cos(1)/2/exp(2) + 3.0/2.0;
+    double intshould = sqrt(5*cos(1)/2/exp(2) + 3.0/2.0);
     double intis = orth_poly_expansion_norm_w(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
     
@@ -1160,7 +1194,7 @@ void Test_hermite_norm(CuTest * tc){
     ope_opts_set_tol(opts,1e-15);
     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
 
-    double intshould = 5*cos(1)/2/exp(2) + 3.0/2.0;
+    double intshould = sqrt(5*cos(1)/2/exp(2) + 3.0/2.0);
     double intis = orth_poly_expansion_norm_w(cpoly);
     CuAssertDblEquals(tc, sqrt(intshould), intis, 1e-13);
     

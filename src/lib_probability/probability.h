@@ -38,11 +38,10 @@
 #ifndef PROBABILITY_H
 #define PROBABILITY_H
 
-#include "../lib_clinalg/lib_clinalg.h"
-//#include "lib_clinalg.h"
+#include "lib_clinalg.h"
 
-void function_train_sobol_sensitivites(const struct FunctionTrain *,
-                                       double *, double *, double *);
+void function_train_sobol_sensitivities(const struct FunctionTrain *,
+                                       double *, double *, size_t);
 
 enum lt_matrix_type {LT, SYMMETRIC, GEN};
 enum pdf_type {GAUSSIAN, GENERAL};

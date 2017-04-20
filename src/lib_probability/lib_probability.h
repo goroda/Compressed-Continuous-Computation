@@ -40,6 +40,6 @@
 
 #include "probability.h"
 #include "probability_utils.h"
-#include "../lib_clinalg/lib_clinalg.h"
+#include "lib_clinalg.h"
 
 #endif

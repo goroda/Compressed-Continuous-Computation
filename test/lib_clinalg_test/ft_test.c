@@ -1812,31 +1812,31 @@ void Test_sin1000dint(CuTest * tc)
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_function_train_initsum); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_linear); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic2); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_scale); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_product); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted); */
+    SUITE_ADD_TEST(suite, Test_function_train_initsum);
+    SUITE_ADD_TEST(suite, Test_function_train_linear);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
+    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
+    SUITE_ADD_TEST(suite, Test_function_train_scale);
+    SUITE_ADD_TEST(suite, Test_function_train_product);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset);
-    /* SUITE_ADD_TEST(suite, Test_function_train_inner); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross3); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross4); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3); */
-    /* SUITE_ADD_TEST(suite, Test_sin10dint); */
-    /* SUITE_ADD_TEST(suite, Test_sin10dint_savetxt); */
-    /* SUITE_ADD_TEST(suite, Test_sin100dint); */
+    SUITE_ADD_TEST(suite, Test_function_train_inner);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
+    SUITE_ADD_TEST(suite, Test_sin10dint);
+    SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
+    SUITE_ADD_TEST(suite, Test_sin100dint);
     /* SUITE_ADD_TEST(suite, Test_sin1000dint); */
     return suite;
 }

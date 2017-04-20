@@ -3043,12 +3043,6 @@ orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
         out += a->coeff[ii] * b->coeff[ii] * a->p->norm(ii); 
     }
 
-    if (a->p->ptype != HERMITE){
-        double m = (a->upper_bound - a->lower_bound) / 
-            (a->p->upper - a->p->lower);
-        //printf("m=%3.15f\n",m);
-        out *= m;
-    }
     return out;
 }
 
@@ -3144,7 +3138,7 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
           printf("second poly=\n");
           print_orth_poly_expansion(t2,0,NULL);
         */
-        double out = orth_poly_expansion_inner_w(t1,t2) * 2.0;
+        double out = orth_poly_expansion_inner_w(t1,t2) * (t1->upper_bound - t1->lower_bound); /* 2.0; */
         if (c1 == 1){
             orth_poly_expansion_free(t1);
         }
@@ -3170,15 +3164,8 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
     size_t ii;
     double out = 0.0;
-    for (ii = 0; ii < p->num_poly; ii++){
-        out += pow(p->coeff[ii],2.0) * p->p->norm(ii);
-    }
 
-    if (p->p->ptype != HERMITE){
-        double m = (p->upper_bound - p->lower_bound) / 
-            (p->p->upper - p->p->lower);
-        out = out * m;
-    }
+    out = sqrt(orth_poly_expansion_inner_w(p,p));
     return sqrt(out);
 }
 
@@ -3197,23 +3184,7 @@ double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
 double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
 
     double out = 0.0;
-    switch (p->p->ptype){
-        case LEGENDRE:
-            out = orth_poly_expansion_norm_w(p) * sqrt(2.0);
-            break;
-        case HERMITE:
-            out = orth_poly_expansion_norm_w(p);
-            break;
-        case CHEBYSHEV:
-            out = sqrt(fabs(orth_poly_expansion_inner(p,p)));
-            break;
-        case STANDARD:
-            fprintf(stderr, "Cannot take norm of STANDARD type\n");
-            break;
-        //default:
-        //    fprintf(stderr, "Polynomial type does not exist: %d\n ", 
-        //            p->p->ptype);
-    }
+    out = sqrt(orth_poly_expansion_inner(p,p));
     return out;
 }
 

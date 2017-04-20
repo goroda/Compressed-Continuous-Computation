@@ -3406,12 +3406,12 @@ double function_train_inner_weighted(const struct FunctionTrain * a,
 {
     double out = 0.123456789;
     size_t ii;
-    double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
+    double * temp = qmarray_kron_integrate_weighted(b->cores[0],a->cores[0]);
     double * temp2 = NULL;
 
     //size_t ii;
     for (ii = 1; ii < a->dim; ii++){
-        temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
+        temp2 = qmarray_vec_kron_integrate_weighted(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);
