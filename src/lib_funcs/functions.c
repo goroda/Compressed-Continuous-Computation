@@ -661,9 +661,7 @@ generic_function_deriv(const struct GenericFunction * gf)
          //printf("piecewise inner = %G\n",out);
          break;
      case POLYNOMIAL:
-         out = orth_poly_expansion_inner(
-             (struct OrthPolyExpansion *) a->f,
-             (struct OrthPolyExpansion *) b->f);
+         out = orth_poly_expansion_inner(a->f,b->f);
          //printf("poly inner = %G\n",out);
          break;
      case LINELM:
@@ -685,6 +683,44 @@ generic_function_deriv(const struct GenericFunction * gf)
 
      return out;
  }
+
+/********************************************************//**
+*   Compute the weighted inner product between two generic functions
+*
+*   \param[in] a  - generic function
+*   \param[in] b  - generic function
+*
+*   \return out -  int a(x) b(x) w(x) dx 
+************************************************************/
+double generic_function_inner_weighted(const struct GenericFunction * a, 
+                                       const struct GenericFunction * b)
+{
+    assert(a->fc == POLYNOMIAL);
+    assert(b->fc == POLYNOMIAL);
+    double out = 0.123456789;   
+    enum function_class fc = a->fc;
+    
+    switch (fc){
+    case CONSTANT:
+        assert (1 == 0);
+        break;
+    case PIECEWISE:
+        assert (1 == 0);
+        break;
+    case POLYNOMIAL:
+        out = orth_poly_expansion_inner_w(a->f,b->f);
+        break;
+    case LINELM:
+        assert (1 == 0);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL: 
+        assert (1 == 0);
+        break;
+    }
+    return out;
+}
 
  /********************************************************//**
  *   Compute the sum of the inner products between
@@ -710,6 +746,31 @@ generic_function_deriv(const struct GenericFunction * gf)
      }
      return val;
  }
+
+/********************************************************//**
+*   Compute the sum of the (weighted) inner products between
+*   two arrays of generic functions
+*
+*   \param[in] n   - number of inner products
+*   \param[in] lda - stride of functions to use in a
+*   \param[in] a   - first array of generic functions
+*   \param[in] ldb - stride of functions to use in b
+*   \param[in] b   - second array of generic functions
+*
+*   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) w(x) dx
+************************************************************/
+double generic_function_inner_weighted_sum(size_t n, size_t lda, 
+                                           struct GenericFunction ** a, 
+                                           size_t ldb, 
+                                           struct GenericFunction ** b)
+{
+     double val = 0.0;
+     size_t ii;
+     for (ii = 0; ii < n; ii++){
+         val += generic_function_inner_weighted(a[ii*lda], b[ii*ldb]);
+     }
+     return val;
+}
 
 /********************************************************//**
 *   Compute norm of a generic function

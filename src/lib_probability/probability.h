@@ -41,6 +41,9 @@
 #include "../lib_clinalg/lib_clinalg.h"
 //#include "lib_clinalg.h"
 
+void function_train_sobol_sensitivites(const struct FunctionTrain *,
+                                       double *, double *, double *);
+
 enum lt_matrix_type {LT, SYMMETRIC, GEN};
 enum pdf_type {GAUSSIAN, GENERAL};
 enum likelihood_type {GAUSSIAN_LIKE, POISSON_LIKE, GENERIC_LIKE};

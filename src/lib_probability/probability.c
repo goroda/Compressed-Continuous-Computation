@@ -57,6 +57,65 @@
 #include "lib_clinalg.h"
 
 /***********************************************************//**
+    Compute sobol sensitivity indices assuming a function-train
+    as mapping input random variables to an output random variable
+
+    \param[in]     ft            - function_train
+    \param[in,out] main_effects  - allocated space for main effect sensitivities
+    \param[in,out] total_effects - allocated space for total effect sensitivies
+    \param[in,out] main_interact - allocated space for 2d interaction main effects
+
+    \note
+    if any of the inputs are NULL, then they are not computed
+***************************************************************/
+void function_train_sobol_sensitivites(
+    const struct FunctionTrain * ft,
+    double * main_effects, double * total_effects, double * main_interact)
+{
+
+    assert (main_interact == NULL);
+    double mean = function_train_integrate_weighted(ft);
+    double second_moment = function_train_inner_weighted(ft,ft);
+    double variance = second_moment - mean*mean;
+    struct FunctionTrain * ft_1 = NULL;
+    if (main_effects != NULL){
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            ft_1 = function_train_integrate_weighted_subset(ft,1,&ii);
+        
+            double fm = function_train_integrate_weighted(ft_1);
+            double sm = function_train_inner_weighted(ft_1,ft_1);
+            double vari = sm - fm*fm;
+            main_effects[ii] = vari/variance;
+        }
+    }
+    if (total_effects != NULL){
+        size_t * ind_contract = calloc_size_t(ft->dim-1);
+        size_t onind;
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            onind = 0;
+            for (size_t jj = 0; jj < ft->dim; jj++){
+                if (ii!=jj){
+                    ind_contract[onind] = jj;
+                    onind++;
+                }
+            }
+            ft_1 = function_train_integrate_weighted_subset(ft,1,ind_contract);
+
+            double fm = function_train_integrate_weighted(ft_1);
+            double sm = function_train_inner_weighted(ft_1,ft_1);
+            double vari = sm - fm*fm;
+            total_effects[ii] = (variance - vari)/variance;
+        }
+        free(ind_contract); ind_contract = NULL;
+    }
+
+    function_train_free(ft_1); ft_1 = NULL;
+}
+
+
+
+
+/***********************************************************//**
     Allocate a linear transform Ax +b
 
     \param[in] dimin  - input dimension 

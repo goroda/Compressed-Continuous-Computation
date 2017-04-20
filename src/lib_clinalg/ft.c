@@ -3389,6 +3389,44 @@ double function_train_inner(const struct FunctionTrain * a,
 }
 
 /********************************************************//**
+    Inner product between two functions in FT form with weighted
+    space w(x)
+
+    \param[in] a - Function train 1
+    \param[in] b - Function train 2
+
+    \return Inner product \f$ \int a(x)b(x) w(x) dx \f$
+
+    \note 
+    In order for this function to make sense a(x) and b(x)
+    shoud have the same underlying basis
+***********************************************************/
+double function_train_inner_weighted(const struct FunctionTrain * a, 
+                                     const struct FunctionTrain * b)
+{
+    double out = 0.123456789;
+    size_t ii;
+    double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
+    double * temp2 = NULL;
+
+    //size_t ii;
+    for (ii = 1; ii < a->dim; ii++){
+        temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
+        size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        
+        free(temp2); temp2 = NULL;
+    }
+    
+    out = temp[0];
+    free(temp); temp=NULL;
+
+    return out;
+}
+
+/********************************************************//**
     Compute the L2 norm of a function in FT format
 
     \param[in] a - Function train

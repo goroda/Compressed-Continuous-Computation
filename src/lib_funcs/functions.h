@@ -142,8 +142,14 @@ generic_function_daxpby(double, const struct GenericFunction *,
 
 double generic_function_inner(const struct GenericFunction *,
                               const struct GenericFunction *);
+double generic_function_inner_weighted(const struct GenericFunction *, 
+                                       const struct GenericFunction *);
 double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
-                         size_t, struct GenericFunction **);
+                                  size_t, struct GenericFunction **);
+double generic_function_inner_weighted_sum(size_t, size_t, 
+                                           struct GenericFunction **, 
+                                           size_t, 
+                                           struct GenericFunction **);
 double generic_function_norm(const struct GenericFunction *); 
 double generic_function_norm2diff(const struct GenericFunction *, 
                                   const struct GenericFunction *);
