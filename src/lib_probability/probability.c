@@ -56,6 +56,122 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 
+typedef struct C3_SSInteract
+{
+    size_t ninteract;
+    size_t nfixed;
+    size_t * i_vars;
+    size_t * ni_vars;
+    double sensitivity;
+} ssi_t;
+
+static struct C3_SSInteract * c3_ss_interact_alloc(size_t ninteract, size_t nfixed)
+{
+    ssi_t * si = malloc(sizeof(ssi_t));
+    if (si == NULL){
+        fprintf(stderr, "Failure to allocate space for sobol interaction\n");
+        exit(1);
+    }
+    si->ninteract = ninteract;
+    si->nfixed = nfixed;
+
+    si->i_vars = calloc_size_t(ninteract); // interacting variables
+    si->ni_vars = calloc_size_t(nfixed); // non interacting variables
+    si->sensitivity = 0;
+
+    return si;
+}
+
+static void c3_ss_interact_free(ssi_t * si)
+{
+    if (si != NULL){
+        free(si->i_vars); si->ivars = NULL;
+        free(si->ni_vars); si->ni_vars = NULL;
+        free(si); si = NULL;
+    }
+}
+
+static void c3_ss_interact_add_ivar(ssi_t * si, size_t var)
+{
+    assert (ind < si->ninteract);
+    si->interacting_vars[ind] = var;
+}
+
+static void c3_ss_interact_add_sensitivity(ssi_t * si, double sensitivity)
+{
+    si->sensitivity = sensitivity;
+}
+
+typedef struct C3SobolSensitivity
+{
+    size_t dim;
+    double * total_effects;
+
+    size_t max_order;
+    size_t num_sobol_indices;
+    struct SSInteract ** interactions;
+} c3_sobol_t;
+
+static c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
+{
+
+
+    c3_sobol_t * sobol = malloc(sizeof(c3_sobol_t));
+    if (sobol == NULL){
+        fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
+        exit(1);
+    }
+    sobol->dim = dim;
+
+    assert (order < 2);
+    sobol->max_order = order;
+
+    sobol->num_sobol_indices = 0;
+    for (size_t ii = 1; ii < order; ii++){
+
+        if (ii == 1){
+            sobol->num_sobol_indices += dim;
+        }
+
+        else if (ii == 2){
+            for (size_t jj = 1; jj < dim; jj++){
+                sobol->num_sobol_indices += (dim-jj);
+            }
+        }
+    }
+
+    sobol->interactions = malloc(sobol->num_sobol_indices * sizeof(ssi_t *));
+    if (sobol->interactions == NULL){
+        fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
+        exit(1);        
+    }
+
+    size_t onindex = 1;
+    for (size_t ii = 1; ii < order; ii++){
+        
+        sobol->interactions[onindex] = c3_ss_interact_alloc(ii,dim-ii);
+        
+        if (ii == 1){
+            for (size_t jj == 0; jj < dim; jj++){
+                for (size_t kk = 0; kk < dim; kk++){
+                    if (jj = kk){
+                        c3_ss_interact_add_ivar(sobol->interactions[onindex],jj);
+                    }
+                    else{
+                        c3_ss_interact_add_nivar(sobol->interactions[onindex],kk);
+                    }
+                }
+            }
+            onindex++;
+        }
+        else if (ii == 2){
+            
+        }
+            
+    }
+}
+    
+
 /***********************************************************//**
     Compute sobol sensitivity indices assuming a function-train
     as mapping input random variables to an output random variable
