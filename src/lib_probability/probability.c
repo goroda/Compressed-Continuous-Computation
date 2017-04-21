@@ -217,6 +217,81 @@ void get_combination(size_t num_elements, size_t elements_left, size_t start,
     }
 }
 
+struct IndexList
+{
+    size_t nelem;
+    size_t * vals;
+    struct IndexList * next;
+};
+
+struct IndexList * index_list_create(size_t nelem, size_t * vals)
+{
+    struct IndexList * il = malloc(sizeof(struct IndexList));
+    if (il == NULL){
+        fprintf(stderr,"Failure to allocate index list for sobol indices\n");
+        exit(1);
+    }
+
+    il->nelem = nelem;
+    il->vals = calloc_size_t(nelem);
+    memmove(il->vals,vals,nelem*sizeof(size_t));
+    il->next = NULL;
+    return il;
+}
+
+void index_list_destroy(struct IndexList * list)
+{
+    if (list != NULL){
+        struct IndexList * temp = list->next;
+        free(list->vals); list->vals = NULL;
+        free(list); list = NULL;
+        index_list_destroy(temp);
+    }
+}
+
+void index_list_append(struct IndexList ** list, size_t nelem, size_t * vals)
+{
+    struct IndexList * newitem = index_list_create(nelem,vals);
+
+    if (*list == NULL){
+        *list = newitem;
+    }
+    else{
+        struct IndexList * temp = *list;
+        while (temp->next != NULL){
+            temp = temp->next;
+        }
+        temp->next = newitem;
+    }
+}
+    
+
+void comb_g(size_t s, size_t n, size_t k, struct IndexList ** list, size_t nprev, size_t * prev){
+    // n choose k, order doesn't matter, return ordered sequences
+
+
+    size_t * base = calloc_size_t(nprev+1);
+    if (nprev != 0){
+        memmove(base,prev,nprev * sizeof(size_t));
+    }
+    
+    if (k == 1){
+
+        for (size_t ii = s; ii < n; ii++){
+            base[nprev] = ii;
+            index_list_append(list,nprev+1,base);
+        }
+    }
+    else{
+        for (size_t ii = s; ii < n; ii++){
+            base[nprev] = ii;
+            comb_g(s+1,n,k-1,list,nprev+1,base);
+        }
+    }
+    free(base); base = NULL;
+}
+// 
+
 typedef struct C3SobolSensitivity
 {
     size_t dim;
@@ -297,15 +372,23 @@ double c3_sobol_sensitivity_get_interaction(c3_sobol_t * sobol, size_t ninteract
 
 void c3_sobol_sensitivity_print(c3_sobol_t * sobol)
 {
-    printf("\nTotal variance:\n%G\n",sobol->variance);
-    
-    printf("\nMain effects:\n");
-    for (size_t ii = 0; ii < sobol->dim; ii++){
-        sinteract_print(sobol->interactions[ii]);
+    printf("here!\n");
+    struct IndexList * il = NULL;
+    comb_g(1,5,2,&il,0,NULL);
+    while (il != NULL){
+        iprint_sz(il->nelem,il->vals);
+        il = il->next;
     }
+    
+    /* printf("\nTotal variance:\n%G\n",sobol->variance); */
+    
+    /* printf("\nMain effects:\n"); */
+    /* for (size_t ii = 0; ii < sobol->dim; ii++){ */
+    /*     sinteract_print(sobol->interactions[ii]); */
+    /* } */
 
-    printf("\nTotal effects:\n");
-    dprint(sobol->dim,sobol->total_effects);
+    /* printf("\nTotal effects:\n"); */
+    /* dprint(sobol->dim,sobol->total_effects); */
     /* for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){ */
     /* } */
 }

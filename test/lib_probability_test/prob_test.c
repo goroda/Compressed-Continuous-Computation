@@ -161,33 +161,33 @@ void Test_sobol2(CuTest * tc)
     c3_sobol_sensitivity_print(sobol);
 
     printf("\n");
-    size_t interact2[2] = {0, 1};
+    /* size_t interact2[2] = {0, 1}; */
 
-    double a[6] = {0.0,0.5,3.0,9.0,99.0,99.0};
-    double main_should[6];
-    for (size_t ii = 0; ii < 6; ii++){
-        main_should[ii] = 1.0/3.0 * pow(1.0 + a[ii],-2);
-    }
+    /* double a[6] = {0.0,0.5,3.0,9.0,99.0,99.0}; */
+    /* double main_should[6]; */
+    /* for (size_t ii = 0; ii < 6; ii++){ */
+    /*     main_should[ii] = 1.0/3.0 * pow(1.0 + a[ii],-2); */
+    /* } */
 
-    printf("main should: "); dprint(6,main_should);
+    /* printf("main should: "); dprint(6,main_should); */
     
-    // check first order effects;
-    for (size_t ii = 0; ii < dim; ii++){
-        CuAssertDblEquals(tc,main_should[ii],c3_sobol_sensitivity_get_interaction(sobol,1,&ii),1e-2);
-    }
+    /* // check first order effects; */
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     CuAssertDblEquals(tc,main_should[ii],c3_sobol_sensitivity_get_interaction(sobol,1,&ii),1e-2); */
+    /* } */
 
-    // check second order effects;
-    size_t vars[2];
-    for (size_t ii = 0; ii < dim; ii++){
-        for (size_t jj = ii+1; jj < dim; jj++){
-            vars[0] = ii;
-            vars[1] = jj;
-            printf("vari (%zu,%zu) = %G\n",ii,jj,
-                   c3_sobol_sensitivity_get_interaction(sobol,2,vars));
-            CuAssertDblEquals(tc,main_should[ii]*main_should[jj],
-                              c3_sobol_sensitivity_get_interaction(sobol,2,vars),1e-2);
-        }
-    }
+    /* // check second order effects; */
+    /* size_t vars[2]; */
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     for (size_t jj = ii+1; jj < dim; jj++){ */
+    /*         vars[0] = ii; */
+    /*         vars[1] = jj; */
+    /*         printf("vari (%zu,%zu) = %G\n",ii,jj, */
+    /*                c3_sobol_sensitivity_get_interaction(sobol,2,vars)); */
+    /*         CuAssertDblEquals(tc,main_should[ii]*main_should[jj], */
+    /*                           c3_sobol_sensitivity_get_interaction(sobol,2,vars),1e-2); */
+    /*     } */
+    /* } */
     
     /* printf("vari (0,1) = %G\n",c3_sobol_sensitivity_get_interaction(sobol,2,interact2)); */
 
