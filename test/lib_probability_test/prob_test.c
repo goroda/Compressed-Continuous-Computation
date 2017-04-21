@@ -104,9 +104,92 @@ void Test_sobol(CuTest * tc)
     CuAssertDblEquals(tc,2.0616659946e-01,main_effects[2],1e-9);
 
 
-    struct C3SobolSensitivity * sobol_indices = c3_sobol_sensitivity_alloc(3,1);
-    c3_sobol_sensitivity_print(sobol_indices);
+    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_alloc(ft,2,1);
+    c3_sobol_sensitivity_print(sobol);
+
+    size_t interact2[2] = {0, 1};
     
+    printf("vari (0,1) = %G",c3_sobol_sensitivity_get_interaction(sobol,2,interact2));
+
+    function_train_free(ft);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim, start);
+    fwrap_destroy(fw);
+}
+
+static int gfunction(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    double a[6] = {0.0, 0.5, 3.0, 9.0, 99.0, 99.9};
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = 1.0;
+        for (size_t jj = 0; jj < 6; jj++){
+            double temp = (sqrt(pow(4.0*x[ii*6+jj] - 2,2)) + a[jj]) / (1 + a[jj]);
+            out[ii] *= temp;
+        }
+    }
+    return 0;
+}
+
+void Test_sobol2(CuTest * tc)
+{
+    printf("Testing Function: function_train_sobol_sensitivities (2) \n");
+
+    size_t dim = 6;
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,gfunction,NULL);
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,0);
+    ope_opts_set_ub(opts,1);
+    ope_opts_set_maxnum(opts,20);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(0.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+
+    size_t max_order = 2;
+    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_alloc(ft,dim,max_order);
+    c3_sobol_sensitivity_print(sobol);
+
+    printf("\n");
+    size_t interact2[2] = {0, 1};
+
+    double a[6] = {0.0,0.5,3.0,9.0,99.0,99.0};
+    double main_should[6];
+    for (size_t ii = 0; ii < 6; ii++){
+        main_should[ii] = 1.0/3.0 * pow(1.0 + a[ii],-2);
+    }
+
+    printf("main should: "); dprint(6,main_should);
+    
+    // check first order effects;
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,main_should[ii],c3_sobol_sensitivity_get_interaction(sobol,1,&ii),1e-2);
+    }
+
+    // check second order effects;
+    size_t vars[2];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            vars[0] = ii;
+            vars[1] = jj;
+            printf("vari (%zu,%zu) = %G\n",ii,jj,
+                   c3_sobol_sensitivity_get_interaction(sobol,2,vars));
+            CuAssertDblEquals(tc,main_should[ii]*main_should[jj],
+                              c3_sobol_sensitivity_get_interaction(sobol,2,vars),1e-2);
+        }
+    }
+    
+    /* printf("vari (0,1) = %G\n",c3_sobol_sensitivity_get_interaction(sobol,2,interact2)); */
 
     
     function_train_free(ft);
@@ -115,6 +198,8 @@ void Test_sobol(CuTest * tc)
     free_dd(dim, start);
     fwrap_destroy(fw);
 }
+
+
 
 /* void Test_stdnorm(CuTest * tc) */
 /* { */
@@ -852,7 +937,8 @@ CuSuite * ProbGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_sobol);
+    /* SUITE_ADD_TEST(suite, Test_sobol); */
+    SUITE_ADD_TEST(suite, Test_sobol2);
     
     /* SUITE_ADD_TEST(suite, Test_stdnorm); */
     /* SUITE_ADD_TEST(suite, Test_mvn1d); */

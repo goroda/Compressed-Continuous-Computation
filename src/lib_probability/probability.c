@@ -56,13 +56,57 @@
 #include "linalg.h"
 #include "lib_clinalg.h"
 
+double function_train_sobol_interact_var(
+    const struct FunctionTrain * ft, size_t ninteract, size_t * interacting_vars)
+{
+    size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
+    
+    size_t on_contract = 0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        size_t non_interacting = 1;
+        for (size_t jj = 0; jj < ninteract; jj++){
+            if (ii == interacting_vars[jj]){
+                non_interacting = 0;
+                break;
+            }
+        }
+
+        if (non_interacting)
+        {
+            ind_contract[on_contract] = ii;
+            on_contract++;
+        }
+    }
+
+    /* printf("%zu, ",ft->dim-ninteract); iprint_sz(ft->dim-ninteract,ind_contract); */
+    struct FunctionTrain * ft_1 =
+        function_train_integrate_weighted_subset(ft,ft->dim-ninteract,
+                                                 ind_contract);
+
+    double fm = function_train_integrate_weighted(ft_1);
+    double sm = function_train_inner_weighted(ft_1,ft_1);
+    double vari = sm - fm*fm;
+
+    function_train_free(ft_1); ft_1 = NULL;
+    free(ind_contract); ind_contract = NULL;
+    return vari;
+}
+
+
 struct SInteract
 {
     size_t val;
-    struct SInteract * next;
+    size_t nleaves;
+
+    size_t nlabels;
+    size_t * label;
+    double vari;
+    struct SInteract ** leaves;
 };
 
-struct SInteract * sinteract_create(size_t val)
+struct SInteract * sinteract_create(size_t val, size_t nleaves,
+                                    size_t n_prev_labels, size_t * prev_labels,
+                                    const struct FunctionTrain * ft)
 {
     struct SInteract * si = malloc(sizeof(struct SInteract));
     if (si == NULL){
@@ -71,46 +115,104 @@ struct SInteract * sinteract_create(size_t val)
     }
 
     si->val = val;
-    si->next = NULL;
-
+    si->nleaves = nleaves;
+    if (nleaves > 0){
+        si->leaves = malloc(nleaves * sizeof(struct SInteract *));
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            si->leaves[ii] = NULL;
+        }
+    }
+    else{
+        si->leaves = NULL;
+    }
+    if (n_prev_labels == 0){
+        si->nlabels = 1;
+        si->label = calloc_size_t(1);
+        si->label[0] = val;
+    }
+    else{
+        si->nlabels = n_prev_labels+1;
+        si->label = calloc_size_t(si->nlabels);
+        memmove(si->label,prev_labels,n_prev_labels * sizeof(size_t));
+        si->label[si->nlabels-1] = val;
+    }
+    
+    si->vari = function_train_sobol_interact_var(ft,si->nlabels,si->label);
+    
     return si;
 }
 
-void sinteract_push(struct SInteract ** si, size_t val)
+double sinteract_get_vari(struct SInteract * si, size_t distance, size_t * vars)
 {
-    struct SInteract * new_element = sinteract_create(val);
-    new_element->next = *si;
-    *si = new_element;
+    if (distance == 0){
+        return si->vari;
+    }
+    else{
+        size_t nextind = vars[0] - si->val-1;
+        /* printf("si->val = %zu\n",si->val); */
+        /* printf("vars[0] = %zu\n",vars[0]); */
+        return sinteract_get_vari(si->leaves[nextind],distance-1,vars+1);
+    }
 }
 
 void sinteract_print(struct SInteract * si)
 {
     if (si != NULL){
-        struct SInteract * temp = si;
-        while (temp != NULL){
-            printf("%zu ",temp->val);
-            temp = temp->next;
+        printf("Interaction: ");
+        for (size_t ii = 0; ii < si->nlabels; ii++){
+            printf("%zu ",si->label[ii]);
         }
-        printf("\n");
+        printf("--> Variance: %G\n",si->vari);
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            sinteract_print(si->leaves[ii]);
+        }
+        
+        /* printf("\n"); */
     }
 }
 
-void get_combination(size_t n, size_t k, size_t start, struct SInteract ** elements, size_t * index)
+void sinteract_push(struct SInteract ** si, size_t val, size_t which_leaf, size_t nleaves,
+                    const struct FunctionTrain * ft)
 {
-    if (k == 1){
-        printf("start = %zu, end = %zu\n",start,n);
-        for (size_t ii = start; ii < n; ii++){
-            sinteract_push(&elements[*index],ii);
-            printf("finished element: "); sinteract_print(elements[*index]);
-            
-            *index = *index + 1;
+    /* printf("push (val,leaf,nleaves) %zu, %zu, %zu\n",val,which_leaf,nleaves); */
+    struct SInteract * new_leaf = sinteract_create(val,nleaves,(*si)->nlabels,(*si)->label,ft);
+    (*si)->leaves[which_leaf] = new_leaf;
+
+    /* printf("newest leaf = "); */
+    /* sinteract_print(new_leaf); */
+}
+
+
+void get_combination(size_t num_elements, size_t elements_left, size_t start,
+                     struct SInteract ** elements, size_t * index,
+                     const struct FunctionTrain * ft)
+{
+    /* printf("start = %zu\n",start); */
+    if (elements_left == 1){
+        /* printf("\n\n\nAt base!\n"); */
+        /* printf("start = %zu, end = %zu\n",start,num_elements); */
+        /* printf("\t Base node has %zu leaves, %zu labels \n",(*elements)->nleaves,(*elements)->nlabels); */
+        /* printf("\t\t "); sinteract_print(*elements); */
+        for (size_t ii = start; ii < num_elements; ii++){
+            sinteract_push(elements,ii,ii-start,0,ft);
         }
+        /* printf("elements after:\n"); */
+        /* sinteract_print(*elements); */
+        /* printf("done with base!\n"); */
     }
     else{
-        for (size_t ii = start; ii < n; ii++){
-            printf("ii = %zu, k = %zu\n",ii,k);
-            sinteract_push(elements + *index,ii);
-            get_combination(n,k-1,start+1,elements,index);
+
+        /* printf("num_elements = %zu, elements_left = %zu\n",num_elements,elements_left); */
+        for (size_t ii = start; ii < num_elements; ii++){
+            /* printf("push\n"); */
+
+            // if on element 2 and there are 5 dimensions then
+            // number of leaves is 3 4
+
+            sinteract_push(elements,ii,ii-start,num_elements-ii-1,ft);
+            
+            /* printf("got it\n"); */
+            get_combination(num_elements,elements_left-1,ii+1,&((*elements)->leaves[ii-start]),index,ft);
         }
     }
 }
@@ -120,13 +222,14 @@ typedef struct C3SobolSensitivity
     size_t dim;
     double * total_effects;
 
+    double variance;
     size_t max_order;
     size_t num_sobol_indices;
-    struct SInteract ** interactions;
+    struct SInteract ** interactions;    
 } c3_sobol_t;
 
 
-c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
+c3_sobol_t * c3_sobol_sensitivity_alloc(const struct FunctionTrain * ft, size_t dim, size_t order)
 {
     c3_sobol_t * sobol = malloc(sizeof(c3_sobol_t));
     if (sobol == NULL){
@@ -137,29 +240,77 @@ c3_sobol_t * c3_sobol_sensitivity_alloc(size_t dim, size_t order)
 
     sobol->max_order = order;
 
-    sobol->num_sobol_indices = 200;
-    sobol->interactions = malloc(sobol->num_sobol_indices * sizeof(struct SInteract *));
+    sobol->interactions = malloc(dim * sizeof(struct SInteract *));
     if (sobol->interactions == NULL){
         fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
         exit(1);        
     }
     
-    for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){
-        sobol->interactions[ii] = NULL;
+    for (size_t ii = 0; ii < dim; ii++){
+        sobol->interactions[ii] = sinteract_create(ii,dim-1,0,NULL,ft);
+        /* printf("\n\n\n"); */
+        /* printf("Initial tree:\n "); */
+        /* sinteract_print(sobol->interactions[ii]); */
+
+        get_combination(dim,order,ii+1,&(sobol->interactions[ii]),NULL,ft);
+
+        /* printf("Final tree:\n"); */
+        /* sinteract_print(sobol->interactions[ii]); */
+
     }
 
-    size_t onindex = 0;
-    get_combination(dim,dim-order,0,sobol->interactions,&onindex);
 
+    /* printf("\n\n"); */
+
+    double mean = function_train_integrate_weighted(ft);
+    double second_moment = function_train_inner_weighted(ft,ft);
+    sobol->variance = second_moment - mean*mean;
+    /* printf("mean = %G\n",mean); */
+    /* printf("var = %G\n",variance); */
+
+
+    sobol->total_effects = calloc_double(ft->dim);
+    struct FunctionTrain * ft_1 = NULL;;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        ft_1 = function_train_integrate_weighted_subset(ft,1,&ii);
+        
+        double fm = function_train_integrate_weighted(ft_1);
+        double sm = function_train_inner_weighted(ft_1,ft_1);
+        double vari = sm - fm*fm;
+        sobol->total_effects[ii] = (sobol->variance - vari)/sobol->variance;
+        function_train_free(ft_1); ft_1 = NULL;
+    }
+    
     return sobol;
+}
+
+double c3_sobol_sensitivity_get_interaction(c3_sobol_t * sobol, size_t ninteract, size_t * vars)
+{
+
+    if (ninteract == 1){
+        return sobol->interactions[vars[0]]->vari;
+    }
+    else{
+        return sinteract_get_vari(sobol->interactions[vars[0]],ninteract-1,vars+1);
+    }
 }
 
 void c3_sobol_sensitivity_print(c3_sobol_t * sobol)
 {
-    for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){
+    printf("\nTotal variance:\n%G\n",sobol->variance);
+    
+    printf("\nMain effects:\n");
+    for (size_t ii = 0; ii < sobol->dim; ii++){
         sinteract_print(sobol->interactions[ii]);
     }
+
+    printf("\nTotal effects:\n");
+    dprint(sobol->dim,sobol->total_effects);
+    /* for (size_t ii = 0; ii < sobol->num_sobol_indices; ii++){ */
+    /* } */
 }
+
+
 
 /***********************************************************//**
     Compute sobol sensitivity indices assuming a function-train

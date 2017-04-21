@@ -41,7 +41,8 @@
 #include "lib_clinalg.h"
 
 struct C3SobolSensitivity;
-struct C3SobolSensitivity * c3_sobol_sensitivity_alloc(size_t, size_t);
+struct C3SobolSensitivity * c3_sobol_sensitivity_alloc(const struct FunctionTrain *,size_t, size_t);
+double c3_sobol_sensitivity_get_interaction(struct C3SobolSensitivity *, size_t, size_t *);
 void c3_sobol_sensitivity_print(struct C3SobolSensitivity *);
 
 
