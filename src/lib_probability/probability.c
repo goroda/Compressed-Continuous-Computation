@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file probability.c
  * Provides routines for working with probability with function trains
  */
@@ -84,10 +81,10 @@ struct IndexList * index_list_create(size_t nelem, size_t * vals)
 void index_list_destroy(struct IndexList * list)
 {
     if (list != NULL){
-        struct IndexList * temp = list->next;
         free(list->vals); list->vals = NULL;
+        index_list_destroy(list->next);
         free(list); list = NULL;
-        index_list_destroy(temp);
+
     }
 }
 
@@ -176,38 +173,47 @@ double function_train_sobol_interact_var(
     size_t ninteract,
     const size_t * interacting_vars)
 {
-    size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
+    int alloc = 0;
+    struct FunctionTrain * ft_1 = NULL;
+    if (ft->dim == ninteract){
+        ft_1 = (struct FunctionTrain * )ft;
+    }
+    else{
+        alloc = 1;
+        size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
     
-    size_t on_contract = 0;
-    for (size_t ii = 0; ii < ft->dim; ii++){
-        size_t non_interacting = 1;
-        for (size_t jj = 0; jj < ninteract; jj++){
-            if (ii == interacting_vars[jj]){
-                non_interacting = 0;
-                break;
+        size_t on_contract = 0;
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            size_t non_interacting = 1;
+            for (size_t jj = 0; jj < ninteract; jj++){
+                if (ii == interacting_vars[jj]){
+                    non_interacting = 0;
+                    break;
+                }
+            }
+
+            if (non_interacting)
+            {
+                ind_contract[on_contract] = ii;
+                on_contract++;
             }
         }
 
-        if (non_interacting)
-        {
-            ind_contract[on_contract] = ii;
-            on_contract++;
-        }
+
+        ft_1 =
+            function_train_integrate_weighted_subset(ft,
+                                                     ft->dim-ninteract,
+                                                     ind_contract);
+        free(ind_contract); ind_contract = NULL;
     }
-
-
-    struct FunctionTrain * ft_1 =
-        function_train_integrate_weighted_subset(
-            ft,
-            ft->dim-ninteract,
-            ind_contract);
-
     double fm = function_train_integrate_weighted(ft_1);
     double sm = function_train_inner_weighted(ft_1,ft_1);
     double vari = sm - fm*fm;
 
-    function_train_free(ft_1); ft_1 = NULL;
-    free(ind_contract); ind_contract = NULL;
+    if (alloc == 1){
+        function_train_free(ft_1); ft_1 = NULL;
+    }
+
     return vari;
 }
 

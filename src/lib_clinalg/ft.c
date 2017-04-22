@@ -3267,6 +3267,7 @@ function_train_integrate_weighted_subset(
     size_t * dims_contract)
 {
 
+    
     size_t newdim = ft->dim - ndim_contract;
     assert (newdim > 0);
     /* printf("newdim = %zu\n",newdim); */
@@ -3279,6 +3280,7 @@ function_train_integrate_weighted_subset(
 
     size_t on_contract = 0;
     size_t ii = 0;
+    
     while ((dims_contract[on_contract] == ii ) && (on_contract < ndim_contract)){
         double * mat = qmarray_integrate_weighted(ft->cores[ii]);
 
