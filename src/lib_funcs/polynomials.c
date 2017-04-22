@@ -3162,10 +3162,8 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 *        Computes  \f$ \sqrt(\int f(x)^2 w(x) dx) \f$
 *************************************************************/
 double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
-    size_t ii;
-    double out = 0.0;
 
-    out = sqrt(orth_poly_expansion_inner_w(p,p));
+    double out = sqrt(orth_poly_expansion_inner_w(p,p));
     return sqrt(out);
 }
 

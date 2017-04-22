@@ -1007,7 +1007,7 @@ struct Qmarray * qmarray_kron(const struct Qmarray * a,const struct Qmarray * b)
     \param[in] a - qmarray 1
     \param[in] b - qmarray 2
 
-    \return c -   \int kron(a(x),b(x)) dx
+    \return c -  \f$ \int kron(a(x),b(x)) dx \f$
 ***************************************************************/
 double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray * b)
 {
@@ -1038,7 +1038,7 @@ double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray *
     \param[in] a - qmarray 1
     \param[in] b - qmarray 2
 
-    \return c -   \int kron(a(x),b(x)) w(x) dx
+    \return c - \f$ \int kron(a(x),b(x)) w(x) dx \f$
 
     \note 
     In order for this function to make sense a(x) and b(x)

@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +55,8 @@ static int rosenbrock(size_t N, const double * x, double * out, void * args)
 {
     (void)(args);
     for (size_t ii = 0; ii < N; ii++){
-        out[ii] = 100.0 * pow( x[ii*2 + 1] - pow(x[ii*2],2), 2) + pow(1.0-x[ii*2],2);
+        out[ii] = 100.0 * pow( x[ii*2 + 1] - pow(x[ii*2],2), 2) +
+            pow(1.0-x[ii*2],2);
     }
     return 0;
 }
@@ -86,30 +84,39 @@ void Test_sobol(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
+    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_calculate(ft,dim,dim);
 
-
-    double total_effects[2];
-    double main_effects[3];
-    size_t order = 2;
-    function_train_sobol_sensitivities(ft,total_effects,main_effects,order);
+    /* c3_sobol_sensitivity_print(sobol); */
     /* printf("Main effects: "); dprint(dim, main_effects); */
     /* printf("Total effects: "); dprint(dim, total_effects); */
     /* printf("Interaction effects: \n"); */
     /* dprint2d_col(2,2,interact_effects); */
 
-    CuAssertDblEquals(tc,4.9746891383e-01,main_effects[0],1e-9);
-    CuAssertDblEquals(tc,2.9636448672e-01,main_effects[1],1e-9);
-    CuAssertDblEquals(tc,7.0363551328e-01,total_effects[0],1e-9);
-    CuAssertDblEquals(tc,5.0253108617e-01,total_effects[1],1e-9);
-    CuAssertDblEquals(tc,2.0616659946e-01,main_effects[2],1e-9);
 
+    double var = c3_sobol_sensitivity_get_variance(sobol);
 
-    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_alloc(ft,2,1);
-    c3_sobol_sensitivity_print(sobol);
-
-    size_t interact2[2] = {0, 1};
+    CuAssertDblEquals(tc,7.0363551328e-01,
+                      c3_sobol_sensitivity_get_total(sobol,0),
+                      1e-9);
+    CuAssertDblEquals(tc,5.0253108617e-01,
+                      c3_sobol_sensitivity_get_total(sobol,1),
+                      1e-9);
     
-    printf("vari (0,1) = %G",c3_sobol_sensitivity_get_interaction(sobol,2,interact2));
+    size_t main_effect = 0;
+    CuAssertDblEquals(tc,4.9746891383e-01,
+                      c3_sobol_sensitivity_get_interaction(
+                          sobol,1,&main_effect)/var,1e-9);
+    main_effect = 1;
+    CuAssertDblEquals(tc,2.9636448672e-01,
+                      c3_sobol_sensitivity_get_interaction(
+                          sobol,1,&main_effect)/var,1e-9);
+
+
+    size_t main_effects[2] = {0,1};
+    CuAssertDblEquals(tc,2.0616659946e-01,
+                      c3_sobol_sensitivity_get_interaction(
+                          sobol,2,main_effects)/var,1e-9);
+
 
     function_train_free(ft);
     c3approx_destroy(c3a);
@@ -142,7 +149,8 @@ void Test_sobol2(CuTest * tc)
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,0);
     ope_opts_set_ub(opts,1);
-    ope_opts_set_maxnum(opts,20);
+    ope_opts_set_maxnum(opts,50);
+    ope_opts_set_tol(opts,1e-12);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
 
@@ -154,40 +162,161 @@ void Test_sobol2(CuTest * tc)
         start[ii] = linspace(0.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-14);
+    c3approx_set_round_tol(c3a,1e-14);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-    size_t max_order = 2;
-    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_alloc(ft,dim,max_order);
-    c3_sobol_sensitivity_print(sobol);
+    size_t max_order = dim;
+    struct C3SobolSensitivity * sobol =
+        c3_sobol_sensitivity_calculate(ft,dim,max_order);
+    /* c3_sobol_sensitivity_print(sobol); */
 
     printf("\n");
-    /* size_t interact2[2] = {0, 1}; */
 
-    /* double a[6] = {0.0,0.5,3.0,9.0,99.0,99.0}; */
-    /* double main_should[6]; */
-    /* for (size_t ii = 0; ii < 6; ii++){ */
-    /*     main_should[ii] = 1.0/3.0 * pow(1.0 + a[ii],-2); */
-    /* } */
+    double a[6] = {0.0,0.5,3.0,9.0,99.0,99.0};
+    double main_should[6];
+    for (size_t ii = 0; ii < 6; ii++){
+        main_should[ii] = 1.0/3.0 * pow(1.0 + a[ii],-2);
+    }
 
     /* printf("main should: "); dprint(6,main_should); */
     
-    /* // check first order effects; */
-    /* for (size_t ii = 0; ii < dim; ii++){ */
-    /*     CuAssertDblEquals(tc,main_should[ii],c3_sobol_sensitivity_get_interaction(sobol,1,&ii),1e-2); */
-    /* } */
+    // check first order effects;
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,main_should[ii],
+                          c3_sobol_sensitivity_get_interaction(sobol,1,&ii),1e-2);
+    }
 
-    /* // check second order effects; */
-    /* size_t vars[2]; */
-    /* for (size_t ii = 0; ii < dim; ii++){ */
-    /*     for (size_t jj = ii+1; jj < dim; jj++){ */
-    /*         vars[0] = ii; */
-    /*         vars[1] = jj; */
-    /*         printf("vari (%zu,%zu) = %G\n",ii,jj, */
-    /*                c3_sobol_sensitivity_get_interaction(sobol,2,vars)); */
-    /*         CuAssertDblEquals(tc,main_should[ii]*main_should[jj], */
-    /*                           c3_sobol_sensitivity_get_interaction(sobol,2,vars),1e-2); */
-    /*     } */
-    /* } */
+    // check second order effects;
+    size_t vars[2];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            vars[0] = ii;
+            vars[1] = jj;
+            /* printf("vari (%zu,%zu) = %G\n",ii,jj, */
+            /*        c3_sobol_sensitivity_get_interaction(sobol,2,vars)); */
+            /* printf("-> should = %G\n", */
+            /*        main_should[ii]*main_should[jj]); */
+
+            CuAssertDblEquals(tc,main_should[ii]*main_should[jj],
+                              c3_sobol_sensitivity_get_interaction(
+                                  sobol,2,vars),1e-2);
+        }
+    }
+
+
+    // check third order effects;
+    size_t vars3[3];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            for (size_t kk = jj+1; kk < dim; kk++){
+                vars3[0] = ii;
+                vars3[1] = jj;
+                vars3[2] = kk;
+                /* printf("vari (%zu,%zu,%zu) = %G\n",ii,jj,kk, */
+                /*    c3_sobol_sensitivity_get_interaction(sobol,3,vars3)); */
+                /* printf("-> should = %G\n", */
+                /*        main_should[ii]*main_should[jj]*main_should[kk]); */
+                CuAssertDblEquals(tc,
+                                  main_should[ii]*main_should[jj]*main_should[kk],
+                                  c3_sobol_sensitivity_get_interaction(
+                                      sobol,3,vars3),1e-2);
+            }
+        }
+    }
+
+    // check fourth order effects
+    size_t vars4[4];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            for (size_t kk = jj+1; kk < dim; kk++){
+                for (size_t ll = kk+1; ll < dim; ll++){
+                    vars4[0] = ii;
+                    vars4[1] = jj;
+                    vars4[2] = kk;
+                    vars4[3] = ll;
+                    /* printf("vari (%zu,%zu,%zu,%zu) = %G\n",ii,jj,kk,ll, */
+                    /*        c3_sobol_sensitivity_get_interaction( */
+                    /*            sobol,4,vars4)); */
+                    /* printf("-> should = %G\n", */
+                    /*        main_should[ii]*main_should[jj]* */
+                    /*        main_should[kk]*main_should[ll]); */
+                    CuAssertDblEquals(tc,
+                                      main_should[ii]*main_should[jj]*
+                                      main_should[kk]*main_should[ll],
+                                      c3_sobol_sensitivity_get_interaction(
+                                          sobol,4,vars4),1e-2);
+                }
+            }
+        }
+    }
+
+    // check fifth order effects
+    size_t vars5[5];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            for (size_t kk = jj+1; kk < dim; kk++){
+                for (size_t ll = kk+1; ll < dim; ll++){
+                    for (size_t zz = ll+1; zz < dim; zz++){
+                        vars5[0] = ii;
+                        vars5[1] = jj;
+                        vars5[2] = kk;
+                        vars5[3] = ll;
+                        vars5[4] = zz;
+                        /* printf("vari (%zu,%zu,%zu,%zu,%zu) = %G\n", */
+                        /*        ii,jj,kk,ll,zz, */
+                        /*        c3_sobol_sensitivity_get_interaction( */
+                        /*            sobol,5,vars5)); */
+                        /* printf("-> should = %G\n", */
+                        /*        main_should[ii]*main_should[jj]* */
+                        /*        main_should[kk]*main_should[ll]* */
+                        /*        main_should[zz]); */
+                        CuAssertDblEquals(tc,
+                                          main_should[ii]*main_should[jj]*
+                                          main_should[kk]*main_should[ll]*
+                                          main_should[zz],
+                                          c3_sobol_sensitivity_get_interaction(
+                                              sobol,5,vars5),1e-2);
+                    }
+                }
+            }
+        }
+    }
+
+    // check sixth order effects
+    size_t vars6[6];
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = ii+1; jj < dim; jj++){
+            for (size_t kk = jj+1; kk < dim; kk++){
+                for (size_t ll = kk+1; ll < dim; ll++){
+                    for (size_t zz = ll+1; zz < dim; zz++){
+                        for (size_t qq = zz+1; qq < dim; qq++){
+                            vars6[0] = ii;
+                            vars6[1] = jj;
+                            vars6[2] = kk;
+                            vars6[3] = ll;
+                            vars6[4] = zz;
+                            vars6[5] = qq;
+                            /* printf("vari (%zu,%zu,%zu,%zu,%zu) = %G\n", */
+                            /*        ii,jj,kk,ll,zz, */
+                            /*        c3_sobol_sensitivity_get_interaction( */
+                            /*            sobol,6,vars6)); */
+                            /* printf("-> should = %G\n", */
+                            /*        main_should[ii]*main_should[jj]* */
+                            /*        main_should[kk]*main_should[ll]* */
+                            /*        main_should[zz]*main_should[qq]); */
+                            CuAssertDblEquals(tc,
+                                              main_should[ii]*main_should[jj]*
+                                              main_should[kk]*main_should[ll]*
+                                              main_should[zz]*main_should[qq],
+                                              c3_sobol_sensitivity_get_interaction(
+                                                  sobol,6,vars6),1e-2);
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     /* printf("vari (0,1) = %G\n",c3_sobol_sensitivity_get_interaction(sobol,2,interact2)); */
 
@@ -937,7 +1066,7 @@ CuSuite * ProbGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_sobol); */
+    SUITE_ADD_TEST(suite, Test_sobol);
     SUITE_ADD_TEST(suite, Test_sobol2);
     
     /* SUITE_ADD_TEST(suite, Test_stdnorm); */

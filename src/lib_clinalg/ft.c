@@ -3254,7 +3254,7 @@ function_train_integrate_weighted(const struct FunctionTrain * ft)
     \param[in] ndim_contract - number of dimensions to contract
     \param[in] dims_contract - dimensions over which to contract (increasing order)
     
-    \return  \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
+    \return Evaluates \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
     
     \note w(x) depends on underlying parameterization
     for example, it is 1/2 for legendre (and default for others),
@@ -3345,7 +3345,7 @@ function_train_integrate_weighted_subset(
     }
 
     
-    for (size_t ii = 0; ii < newdim; ii++){
+    for (ii = 0; ii < newdim; ii++){
         newft->ranks[ii]   = newft->cores[ii]->nrows;
         newft->ranks[ii+1] = newft->cores[ii]->ncols;
     }
