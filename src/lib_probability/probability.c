@@ -359,17 +359,18 @@ void sinteract_compute_var_subtract(struct SInteract * element,
         struct IndexList * il = NULL;
         n_choose_k_no_order(0,nlabels,jj,&il,0,NULL);
 
-        while (il != NULL){
-            size_t * vars = calloc_size_t(il->nelem);
-            for (size_t kk = 0; kk < il->nelem; kk++){
-                vars[kk] = element->label[il->vals[kk]];
+        struct IndexList * temp = il;
+        while (temp != NULL){
+            size_t * vars = calloc_size_t(temp->nelem);
+            for (size_t kk = 0; kk < temp->nelem; kk++){
+                vars[kk] = element->label[temp->vals[kk]];
             }
 
             double vari = c3_sobol_sensitivity_get_interaction(
-                head_of_tree,il->nelem,vars);
+                head_of_tree,temp->nelem,vars);
             var_subtract += vari;
 
-            il = il->next;
+            temp = temp->next;
             free(vars); vars = NULL;
         }
 
