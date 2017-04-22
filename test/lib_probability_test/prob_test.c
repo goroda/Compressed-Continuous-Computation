@@ -84,7 +84,7 @@ void Test_sobol(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_calculate(ft,dim,dim);
+    struct C3SobolSensitivity * sobol = c3_sobol_sensitivity_calculate(ft,dim);
 
     /* c3_sobol_sensitivity_print(sobol); */
     /* printf("Main effects: "); dprint(dim, main_effects); */
@@ -118,6 +118,7 @@ void Test_sobol(CuTest * tc)
                           sobol,2,main_effects)/var,1e-9);
 
 
+    c3_sobol_sensitivity_free(sobol);
     function_train_free(ft);
     c3approx_destroy(c3a);
     one_approx_opts_free_deep(&qmopts);
@@ -168,7 +169,7 @@ void Test_sobol2(CuTest * tc)
 
     size_t max_order = dim;
     struct C3SobolSensitivity * sobol =
-        c3_sobol_sensitivity_calculate(ft,dim,max_order);
+        c3_sobol_sensitivity_calculate(ft,max_order);
     /* c3_sobol_sensitivity_print(sobol); */
 
     printf("\n");
@@ -320,7 +321,7 @@ void Test_sobol2(CuTest * tc)
     
     /* printf("vari (0,1) = %G\n",c3_sobol_sensitivity_get_interaction(sobol,2,interact2)); */
 
-    
+    c3_sobol_sensitivity_free(sobol);    
     function_train_free(ft);
     c3approx_destroy(c3a);
     one_approx_opts_free_deep(&qmopts);

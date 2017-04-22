@@ -50,7 +50,7 @@
 struct FTMemSpace;
 
 /** \struct FunctionTrain
- * \brief Functrain train
+ * \brief Function-train
  * \var FunctionTrain::dim
  * dimension of function
  * \var FunctionTrain::ranks
