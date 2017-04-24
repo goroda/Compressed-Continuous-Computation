@@ -64,6 +64,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_tensdecomp/tt_integrate.h
            lib_tensdecomp/tt_multilinalg.h
            lib_tensor/tensor.h
+           lib_probability/probability.h
            ../include/c3.h
            )
 
@@ -106,6 +107,7 @@ set(src lib_array/array.c
         lib_tensdecomp/tt_integrate.c
         lib_tensdecomp/tt_multilinalg.c
         lib_tensor/tensor.c
+        lib_probability/probability.c
         )
 
 #create a libray containing everything!

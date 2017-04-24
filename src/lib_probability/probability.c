@@ -336,6 +336,21 @@ void sinteract_print(struct SInteract * si)
     }
 }
 
+void sinteract_apply_external(struct SInteract *si, void (*f)(double,size_t,size_t*,void*),void * arg)
+{
+    if (si != NULL){
+        if (si->set_sub){
+            f(si->vari-si->var_subtract,si->nlabels,si->label,arg);
+        }
+        else{
+            f(si->vari,si->nlabels,si->label,arg);
+        }
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            sinteract_apply_external(si->leaves[ii],f,arg);
+        }
+    }
+}
+
 void sinteract_push(struct SInteract ** si, size_t val, size_t which_leaf,
                     size_t nleaves,
                     const struct FunctionTrain * ft)
@@ -515,6 +530,19 @@ double c3_sobol_sensitivity_get_total(const c3_sobol_t * sobol, size_t var)
     return sobol->total_effects[var];
 }
 
+/**********************************************************//**
+    Get the first order main effect sensitivity
+
+    \param[in] sobol - sobol sensitivity structure
+    \param[in] var   - variable whose total sensitivity to get
+
+    \return main sensitivity of variable *var*
+**************************************************************/
+double c3_sobol_sensitivity_get_main(const c3_sobol_t * sobol, size_t var)
+{
+    return sobol->interactions[var]->vari;
+}
+
 
 /**********************************************************//**
     Get the variance of the random variable
@@ -545,6 +573,20 @@ void c3_sobol_sensitivity_print(const c3_sobol_t * sobol)
 
     printf("\nTotal effects:\n");
     dprint(sobol->dim,sobol->total_effects);
+}
+
+/**********************************************************//**
+    Apply an external function to the main effects along the 
+    sobol index tree
+**************************************************************/
+void c3_sobol_sensitivity_apply_external(const c3_sobol_t * sobol,
+                                         void (*f)(double, size_t, size_t*,void*),
+                                         void * arg)
+{
+
+    for (size_t ii = 0; ii < sobol->dim; ii++){
+        sinteract_apply_external(sobol->interactions[ii],f,arg);
+    }
 }
 
 /***********************************************************//**
