@@ -64,6 +64,59 @@
 #include "legtens.h"
 
 
+enum SPACE_MAP {SM_LINEAR, SM_NONE};
+
+struct SpaceMapping
+{
+    enum SPACE_MAP map;
+    int set;
+    double lin_slope;
+    double lin_offset;
+    double inv_lin_slope;
+    double inv_lin_offset;
+};
+
+struct SpaceMapping * space_mapping_create(enum SPACE_MAP map_type)
+{
+    struct SpaceMapping * map = malloc(sizeof(struct SpaceMapping));
+    if (map == NULL){
+        fprintf(stderr,"Failure to allocate space mapping for polynomials\n");
+        exit(1);
+    }
+
+    map->map = map_type;
+    map->set = 0;
+}
+
+void space_mapping_free(struct SpaceMapping * map)
+{
+    if (map != NULL){
+        free(map); map = NULL;
+    }
+}
+
+double space_mapping_map(struct SpaceMapping * map, double x)
+{
+    if (map->map == SM_LINEAR){
+        return map->lin_slope * x + map->lin_offset;
+    }
+    else{
+        fprintf(stderr, "NONLIENAR MAPPINGS NOT YET IMPLEMENTED\n");
+        exit(1);
+    }
+}
+
+double space_mapping_map_inverse(struct SpaceMapping * map, double x)
+{
+    if (map->map == SM_LINEAR){
+        return map->inv_lin_slope * x + map->inv_lin_offset;
+    }
+    else{
+        fprintf(stderr, "NONLINEAR MAPPINGS NOT YET IMPLEMENTED\n");
+        exit(1);
+    }
+}
+
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
 double one_seq(size_t n) { return (1.0 + 0.0*n); }
