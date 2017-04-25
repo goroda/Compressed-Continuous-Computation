@@ -258,7 +258,6 @@ static double space_mapping_map_inverse(struct SpaceMapping * map, double x)
     }
 }
 
-
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
 double one_seq(size_t n) { return (1.0 + 0.0*n); }
