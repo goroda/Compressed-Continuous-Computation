@@ -407,13 +407,14 @@ CuSuite * ChebGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_cheb_approx);
-    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal); 
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt); 
-    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird); 
-    SUITE_ADD_TEST(suite, Test_cheb_integrate); 
+    SUITE_ADD_TEST(suite, Test_cheb_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt);
+    SUITE_ADD_TEST(suite, Test_cheb_approx_adapt_weird);
+    SUITE_ADD_TEST(suite, Test_cheb_integrate);
     SUITE_ADD_TEST(suite, Test_cheb_inner);
     SUITE_ADD_TEST(suite, Test_cheb_norm);
     SUITE_ADD_TEST(suite, Test_cheb_orth_poly_expansion_create_with_params_and_grad);
+    
     /* SUITE_ADD_TEST(suite, Test_cheb_product);  */
 
     return suite;

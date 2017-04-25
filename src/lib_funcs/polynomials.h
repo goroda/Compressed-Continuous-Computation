@@ -191,6 +191,8 @@ struct OrthPolyExpansion{
 
     size_t nalloc; // number of coefficients allocated for efficiency
 
+    struct SpaceMapping * space_transform;
+
 };
 
 #define OPECALLOC 50;
