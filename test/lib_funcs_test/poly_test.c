@@ -1101,6 +1101,53 @@ void Test_hermite_integrate(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+int fherm_lin(size_t N, const double * x, double * out, void * arg)
+{
+    (void)(arg);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = 3.0*x[ii] - 0.2;
+    }
+    return 0;
+}
+
+void Test_hermite_non_std_normal(CuTest * tc)
+{
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,fherm_lin,NULL);
+
+    // approximation
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-8);
+    ope_opts_set_mean_and_std(opts,2.0,0.05);
+    opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
+
+
+    double mean_should = -0.2 + 3.0*2.0;
+    double mean_is = hermite_integrate(cpoly);
+    double second_moment = orth_poly_expansion_inner(cpoly,cpoly);
+
+    opoly_t cpoly_prod = orth_poly_expansion_prod(cpoly,cpoly);
+    double second_moment2 = hermite_integrate(cpoly_prod);
+
+    double var = second_moment - mean_is * mean_is;
+    double var2 = second_moment2 - mean_is * mean_is;
+    
+    double var_should = 9.0*0.05*0.05;
+
+    CuAssertDblEquals(tc, mean_should, mean_is, 1e-13);
+    CuAssertDblEquals(tc, var_should, var, 1e-13);
+    CuAssertDblEquals(tc, var_should, var2, 1e-13);
+
+    POLY_FREE(cpoly_prod);
+    POLY_FREE(cpoly);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+}
+
 
 int fherm4(size_t N, const double * x, double * out, void * arg)
 {
@@ -1261,6 +1308,7 @@ void Test_hermite_product(CuTest * tc){
     fwrap_destroy(fw);
     fwrap_destroy(fw2);
 }
+
 
 void Test_hermite_axpy(CuTest * tc){
 
@@ -1423,6 +1471,7 @@ CuSuite * HermGetSuite(){
     SUITE_ADD_TEST(suite, Test_hermite_approx);
     SUITE_ADD_TEST(suite, Test_hermite_approx_adapt);
     SUITE_ADD_TEST(suite, Test_hermite_integrate);
+    SUITE_ADD_TEST(suite, Test_hermite_non_std_normal);
     SUITE_ADD_TEST(suite, Test_hermite_inner);
     SUITE_ADD_TEST(suite, Test_hermite_norm_w);
     SUITE_ADD_TEST(suite, Test_hermite_norm);

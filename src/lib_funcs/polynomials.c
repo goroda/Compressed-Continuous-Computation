@@ -223,7 +223,7 @@ space_mapping_loadtxt(FILE * stream)//l, size_t prec)
 
 
 // original space to normalized space
-static double space_mapping_map(struct SpaceMapping * map, double x)
+double space_mapping_map(struct SpaceMapping * map, double x)
 {
     if (map->map == SM_LINEAR){
         return map->lin_slope * x + map->lin_offset;
@@ -257,6 +257,19 @@ static double space_mapping_map_inverse(struct SpaceMapping * map, double x)
         exit(1);
     }
 }
+
+static double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double x)
+{
+    (void)(x);
+    if (map->map == SM_LINEAR){
+        return map->inv_lin_slope;
+    }
+    else{
+        fprintf(stderr, "NONLIENAR MAPPINGS NOT YET IMPLEMENTED\n");
+        exit(1);
+    }
+}
+
 
 // Recurrence relationship sequences
 double zero_seq(size_t n){ return (0.0 + 0.0*n); }
@@ -395,6 +408,10 @@ struct OpeOpts{
     
     double lb;
     double ub;
+
+    // for hermite
+    double mean;
+    double std;
 };
 
 struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
@@ -419,7 +436,10 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
     ao->coeffs_check = 2;
     ao->tol = 1e-10;
     ao->max_num = 100;
-    
+
+    // for hermite
+    ao->mean = 0.0;
+    ao->std  = 1.0;
 
     return ao;
 }
@@ -491,6 +511,19 @@ double ope_opts_get_ub(const struct OpeOpts * ope)
 {
     assert (ope != NULL);
     return ope->ub;
+}
+
+void ope_opts_set_mean_and_std(struct OpeOpts * ope, double mean, double std)
+{
+    if (ope->ptype == HERMITE){
+        ope->mean = mean;
+        ope->std = std;
+    }
+    else{
+        fprintf(stderr,"Warning: setting mean and variance for non hermite polynomials\n");
+        fprintf(stderr,"         does not do anything\n");
+    }
+
 }
 
 void ope_opts_set_ptype(struct OpeOpts * ope, enum poly_type ptype)
@@ -1039,7 +1072,7 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
             break;
         case HERMITE:
             p->p = init_hermite_poly();
-            p->space_transform = space_mapping_create(SM_LINEAR);
+            p->space_transform = space_mapping_create(SM_LINEAR);;
             break; 
         case STANDARD:
             p->space_transform = space_mapping_create(SM_LINEAR);
@@ -1059,6 +1092,31 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
 }
 
 /********************************************************//**
+*   Initialize an expansion of a certain orthogonal polynomial family
+*            
+*   \param[in] opts     - approximation options
+*   \param[in] num_poly - number of polynomials
+*
+*   \return p - orthogonal polynomial expansion
+*************************************************************/
+struct OrthPolyExpansion * 
+orth_poly_expansion_init_from_opts(const struct OpeOpts * opts, size_t num_poly)
+{
+
+    struct OrthPolyExpansion * p = orth_poly_expansion_init(opts->ptype,num_poly,opts->lb,opts->ub);
+    if (opts->ptype == HERMITE)
+    {
+        p->space_transform->set = 1;
+        p->space_transform->lin_slope = 1.0/opts->std;
+        p->space_transform->lin_offset = -opts->mean/opts->std;
+        p->space_transform->inv_lin_slope = opts->std;
+        p->space_transform->inv_lin_offset = opts->mean;
+    }
+
+    return p;
+}
+
+/********************************************************//**
 *   Initialize an expanion of a certain orthogonal polynomial family
 *            
 *   \param[in] opts    - approximation options
@@ -1073,7 +1131,7 @@ orth_poly_expansion_create_with_params(struct OpeOpts * opts,
 {
 
     struct OrthPolyExpansion * poly = NULL;
-    poly = orth_poly_expansion_init(opts->ptype,nparams,opts->lb,opts->ub);
+    poly = orth_poly_expansion_init_from_opts(opts,nparams);
     for (size_t ii = 0; ii < nparams; ii++){
         poly->coeff[ii] = param[ii];
     }
@@ -1203,12 +1261,12 @@ orth_poly_expansion_zero(struct OpeOpts * opts, int force_nparam)
     assert (opts != NULL);
     struct OrthPolyExpansion * p = NULL;
     if (force_nparam == 0){
-        p = orth_poly_expansion_init(opts->ptype,1,opts->lb,opts->ub);
+        p = orth_poly_expansion_init_from_opts(opts,1);
         p->coeff[0] = 0.0;
     }
     else{
         size_t nparams = ope_opts_get_nparams(opts);
-        p = orth_poly_expansion_init(opts->ptype,nparams,opts->lb,opts->ub);
+        p = orth_poly_expansion_init_from_opts(opts,nparams);
         for (size_t ii = 0; ii < nparams; ii++){
             p->coeff[ii] = 0.0;
         }
@@ -1235,7 +1293,7 @@ orth_poly_expansion_constant(double a, struct OpeOpts * opts)
 
     assert (opts != NULL);
     struct OrthPolyExpansion * p = NULL;
-    p = orth_poly_expansion_init(opts->ptype,1,opts->lb,opts->ub);
+    p = orth_poly_expansion_init_from_opts(opts,1);
     p->coeff[0] = a / p->p->const_term;
 
     return p;
@@ -1258,9 +1316,7 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
-    
-    struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(opts->ptype, 2, opts->lb, opts->ub);
+    struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts,2);
     if (opts->ptype == LEGENDRE){
         double m = (p->p->upper - p->p->lower) / 
                     (p->upper_bound - p->lower_bound);
@@ -1272,8 +1328,8 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
         p->coeff[0] = offset-off*p->coeff[1];
     }
     else if (opts->ptype == HERMITE){
-        p->coeff[0] = offset;
-        p->coeff[1] = a;
+        p->coeff[1] = a / p->space_transform->lin_slope;
+        p->coeff[0] = offset - p->space_transform->lin_offset * p->coeff[1];
     }
     else{
         struct lin_func lf;
@@ -1307,8 +1363,7 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
     assert (isinf(offset) == 0);
 
 
-    struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
+    struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts, 3);
 
     if (opts->ptype == LEGENDRE){
         double m = (p->p->upper - p->p->lower) / 
@@ -1319,9 +1374,15 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
         p->coeff[0] = (a*offset*offset - p->coeff[2]/2.0*(3*off*off-1.0) - p->coeff[1] * off);
     }
     else if(opts->ptype == HERMITE){
-        p->coeff[0]= a*offset*offset+a;
-        p->coeff[1] = -2.0*a*offset;
-        p->coeff[2] = a;
+        double m = p->space_transform->lin_slope;
+        double off = p->space_transform->lin_offset;
+        p->coeff[2] = a / m / m;
+        p->coeff[1] = -2.0 * (a * offset + p->coeff[2] * m*off)/m;
+        p->coeff[0] = a * offset * offset - p->coeff[2] * (off * off - 1) - p->coeff[1] * off;
+
+        /* p->coeff[0]= a*offset*offset+a; */
+        /* p->coeff[1] = -2.0*a*offset; */
+
     }
     else{
         struct quad_func qf;
@@ -1342,22 +1403,18 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
 *
 *   \return p - orthogonal polynomial expansion
 *
-*   \return
-*       ONLY WORKS FOR LEGENDRE!!!
-*       Orthogonal polynomials on [-1, 1] with weight 1.0;
+*   \note Not sure about hermite! 
 *************************************************************/
 struct OrthPolyExpansion *
 orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 {
 
     struct OrthPolyExpansion * p = 
-            orth_poly_expansion_init(opts->ptype, order+1, opts->lb, opts->ub);
+        orth_poly_expansion_init_from_opts(opts, order+1);
 
-    double m;
+    double m = space_mapping_map_inverse_deriv(p->space_transform,0);
     switch (opts->ptype){
     case LEGENDRE:
-        m = (p->upper_bound - p->lower_bound) / 
-            (p->p->upper - p->p->lower);
         p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
         break;
     case HERMITE:
@@ -1684,7 +1741,7 @@ orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion * p)
 *
 *   \return out - polynomial value
 *************************************************************/
-double legendre_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
+double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
     double p [2];
@@ -1880,7 +1937,7 @@ int legendre_poly_expansion_arr_evalN(size_t n,
 *
 *   \return 0=success
 *************************************************************/
-int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x,
+int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
                                             double * grad, size_t inc)
 {
     double p [2];
@@ -1919,7 +1976,7 @@ int legendre_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, dou
 *
 *   \return out - polynomial value
 *************************************************************/
-double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
+double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
 
     double p[2] = {0.0, 0.0};
@@ -1948,7 +2005,7 @@ double chebyshev_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *
 *   \return 0=success
 *************************************************************/
-int chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x,
+int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
                                              double * grad, size_t inc)
 {
 
@@ -1985,7 +2042,7 @@ int chebyshev_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, do
 *
 *   \return out - polynomial value
 *************************************************************/
-double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
+double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
     if (poly->p->ptype == LEGENDRE){
@@ -2036,7 +2093,7 @@ double orth_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *   \note Currently just calls the single evaluation code
 *         Note sure if this is optimal, cache-wise
 *************************************************************/
-void orth_poly_expansion_evalN(struct OrthPolyExpansion * poly, size_t N,
+void orth_poly_expansion_evalN(const struct OrthPolyExpansion * poly, size_t N,
                                const double * x, size_t incx, double * y, size_t incy)
 {
     for (size_t ii = 0; ii < N; ii++){
@@ -2056,7 +2113,7 @@ void orth_poly_expansion_evalN(struct OrthPolyExpansion * poly, size_t N,
 *   \return 0 success, 1 otherwise
 *************************************************************/
 int orth_poly_expansion_param_grad_eval(
-    struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
+    const struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
     int res = 1;
     size_t nparam = orth_poly_expansion_get_num_params(poly);
@@ -2076,7 +2133,8 @@ int orth_poly_expansion_param_grad_eval(
         }
     }
     else{
-        fprintf(stderr, "Cannot evaluate derivative with respect to parameters for polynomial type %d\n",poly->p->ptype);
+        fprintf(stderr, "Cannot evaluate derivative with respect to parameters\n");
+        fprintf(stderr, "for polynomial type %d\n",poly->p->ptype);
         exit(1);
     }
     return res;
@@ -2703,7 +2761,7 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
     size_t ii;
     size_t N = aopts->start_num;
     struct OrthPolyExpansion * poly = NULL;
-    poly = orth_poly_expansion_init(aopts->ptype, N, aopts->lb,aopts->ub);
+    poly = orth_poly_expansion_init_from_opts(aopts,N);
     orth_poly_expansion_approx_vec(poly,fw);
 
     size_t coeffs_too_big = 0;
@@ -2828,12 +2886,12 @@ orth_poly_expansion_randu(enum poly_type ptype, size_t maxorder,
 *   \return out - integral of approximation
 *************************************************************/
 double
-cheb_integrate2(struct OrthPolyExpansion * poly)
+cheb_integrate2(const struct OrthPolyExpansion * poly)
 {
     size_t ii;
     double out = 0.0;
     
-    double m = space_mapping_map_deriv(poly->space_transform,0.0);
+    double m = space_mapping_map_inverse_deriv(poly->space_transform,0.0);
     /* double m =  */
     for (ii = 0; ii < poly->num_poly; ii+=2){
         out += poly->coeff[ii] * 2.0 / (1.0 - (double) (ii*ii));
@@ -2850,11 +2908,11 @@ cheb_integrate2(struct OrthPolyExpansion * poly)
 *   \return out - integral of approximation
 *************************************************************/
 double
-legendre_integrate(struct OrthPolyExpansion * poly)
+legendre_integrate(const struct OrthPolyExpansion * poly)
 {
     double out = 0.0;
 
-    double m = space_mapping_map_deriv(poly->space_transform,0.0);
+    double m = space_mapping_map_inverse_deriv(poly->space_transform,0.0);
     out = poly->coeff[0] * 2.0;
     out = out * m;
     return out;
@@ -2873,8 +2931,8 @@ legendre_integrate(struct OrthPolyExpansion * poly)
 *   Lower and upper bounds of both polynomials must be the same
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_prod(struct OrthPolyExpansion * a,
-                         struct OrthPolyExpansion * b)
+orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
+                         const struct OrthPolyExpansion * b)
 {
 
     struct OrthPolyExpansion * c = NULL;
@@ -2925,8 +2983,8 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
     else{
 //        printf("OrthPolyExpansion product greater than order 100 is slow\n");
         struct OrthPolyExpansion * comb[2];
-        comb[0] = a;
-        comb[1] = b;
+        comb[0] = (struct OrthPolyExpansion *) a;
+        comb[1] = (struct OrthPolyExpansion *)b;
         
         double norma = 0.0, normb = 0.0;
         size_t ii;
@@ -2941,11 +2999,15 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
             //printf("in here \n");
 //            c = orth_poly_expansion_constant(0.0,a->p->ptype,lb,ub);
             c = orth_poly_expansion_init(p,1, lb, ub);
+            space_mapping_free(c->space_transform); c->space_transform = NULL;
+            c->space_transform = space_mapping_copy(a->space_transform);
             c->coeff[0] = 0.0;
         }
         else{
             //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
             c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+            space_mapping_free(c->space_transform); c->space_transform = NULL;
+            c->space_transform = space_mapping_copy(a->space_transform);
             orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
             orth_poly_expansion_round(&c);
         }
@@ -2986,8 +3048,8 @@ orth_poly_expansion_prod(struct OrthPolyExpansion * a,
 *************************************************************/
 struct OrthPolyExpansion *
 orth_poly_expansion_sum_prod(size_t n, size_t lda, 
-        struct OrthPolyExpansion ** a, size_t ldb,
-        struct OrthPolyExpansion ** b)
+                             struct OrthPolyExpansion ** a, size_t ldb,
+                             struct OrthPolyExpansion ** b)
 {
 
     enum poly_type ptype;
@@ -3077,8 +3139,8 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
 *************************************************************/
 struct OrthPolyExpansion *
 orth_poly_expansion_lin_comb(size_t n, size_t ldx, 
-        struct OrthPolyExpansion ** x, size_t ldc,
-        const double * c )
+                             struct OrthPolyExpansion ** x, size_t ldc,
+                             const double * c )
 {
 
     struct OrthPolyExpansion * out = NULL;
@@ -3101,6 +3163,8 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
     
 
     out = orth_poly_expansion_init(ptype, maxorder, lb, ub);
+    space_mapping_free(out->space_transform);
+    out->space_transform = space_mapping_copy(x[0]->space_transform);
     size_t kk;
     for (kk = 0; kk < n; kk++){
         for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
@@ -3125,7 +3189,7 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
 *    the Gaussian weight
 *************************************************************/
 double
-orth_poly_expansion_integrate(struct OrthPolyExpansion * poly)
+orth_poly_expansion_integrate(const struct OrthPolyExpansion * poly)
 {
     double out = 0.0;
     switch (poly->p->ptype){
@@ -3180,8 +3244,8 @@ orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion * poly)
 *
 *************************************************************/
 double
-orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
-                            struct OrthPolyExpansion * b)
+orth_poly_expansion_inner_w(const struct OrthPolyExpansion * a,
+                            const struct OrthPolyExpansion * b)
 {
     assert(a->p->ptype == b->p->ptype);
     
@@ -3210,8 +3274,8 @@ orth_poly_expansion_inner_w(struct OrthPolyExpansion * a,
 *   Otherwise it computes the error with respect to gaussia weight
 *************************************************************/
 double
-orth_poly_expansion_inner(struct OrthPolyExpansion * a,
-                          struct OrthPolyExpansion * b)
+orth_poly_expansion_inner(const struct OrthPolyExpansion * a,
+                          const struct OrthPolyExpansion * b)
 {   
     struct OrthPolyExpansion * t1 = NULL;
     struct OrthPolyExpansion * t2 = NULL;
@@ -3252,12 +3316,12 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
         if (a->p->ptype == CHEBYSHEV){
             t1 = orth_poly_expansion_init(LEGENDRE, a->num_poly,
                                           a->lower_bound, a->upper_bound);
-            orth_poly_expansion_approx(&orth_poly_expansion_eval2, a, t1);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval2, (void*)a, t1);
             orth_poly_expansion_round(&t1);
             c1 = 1;
         }
         else if (a->p->ptype == LEGENDRE){
-            t1 = a;
+            t1 = (struct OrthPolyExpansion *)a;
         }
         else{
             fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
@@ -3268,12 +3332,12 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
         if (b->p->ptype == CHEBYSHEV){
             t2 = orth_poly_expansion_init(LEGENDRE, b->num_poly,
                                           b->lower_bound, b->upper_bound);
-            orth_poly_expansion_approx(&orth_poly_expansion_eval2, b, t2);
+            orth_poly_expansion_approx(&orth_poly_expansion_eval2, (void*)b, t2);
             orth_poly_expansion_round(&t2);
             c2 = 1;
         }
         else if (b->p->ptype == LEGENDRE){
-            t2 = b;
+            t2 = (struct OrthPolyExpansion *)b;
         }
         else{
             fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
@@ -3310,7 +3374,7 @@ orth_poly_expansion_inner(struct OrthPolyExpansion * a,
 *   \note
 *        Computes  \f$ \sqrt(\int f(x)^2 w(x) dx) \f$
 *************************************************************/
-double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
+double orth_poly_expansion_norm_w(const struct OrthPolyExpansion * p){
 
     double out = sqrt(orth_poly_expansion_inner_w(p,p));
     return sqrt(out);
@@ -3328,7 +3392,7 @@ double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p){
 *   \note
 *        Computes \f$ \sqrt(\int_a^b f(x)^2 dx) \f$
 *************************************************************/
-double orth_poly_expansion_norm(struct OrthPolyExpansion * p){
+double orth_poly_expansion_norm(const struct OrthPolyExpansion * p){
 
     double out = 0.0;
     out = sqrt(orth_poly_expansion_inner(p,p));
@@ -3621,6 +3685,8 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
        // else{    
             p = orth_poly_expansion_init(y->p->ptype,
                         y->num_poly, y->lower_bound, y->upper_bound);
+            space_mapping_free(p->space_transform);
+            p->space_transform = space_mapping_copy(y->space_transform);
             for (ii = 0; ii < y->num_poly; ii++){
                 p->coeff[ii] = y->coeff[ii] * b;
             }
@@ -3636,6 +3702,8 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
         //else{
             p = orth_poly_expansion_init(x->p->ptype,
                         x->num_poly, x->lower_bound, x->upper_bound);
+            space_mapping_free(p->space_transform);
+            p->space_transform = space_mapping_copy(x->space_transform);
             for (ii = 0; ii < x->num_poly; ii++){
                 p->coeff[ii] = x->coeff[ii] * a;
             }
@@ -3648,6 +3716,8 @@ orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
 
     p = orth_poly_expansion_init(x->p->ptype,
                     N, x->lower_bound, x->upper_bound);
+    space_mapping_free(p->space_transform);
+    p->space_transform = space_mapping_copy(x->space_transform);
     
     size_t xN = x->num_poly;
     size_t yN = y->num_poly;

@@ -94,6 +94,7 @@ struct OrthPoly * init_hermite_poly(){
     return p;
 }
 
+
 /********************************************************//**
 *   Evaluate a hermite polynomial expansion 
 *
@@ -102,24 +103,26 @@ struct OrthPoly * init_hermite_poly(){
 *
 *   \return out - polynomial value
 *************************************************************/
-double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
+double hermite_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
     double p [2];
     double pnew;
-        
+
+
+    double xnorm = space_mapping_map(poly->space_transform,x);
     size_t iter = 0;
     p[0] = 1.0;
     out += p[0] * poly->coeff[iter];// * SQRTPIINV;
     iter++;
     if (poly->num_poly > 1){
-        p[1] = x;
+        p[1] = xnorm;
         out += p[1] * poly->coeff[iter];// * SQRTPIINV;
         iter++;
     }   
     for (iter = 2; iter < poly->num_poly; iter++){
         
-        pnew = x * p[1] - (double)(iter-1) * p[0];
+        pnew = xnorm * p[1] - (double)(iter-1) * p[0];
         out += poly->coeff[iter] * pnew;// * SQRTPIINV;
         p[0] = p[1];
         p[1] = pnew;
@@ -138,23 +141,27 @@ double hermite_poly_expansion_eval(struct OrthPolyExpansion * poly, double x)
 *
 *   \return 0=success
 *************************************************************/
-int hermite_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, double x, double * grad, size_t inc)
+int hermite_poly_expansion_param_grad_eval(
+    const struct OrthPolyExpansion * poly, double x,
+    double * grad, size_t inc)
 {
     double p[2];
     double pnew;
-        
+
+    double x_norm = space_mapping_map(poly->space_transform,x);
+    
     size_t iter = 0;
     p[0] = 1.0;
     grad[0*inc] = p[0];
     iter++;
     if (poly->num_poly > 1){
-        p[1] = x;
+        p[1] = x_norm;
         grad[iter*inc] = p[1]; // * SQRTPIINV;
         iter++;
     }  
     for (iter = 2; iter < poly->num_poly; iter++){
         
-        pnew = x * p[1] - (double)(iter-1) * p[0];
+        pnew = x_norm * p[1] - (double)(iter-1) * p[0];
         grad[iter*inc] = pnew;// * SQRTPIINV;
         p[0] = p[1];
         p[1] = pnew;
@@ -169,7 +176,7 @@ int hermite_poly_expansion_param_grad_eval(struct OrthPolyExpansion * poly, doub
 *
 *   \return out - integral of approximation
 *************************************************************/
-double hermite_integrate(struct OrthPolyExpansion * poly)
+double hermite_integrate(const struct OrthPolyExpansion * poly)
 {
     double out = poly->coeff[0];//sqrt(2.0*M_PI);
     return out;

@@ -35,9 +35,6 @@
 //Code
 
 
-
-
-
 /** \file polynomials.h
  * Provides header files and structure definitions for functions in in polynomials.c
  */
@@ -53,6 +50,9 @@
 #include <stdio.h>
 
 #include "fwrap.h"
+
+struct SpaceMapping;
+double space_mapping_map(struct SpaceMapping * map, double x);
 
 enum coeff_decay_type {NONE,ALGEBRAIC,EXPONENTIAL};
 
@@ -74,6 +74,7 @@ void ope_opts_set_lb(struct OpeOpts *, double);
 double ope_opts_get_lb(const struct OpeOpts *);
 void ope_opts_set_ub(struct OpeOpts *, double);
 double ope_opts_get_ub(const struct OpeOpts *);
+void ope_opts_set_mean_and_std(struct OpeOpts *, double, double);
 void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
 enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
 size_t ope_opts_get_nparams(const struct OpeOpts *);
@@ -201,7 +202,8 @@ size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion *);
 size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
-
+struct OrthPolyExpansion * 
+orth_poly_expansion_init_from_opts(const struct OpeOpts *, size_t);
 struct OrthPolyExpansion * 
 orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
@@ -253,7 +255,7 @@ struct StandardPoly *
 orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion *);
 
 
-double legendre_poly_expansion_eval(struct OrthPolyExpansion *, double);
+double legendre_poly_expansion_eval(const struct OrthPolyExpansion *, double);
 int legendre_poly_expansion_arr_eval(size_t,
                                      struct OrthPolyExpansion **, 
                                      double, double *);
@@ -263,17 +265,17 @@ int legendre_poly_expansion_arr_evalN(size_t,
                                       const double *, size_t,
                                       double *, size_t);
 int legendre_poly_expansion_param_grad_eval(
-    struct OrthPolyExpansion *, double, double *, size_t);
+    const struct OrthPolyExpansion *, double, double *, size_t);
     
-double chebyshev_poly_expansion_eval(struct OrthPolyExpansion *, double);
+double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion *, double);
 int chebyshev_poly_expansion_param_grad_eval(
-    struct OrthPolyExpansion *, double, double *, size_t);
+    const struct OrthPolyExpansion *, double, double *, size_t);
 
-double orth_poly_expansion_eval(struct OrthPolyExpansion *, double);
-void orth_poly_expansion_evalN(struct OrthPolyExpansion *, size_t,
+double orth_poly_expansion_eval(const struct OrthPolyExpansion *, double);
+void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,
                                const double *, size_t, double *, size_t);
 int orth_poly_expansion_param_grad_eval(
-    struct OrthPolyExpansion *, size_t, const double *, double *);
+    const struct OrthPolyExpansion *, size_t, const double *, double *);
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);
@@ -291,7 +293,7 @@ void orth_poly_expansion_round(struct OrthPolyExpansion **);
 void orth_poly_expansion_roundt(struct OrthPolyExpansion **,double);
 
 void orth_poly_expansion_approx (double (*)(double,void *), void *, 
-                       struct OrthPolyExpansion *);
+                                 struct OrthPolyExpansion *);
 int
 orth_poly_expansion_approx_vec(struct OrthPolyExpansion *,
                                struct Fwrap *);
@@ -306,25 +308,25 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts *,struct Fwrap *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_randu(enum poly_type, size_t, double, double);
 
-double cheb_integrate2(struct OrthPolyExpansion *);
-double legendre_integrate(struct OrthPolyExpansion *);
+double cheb_integrate2(const struct OrthPolyExpansion *);
+double legendre_integrate(const struct OrthPolyExpansion *);
 
 struct OrthPolyExpansion *
-orth_poly_expansion_prod(struct OrthPolyExpansion *,
-                         struct OrthPolyExpansion *);
+orth_poly_expansion_prod(const struct OrthPolyExpansion *,
+                         const struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_sum_prod(size_t, size_t, 
         struct OrthPolyExpansion **, size_t,
         struct OrthPolyExpansion **);
 
-double orth_poly_expansion_integrate(struct OrthPolyExpansion *);
+double orth_poly_expansion_integrate(const struct OrthPolyExpansion *);
 double orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion *);
-double orth_poly_expansion_inner_w(struct OrthPolyExpansion *,
-                            struct OrthPolyExpansion *);
-double orth_poly_expansion_inner(struct OrthPolyExpansion *,
-                            struct OrthPolyExpansion *);
-double orth_poly_expansion_norm_w(struct OrthPolyExpansion * p);
-double orth_poly_expansion_norm(struct OrthPolyExpansion * p);
+double orth_poly_expansion_inner_w(const struct OrthPolyExpansion *,
+                                   const struct OrthPolyExpansion *);
+double orth_poly_expansion_inner(const struct OrthPolyExpansion *,
+                                 const struct OrthPolyExpansion *);
+double orth_poly_expansion_norm_w(const struct OrthPolyExpansion * p);
+double orth_poly_expansion_norm(const struct OrthPolyExpansion * p);
 
 void orth_poly_expansion_flip_sign(struct OrthPolyExpansion *);
 
