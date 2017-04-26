@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file polynomials.c
  * Provides routines for manipulating orthogonal polynomials
 */
@@ -412,6 +408,9 @@ struct OpeOpts{
     // for hermite
     double mean;
     double std;
+
+    // kristoffel weighting for least squares
+    double kristoffel_eval;
 };
 
 struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
@@ -440,6 +439,9 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
     // for hermite
     ao->mean = 0.0;
     ao->std  = 1.0;
+
+    // for least squares applications
+    ao->kristoffel_eval = 0;
 
     return ao;
 }
@@ -557,6 +559,19 @@ void ope_opts_set_nparams(struct OpeOpts * opts, size_t num)
     opts->start_num = num;
 }
 
+
+/********************************************************//**
+*   Set kristoffel weighting for evaluation of polynomials
+*   This is typically only used in the context of least squares
+*  
+*   \param[in] opts              - options to modify
+*   \param[in] kristoffel_weight - 1 to use, 0 to not use
+*************************************************************/
+void ope_opts_set_kristoffel_weight(struct OpeOpts * opts, int kristoffel_weight)
+{
+    assert (opts != NULL);
+    opts->kristoffel_eval = kristoffel_weight;
+}
 
 /********************************************************//**
 *   Initialize a standard basis polynomial
@@ -1087,6 +1102,7 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
     //p->coeff = calloc_double(num_poly);
     p->lower_bound = lb;
     p->upper_bound = ub;
+    p->kristoffel_eval = 0;
 
     return p;
 }
@@ -1112,6 +1128,8 @@ orth_poly_expansion_init_from_opts(const struct OpeOpts * opts, size_t num_poly)
         p->space_transform->inv_lin_slope = opts->std;
         p->space_transform->inv_lin_offset = opts->mean;
     }
+
+    p->kristoffel_eval = opts->kristoffel_eval;
 
     return p;
 }
@@ -1233,6 +1251,7 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
         p->lower_bound = pin->lower_bound;
         p->upper_bound = pin->upper_bound;
         p->space_transform = space_mapping_copy(pin->space_transform);
+        p->kristoffel_eval = pin->kristoffel_eval;
     }
     return p;
 }
@@ -1449,6 +1468,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 {
     struct OrthPolyExpansion * p = args;
     assert (p->p->ptype != HERMITE);
+    assert (p->kristoffel_eval == 0);
 
     double xnorm = space_mapping_map(p->space_transform,x);
     double * derivvals = orth_poly_deriv_upto(p->p->ptype,p->num_poly-1,xnorm);
@@ -1475,6 +1495,7 @@ struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
     /* assert (p->p->ptype != HERMITE); */
+    assert (p->kristoffel_eval == 0);
     struct OrthPolyExpansion * out = NULL;
     if ( p == NULL ){
         return out;
@@ -1551,6 +1572,8 @@ serialize_orth_poly_expansion(unsigned char * ser,
     size_t size_mapping;
     serialize_space_mapping(NULL,p->space_transform,&size_mapping);
     totsize += size_mapping;
+
+    totsize += sizeof(int); // for kristoffel flag
     if (totSizeIn != NULL){
         *totSizeIn = totsize;
         return ser;
@@ -1560,6 +1583,7 @@ serialize_orth_poly_expansion(unsigned char * ser,
     ptr = serialize_double(ptr, p->upper_bound);
     ptr = serialize_doublep(ptr, p->coeff, p->num_poly);
     ptr = serialize_space_mapping(ptr,p->space_transform,NULL);
+    ptr = serialize_int(ptr,p->kristoffel_eval);
     return ptr;
 }
 
@@ -1591,6 +1615,9 @@ deserialize_orth_poly_expansion(
     ptr = deserialize_double(ptr,&upper_bound);
     ptr = deserialize_doublep(ptr, &coeff, &num_poly);
     ptr = deserialize_space_mapping(ptr, &map);
+
+    int kristoffel_eval;
+    ptr = deserialize_int(ptr,&kristoffel_eval);
     if ( NULL == (*poly = malloc(sizeof(struct OrthPolyExpansion)))){
         fprintf(stderr, "failed to allocate memory for poly exp.\n");
         exit(1);
@@ -1602,7 +1629,7 @@ deserialize_orth_poly_expansion(
     (*poly)->nalloc = num_poly;//+OPECALLOC;
     (*poly)->p = p;
     (*poly)->space_transform = map;
-    
+    (*poly)->kristoffel_eval = kristoffel_eval;
     return ptr;
 }
 
@@ -1627,6 +1654,7 @@ void orth_poly_expansion_savetxt(const struct OrthPolyExpansion * f,
         }
     }
     space_mapping_savetxt(f->space_transform,stream,prec);
+    fprintf(stream,"%d ",f->kristoffel_eval);
 }
 
 /********************************************************//**
@@ -1666,6 +1694,11 @@ orth_poly_expansion_loadtxt(FILE * stream)//l, size_t prec)
 
     space_mapping_free(ope->space_transform); ope->space_transform = NULL;
     ope->space_transform = space_mapping_loadtxt(stream);
+
+    int kristoffel_eval;
+    num = fscanf(stream,"%d ",&kristoffel_eval);
+    assert (num == 1);
+    ope->kristoffel_eval = kristoffel_eval;
     
     return ope;
 }
@@ -1750,23 +1783,36 @@ double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, doubl
     double x_norm = space_mapping_map(poly->space_transform,x);
     
     size_t iter = 0;
+
+    double den = 0.0;     //kristoffel denominator
+    
     p[0] = 1.0;
     out += p[0] * poly->coeff[iter];
     iter++;
+    den += p[0]*p[0];
     if (poly->num_poly > 1){
         p[1] = x_norm;
         out += p[1] * poly->coeff[iter];
         iter++;
+        den += p[1]*p[1];
     }   
     for (iter = 2; iter < poly->num_poly; iter++){
         
         pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
         pnew /= (double) iter;
         out += poly->coeff[iter] * pnew;
+
         p[0] = p[1];
         p[1] = pnew;
+
+        den += pnew*pnew;
     }
-    return out;
+    if (poly->kristoffel_eval == 0){
+        return out;
+    }
+    else{
+        return out / den;
+    }
 }
 
 
@@ -1789,6 +1835,13 @@ int legendre_poly_expansion_arr_eval(size_t n,
                                      struct OrthPolyExpansion ** parr, 
                                      double x, double * out)
 {
+
+    if (parr[0]->kristoffel_eval == 1){
+        for (size_t ii = 0; ii < n; ii++){
+            out[ii] = orth_poly_expansion_eval(parr[ii],x);
+        }
+        return 0;
+    }
     
     size_t maxpoly = 0;
     for (size_t ii = 0; ii < n; ii++){
@@ -1800,6 +1853,7 @@ int legendre_poly_expansion_arr_eval(size_t n,
         }
         out[ii] = 0.0;
     }
+
 
     double x_norm = space_mapping_map(parr[0]->space_transform,x);
 
@@ -1858,6 +1912,15 @@ int legendre_poly_expansion_arr_evalN(size_t n,
                                       const double * x, size_t incx,
                                       double * y, size_t incy)
 {
+
+    if (parr[0]->kristoffel_eval == 1){
+        for (size_t jj = 0; jj < N; jj++){
+            for (size_t ii = 0; ii < n; ii++){
+                y[ii + jj * incy] = orth_poly_expansion_eval(parr[ii],x[jj*incx]);
+            }
+        }
+        return 0;
+    }
     
     size_t maxpoly = 0;
     for (size_t ii = 0; ii < n; ii++){
@@ -1946,14 +2009,21 @@ int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * pol
     double x_norm = space_mapping_map(poly->space_transform,x);
     
     size_t iter = 0;
+    double den = 0.0;
     
     p[0] = 1.0;
     grad[0*inc] = p[0];
+
+    den += p[0]*p[0];
+
+    
     iter++;
     if (poly->num_poly > 1){
         p[1] = x_norm;
         grad[iter*inc] = p[1];
         iter++;
+
+        den += p[1]*p[1];
     }   
     for (iter = 2; iter < poly->num_poly; iter++){
         pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
@@ -1961,8 +2031,17 @@ int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * pol
         grad[iter*inc] = pnew;
         p[0] = p[1];
         p[1] = pnew;
+
+        den += pnew * pnew;
     }
     /* printf("iter=%zu grad here = ",iter); dprint(iter+1,grad); */
+
+    if (poly->kristoffel_eval == 1){
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            grad[ii*inc] /= den;
+        }
+    }
+    
     return 0;
 }
 
@@ -1979,6 +2058,9 @@ int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * pol
 double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
 
+    assert (poly->kristoffel_eval == 0);
+
+    
     double p[2] = {0.0, 0.0};
     double pnew;
     
@@ -2014,20 +2096,36 @@ int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * po
 
     double x_norm = space_mapping_map(poly->space_transform,x);
     size_t iter = 0;
-    
+
+    double den = 0.0;
+
     p[0] = 1.0;
     grad[0*inc] = p[0];
     iter++;
+
+    den += p[0]*p[0];
+    
     if (poly->num_poly > 1){
         p[1] = x_norm;
         grad[iter*inc] = p[1];
         iter++;
+
+        den += p[1]*p[1];
     }   
     for (iter = 2; iter < poly->num_poly; iter++){
         pnew = 2.0 * x_norm * p[1] - p[0];
         grad[iter*inc] = pnew;
         p[0] = p[1];
         p[1] = pnew;
+
+
+        den += pnew*pnew;
+    }
+
+    if (poly->kristoffel_eval == 1){
+        for (size_t ii = 0; ii < poly->num_poly; ii++){
+            grad[ii*inc] /= den;
+        }
     }
     return 0;
 }
@@ -2048,10 +2146,10 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
     if (poly->p->ptype == LEGENDRE){
         out = legendre_poly_expansion_eval(poly,x);
     }
-    else if (poly->p->ptype == HERMITE){
+    else if ((poly->p->ptype == HERMITE) && (poly->kristoffel_eval == 0)){
         out = hermite_poly_expansion_eval(poly,x);
     }
-    else if (poly->p->ptype == CHEBYSHEV){
+    else if ((poly->p->ptype == CHEBYSHEV) && (poly->kristoffel_eval == 0)){
         out = chebyshev_poly_expansion_eval(poly,x);
     }
     else{
@@ -2061,12 +2159,19 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
         
         double x_normalized = space_mapping_map(poly->space_transform,x);
 
+        double den = 0.0;
+        
         p[0] = poly->p->const_term;
         out += p[0] * poly->coeff[iter];
+
+        den += p[0]*p[0];
+        
         iter++;
         if (poly->num_poly > 1){
             p[1] = poly->p->lin_const + poly->p->lin_coeff * x_normalized;
             out += p[1] * poly->coeff[iter];
+
+            den += p[1]*p[1];
             iter++;
         }
         for (iter = 2; iter < poly->num_poly; iter++){
@@ -2074,6 +2179,13 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
             out += poly->coeff[iter] * pnew;
             p[0] = p[1];
             p[1] = pnew;
+
+            den += pnew*pnew;
+        }
+
+
+        if (poly->kristoffel_eval == 1){
+            out /= den;
         }
     }
     return out;
@@ -2156,8 +2268,11 @@ int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
                                             double scale, double * grad)
 {
+
+    assert (poly->kristoffel_eval == 0);
     int res = 1;
 
+    
     // assuming linear transformation
     double dtransform_dx = space_mapping_map_deriv(poly->space_transform,0.0);
     if (poly->p->ptype == LEGENDRE){
@@ -2223,6 +2338,8 @@ orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
                                       double decay_param)
 {
 
+    assert (poly->kristoffel_eval == 0);
+    
     // assuming linear transformation
     double m = space_mapping_map_deriv(poly->space_transform,0.0);
     /* double m = (poly->upper_bound-poly->lower_bound) /(poly->p->upper - poly->p->lower); */
@@ -2324,6 +2441,7 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
                                                  double scale, enum coeff_decay_type decay_type,
                                                  double decay_param, double * grad)
 {
+    assert (poly->kristoffel_eval == 0);
     int res = 1;
     if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
         if (decay_type == ALGEBRAIC){

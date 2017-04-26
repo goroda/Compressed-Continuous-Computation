@@ -85,7 +85,6 @@ struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
     return mem;
 }
 
-
 /***********************************************************//**
     Allocate an array of regression memory structures
     
@@ -111,7 +110,6 @@ struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t o
 
     return mem;
 }
-
 
 /***********************************************************//**
     Free a regression memory structure
@@ -142,7 +140,6 @@ void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
     }
 }
 
-
 /***********************************************************//**
     Return increment between objects 
 
@@ -153,7 +150,6 @@ size_t reg_mem_space_get_data_inc(const struct RegMemSpace * rmem)
     assert (rmem != NULL);
     return rmem->one_data_size;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +231,6 @@ enum FTPARAM_ST ft_param_extract_structure(const struct FTparam * ftp)
     }
 
     return structure;
-    
 }
 
 /** \struct RegressOpts

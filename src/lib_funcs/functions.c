@@ -2771,6 +2771,7 @@ struct Regress1DOpts
     double * eval;
     double * grad;
     double * resid;
+    
 };
 
 /********************************************************//**

@@ -79,6 +79,8 @@ void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
 enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
 size_t ope_opts_get_nparams(const struct OpeOpts *);
 void ope_opts_set_nparams(struct OpeOpts *, size_t);
+void ope_opts_set_kristoffel_weight(struct OpeOpts *, int);
+
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis
@@ -193,6 +195,7 @@ struct OrthPolyExpansion{
     size_t nalloc; // number of coefficients allocated for efficiency
 
     struct SpaceMapping * space_transform;
+    int kristoffel_eval;
 
 };
 
