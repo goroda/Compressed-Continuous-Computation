@@ -251,7 +251,9 @@ double function_train_norm2diff(const struct FunctionTrain *,
 double function_train_relnorm2diff(const struct FunctionTrain *,
                                        const struct FunctionTrain *);
 
-
+int function_train_is_kristoffel_active(const struct FunctionTrain *);
+double function_train_get_kristoffel_weight(const struct FunctionTrain *,
+                                            const double *);
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
