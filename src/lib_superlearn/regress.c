@@ -272,6 +272,7 @@ struct RegressOpts
     double als_conv_tol;
 
     size_t * restrict_rank_opt;
+
 };
 
 
@@ -1967,9 +1968,20 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 ***************************************************************/
 struct FunctionTrain *
 c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3Opt * optimizer,
-                  size_t N, const double * x, const double * y)
+                  size_t N, const double * x, const double * yin)
 {
     // check if special structure exists / initialized
+
+    double * y = (double *) yin;
+    int use_kristoffel_precond = function_train_is_kristoffel_active(ftp->ft);
+    if (use_kristoffel_precond){
+        double normalization = 0.0;
+        double * y = calloc_double(y);
+        for (size_t ii = 0; ii < N; ii++){
+            normalization = function_train_get_kristoffel_weights(ftp->ft,x+ ii*ftp->dim);
+            y[ii] = yin[ii] / normalization;
+        }
+    }
     
     struct FunctionTrain * ft = NULL;
     if (regopts->type == AIO){
@@ -1985,6 +1997,10 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
         exit(1);
     }
 
+    if (regopts->kristoffel_precond == 1){
+        free(y); y = NULL;
+    }
+    
     return ft;
 }
 

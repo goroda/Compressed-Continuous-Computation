@@ -4605,6 +4605,47 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
 }
 
 
+/***********************************************************//**
+    Determine whether kristoffel weighting is active
+
+    \param[in] ft - function_train
+
+    \return 1 if active, 0 otherwise
+***************************************************************/
+int function_train_is_kristoffel_active(const struct FunctionTrain * ft)
+{
+    int active = 1;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        active = qmarray_is_kristoffel_active(ft->cores[ii]);
+        if (active == 0){
+            break;
+        }
+    }
+
+    return active;
+}
+
+/***********************************************************//**
+    Get the kristoffel normalization factor                                                            
+
+    \param[in] ft - function train
+    \param[in] x  - location at which to obtain normalization
+
+    \return normalization factor
+***************************************************************/
+double function_train_get_kristoffel_weight(const struct FunctionTrain * ft,
+                                            const double * x)
+{
+    double weight = 1.0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        weight *= qmarray_get_kristoffel_weight(ft->cores[ii],x);
+    }
+
+    return weight;
+}
+
+
+
 
 
 //////////////////////////////////////////////////////////////////////////
