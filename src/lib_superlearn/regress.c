@@ -1971,9 +1971,9 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
     int use_kristoffel_precond = function_train_is_kristoffel_active(ftp->ft);
     if (use_kristoffel_precond){
         double normalization = 0.0;
-        double * y = calloc_double(y);
+        double * y = calloc_double(N);
         for (size_t ii = 0; ii < N; ii++){
-            normalization = function_train_get_kristoffel_weights(ftp->ft,x+ ii*ftp->dim);
+            normalization = function_train_get_kristoffel_weight(ftp->ft,x+ ii*ftp->dim);
             y[ii] = yin[ii] / normalization;
         }
     }
@@ -1992,7 +1992,7 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
         exit(1);
     }
 
-    if (regopts->kristoffel_precond == 1){
+    if (use_kristoffel_precond == 1){
         free(y); y = NULL;
     }
     

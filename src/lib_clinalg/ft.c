@@ -4611,14 +4611,19 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
     \param[in] ft - function_train
 
     \return 1 if active, 0 otherwise
+
+    \note It is assumed that if kristoffel is active on 1
+    core it is active on all cores
 ***************************************************************/
 int function_train_is_kristoffel_active(const struct FunctionTrain * ft)
 {
-    int active = 1;
-    for (size_t ii = 0; ii < ft->dim; ii++){
-        active = qmarray_is_kristoffel_active(ft->cores[ii]);
-        if (active == 0){
-            break;
+    int active = qmarray_is_kristoffel_active(ft->cores[0]);
+    for (size_t ii = 1; ii < ft->dim; ii++){
+
+        if (qmarray_is_kristoffel_active(ft->cores[ii]) != active){
+            fprintf(stderr, "Kristoffel weighting cannot be active on some cores\n");
+            fprintf(stderr, "and inactive on other cores\n");
+            exit(1);
         }
     }
 
@@ -4638,7 +4643,7 @@ double function_train_get_kristoffel_weight(const struct FunctionTrain * ft,
 {
     double weight = 1.0;
     for (size_t ii = 0; ii < ft->dim; ii++){
-        weight *= qmarray_get_kristoffel_weight(ft->cores[ii],x);
+        weight *= qmarray_get_kristoffel_weight(ft->cores[ii],x[ii]);
     }
 
     return weight;

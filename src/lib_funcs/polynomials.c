@@ -2192,6 +2192,47 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 }
 
 /********************************************************//**
+*   Get the kristoffel weight of an orthonormal polynomial expansion
+*
+*   \param[in] poly - polynomial expansion
+*   \param[in] x    - location at which to evaluate
+*
+*   \return out - weight
+*************************************************************/
+double orth_poly_expansion_get_kristoffel_weight(const struct OrthPolyExpansion * poly, double x)
+{
+    size_t iter = 0;
+    double p [2];
+    double pnew;
+        
+    double x_normalized = space_mapping_map(poly->space_transform,x);
+    double den = 0.0;
+        
+    p[0] = poly->p->const_term;
+
+
+    den += p[0]*p[0];
+        
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = poly->p->lin_const + poly->p->lin_coeff * x_normalized;
+
+        den += p[1]*p[1];
+        iter++;
+    }
+    for (iter = 2; iter < poly->num_poly; iter++){
+        pnew = eval_orth_poly_wp(poly->p, p[0], p[1], iter, x_normalized);
+
+        p[0] = p[1];
+        p[1] = pnew;
+
+        den += pnew*pnew;
+    }
+
+    return den;
+}
+
+/********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
 *   order polynomials from the same family.
 *

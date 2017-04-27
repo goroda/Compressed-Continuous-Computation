@@ -3197,6 +3197,46 @@ generic_function_rkhs_squared_norm_param_grad(const struct GenericFunction * gf,
 }
 
 
+/***********************************************************//**
+    Determine whether kristoffel weighting is active
+
+    \param[in] gf - generic function
+
+    \return 1 if active, 0 otherwise
+***************************************************************/
+int generic_function_is_kristoffel_active(const struct GenericFunction * gf)
+{
+    if (gf->fc != POLYNOMIAL){
+        return 0;
+    }
+    else{
+        struct OrthPolyExpansion * ope = gf->f;
+        return ope->kristoffel_eval;
+    }
+}
+
+/***********************************************************//**
+    Get the kristoffel normalization factor                                                            
+
+    \param[in] gf - generic function
+    \param[in] x  - location at which to obtain normalization
+
+    \return normalization factor
+***************************************************************/
+double generic_function_get_kristoffel_weight(const struct GenericFunction * gf,
+                                              double x)
+{
+    if (gf->fc != POLYNOMIAL){
+        fprintf(stderr, "Cannot get the kristoffel weight of a function that is not a polynomial\n");
+        exit(1);
+    }
+    else{
+        double weight = orth_poly_expansion_get_kristoffel_weight(gf->f,x);
+        return weight;
+    }
+}
+
+
 /********************************************************//**
     LS regression objective function
 ************************************************************/

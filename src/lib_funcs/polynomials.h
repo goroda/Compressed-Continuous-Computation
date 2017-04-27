@@ -275,6 +275,9 @@ int chebyshev_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion *, double, double *, size_t);
 
 double orth_poly_expansion_eval(const struct OrthPolyExpansion *, double);
+double orth_poly_expansion_get_kristoffel_weight(const struct OrthPolyExpansion *, double);
+
+
 void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,
                                const double *, size_t, double *, size_t);
 int orth_poly_expansion_param_grad_eval(

@@ -3465,6 +3465,51 @@ struct Qmarray * qmarray_create_nodal(struct Qmarray * qma, size_t N, double * x
     return qmaout;
 }
 
+
+/***********************************************************//**
+    Determine whether kristoffel weighting is active
+
+    \param[in] qma - qmarray
+
+    \return 1 if active, 0 otherwise
+
+    \note It is assumed that if kristoffel is active on one function
+    it is active on all
+***************************************************************/
+int qmarray_is_kristoffel_active(const struct Qmarray * qma)
+{
+
+    int active = generic_function_is_kristoffel_active(qma->funcs[0]);
+    for (size_t ii = 1; ii < qma->nrows * qma->ncols; ii++){
+        if (generic_function_is_kristoffel_active(qma->funcs[ii]) != active){
+            fprintf(stderr, "Kristoffel weighting cannot be active on some univariate functions\n");
+            fprintf(stderr, "and inactive on other ones\n");
+            exit(1);
+        }
+    }
+    return active;
+}
+
+/***********************************************************//**
+    Get the kristoffel normalization factor                                                            
+
+    \param[in] qma - quasimatrix array
+    \param[in] x   - location at which to obtain normalization
+
+    \return normalization factor
+
+    \note Assumes that each univariate function has the same weight
+***************************************************************/
+double qmarray_get_kristoffel_weight(const struct Qmarray * qma,
+                                     double x)
+{
+    double weight = generic_function_get_kristoffel_weight(qma->funcs[0],x);
+    return weight;
+}
+
+
+
+
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
