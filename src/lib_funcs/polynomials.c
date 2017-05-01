@@ -1333,28 +1333,10 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
     assert (isinf(offset) == 0);
 
     struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts,2);
-    if (opts->ptype == LEGENDRE){
-        double m = (p->p->upper - p->p->lower) / 
-                    (p->upper_bound - p->lower_bound);
-        double off = p->p->upper - m * p->upper_bound;
-        //printf("lb=%G,ub=%G\n",lb,ub);
-        //printf("mycalc = %G\n",a/m);
-        //printf("mycalc[0] = %G\n",offset-a/m*off);
-        p->coeff[1] = a/m;
-        p->coeff[0] = offset-off*p->coeff[1];
-    }
-    else if (opts->ptype == HERMITE){
-        p->coeff[1] = a / p->space_transform->lin_slope;
-        p->coeff[0] = offset - p->space_transform->lin_offset * p->coeff[1];
-    }
-    else{
-        struct lin_func lf;
-        lf.slope = a;
-        lf.offset = offset;
-        orth_poly_expansion_approx(eval_lin_func, &lf, p);
-        printf("a=%G,offset=%G,coeff[0]=%G,coeff[1]=%G\n",a,offset,p->coeff[0],p->coeff[1]);
-        printf("\n");
-   }
+    p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
+    p->coeff[0] = (offset - p->p->lin_const -
+                   p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
+                   p->p->const_term;
 
     return p;
 }
@@ -1434,7 +1416,7 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
         break;
     case HERMITE:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order));
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
         break;
     case CHEBYSHEV:
         fprintf(stderr,"cannot generate orthonormal polynomial of\n");
@@ -2127,29 +2109,31 @@ void orth_poly_expansion_evalN(const struct OrthPolyExpansion * poly, size_t N,
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
-    int res = 1;
     size_t nparam = orth_poly_expansion_get_num_params(poly);
-    if (poly->p->ptype == LEGENDRE){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
+    for (size_t ii = 0; ii < nx; ii++){
+
+        double p[2];
+        double pnew;
+
+        double x_norm = space_mapping_map(poly->space_transform,x[ii]);
+    
+        size_t iter = 0;
+        p[0] = poly->p->const_term;
+        grad[ii*nparam] = p[0];
+        iter++;
+        if (poly->num_poly > 1){
+            p[1] = poly->p->lin_const + poly->p->lin_coeff * x_norm;
+            grad[ii*nparam + iter] = p[1]; 
+            iter++;
+        }  
+        for (iter = 2; iter < poly->num_poly; iter++){
+            pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];
+            grad[ii*nparam + iter] = pnew;
+            p[0] = p[1];
+            p[1] = pnew;
         }
     }
-    else if (poly->p->ptype == HERMITE){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
-        }
-    }
-    else if (poly->p->ptype == CHEBYSHEV){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
-        }
-    }
-    else{
-        fprintf(stderr, "Cannot evaluate derivative with respect to parameters\n");
-        fprintf(stderr, "for polynomial type %d\n",poly->p->ptype);
-        exit(1);
-    }
-    return res;
+    return 0;    
 }
 
 /********************************************************//**

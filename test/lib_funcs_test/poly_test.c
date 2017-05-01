@@ -972,8 +972,8 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_approx_nonnormal);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt_weird);
-    /* SUITE_ADD_TEST(suite, Test_legendre_linear); */
-    /* SUITE_ADD_TEST(suite, Test_legendre_quadratic); */
+    SUITE_ADD_TEST(suite, Test_legendre_linear);
+    SUITE_ADD_TEST(suite, Test_legendre_quadratic);
     /* /\* SUITE_ADD_TEST(suite, Test_legendre_derivative); *\/ */
     /* /\* SUITE_ADD_TEST(suite, Test_legendre_derivative_consistency); *\/ */
     SUITE_ADD_TEST(suite, Test_legendre_integrate);
