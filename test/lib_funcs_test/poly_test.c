@@ -583,6 +583,53 @@ void Test_legendre_derivative(CuTest * tc){
     
 }
 
+void Test_legendre_linear(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_linear with legendre poly \n");
+    
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    double a = 2.0, offset=3.0;
+    opoly_t poly = orth_poly_expansion_linear(a,offset,opts);
+    
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = POLY_EVAL(poly,pts[ii]);
+        double eval2 = a*pts[ii] + offset;
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-7);
+    }
+    free(pts); pts = NULL;
+    
+    POLY_FREE(poly);
+    ope_opts_free(opts);
+}
+
+void Test_legendre_quadratic(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_quadratic with legendre poly \n");
+ 
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    double a = 2.0, offset=3.0;
+    opoly_t poly = orth_poly_expansion_quadratic(a,offset,opts);
+ 
+    size_t N = 100;
+    double * pts = linspace(-1,1,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = POLY_EVAL(poly,pts[ii]);
+        double eval2 = a*pow(pts[ii] - offset,2);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-7);
+    }
+    free(pts); pts = NULL;
+    
+    POLY_FREE(poly);
+    ope_opts_free(opts);
+}
+
+
 void Test_legendre_integrate(CuTest * tc){
 
     printf("Testing function: legendre_integrate\n");
@@ -925,8 +972,10 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_approx_nonnormal);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt_weird);
-    SUITE_ADD_TEST(suite, Test_legendre_derivative);
-    SUITE_ADD_TEST(suite, Test_legendre_derivative_consistency);
+    /* SUITE_ADD_TEST(suite, Test_legendre_linear); */
+    /* SUITE_ADD_TEST(suite, Test_legendre_quadratic); */
+    /* /\* SUITE_ADD_TEST(suite, Test_legendre_derivative); *\/ */
+    /* /\* SUITE_ADD_TEST(suite, Test_legendre_derivative_consistency); *\/ */
     SUITE_ADD_TEST(suite, Test_legendre_integrate);
     SUITE_ADD_TEST(suite, Test_legendre_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_legendre_inner);

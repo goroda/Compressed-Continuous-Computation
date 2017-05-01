@@ -158,8 +158,9 @@ struct OrthPoly * deserialize_orth_poly(unsigned char *);
 
 struct StandardPoly * orth_to_standard_poly(struct OrthPoly *, size_t);
 
-double eval_orth_poly_wp(const struct OrthPoly *, double, double, 
-                             size_t, double);
+/* double eval_orth_poly_wp(const struct OrthPoly *, double, double, *\/ */
+/*                              size_t, double); */
+
 double deriv_legen(double, size_t);
 double * deriv_legen_upto(double, size_t);
 double * orth_poly_deriv_upto(enum poly_type, size_t, double);

@@ -272,14 +272,17 @@ static double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double 
 
 
 // Recurrence relationship sequences
-double zero_seq(size_t n){ return (0.0 + 0.0*n); }
-double one_seq(size_t n) { return (1.0 + 0.0*n); }
-double none_seq(size_t n) { return (-1.0 + 0.0*n); }
-double two_seq(size_t n) { return (2.0 + 0.0*n); }
-double n_seq(size_t n) { return ((double) n); }
-double nn_seq (size_t n) { return -n_seq(n); }
-double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);}
-double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );}
+inline static double zero_seq(size_t n){ (void)n; return (0.0); }
+inline static double one_seq(size_t n) { (void)n; return (1.0); }
+inline static double none_seq(size_t n){ (void)n; return (-1.0); }
+inline static double two_seq(size_t n) { (void)n; return (2.0); }
+inline static double n_seq(size_t n) { return ((double) n); }
+inline static double nn_seq (size_t n) { return -n_seq(n); }
+inline static double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);}
+inline static double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );}
+inline static double lega_seq_norm (size_t n) { return ( sqrt( 4 * (double) (n * n) - 1) / (double) n);}
+inline static double legc_seq_norm (size_t n) {
+    return ( -(sqrt(2 * (double) n + 1) * ((double) n -1)) / (double)n / sqrt( 2 * (double) n - 3));}
 
 // Orthonormality functions
 double chebortho(size_t n) {
@@ -344,14 +347,16 @@ static const double legorthoarr[201] =
             ,2.557544757033248e-03,2.544529262086514e-03,2.531645569620253e-03,2.518891687657431e-03
             ,2.506265664160401e-03,2.493765586034913e-03};
 
-double legortho(size_t n){
-    if (n < 201){
-        return legorthoarr[n];
-    }
-    else{
-       // printf("here?! n=%zu\n",n);
-        return (1.0 / (2.0 * (double) n + 1.0));
-    }
+inline static double legortho(size_t n){
+    (void) n;
+    return 1;
+    /* if (n < 201){ */
+    /*     return legorthoarr[n]; */
+    /* } */
+    /* else{ */
+    /*    // printf("here?! n=%zu\n",n); */
+    /*     return (1.0 / (2.0 * (double) n + 1.0)); */
+    /* } */
 }
 
 // Helper functions
@@ -673,15 +678,18 @@ struct OrthPoly * init_leg_poly(){
         exit(1);
     }
     p->ptype = LEGENDRE;
-    p->an = &lega_seq; 
+    /* p->an = &lega_seq; */
+    p->an = &lega_seq_norm; 
     p->bn = &zero_seq;
-    p->cn = &legc_seq;
+    /* p->cn = &legc_seq; */
+    p->cn = &legc_seq_norm;
     
     p->lower = -1.0;
     p->upper = 1.0;
 
     p->const_term = 1.0;
-    p->lin_coeff = 1.0;
+    /* p->lin_coeff = 1.0; */ // orthogonal
+    p->lin_coeff = 1.0 * sqrt(3.0); // orthonormal
     p->lin_const = 0.0;
 
     p->norm = &legortho;
@@ -820,25 +828,27 @@ struct StandardPoly * orth_to_standard_poly(struct OrthPoly * p, size_t n)
 *
 *   \return out - polynomial value
 *************************************************************/
-double 
+inline static double 
 eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
-                    size_t n, double x)
+                  size_t n, double x)
 {   
-    double out;
-    if (rec->ptype == LEGENDRE){
-        double nt = (double) n;
-        double a = (2.0*nt-1.0) / nt;
-        double c = -(nt-1.0)/nt;
-        out = a * x * p1 + c * p2;
-    }
-    else{
-        out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2;
-    }
+    /* double out; */
+    /* if (rec->ptype == LEGENDRE){ */
+    /*     double nt = (double) n; */
+    /*     double a = (2.0*nt-1.0) / nt; */
+    /*     double c = -(nt-1.0)/nt; */
+    /*     out = a * x * p1 + c * p2; */
+    /* } */
+    /* else{ */
+        /* out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2; */
+    /* } */
     
     /* if (rec->ptype == HERMITE){ *\/ */
     /*      out /= sqrt(sqrt(2.0*M_PI)); *\/ */
     /* /\* } *\/ */
-    return out;
+    /* return out;               */
+
+    return (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2; 
 }
 
 /********************************************************//**
@@ -860,15 +870,19 @@ double * deriv_legen_upto(double x, size_t order){
         size_t ii;
         for (ii = 1; ii < order+1; ii++){
             out[ii] = (double) (order * (order+1)/2.0);
+            
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
     }
     else if (fabs(x-(-1.0)) <= DBL_EPSILON){
         size_t ii;
         for (ii = 1; ii < order+1; ii+=2){
             out[ii] = (double) (order * (order+1)/2.0);
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
         for (ii = 2; ii < order+1; ii+=2){
             out[ii] = -(double) (order * (order+1)/2.0);
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
     }
     else if (order == 1){
@@ -949,6 +963,7 @@ double deriv_legen(double x, size_t order){
 *************************************************************/
 double * orth_poly_deriv_upto(enum poly_type ptype, size_t order, double x)
 {
+    assert (1 == 0);
     double * out = NULL;
     if (ptype == LEGENDRE){
         out = deriv_legen_upto(x,order);
@@ -972,6 +987,7 @@ double * orth_poly_deriv_upto(enum poly_type ptype, size_t order, double x)
 *************************************************************/
 double orth_poly_deriv(enum poly_type ptype, size_t order, double x)
 {
+    assert (1 == 0);
     double out = 0.0;
     if (ptype == LEGENDRE){
         out = deriv_legen(x,order);
@@ -1447,6 +1463,7 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 *************************************************************/
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
+    assert (1 == 0);
     struct OrthPolyExpansion * p = args;
     assert (p->p->ptype != HERMITE);
 
@@ -1474,6 +1491,7 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
+    assert (1 == 0);
     /* assert (p->p->ptype != HERMITE); */
     struct OrthPolyExpansion * out = NULL;
     if ( p == NULL ){
@@ -2045,13 +2063,7 @@ int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * po
 double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
-    if (poly->p->ptype == LEGENDRE){
-        out = legendre_poly_expansion_eval(poly,x);
-    }
-    else if (poly->p->ptype == HERMITE){
-        out = hermite_poly_expansion_eval(poly,x);
-    }
-    else if (poly->p->ptype == CHEBYSHEV){
+    if (poly->p->ptype == CHEBYSHEV){
         out = chebyshev_poly_expansion_eval(poly,x);
     }
     else{

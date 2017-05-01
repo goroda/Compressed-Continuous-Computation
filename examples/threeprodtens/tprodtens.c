@@ -8,9 +8,16 @@
 #include "lib_clinalg.h"
 #include "quadrature.h"
 
+inline static double 
+eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
+                  size_t n, double x)
+{
+    return (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2; 
+}
+
 int main()
 {
-    // generate a sequence of quadrature tables
+    // generate the three term product
     
     size_t maxorder = 200;
     size_t ii,jj,kk,ll;
@@ -59,14 +66,23 @@ int main()
                 if (fabs(coeffs[ii+jj*maxorder/2+kk*maxorder*maxorder/4]) > zerothresh){
                     nonzero++;
                 }
+                else{
+                    coeffs[ii+jj*maxorder/2+kk*maxorder*maxorder/4] = 0.0;
+                }
                 total += 1;
             }
         }
     }
     printf("done and printing\n");
-    printf("density level = %G\n", (double) nonzero/total);
-    int success = darray_save(maxorder*maxorder*maxorder/4,1,coeffs,"legpolytens.dat",1);
-    assert ( success == 1);
+    printf("density level %zu / %zu = %G\n", nonzero,total,(double) nonzero/ (double)total);
+    FILE * fp = fopen("legpolytens.dat","w");
+    assert (fp != NULL);
+    for (size_t ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
+        fprintf(fp,"%3.15G, ",coeffs[ii]);
+    }
+    fclose(fp); 
+    /* int success = darray_save(maxorder*maxorder*maxorder/4,1,coeffs,"legpolytens.dat",1); */
+    /* assert ( success == 1); */
     free_orth_poly(leg);
     free(pt);
     free(wt);
