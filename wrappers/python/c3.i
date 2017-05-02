@@ -6,47 +6,39 @@
     #define SWIG_FILE_WITH_INIT
 
     #include <Python.h>
-    /* #include "/home/aagorod/Software/c3/include/c3.h" */
-    #include "/home/aagorod/Software/c3/src/lib_interface/approximate.h"
-    #include "/home/aagorod/Software/c3/src/lib_array/array.h"
-
-    #include "/home/aagorod/Software/c3/src/lib_stringmanip/stringmanip.h"
-    #include "/home/aagorod/Software/c3/src/lib_superlearn/regress.h"
-    #include "/home/aagorod/Software/c3/src/lib_interface/c3_interface.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/diffusion.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/dmrg.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/dmrgprod.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/ft.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/indmanage.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/lib_clinalg.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/qmarray.h"
-    #include "/home/aagorod/Software/c3/src/lib_clinalg/quasimatrix.h"
-    /* #include "/home/aagorod/Software/c3/src/lib_fft/fft.h" */
-    #include "/home/aagorod/Software/c3/src/lib_funcs/fapprox.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/functions.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/fwrap.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/hpoly.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/legtens.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/lib_funcs.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/linelm.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/kernels.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/monitoring.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/piecewisepoly.h"
-    /* #include "/home/aagorod/Software/c3/src/lib_funcs/pivoting.h" */
-    #include "/home/aagorod/Software/c3/src/lib_funcs/polynomials.h"
-    #include "/home/aagorod/Software/c3/src/lib_funcs/space.h"
-    #include "/home/aagorod/Software/c3/src/lib_linalg/lib_linalg.h"
-    #include "/home/aagorod/Software/c3/src/lib_linalg/linalg.h"
-    #include "/home/aagorod/Software/c3/src/lib_linalg/matrix_util.h"
-    #include "/home/aagorod/Software/c3/src/lib_optimization/lib_optimization.h"
-    #include "/home/aagorod/Software/c3/src/lib_optimization/optimization.h"
-    #include "/home/aagorod/Software/c3/src/lib_quadrature/quadrature.h"
-    /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/candecomp.h" */
-    /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/cross.h" */
-    /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/tensortrain.h" */
-    /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_integrate.h" */
-    /* #include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_multilinalg.h" */
-    /* #include "/home/aagorod/Software/c3/src/lib_tensor/tensor.h" */
+    #include "approximate.h"
+    #include "array.h"
+    #include "stringmanip.h"
+    #include "regress.h"
+    #include "c3_interface.h"
+    #include "diffusion.h"
+    #include "dmrg.h"
+    #include "dmrgprod.h"
+    #include "ft.h"
+    #include "indmanage.h"
+    #include "lib_clinalg.h"
+    #include "qmarray.h"
+    #include "quasimatrix.h"
+    /* #include "fft.h" */
+    #include "fapprox.h"
+    #include "functions.h"
+    #include "fwrap.h"
+    #include "hpoly.h"
+    #include "legtens.h"
+    #include "lib_funcs.h"
+    #include "linelm.h"
+    #include "kernels.h"
+    #include "monitoring.h"
+    #include "piecewisepoly.h"
+    #include "pivoting.h"
+    #include "polynomials.h"
+    #include "space.h"
+    #include "lib_linalg.h"
+    #include "linalg.h"
+    #include "matrix_util.h"
+    #include "lib_optimization.h"
+    #include "optimization.h"
+    #include "quadrature.h"
 
 
     typedef long unsigned int size_t;
@@ -134,48 +126,43 @@ typedef long unsigned int size_t;
 }
 
 
+/* %include "../../include/c3.h" */
 
-%include "/home/aagorod/Software/c3/src/lib_interface/approximate.h"
-/* %include "/home/aagorod/Software/c3/include/c3.h" */
-%include "/home/aagorod/Software/c3/src/lib_array/array.h"
+%include "../../src/lib_interface/approximate.h"
 
-%include "/home/aagorod/Software/c3/src/lib_stringmanip/stringmanip.h"
-%include "/home/aagorod/Software/c3/src/lib_superlearn/regress.h"
-%include "/home/aagorod/Software/c3/src/lib_interface/c3_interface.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/diffusion.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/dmrg.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/dmrgprod.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/ft.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/indmanage.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/lib_clinalg.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/qmarray.h"
-%include "/home/aagorod/Software/c3/src/lib_clinalg/quasimatrix.h"
-/* %include "/home/aagorod/Software/c3/src/lib_fft/fft.h" */
-%include "/home/aagorod/Software/c3/src/lib_funcs/fapprox.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/functions.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/fwrap.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/hpoly.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/legtens.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/lib_funcs.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/linelm.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/kernels.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/monitoring.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/piecewisepoly.h"
-/* %include "/home/aagorod/Software/c3/src/lib_funcs/pivoting.h" */
-%include "/home/aagorod/Software/c3/src/lib_funcs/polynomials.h"
-%include "/home/aagorod/Software/c3/src/lib_funcs/space.h"
-%include "/home/aagorod/Software/c3/src/lib_linalg/lib_linalg.h"
-%include "/home/aagorod/Software/c3/src/lib_linalg/linalg.h"
-%include "/home/aagorod/Software/c3/src/lib_linalg/matrix_util.h"
-%include "/home/aagorod/Software/c3/src/lib_optimization/lib_optimization.h"
-%include "/home/aagorod/Software/c3/src/lib_optimization/optimization.h"
-%include "/home/aagorod/Software/c3/src/lib_quadrature/quadrature.h"
-/* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/candecomp.h" */
-/* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/cross.h" */
-/* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/tensortrain.h" */
-/* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_integrate.h" */
-/* %include "/home/aagorod/Software/c3/src/lib_tensdecomp/tt_multilinalg.h" */
-/* %include "/home/aagorod/Software/c3/src/lib_tensor/tensor.h" */
+%include "../../src/lib_array/array.h"
+
+%include "../../src/lib_stringmanip/stringmanip.h"
+%include "../../src/lib_superlearn/regress.h"
+%include "../../src/lib_interface/c3_interface.h"
+%include "../../src/lib_clinalg/diffusion.h"
+%include "../../src/lib_clinalg/dmrg.h"
+%include "../../src/lib_clinalg/dmrgprod.h"
+%include "../../src/lib_clinalg/ft.h"
+%include "../../src/lib_clinalg/indmanage.h"
+%include "../../src/lib_clinalg/lib_clinalg.h"
+%include "../../src/lib_clinalg/qmarray.h"
+%include "../../src/lib_clinalg/quasimatrix.h"
+/* %include "../../src/lib_fft/fft.h" */
+%include "../../src/lib_funcs/fapprox.h"
+%include "../../src/lib_funcs/functions.h"
+%include "../../src/lib_funcs/fwrap.h"
+%include "../../src/lib_funcs/hpoly.h"
+%include "../../src/lib_funcs/legtens.h"
+%include "../../src/lib_funcs/lib_funcs.h"
+%include "../../src/lib_funcs/linelm.h"
+%include "../../src/lib_funcs/kernels.h"
+%include "../../src/lib_funcs/monitoring.h"
+%include "../../src/lib_funcs/piecewisepoly.h"
+%include "../../src/lib_funcs/pivoting.h"
+%include "../../src/lib_funcs/polynomials.h"
+%include "../../src/lib_funcs/space.h"
+%include "../../src/lib_linalg/lib_linalg.h"
+%include "../../src/lib_linalg/linalg.h"
+%include "../../src/lib_linalg/matrix_util.h"
+%include "../../src/lib_optimization/lib_optimization.h"
+%include "../../src/lib_optimization/optimization.h"
+%include "../../src/lib_quadrature/quadrature.h"
 
 
 

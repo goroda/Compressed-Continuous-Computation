@@ -53,8 +53,8 @@
 #define SQRTPIINV 0.631618777746064701290010510108243075846860739510341013477
 #endif
 
-
-struct OrthPoly * init_hermite_poly();
+struct OrthPoly;
+struct OrthPoly * init_hermite_poly(void);
 double hermite_integrate(const struct OrthPolyExpansion *);
 
 

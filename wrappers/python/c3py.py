@@ -75,7 +75,7 @@ class FunctionTrain:
             self.ranks = list(copy.deepcopy(ranks))
 
     def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",adaptrank=0,\
-                         roundtol=1e-5,maxrank=10,kickrank=2,verbose=0):
+                         roundtol=1e-5,maxrank=10,kickrank=2,kristoffel=0,verbose=0):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -103,7 +103,10 @@ class FunctionTrain:
             c3.ft_regress_set_maxrank(reg,maxrank)
             c3.ft_regress_set_kickrank(reg,kickrank)
             c3.ft_regress_set_verbose(reg,verbose)
-            
+
+        # if kristoffel is True:
+        #     c3.ft_regress_set_kristoffel(reg,1)
+                
         if self.ft is None:
             c3.function_train_free(self.ft)
 

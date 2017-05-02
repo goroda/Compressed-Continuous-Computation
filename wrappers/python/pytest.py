@@ -9,18 +9,23 @@ def func2(x):
     # return np.prod(x-1,axis=1)
     return np.sin(np.sum(x,axis=1))
 
-dim = 25
-ndata = 500
-# x = np.random.rand(ndata,dim)*2.0-1.0
-x = np.random.randn(ndata,dim)
+dim = 5
+ndata = 1000
+x = np.random.rand(ndata,dim)*2.0-1.0
+#x = np.random.randn(ndata,dim)
 y1 = func1(x)
 y2 = func2(x)
 
 lb = -1
 ub = 1
-nparam = 4
+nparam = 10
+
+ranks = [2]*(dim+1)
+ranks[0] = 1
+ranks[dim] = 1
 
 ft = c3py.FunctionTrain(dim)
+
 for ii in range(dim):
     ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
     # ft.set_dim_opts(ii,"hermite",nparam)
@@ -29,11 +34,12 @@ for ii in range(dim):
 ft.build_data_model(ndata,x,y1,alg="AIO",obj="LS",adaptrank=1,kickrank=1,roundtol=1e-10,verbose=0)
 
 ft2 = c3py.FunctionTrain(dim)
+ft2.set_ranks(ranks)
 for ii in range(dim):
     ft2.set_dim_opts(ii,"legendre",lb,ub,nparam)
     # ft2.set_dim_opts(ii,"hermite",nparam)
 
-ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",adaptrank=1,kickrank=1,roundtol=1e-10,verbose=1)
+ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",kristoffel=True,verbose=1)
 
 ft3 = ft + ft2
 ft4 = ft * ft2
