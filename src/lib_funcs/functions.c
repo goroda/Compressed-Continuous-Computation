@@ -2296,7 +2296,7 @@ fiber_cut_init2d( double (*f)(double, double, void *), void * args,
                             size_t dim, double val)
 {
     struct FiberCut * fcut = alloc_fiber_cut(2,dim);
-    fcut->f.f2d = f;
+    fcut->fpoint.f2d = f;
     fcut->args = args;
     fcut->ftype_flag=0;
     if (dim == 0){
@@ -2331,7 +2331,7 @@ fiber_cut_2darray( double (*f)(double, double, void *), void * args,
     size_t ii;
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(2,dim);
-        fcut[ii]->f.f2d = f;
+        fcut[ii]->fpoint.f2d = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 0;
         if (dim == 0){
@@ -2370,7 +2370,7 @@ fiber_cut_ndarray( double (*f)(double *, void *), void * args,
 //    printf("vals are \n");
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(totdim,dim);
-        fcut[ii]->f.fnd = f;
+        fcut[ii]->fpoint.fnd = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 1;
         memmove(fcut[ii]->vals, val[ii], totdim*sizeof(double));
@@ -2394,10 +2394,10 @@ double fiber_cut_eval2d(double x, void * vfcut){
     
     double val;
     if (fcut->dimcut == 0){
-        val = fcut->f.f2d(x, fcut->vals[1], fcut->args);
+        val = fcut->fpoint.f2d(x, fcut->vals[1], fcut->args);
     }
     else{
-        val = fcut->f.f2d(fcut->vals[0], x, fcut->args);
+        val = fcut->fpoint.f2d(fcut->vals[0], x, fcut->args);
     }
     return val;
 }
@@ -2416,7 +2416,7 @@ double fiber_cut_eval(double x, void * vfcut){
     
     double val;
     fcut->vals[fcut->dimcut] = x;
-    val = fcut->f.fnd(fcut->vals, fcut->args);
+    val = fcut->fpoint.fnd(fcut->vals, fcut->args);
     return val;
 }
 

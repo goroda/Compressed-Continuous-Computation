@@ -104,7 +104,7 @@ unsigned char *
 unsigned char * 
     linear_transform_deserialize(unsigned char *, struct LinearTransform **);
 
-struct ProbabilityDensity * probability_density_alloc();
+struct ProbabilityDensity * probability_density_alloc(void);
 void probability_density_free(struct ProbabilityDensity *);
 unsigned char * 
 probability_density_serialize(unsigned char *, struct ProbabilityDensity *,

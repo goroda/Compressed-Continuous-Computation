@@ -2106,6 +2106,18 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
 }
 
 /***********************************************************//**
+    Get dimension
+    
+    \param[in] ftr - regression structure
+    \returns dimension
+***************************************************************/
+size_t ft_regress_get_dim(const struct FTRegress * ftr)
+{
+    assert (ftr != NULL);
+    return ftr->dim;
+}
+
+/***********************************************************//**
     Turn on/off adaptation
     
     \param[in,out] ftr - regression structure
@@ -2545,7 +2557,9 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         size_t nparams_rounded = function_train_get_nparams(ftround);
         if (ftr->regopts->verbose > 0){
             printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
-            printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            if (opt_only_restricted == 1){
+                printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            }
             printf("Nrounded params: %zu\n",nparams_rounded);
         }
 
