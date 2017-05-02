@@ -1798,7 +1798,7 @@ generic_function_1darray_eval2(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
-        int res = legendre_poly_expansion_arr_eval(n,parr,x,out);
+        int res = orth_poly_expansion_arr_eval(n,parr,x,out);
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){
@@ -1845,7 +1845,7 @@ generic_function_1darray_eval2N(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
-        int res = legendre_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        int res = orth_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){

@@ -273,13 +273,13 @@ static double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double 
 
 // Recurrence relationship sequences
 inline static double zero_seq(size_t n){ (void)n; return (0.0); }
-inline static double one_seq(size_t n) { (void)n; return (1.0); }
+/* inline static double one_seq(size_t n) { (void)n; return (1.0); } */
 inline static double none_seq(size_t n){ (void)n; return (-1.0); }
 inline static double two_seq(size_t n) { (void)n; return (2.0); }
-inline static double n_seq(size_t n) { return ((double) n); }
-inline static double nn_seq (size_t n) { return -n_seq(n); }
-inline static double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);}
-inline static double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );}
+/* inline static double n_seq(size_t n) { return ((double) n); } */
+/* inline static double nn_seq (size_t n) { return -n_seq(n); } */
+/* inline static double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);} */
+/* inline static double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );} */
 inline static double lega_seq_norm (size_t n) { return ( sqrt( 4 * (double) (n * n) - 1) / (double) n);}
 inline static double legc_seq_norm (size_t n) {
     return ( -(sqrt(2 * (double) n + 1) * ((double) n -1)) / (double)n / sqrt( 2 * (double) n - 3));}
@@ -294,58 +294,58 @@ double chebortho(size_t n) {
     }
 }
 
-static const double legorthoarr[201] =
-            {1.000000000000000e+00, 3.333333333333333e-01,2.000000000000000e-01,
-            1.428571428571428e-01,1.111111111111111e-01,9.090909090909091e-02,7.692307692307693e-02,
-            6.666666666666667e-02,5.882352941176471e-02,5.263157894736842e-02,4.761904761904762e-02,
-            4.347826086956522e-02,4.000000000000000e-02,3.703703703703703e-02,3.448275862068965e-02,
-            3.225806451612903e-02,3.030303030303030e-02,2.857142857142857e-02,2.702702702702703e-02,
-            2.564102564102564e-02,2.439024390243903e-02,2.325581395348837e-02,2.222222222222222e-02,
-            2.127659574468085e-02,2.040816326530612e-02,1.960784313725490e-02,1.886792452830189e-02,
-            1.818181818181818e-02,1.754385964912281e-02,1.694915254237288e-02,1.639344262295082e-02
-            ,1.587301587301587e-02,1.538461538461539e-02,1.492537313432836e-02,1.449275362318841e-02
-            ,1.408450704225352e-02,1.369863013698630e-02,1.333333333333333e-02,1.298701298701299e-02
-            ,1.265822784810127e-02,1.234567901234568e-02,1.204819277108434e-02,1.176470588235294e-02
-            ,1.149425287356322e-02,1.123595505617977e-02,1.098901098901099e-02,1.075268817204301e-02
-            ,1.052631578947368e-02,1.030927835051546e-02,1.010101010101010e-02,9.900990099009901e-03
-            ,9.708737864077669e-03,9.523809523809525e-03,9.345794392523364e-03,9.174311926605505e-03
-            ,9.009009009009009e-03,8.849557522123894e-03,8.695652173913044e-03,8.547008547008548e-03
-            ,8.403361344537815e-03,8.264462809917356e-03,8.130081300813009e-03,8.000000000000000e-03
-            ,7.874015748031496e-03,7.751937984496124e-03,7.633587786259542e-03,7.518796992481203e-03
-            ,7.407407407407408e-03,7.299270072992700e-03,7.194244604316547e-03,7.092198581560284e-03
-            ,6.993006993006993e-03,6.896551724137931e-03,6.802721088435374e-03,6.711409395973154e-03
-            ,6.622516556291391e-03,6.535947712418301e-03,6.451612903225806e-03,6.369426751592357e-03
-            ,6.289308176100629e-03,6.211180124223602e-03,6.134969325153374e-03,6.060606060606061e-03
-            ,5.988023952095809e-03,5.917159763313609e-03,5.847953216374269e-03,5.780346820809248e-03
-            ,5.714285714285714e-03,5.649717514124294e-03,5.586592178770950e-03,5.524861878453038e-03
-            ,5.464480874316940e-03,5.405405405405406e-03,5.347593582887700e-03,5.291005291005291e-03
-            ,5.235602094240838e-03,5.181347150259068e-03,5.128205128205128e-03,5.076142131979695e-03
-            ,5.025125628140704e-03,4.975124378109453e-03,4.926108374384237e-03,4.878048780487805e-03
-            ,4.830917874396135e-03,4.784688995215311e-03,4.739336492890996e-03,4.694835680751174e-03
-            ,4.651162790697674e-03,4.608294930875576e-03,4.566210045662100e-03,4.524886877828055e-03
-            ,4.484304932735426e-03,4.444444444444444e-03,4.405286343612335e-03,4.366812227074236e-03
-            ,4.329004329004329e-03,4.291845493562232e-03,4.255319148936170e-03,4.219409282700422e-03
-            ,4.184100418410041e-03,4.149377593360996e-03,4.115226337448560e-03,4.081632653061225e-03
-            ,4.048582995951417e-03,4.016064257028112e-03,3.984063745019920e-03,3.952569169960474e-03
-            ,3.921568627450980e-03,3.891050583657588e-03,3.861003861003861e-03,3.831417624521073e-03
-            ,3.802281368821293e-03,3.773584905660377e-03,3.745318352059925e-03,3.717472118959108e-03
-            ,3.690036900369004e-03,3.663003663003663e-03,3.636363636363636e-03,3.610108303249098e-03
-            ,3.584229390681004e-03,3.558718861209964e-03,3.533568904593640e-03,3.508771929824561e-03
-            ,3.484320557491289e-03,3.460207612456748e-03,3.436426116838488e-03,3.412969283276451e-03
-            ,3.389830508474576e-03,3.367003367003367e-03,3.344481605351171e-03,3.322259136212625e-03
-            ,3.300330033003300e-03,3.278688524590164e-03,3.257328990228013e-03,3.236245954692557e-03
-            ,3.215434083601286e-03,3.194888178913738e-03,3.174603174603175e-03,3.154574132492113e-03
-            ,3.134796238244514e-03,3.115264797507788e-03,3.095975232198143e-03,3.076923076923077e-03
-            ,3.058103975535168e-03,3.039513677811550e-03,3.021148036253776e-03,3.003003003003003e-03
-            ,2.985074626865672e-03,2.967359050445104e-03,2.949852507374631e-03,2.932551319648094e-03
-            ,2.915451895043732e-03,2.898550724637681e-03,2.881844380403458e-03,2.865329512893983e-03
-            ,2.849002849002849e-03,2.832861189801700e-03,2.816901408450704e-03,2.801120448179272e-03
-            ,2.785515320334262e-03,2.770083102493075e-03,2.754820936639119e-03,2.739726027397260e-03
-            ,2.724795640326975e-03,2.710027100271003e-03,2.695417789757413e-03,2.680965147453083e-03
-            ,2.666666666666667e-03,2.652519893899204e-03,2.638522427440633e-03,2.624671916010499e-03
-            ,2.610966057441253e-03,2.597402597402597e-03,2.583979328165375e-03,2.570694087403599e-03
-            ,2.557544757033248e-03,2.544529262086514e-03,2.531645569620253e-03,2.518891687657431e-03
-            ,2.506265664160401e-03,2.493765586034913e-03};
+/* static const double legorthoarr[201] = */
+/*             {1.000000000000000e+00, 3.333333333333333e-01,2.000000000000000e-01, */
+/*             1.428571428571428e-01,1.111111111111111e-01,9.090909090909091e-02,7.692307692307693e-02, */
+/*             6.666666666666667e-02,5.882352941176471e-02,5.263157894736842e-02,4.761904761904762e-02, */
+/*             4.347826086956522e-02,4.000000000000000e-02,3.703703703703703e-02,3.448275862068965e-02, */
+/*             3.225806451612903e-02,3.030303030303030e-02,2.857142857142857e-02,2.702702702702703e-02, */
+/*             2.564102564102564e-02,2.439024390243903e-02,2.325581395348837e-02,2.222222222222222e-02, */
+/*             2.127659574468085e-02,2.040816326530612e-02,1.960784313725490e-02,1.886792452830189e-02, */
+/*             1.818181818181818e-02,1.754385964912281e-02,1.694915254237288e-02,1.639344262295082e-02 */
+/*             ,1.587301587301587e-02,1.538461538461539e-02,1.492537313432836e-02,1.449275362318841e-02 */
+/*             ,1.408450704225352e-02,1.369863013698630e-02,1.333333333333333e-02,1.298701298701299e-02 */
+/*             ,1.265822784810127e-02,1.234567901234568e-02,1.204819277108434e-02,1.176470588235294e-02 */
+/*             ,1.149425287356322e-02,1.123595505617977e-02,1.098901098901099e-02,1.075268817204301e-02 */
+/*             ,1.052631578947368e-02,1.030927835051546e-02,1.010101010101010e-02,9.900990099009901e-03 */
+/*             ,9.708737864077669e-03,9.523809523809525e-03,9.345794392523364e-03,9.174311926605505e-03 */
+/*             ,9.009009009009009e-03,8.849557522123894e-03,8.695652173913044e-03,8.547008547008548e-03 */
+/*             ,8.403361344537815e-03,8.264462809917356e-03,8.130081300813009e-03,8.000000000000000e-03 */
+/*             ,7.874015748031496e-03,7.751937984496124e-03,7.633587786259542e-03,7.518796992481203e-03 */
+/*             ,7.407407407407408e-03,7.299270072992700e-03,7.194244604316547e-03,7.092198581560284e-03 */
+/*             ,6.993006993006993e-03,6.896551724137931e-03,6.802721088435374e-03,6.711409395973154e-03 */
+/*             ,6.622516556291391e-03,6.535947712418301e-03,6.451612903225806e-03,6.369426751592357e-03 */
+/*             ,6.289308176100629e-03,6.211180124223602e-03,6.134969325153374e-03,6.060606060606061e-03 */
+/*             ,5.988023952095809e-03,5.917159763313609e-03,5.847953216374269e-03,5.780346820809248e-03 */
+/*             ,5.714285714285714e-03,5.649717514124294e-03,5.586592178770950e-03,5.524861878453038e-03 */
+/*             ,5.464480874316940e-03,5.405405405405406e-03,5.347593582887700e-03,5.291005291005291e-03 */
+/*             ,5.235602094240838e-03,5.181347150259068e-03,5.128205128205128e-03,5.076142131979695e-03 */
+/*             ,5.025125628140704e-03,4.975124378109453e-03,4.926108374384237e-03,4.878048780487805e-03 */
+/*             ,4.830917874396135e-03,4.784688995215311e-03,4.739336492890996e-03,4.694835680751174e-03 */
+/*             ,4.651162790697674e-03,4.608294930875576e-03,4.566210045662100e-03,4.524886877828055e-03 */
+/*             ,4.484304932735426e-03,4.444444444444444e-03,4.405286343612335e-03,4.366812227074236e-03 */
+/*             ,4.329004329004329e-03,4.291845493562232e-03,4.255319148936170e-03,4.219409282700422e-03 */
+/*             ,4.184100418410041e-03,4.149377593360996e-03,4.115226337448560e-03,4.081632653061225e-03 */
+/*             ,4.048582995951417e-03,4.016064257028112e-03,3.984063745019920e-03,3.952569169960474e-03 */
+/*             ,3.921568627450980e-03,3.891050583657588e-03,3.861003861003861e-03,3.831417624521073e-03 */
+/*             ,3.802281368821293e-03,3.773584905660377e-03,3.745318352059925e-03,3.717472118959108e-03 */
+/*             ,3.690036900369004e-03,3.663003663003663e-03,3.636363636363636e-03,3.610108303249098e-03 */
+/*             ,3.584229390681004e-03,3.558718861209964e-03,3.533568904593640e-03,3.508771929824561e-03 */
+/*             ,3.484320557491289e-03,3.460207612456748e-03,3.436426116838488e-03,3.412969283276451e-03 */
+/*             ,3.389830508474576e-03,3.367003367003367e-03,3.344481605351171e-03,3.322259136212625e-03 */
+/*             ,3.300330033003300e-03,3.278688524590164e-03,3.257328990228013e-03,3.236245954692557e-03 */
+/*             ,3.215434083601286e-03,3.194888178913738e-03,3.174603174603175e-03,3.154574132492113e-03 */
+/*             ,3.134796238244514e-03,3.115264797507788e-03,3.095975232198143e-03,3.076923076923077e-03 */
+/*             ,3.058103975535168e-03,3.039513677811550e-03,3.021148036253776e-03,3.003003003003003e-03 */
+/*             ,2.985074626865672e-03,2.967359050445104e-03,2.949852507374631e-03,2.932551319648094e-03 */
+/*             ,2.915451895043732e-03,2.898550724637681e-03,2.881844380403458e-03,2.865329512893983e-03 */
+/*             ,2.849002849002849e-03,2.832861189801700e-03,2.816901408450704e-03,2.801120448179272e-03 */
+/*             ,2.785515320334262e-03,2.770083102493075e-03,2.754820936639119e-03,2.739726027397260e-03 */
+/*             ,2.724795640326975e-03,2.710027100271003e-03,2.695417789757413e-03,2.680965147453083e-03 */
+/*             ,2.666666666666667e-03,2.652519893899204e-03,2.638522427440633e-03,2.624671916010499e-03 */
+/*             ,2.610966057441253e-03,2.597402597402597e-03,2.583979328165375e-03,2.570694087403599e-03 */
+/*             ,2.557544757033248e-03,2.544529262086514e-03,2.531645569620253e-03,2.518891687657431e-03 */
+/*             ,2.506265664160401e-03,2.493765586034913e-03}; */
 
 inline static double legortho(size_t n){
     (void) n;
@@ -952,31 +952,6 @@ double deriv_legen(double x, size_t order){
 }
 
 /********************************************************//**
-*   Evaluate the derivative of orthogonal polynomials
-*   up to a certain order
-*
-*   \param[in] ptype - polynomial type
-*   \param[in] order - order of the polynomial
-*   \param[in] x     - location at which to evaluate
-*
-*   \return out - orthonormal polynomial expansion 
-*************************************************************/
-double * orth_poly_deriv_upto(enum poly_type ptype, size_t order, double x)
-{
-    assert (1 == 0);
-    double * out = NULL;
-    if (ptype == LEGENDRE){
-        out = deriv_legen_upto(x,order);
-    }
-    else {
-        fprintf(stderr,"Have not implemented orth_poly_deriv for %d\n",ptype);
-        exit(1);
-    }
-    return out;
-
-}
-
-/********************************************************//**
 *   Evaluate the derivative of an orthogonal polynomial
 *
 *   \param[in] ptype - polynomial type
@@ -1360,34 +1335,12 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
-
     struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts, 3);
 
-    if (opts->ptype == LEGENDRE){
-        double m = (p->p->upper - p->p->lower) / 
-                    (p->upper_bound - p->lower_bound);
-        double off = p->p->upper - m * p->upper_bound;
-        p->coeff[2] = 2.0*a/3.0/m/m;
-        p->coeff[1] = (-2.0 * a * offset - (3.0 *m * off * p->coeff[2]))/m;
-        p->coeff[0] = (a*offset*offset - p->coeff[2]/2.0*(3*off*off-1.0) - p->coeff[1] * off);
-    }
-    else if(opts->ptype == HERMITE){
-        double m = p->space_transform->lin_slope;
-        double off = p->space_transform->lin_offset;
-        p->coeff[2] = a / m / m;
-        p->coeff[1] = -2.0 * (a * offset + p->coeff[2] * m*off)/m;
-        p->coeff[0] = a * offset * offset - p->coeff[2] * (off * off - 1) - p->coeff[1] * off;
-
-        /* p->coeff[0]= a*offset*offset+a; */
-        /* p->coeff[1] = -2.0*a*offset; */
-
-    }
-    else{
-        struct quad_func qf;
-        qf.scale = a;
-        qf.offset = offset;
-        orth_poly_expansion_approx(eval_quad_func, &qf, p);
-    }
+    struct quad_func qf;
+    qf.scale = a;
+    qf.offset = offset;
+    orth_poly_expansion_approx(eval_quad_func, &qf, p);
 
     return p;
 }
@@ -1413,7 +1366,7 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
     double m = space_mapping_map_inverse_deriv(p->space_transform,0);
     switch (opts->ptype){
     case LEGENDRE:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m); 
         break;
     case HERMITE:
         p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
@@ -1445,17 +1398,50 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 *************************************************************/
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
-    assert (1 == 0);
-    struct OrthPolyExpansion * p = args;
-    assert (p->p->ptype != HERMITE);
 
-    double xnorm = space_mapping_map(p->space_transform,x);
-    double * derivvals = orth_poly_deriv_upto(p->p->ptype,p->num_poly-1,xnorm);
+    struct OrthPolyExpansion * poly = args;
+
+    double x_normalized = space_mapping_map(poly->space_transform,x);
+
+    //values
+    double p[2];
+    double pnew;
+
+    //gradients
+    double pg[2];
+    double pgnew;
+        
+    size_t iter = 0;
     double out = 0.0;
-    for (size_t ii = 0; ii < p->num_poly; ii++){
-        out += p->coeff[ii] * derivvals[ii] * space_mapping_map_deriv(p->space_transform,x);
+    p[0] = poly->p->const_term;
+    pg[0] = 0.0;
+    out += pg[0] * poly->coeff[iter];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = poly->p->lin_const + poly->p->lin_coeff * x_normalized;
+        pg[1] = poly->p->lin_coeff;
+        out += pg[1] * poly->coeff[iter];
+        iter++;
     }
-    free(derivvals); derivvals = NULL;
+
+    double a,b,c;
+    for (iter = 2; iter < poly->num_poly; iter++){
+        a = poly->p->an(iter);
+        b = poly->p->bn(iter);
+        c = poly->p->cn(iter);
+        pnew = eval_orth_poly_wp(poly->p, p[0], p[1], iter, x_normalized);
+        
+        pgnew = (a*x_normalized + b) * pg[1] + a * p[1] + c*pg[0];
+        out += poly->coeff[iter] * pgnew;
+        
+        p[0] = p[1];
+        p[1] = pnew;
+
+        pg[0] = pg[1];
+        pg[1] = pgnew;
+    }
+
+    out *= space_mapping_map_deriv(poly->space_transform,x);
     return out;
 }
 
@@ -1473,42 +1459,21 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
-    assert (1 == 0);
-    /* assert (p->p->ptype != HERMITE); */
+    if (p == NULL) return NULL;
+    
     struct OrthPolyExpansion * out = NULL;
-    if ( p == NULL ){
-        return out;
+
+    out = orth_poly_expansion_copy(p);
+    /* out->num_poly = p->num_poly-1; */
+    for (size_t ii = 0; ii < out->nalloc; ii++){
+        out->coeff[ii] = 0.0;
     }
-    if  (p->num_poly == 1){
-        out = orth_poly_expansion_init(p->p->ptype,1, 
-                                       p->lower_bound, p->upper_bound);
+    
+    if  (p->num_poly == 1){        
         out->coeff[0] = 0.0;
     }
     else{
-        switch (p->p->ptype) {
-            case LEGENDRE:
-                out = orth_poly_expansion_init(p->p->ptype,p->num_poly-1, 
-                                               p->lower_bound, p->upper_bound);
-
-                double dtransform_dx = space_mapping_map_deriv(p->space_transform,0.0);
-                for (size_t ii = 0; ii < p->num_poly-1; ii++){ // loop over coefficients
-                    for (size_t jj = ii+1; jj < p->num_poly; jj+=2){
-                        out->coeff[ii] += p->coeff[jj];
-                    }
-                    out->coeff[ii] *= (double) ( 2 * (ii) + 1) * dtransform_dx;
-                    
-                }
-            //orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);
-                break;
-            case HERMITE:
-                fprintf(stderr,"Derivative of hermite polynomials not yet implemented\n");
-                exit(1);
-            case CHEBYSHEV:
-                fprintf(stderr,"Derivative of chebyshev polynomials not yet implemented\n");
-                exit(1);
-            case STANDARD:
-                break;
-        }
+        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);
     }
     return out;
 }
@@ -1734,43 +1699,6 @@ orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion * p)
 }
 
 /********************************************************//**
-*   Evaluate a legendre polynomial expansion 
-*
-*   \param[in] poly - polynomial expansion
-*   \param[in] x    - location at which to evaluate
-*
-*   \return out - polynomial value
-*************************************************************/
-double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
-{
-    double out = 0.0;
-    double p [2];
-    double pnew;
-    
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    
-    size_t iter = 0;
-    p[0] = 1.0;
-    out += p[0] * poly->coeff[iter];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        out += p[1] * poly->coeff[iter];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        
-        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
-        pnew /= (double) iter;
-        out += poly->coeff[iter] * pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    return out;
-}
-
-
-/********************************************************//**
 *   Evaluate each orthonormal polynomial expansion that is in an 
 *   array of generic functions 
 *
@@ -1780,21 +1708,34 @@ double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, doubl
 *   \param[in,out] out     - evaluations
 *
 *   \return 0 - successful
-*           1 - not all legendre polynomials
 *
 *   \note
 *   Assumes all functions have the same bounds
 *************************************************************/
-int legendre_poly_expansion_arr_eval(size_t n,
-                                     struct OrthPolyExpansion ** parr, 
-                                     double x, double * out)
+int orth_poly_expansion_arr_eval(size_t n,
+                                 struct OrthPolyExpansion ** parr, 
+                                 double x, double * out)
 {
-    
+    int all_same = 1;
+    enum poly_type ptype = parr[0]->p->ptype;
+    for (size_t ii = 1; ii < n; ii++){
+        if (parr[ii]->p->ptype != ptype){
+            all_same = 0;
+            break;
+        }
+    }
+
+    if ((all_same == 0) || (ptype == CHEBYSHEV)){
+        for (size_t ii = 0; ii < n; ii++){
+            out[ii] = orth_poly_expansion_eval(parr[ii],x);
+        }
+        return 0;
+    }
+
+
+    // all the polynomials are of the same type
     size_t maxpoly = 0;
     for (size_t ii = 0; ii < n; ii++){
-        if (parr[ii]->p->ptype != LEGENDRE){
-            return 1;
-        }
         if (parr[ii]->num_poly > maxpoly){
             maxpoly = parr[ii]->num_poly;
         }
@@ -1806,13 +1747,13 @@ int legendre_poly_expansion_arr_eval(size_t n,
     // double out = 0.0;
     double p[2];
     double pnew;
-    p[0] = 1.0;
+    p[0] = parr[0]->p->const_term;
     size_t iter = 0;
     for (size_t ii = 0; ii < n; ii++){
         out[ii] += p[0] * parr[ii]->coeff[iter];
     }
     iter++;
-    p[1] = x_norm;
+    p[1] = parr[0]->p->lin_const + parr[0]->p->lin_coeff * x_norm;
     for (size_t ii = 0; ii < n; ii++){
         if (parr[ii]->num_poly > iter){
             out[ii] += p[1] * parr[ii]->coeff[iter];
@@ -1820,8 +1761,7 @@ int legendre_poly_expansion_arr_eval(size_t n,
     }
     iter++;
     for (iter = 2; iter < maxpoly; iter++){
-        pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
-        pnew /= (double) iter;
+        pnew = eval_orth_poly_wp(parr[0]->p, p[0], p[1], iter, x_norm);
         for (size_t ii = 0; ii < n; ii++){
             if (parr[ii]->num_poly > iter){
                 out[ii] += parr[ii]->coeff[iter] * pnew;
@@ -1847,27 +1787,16 @@ int legendre_poly_expansion_arr_eval(size_t n,
 *   \param[in]     incy       - increment between evaluations of array (at least n)
 *
 *   \return 0 - successful
-*           1 - not all legendre polynomials
 *
 *   \note
 *   Assumes all functions have the same bounds
 *************************************************************/
-int legendre_poly_expansion_arr_evalN(size_t n,
-                                      struct OrthPolyExpansion ** parr,
-                                      size_t N,
-                                      const double * x, size_t incx,
-                                      double * y, size_t incy)
+int orth_poly_expansion_arr_evalN(size_t n,
+                                  struct OrthPolyExpansion ** parr,
+                                  size_t N,
+                                  const double * x, size_t incx,
+                                  double * y, size_t incy)
 {
-    
-    size_t maxpoly = 0;
-    for (size_t ii = 0; ii < n; ii++){
-        if (parr[ii]->p->ptype != LEGENDRE){
-            return 1;
-        }
-        if (parr[ii]->num_poly > maxpoly){
-            maxpoly = parr[ii]->num_poly;
-        }
-    }
 
     for (size_t jj = 0; jj < N; jj++){
         for (size_t ii = 0; ii < n; ii++){
@@ -1875,35 +1804,10 @@ int legendre_poly_expansion_arr_evalN(size_t n,
         }
     }
 
+    int res;
     for (size_t jj = 0; jj < N; jj++){
-        double x_norm = space_mapping_map(parr[0]->space_transform,x[jj*incx]); 
-        double p[2];
-        double pnew;
-        p[0] = 1.0;
-        size_t iter = 0;
-        size_t incyy = jj * incy;
-        for (size_t ii = 0; ii < n; ii++){
-            y[ii + incyy] += p[0] * parr[ii]->coeff[iter];
-        }
-        iter++;
-        p[1] = x_norm;
-        for (size_t ii = 0; ii < n; ii++){
-            if (parr[ii]->num_poly > iter){
-                y[ii + incyy] += p[1] * parr[ii]->coeff[iter];
-            }
-        }
-        iter++;
-        for (iter = 2; iter < maxpoly; iter++){
-            pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
-            pnew /= (double) iter;
-            for (size_t ii = 0; ii < n; ii++){
-                if (parr[ii]->num_poly > iter){
-                    y[ii + incyy] += parr[ii]->coeff[iter] * pnew;
-                }
-            }
-            p[0] = p[1];
-            p[1] = pnew;
-        }
+        res = orth_poly_expansion_arr_eval(n, parr, 
+                                           x[jj*incx], y + jj*incy);
     }
 
     for (size_t jj = 0; jj < N; jj++){
@@ -1924,49 +1828,6 @@ int legendre_poly_expansion_arr_evalN(size_t n,
     
     return 0;
 }
-
-
-/********************************************************//**
-*   Gradients with respect to parameters of an orthonormal polynomial
-*   expansion
-*
-*   \param[in]     poly - polynomial expansion
-*   \param[in]     x    - location at which to evaluate
-*   \param[in,out] grad - gradients
-*   \param[in]     inc  - increment of gradient
-*
-*   \return 0=success
-*************************************************************/
-int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
-                                            double * grad, size_t inc)
-{
-    double p [2];
-    double pnew;
-       
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    
-    size_t iter = 0;
-    
-    p[0] = 1.0;
-    grad[0*inc] = p[0];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        grad[iter*inc] = p[1];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
-        pnew /= (double) iter;
-        grad[iter*inc] = pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    /* printf("iter=%zu grad here = ",iter); dprint(iter+1,grad); */
-    return 0;
-}
-
-
 
 /********************************************************//**
 *   Evaluate a Chebyshev polynomial expansion using clenshaw algorithm
@@ -1993,45 +1854,6 @@ double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion * poly, doub
     double out = poly->coeff[0] + x_norm * p[0] - p[1];
     return out;
 }
-
-/********************************************************//**
-*   Gradients with respect to parameters of an orthonormal polynomial
-*   expansion
-*
-*   \param[in]     poly - polynomial expansion
-*   \param[in]     x    - location at which to evaluate
-*   \param[in,out] grad - gradients
-*   \param[in]     inc  - increment of gradient
-*
-*   \return 0=success
-*************************************************************/
-int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
-                                             double * grad, size_t inc)
-{
-
-    double p [2];
-    double pnew;
-
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    size_t iter = 0;
-    
-    p[0] = 1.0;
-    grad[0*inc] = p[0];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        grad[iter*inc] = p[1];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        pnew = 2.0 * x_norm * p[1] - p[0];
-        grad[iter*inc] = pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    return 0;
-}
-
 
 /********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
@@ -3942,6 +3764,9 @@ static int dblcompare(const void * a, const void * b)
 *       Algorithm is based on eigenvalues of non-standard companion matrix from
 *       Roots of Polynomials Expressed in terms of orthogonal polynomials
 *       David Day and Louis Romero 2005
+*
+*       Multiplying by a factor of sqrt(2*N+1) because using orthonormal,
+*       rather than orthogonal polynomials
 *************************************************************/
 double * 
 legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
@@ -3982,19 +3807,32 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         }
     }
     else{
+        /* printf("I am here\n"); */
         double * nscompanion = calloc_double(N*N); // nonstandard companion
         size_t ii;
         double hnn1 = - (double) (N) / (2.0 * (double) (N) - 1.0);
+        /* double hnn1 = - 1.0 / p->p->an(N); */
         nscompanion[1] = 1.0;
-        nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / p->coeff[N];
+        /* nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / p->coeff[N]; */
+        nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / (p->coeff[N] * sqrt(2*N+1));
         for (ii = 1; ii < N-1; ii++){
+            assert (fabs(p->p->bn(ii)) < 1e-14);
             double in = (double) ii;
             nscompanion[ii*N+ii-1] = in / ( 2.0 * in + 1.0);
             nscompanion[ii*N+ii+1] = (in + 1.0) / ( 2.0 * in + 1.0);
-            nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] / p->coeff[N];
+
+            /* nscompanion[ii*N+ii-1] = -p->p->cn(ii+1) / p->p->an(ii+1); */
+            /* nscompanion[ii*N+ii+1] = 1.0/p->p->an(ii+1);  */
+            
+            /* nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] / p->coeff[N]; */
+            nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] * sqrt(2*ii+1)/ p->coeff[N] / sqrt(2*N+1);
         }
         nscompanion[N*N-2] += (double) (N-1) / (2.0 * (double) (N-1) + 1.0);
-        nscompanion[N*N-1] += hnn1 * p->coeff[N-1] / p->coeff[N];
+        /* nscompanion[N*N-2] += -p->p->cn(N)/p->p->an(N); */
+
+        
+        /* nscompanion[N*N-1] += hnn1 * p->coeff[N-1] / p->coeff[N]; */
+        nscompanion[N*N-1] += hnn1 * p->coeff[N-1] * sqrt(2*(N-1)+1)/ p->coeff[N] / sqrt(2*N+1);
         //printf("good up to here!\n");
         //dprint2d_col(N,N,nscompanion);
 
@@ -4049,7 +3887,7 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
       //  printf("eigenvalues \n");
         size_t * keep = calloc_size_t(N);
         for (ii = 0; ii < N; ii++){
-            //printf("(%3.15G, %3.15G)\n",real[ii],img[ii]);
+            /* printf("(%3.15G, %3.15G)\n",real[ii],img[ii]); */
             if ((fabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){
                 if (real[ii] < -1.0){
                     real[ii] = -1.0;

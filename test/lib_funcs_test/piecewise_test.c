@@ -527,7 +527,7 @@ void Test_pw_daxpby(CuTest * tc){
 
     }
     err = sqrt(err/errden);
-    CuAssertDblEquals(tc, 0.0, err, 1e-12);
+    CuAssertDblEquals(tc, 0.0, err, 1e-11);
 
     free(xtest); xtest = NULL;
     POLY_FREE(a); a = NULL;

@@ -80,7 +80,7 @@ int main()
 
     fprintf(fp,"%s\n\n", "#include <string.h>");
     fprintf(fp,"%s\n", "static const double lpolycoeffs[8000000] = {");
-    for (size_t ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
+    for (ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
         fprintf(fp,"%3.15G,\n",coeffs[ii]);
     }
     fprintf(fp,"};\n");
