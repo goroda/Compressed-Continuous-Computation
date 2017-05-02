@@ -3490,6 +3490,21 @@ int qmarray_is_kristoffel_active(const struct Qmarray * qma)
     return active;
 }
 
+void qmarray_activate_kristoffel(struct Qmarray * qma)
+{
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_activate_kristoffel(qma->funcs[ii]);
+    }
+}
+
+void qmarray_deactivate_kristoffel(struct Qmarray * qma)
+{
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_deactivate_kristoffel(qma->funcs[ii]);
+    }
+}
+
+
 /***********************************************************//**
     Get the kristoffel normalization factor                                                            
 

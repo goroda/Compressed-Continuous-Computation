@@ -57,6 +57,7 @@ void ft_regress_set_roundtol(struct FTRegress *, double);
 void ft_regress_set_kfold(struct FTRegress *, size_t);
 void ft_regress_set_finalize(struct FTRegress *, int);
 void ft_regress_set_opt_restrict(struct FTRegress *, int);
+void ft_regress_set_kristoffel(struct FTRegress *, int);
 
 void ft_regress_free(struct FTRegress *);
 void ft_regress_reset_param(struct FTRegress*, struct MultiApproxOpts *, size_t *);
@@ -134,6 +135,7 @@ void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
 void regress_opts_set_als_conv_tol(struct RegressOpts *, double);
 void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
+void regress_opts_set_kristoffel(struct RegressOpts *, int);
 void regress_opts_set_regularization_weight(struct RegressOpts *, double);
 double regress_opts_get_regularization_weight(const struct RegressOpts *);
 void regress_opts_initialize_memory(struct RegressOpts *, size_t *,

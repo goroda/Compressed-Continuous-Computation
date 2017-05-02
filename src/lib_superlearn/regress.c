@@ -253,6 +253,8 @@ enum FTPARAM_ST ft_param_extract_structure(const struct FTparam * ftp)
  * convergence tolerance for als
  * \var RegressOpts::restrict_rank_opt
  * Restrict optimization of ranks to those >= values here
+ * \var RegressOpts::kristoffel_active
+ * whether or not to use kristoffel weighting (only for orthonormal polynomials)
  */
 struct RegressOpts
 {
@@ -267,6 +269,8 @@ struct RegressOpts
     double als_conv_tol;
 
     size_t * restrict_rank_opt;
+
+    int kristoffel_active;
 
 };
 
@@ -305,6 +309,7 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     ropts->dim = dim;
     ropts->als_conv_tol = 1e-5;
     ropts->restrict_rank_opt = calloc_size_t(dim);
+    ropts->kristoffel_active = 0;
     return ropts;
 }
 
@@ -431,6 +436,19 @@ void regress_opts_set_restrict_rank(struct RegressOpts * opts, size_t ind, size_
 {
     assert (opts != NULL);
     opts->restrict_rank_opt[ind] = rank;
+}
+
+
+/***********************************************************//**
+    Set wether or not kristoffel weighting is active
+    
+    \param[in,out] opts   - regression options
+    \param[in]     toggle - 1 active, 0 not active
+***************************************************************/
+void regress_opts_set_kristoffel(struct RegressOpts * opts, int toggle)
+{
+    assert (opts != NULL);
+    opts->kristoffel_active = toggle;
 }
 
 
@@ -1960,6 +1978,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     \param[in]     y         - training labels
 
     \returns function train
+
 ***************************************************************/
 struct FunctionTrain *
 c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3Opt * optimizer,
@@ -1968,8 +1987,9 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
     // check if special structure exists / initialized
 
     double * y = (double *) yin;
-    int use_kristoffel_precond = function_train_is_kristoffel_active(ftp->ft);
+    int use_kristoffel_precond = regopts->kristoffel_active;
     if (use_kristoffel_precond){
+        function_train_activate_kristoffel(ftp->ft);
         double normalization = 0.0;
         double * y = calloc_double(N);
         for (size_t ii = 0; ii < N; ii++){
@@ -1993,6 +2013,8 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
     }
 
     if (use_kristoffel_precond == 1){
+        function_train_deactivate_kristoffel(ft);
+        function_train_deactivate_kristoffel(ftp->ft);
         free(y); y = NULL;
     }
     
@@ -2169,6 +2191,19 @@ void ft_regress_set_opt_restrict(struct FTRegress * ftr, int res)
     assert (ftr != NULL);
     ftr->opt_restricted = res;
 }
+
+/***********************************************************//**
+    Set wether or not kristoffel weighting is active
+    
+    \param[in,out] opts   - regression options
+    \param[in]     toggle - 1 active, 0 not active
+***************************************************************/
+void ft_regress_set_kristoffel(struct FTRegress * opts, int toggle)
+{
+    assert (opts != NULL);
+    regress_opts_set_kristoffel(opts->regopts,toggle);
+}
+
 
 /***********************************************************//**
     Free memory allocated to FT regress structure

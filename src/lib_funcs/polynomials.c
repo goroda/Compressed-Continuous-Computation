@@ -1410,10 +1410,8 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
 
-    struct OrthPolyExpansion * p = args;
-    assert (p->kristoffel_eval == 0);
-
     struct OrthPolyExpansion * poly = args;
+    assert (poly->kristoffel_eval == 0);
 
     double x_normalized = space_mapping_map(poly->space_transform,x);
 
@@ -1796,7 +1794,6 @@ int orth_poly_expansion_arr_eval(size_t n,
     double p[2];
     double pnew;
     p[0] = parr[0]->p->const_term;
-    double den = p[0]*p[0];
     size_t iter = 0;
     for (size_t ii = 0; ii < n; ii++){
         out[ii] += p[0] * parr[ii]->coeff[iter];
@@ -1820,12 +1817,6 @@ int orth_poly_expansion_arr_eval(size_t n,
         p[1] = pnew;
     }
 
-    if (poly->kristoffel_eval == 0){
-        return out;
-    }
-    else{
-        return out / den;
-    }
     return 0;
 }
 
@@ -2075,7 +2066,7 @@ int orth_poly_expansion_param_grad_eval(
             p[1] = poly->p->lin_const + poly->p->lin_coeff * x_norm;
             grad[ii*nparam + iter] = p[1]; 
             iter++;
-            den += p[1]*p1[];
+            den += p[1]*p[1];
         }  
         for (iter = 2; iter < poly->num_poly; iter++){
             pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];

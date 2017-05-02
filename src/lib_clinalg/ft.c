@@ -4630,6 +4630,20 @@ int function_train_is_kristoffel_active(const struct FunctionTrain * ft)
     return active;
 }
 
+void function_train_activate_kristoffel(struct FunctionTrain *ft)
+{
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        qmarray_activate_kristoffel(ft->cores[ii]);
+    }
+}
+
+void function_train_deactivate_kristoffel(struct FunctionTrain *ft)
+{
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        qmarray_deactivate_kristoffel(ft->cores[ii]);
+    }
+}
+
 /***********************************************************//**
     Get the kristoffel normalization factor                                                            
 

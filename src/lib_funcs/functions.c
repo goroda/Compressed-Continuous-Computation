@@ -3215,6 +3215,27 @@ int generic_function_is_kristoffel_active(const struct GenericFunction * gf)
     }
 }
 
+void generic_function_activate_kristoffel(struct GenericFunction * gf)
+{
+    if (gf->fc != POLYNOMIAL){
+        fprintf(stderr,"Cannot activate kristoffel for non polynomial basis\n");
+        exit(1);
+    }
+    else{
+        struct OrthPolyExpansion * ope = gf->f;
+        ope->kristoffel_eval = 1;
+    }
+}
+
+void generic_function_deactivate_kristoffel(struct GenericFunction * gf)
+{
+    if (gf->fc == POLYNOMIAL){
+        struct OrthPolyExpansion * ope = gf->f;
+        ope->kristoffel_eval = 0;
+    }
+}
+
+
 /***********************************************************//**
     Get the kristoffel normalization factor                                                            
 

@@ -209,6 +209,8 @@ double qmarray_param_grad_sqnorm(struct Qmarray *, double, double *);
 struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 
 int qmarray_is_kristoffel_active(const struct Qmarray *);
+void qmarray_activate_kristoffel(struct Qmarray *);
+void qmarray_deactivate_kristoffel(struct Qmarray *);
 double qmarray_get_kristoffel_weight(const struct Qmarray *,double);
 
 int qmarray_qr(struct Qmarray *, struct Qmarray **, double **, struct OneApproxOpts *);

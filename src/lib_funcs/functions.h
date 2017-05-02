@@ -300,6 +300,8 @@ generic_function_array_orth1d_linelm_columns(struct GenericFunction **,
 
 
 int generic_function_is_kristoffel_active(const struct GenericFunction *);
+void generic_function_activate_kristoffel(struct GenericFunction *);
+void generic_function_deactivate_kristoffel(struct GenericFunction *);
 double generic_function_get_kristoffel_weight(const struct GenericFunction *,
                                               double);
 
