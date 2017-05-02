@@ -42,6 +42,11 @@ add_license_split.py
 profiling/regress/*/*.c3
 profiling/regress/bin/*
 
+<<<<<<< HEAD
 wrappers/python/build*
 wrappers/python/c3.py
 wrappers/python/c3_wrap.c
+=======
+
+wrappers/*
+>>>>>>> master

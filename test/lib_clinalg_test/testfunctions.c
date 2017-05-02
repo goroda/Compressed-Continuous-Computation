@@ -117,7 +117,6 @@ int func6(size_t n, const double * x, double * out, void * args)
 }
 
 
-// 2 dimensional function
 int funcnda(size_t n, const double * x, double * out, void * args)
 {
     (void)(args);

@@ -50,7 +50,7 @@
 struct FTMemSpace;
 
 /** \struct FunctionTrain
- * \brief Functrain train
+ * \brief Function-train
  * \var FunctionTrain::dim
  * dimension of function
  * \var FunctionTrain::ranks
@@ -137,6 +137,10 @@ void function_train_param_grad_eval(struct FunctionTrain *, size_t,
                                     double *, double *,
                                     double *,
                                     size_t, double *);
+void function_train_param_grad_eval_simple(struct FunctionTrain *, size_t,
+                                           const double *,
+                                           double *, double *);
+
 void function_train_linparam_grad_eval(struct FunctionTrain *, size_t,
                                        const double *,
                                        struct RunningCoreTotal *,
@@ -221,8 +225,13 @@ double
 function_train_integrate(const struct FunctionTrain *);
 double
 function_train_integrate_weighted(const struct FunctionTrain *);
+struct FunctionTrain *
+function_train_integrate_weighted_subset(
+    const struct FunctionTrain * ft, size_t,size_t *);
 double function_train_inner(const struct FunctionTrain *, 
                             const struct FunctionTrain * );
+double function_train_inner_weighted(const struct FunctionTrain *, 
+                                     const struct FunctionTrain *);
 double function_train_norm2(const struct FunctionTrain *);
 struct FunctionTrain * 
 function_train_orthor(struct FunctionTrain *, 

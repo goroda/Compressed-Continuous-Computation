@@ -44,7 +44,7 @@
 #ifndef C3_FT_REGRESSION
 #define C3_FT_REGRESSION
 
-#include "../lib_clinalg/ft.h"
+#include "ft.h"
 
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
@@ -116,7 +116,9 @@ void ft_param_free(struct FTparam *);
 size_t ft_param_get_nparams(const struct FTparam *);
 size_t * ft_param_get_nparams_per_core(const struct FTparam *);
 struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
-void ft_param_create_from_lin_ls(struct FTparam *, size_t, const double *, const double *,
+void ft_param_create_constant(struct FTparam *, double, double);
+void ft_param_create_from_lin_ls(struct FTparam *, size_t,
+                                 const double *, const double *,
                                  double);
 void ft_param_update_params(struct FTparam *, const double *);
 void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);

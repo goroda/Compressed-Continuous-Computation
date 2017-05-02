@@ -513,7 +513,6 @@ void Test_function_train_integrate(CuTest * tc)
     function_train_free(ft);
 }
 
-
 void Test_function_train_integrate_weighted(CuTest * tc)
 {
     printf("Testing Function: function_train_integrate_weighted \n");
@@ -568,6 +567,230 @@ void Test_function_train_integrate_weighted(CuTest * tc)
     all_opts_free(NULL,opts4,qmopts4,NULL);
     function_train_free(ft);
 }
+
+void Test_function_train_integrate_weighted_subset(CuTest * tc)
+{
+    printf("Testing Function: function_train_integrate_weighted_subset \n");
+    size_t dim = 4;
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func2,NULL);
+    fwrap_set_func_array(fw,1,func3,NULL);
+    fwrap_set_func_array(fw,2,func4,NULL);
+    fwrap_set_func_array(fw,3,func,NULL);
+
+    double lb1 = 0.0;
+    double lb2 = -1.0;
+    double lb3 = -5.0;
+    double lb4 = -5.0;
+    double ub = 1.0;
+    
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb1);
+    struct OpeOpts * opts2 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts2,lb2);
+    struct OpeOpts * opts3 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts3,lb3);
+    struct OpeOpts * opts4 = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts4,lb4);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct OneApproxOpts * qmopts2 = one_approx_opts_alloc(POLYNOMIAL,opts2);
+    struct OneApproxOpts * qmopts3 = one_approx_opts_alloc(POLYNOMIAL,opts3);
+    struct OneApproxOpts * qmopts4 = one_approx_opts_alloc(POLYNOMIAL,opts4);
+
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_dim(fopts,0,qmopts);
+    multi_approx_opts_set_dim(fopts,1,qmopts2);
+    multi_approx_opts_set_dim(fopts,2,qmopts3);
+    multi_approx_opts_set_dim(fopts,3,qmopts4);
+
+    struct FunctionTrain * ft = function_train_initsum(fopts,fw);
+
+    double oned_integrals[4];
+    oned_integrals[0] = (ub*ub - lb1*lb1)/2.0;
+    oned_integrals[1] = (ub*ub*ub/3.0 - cos(3.14159*ub)/3.14159) -
+        lb2*lb2*lb2/3.0 + cos(3.14159*lb2)/3.14159;
+    oned_integrals[2] = (3.0*ub*ub*ub*ub*ub/5.0 - ub*ub*ub*2/3) -
+        (3.0*lb3*lb3*lb3*lb3*lb3/5.0 - lb3*lb3*lb3*2.0/3.0);
+    oned_integrals[3] = (ub - lb4);
+
+    oned_integrals[0] /= (ub-lb1);
+    oned_integrals[1] /= (ub-lb2);
+    oned_integrals[2] /= (ub-lb3);
+    oned_integrals[3] /= (ub-lb4);
+    
+
+    /* printf("oned_integrals = "); */
+    /* dprint(4,oned_integrals); */
+
+    /* printf("\n\n\n"); */
+    // first check integrating out one variable
+    size_t ndim_contract = 1;
+    size_t on_dim=0;
+    double pt[3];
+    struct FunctionTrain * ft_1;
+    double eval_ft,e1,e2,e3,should_be,rel_error;
+    
+    pt[0] = (ub-lb2)*0.2 + lb2;
+    pt[1] = (ub-lb3)*0.9 + lb3;
+    pt[2] = (ub-lb4)*0.4 * lb4;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,&on_dim);
+    eval_ft  = function_train_eval(ft_1,pt);
+    function_train_free(ft_1); ft_1 = NULL;
+    
+    func3(1,pt,&e1,NULL);
+    func4(1,pt+1,&e2,NULL);
+    func(1,pt+2,&e3,NULL);
+    should_be = e1 + e2 + e3 + oned_integrals[0];
+
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-15);
+
+    /* printf("\n\n\n"); */
+
+    on_dim = 1;
+    pt[0] = (ub-lb1)*0.1 + lb1;
+    pt[1] = (ub-lb3)*0.9 + lb3;
+    pt[2] = (ub-lb4)*0.4 * lb4;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,&on_dim);
+    eval_ft  = function_train_eval(ft_1,pt);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func2(1,pt,&e1,NULL);
+    func4(1,pt+1,&e2,NULL);
+    func(1,pt+2,&e3,NULL);
+    should_be = e1 + e2 + e3 + oned_integrals[on_dim];
+
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+    
+    on_dim = 2;
+    pt[0] = (ub-lb1)*0.1 + lb1;
+    pt[1] = (ub-lb2)*0.9 + lb2;
+    pt[2] = (ub-lb4)*0.4 * lb4;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,&on_dim);
+    eval_ft  = function_train_eval(ft_1,pt);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func2(1,pt,&e1,NULL);
+    func3(1,pt+1,&e2,NULL);
+    func(1,pt+2,&e3,NULL);
+    should_be = e1 + e2 + e3 + oned_integrals[on_dim];
+
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+    
+    on_dim = 3;
+    pt[0] = (ub-lb1)*0.1 + lb1;
+    pt[1] = (ub-lb2)*0.9 + lb2;
+    pt[2] = (ub-lb3)*0.4 + lb3;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,&on_dim);
+    eval_ft  = function_train_eval(ft_1,pt);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func2(1,pt,&e1,NULL);
+    func3(1,pt+1,&e2,NULL);
+    func4(1,pt+2,&e3,NULL);
+    should_be = e1 + e2 + e3 + oned_integrals[on_dim];
+
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+
+
+    // now check all but one
+    ndim_contract = 3;
+    size_t on_dim_mult[3];
+    double pt_one ;
+    on_dim_mult[0] = 0;
+    on_dim_mult[1] = 1;
+    on_dim_mult[2] = 2;
+
+    pt_one = (ub-lb4)*0.4 + lb4;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,on_dim_mult);
+    eval_ft  = function_train_eval(ft_1,&pt_one);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func(1,&pt_one,&e1,NULL);
+    should_be = oned_integrals[0] + oned_integrals[1] + oned_integrals[2] + e1;
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+
+    on_dim_mult[0] = 0;
+    on_dim_mult[1] = 1;
+    on_dim_mult[2] = 3;
+
+    pt_one = (ub-lb3)*0.4 + lb3;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,on_dim_mult);
+    eval_ft  = function_train_eval(ft_1,&pt_one);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func4(1,&pt_one,&e1,NULL);
+    should_be = oned_integrals[0] + oned_integrals[1] + oned_integrals[3] + e1;
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+
+    on_dim_mult[0] = 0;
+    on_dim_mult[1] = 2;
+    on_dim_mult[2] = 3;
+
+    pt_one = (ub-lb2)*0.4 + lb2;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,on_dim_mult);
+    eval_ft  = function_train_eval(ft_1,&pt_one);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func3(1,&pt_one,&e1,NULL);
+    should_be = oned_integrals[0] + oned_integrals[2] + oned_integrals[3] + e1;
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+
+
+    on_dim_mult[0] = 1;
+    on_dim_mult[1] = 2;
+    on_dim_mult[2] = 3;
+
+    pt_one = (ub-lb1)*0.4 + lb1;
+
+    ft_1 = function_train_integrate_weighted_subset(ft,ndim_contract,on_dim_mult);
+    eval_ft  = function_train_eval(ft_1,&pt_one);
+    function_train_free(ft_1); ft_1 = NULL;
+
+    func2(1,&pt_one,&e1,NULL);
+    should_be = oned_integrals[1] + oned_integrals[2] + oned_integrals[3] + e1;
+    /* printf(" Is: %G\n",eval_ft); */
+    /* printf(" Should: %G\n",should_be); */
+    rel_error = pow(eval_ft-should_be,2)/fabs(should_be);
+    CuAssertDblEquals(tc, 0.0 ,rel_error,1e-13);
+
+    all_opts_free(fw,opts,qmopts,fopts);
+    all_opts_free(NULL,opts2,qmopts2,NULL);
+    all_opts_free(NULL,opts3,qmopts3,NULL);
+    all_opts_free(NULL,opts4,qmopts4,NULL);
+    function_train_free(ft);
+}
+
 
 void Test_function_train_inner(CuTest * tc)
 {
@@ -858,7 +1081,7 @@ void Test_ftapprox_cross4(CuTest * tc)
     pw_poly_opts_set_coeffs_check(opts,2);
     pw_poly_opts_set_tol(opts,1e-3);
     pw_poly_opts_set_minsize(opts,1e-2);
-    pw_poly_opts_set_nregions(opts,4);
+    pw_poly_opts_set_nregions(opts,2);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
@@ -1598,6 +1821,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_product);
     SUITE_ADD_TEST(suite, Test_function_train_integrate);
     SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset);
     SUITE_ADD_TEST(suite, Test_function_train_inner);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
@@ -1613,7 +1837,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_sin10dint);
     SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
     SUITE_ADD_TEST(suite, Test_sin100dint);
-    SUITE_ADD_TEST(suite, Test_sin1000dint);
+    /* SUITE_ADD_TEST(suite, Test_sin1000dint); */
     return suite;
 }
 

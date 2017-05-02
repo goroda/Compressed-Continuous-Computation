@@ -145,8 +145,8 @@ struct PiecewisePoly *
 piecewise_poly_finer_grid(const struct PiecewisePoly *, size_t, double *);
 
 //operations using two piecewise polynomials
-void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
-                     struct PiecewisePoly *, struct PiecewisePoly **);
+void piecewise_poly_match(const struct PiecewisePoly *, struct PiecewisePoly **,
+                          const struct PiecewisePoly *, struct PiecewisePoly **);
 struct PiecewisePoly *
 piecewise_poly_prod(const struct PiecewisePoly *,const struct PiecewisePoly *);
 double piecewise_poly_inner(const struct PiecewisePoly *,const struct PiecewisePoly *);

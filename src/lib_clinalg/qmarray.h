@@ -133,13 +133,17 @@ struct Qmarray * qmaqmat(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmatqmat(const struct Qmarray * a, const struct Qmarray * b);
 double * qmatqma_integrate(const struct Qmarray *,const struct Qmarray *);
 double * qmaqmat_integrate(const struct Qmarray *, const struct Qmarray *);
+double * qmatqmat_integrate_weighted(const struct Qmarray *,const struct Qmarray *);
 double * qmatqmat_integrate(const struct Qmarray *,const  struct Qmarray *);
 struct Qmarray * qmarray_kron(const struct Qmarray *, const struct Qmarray *);
 double * qmarray_kron_integrate(const struct Qmarray *, const struct Qmarray *);
+double * qmarray_kron_integrate_weighted(const struct Qmarray *, const struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(const double *, const struct Qmarray *,
                                   const struct Qmarray *);
 double * qmarray_vec_kron_integrate(const double *, const struct Qmarray *,
                                     const struct Qmarray *);
+double * qmarray_vec_kron_integrate_weighted(
+    const double *, const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_mat_kron(size_t, const double *, const struct Qmarray *,
                                   const struct Qmarray *);
 struct Qmarray * qmarray_kron_mat(size_t, const double *, const struct Qmarray *,

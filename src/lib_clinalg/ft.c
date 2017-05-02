@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file ft.c
  * Provides algorithms for function train manipulation
  */
@@ -1425,6 +1422,56 @@ void function_train_param_grad_eval(struct FunctionTrain * ft, size_t n,
             
         }
     }
+}
+
+/***********************************************************//**
+    Evaluate a function train and gradients with respect to
+    FT parameters at a set of inputs
+
+    \param[in]     ft                   - function train
+    \param[in]     n                    - number of evaluations
+    \param[in]     x                    - locations of evaluations
+    \param[in,out] out                  - evaluations
+    \param[in,out] grad                 - gradient at every evaluation 
+                                          (could be NULL to not compute)
+***************************************************************/
+void function_train_param_grad_eval_simple(struct FunctionTrain * ft, size_t n,
+                                           const double * x,
+                                           double * out, double * grad)
+{
+
+    size_t dim  = ft->dim;
+    size_t * nparams_per_core = calloc_size_t(dim);
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t max_param_within_core = 0;
+    size_t maxparam_func;
+    for (size_t ii = 0; ii < dim; ii++){
+        nparams_per_core[ii] = function_train_core_get_nparams(ft,ii,&maxparam_func);
+        if (nparams_per_core[ii] > max_param_within_core){
+            max_param_within_core = nparams_per_core[ii];
+        }
+    }
+    double * core_grad_space = calloc_double(max_param_within_core * maxrank * maxrank * n);
+    double * max_func_param_space = calloc_double(max_param_within_core);
+    
+    struct RunningCoreTotal *  evals_lr = running_core_total_alloc(maxrank * maxrank);
+    struct RunningCoreTotal *  evals_rl = running_core_total_alloc(maxrank * maxrank);
+    struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,maxrank * maxrank);
+
+
+    function_train_param_grad_eval(ft,n,x,evals_lr,evals_rl,grads,nparams_per_core,
+                                   out,grad,
+                                   core_grad_space,maxrank * maxrank * max_param_within_core,
+                                   max_func_param_space);
+                                   
+
+    free(nparams_per_core);                 nparams_per_core     = NULL;
+    running_core_total_free(evals_lr);      evals_lr             = NULL;
+    running_core_total_free(evals_rl);      evals_rl             = NULL;
+    running_core_total_arr_free(dim,grads); grads                = NULL;
+    free(core_grad_space);                  core_grad_space      = NULL;
+    free(max_func_param_space);             max_func_param_space = NULL;
+
 }
 
 /***********************************************************//**
@@ -3200,6 +3247,116 @@ function_train_integrate_weighted(const struct FunctionTrain * ft)
 
 
 /********************************************************//**
+    Contract the function along certain dimensions with respect
+    to an appropriate reight
+
+    \param[in] ft            - Function train 1
+    \param[in] ndim_contract - number of dimensions to contract
+    \param[in] dims_contract - dimensions over which to contract (increasing order)
+    
+    \return Evaluates \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
+    
+    \note w(x) depends on underlying parameterization
+    for example, it is 1/2 for legendre (and default for others),
+    gauss for hermite,etc
+***********************************************************/
+struct FunctionTrain *
+function_train_integrate_weighted_subset(
+    const struct FunctionTrain * ft,
+    size_t ndim_contract,
+    size_t * dims_contract)
+{
+
+    
+    size_t newdim = ft->dim - ndim_contract;
+    assert (newdim > 0);
+    /* printf("newdim = %zu\n",newdim); */
+    struct FunctionTrain * newft = function_train_alloc(newdim);
+    newft->ranks[0] = 1;
+    newft->ranks[newdim] = 1;
+
+    double * left_mult = NULL;
+    size_t ncols = 0;
+
+    size_t on_contract = 0;
+    size_t ii = 0;
+    
+    while ((dims_contract[on_contract] == ii ) && (on_contract < ndim_contract)){
+        double * mat = qmarray_integrate_weighted(ft->cores[ii]);
+
+        if (left_mult == NULL){
+            ncols = ft->cores[ii]->ncols;
+            left_mult = calloc_double(ncols);
+            memmove(left_mult,mat,ncols * sizeof(double));
+        }
+        else{
+            double * new_left_mult = calloc_double(ft->cores[ii]->ncols);
+            c3linalg_multiple_vec_mat(1,ft->cores[ii]->nrows,ft->cores[ii]->ncols,
+                                      left_mult,ncols,
+                                      mat,ft->cores[ii]->nrows*ft->cores[ii]->ncols,
+                                      new_left_mult,ft->cores[ii]->ncols);
+            free(left_mult); left_mult = NULL;
+
+            ncols = ft->cores[ii]->ncols;
+            left_mult = calloc_double(ncols);
+            memmove(left_mult,new_left_mult,ncols*sizeof(double));
+            free(new_left_mult); new_left_mult = NULL;
+        }
+
+        free(mat); mat = NULL;
+        ii++;
+        on_contract++;
+
+        if (on_contract == ndim_contract){
+            break;
+        }
+    }
+
+    size_t on_new_core = 0;
+    int done = 0;
+    if (on_contract == ndim_contract){
+        on_contract--;
+        done = 1;
+    }
+    for (; ii < ft->dim; ii++){
+        if ((dims_contract[on_contract] == ii) && (done == 0)){
+            double * mat = qmarray_integrate_weighted(ft->cores[ii]);
+
+            struct Qmarray * newcore = qmam(newft->cores[on_new_core-1],mat,ft->cores[ii]->ncols);
+            qmarray_free(newft->cores[on_new_core-1]);
+            newft->cores[on_new_core-1] = qmarray_copy(newcore);
+
+            on_contract++;
+            if (on_contract == ndim_contract){
+                done = 1;
+                on_contract--;
+            }
+            free(mat); mat = NULL;
+            qmarray_free(newcore); newcore = NULL;
+        }
+        else{
+            if (left_mult != NULL){
+                newft->cores[on_new_core] = mqma(left_mult,ft->cores[ii],1);
+                free(left_mult); left_mult = NULL;
+            }
+            else{
+                newft->cores[on_new_core] = qmarray_copy(ft->cores[ii]);
+            }
+            on_new_core++;
+        }
+    }
+
+    
+    for (ii = 0; ii < newdim; ii++){
+        newft->ranks[ii]   = newft->cores[ii]->nrows;
+        newft->ranks[ii+1] = newft->cores[ii]->ncols;
+    }
+    
+    return newft;
+}
+
+
+/********************************************************//**
     Inner product between two functions in FT form
 
     \param[in] a - Function train 1
@@ -3219,6 +3376,44 @@ double function_train_inner(const struct FunctionTrain * a,
     //size_t ii;
     for (ii = 1; ii < a->dim; ii++){
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
+        size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        
+        free(temp2); temp2 = NULL;
+    }
+    
+    out = temp[0];
+    free(temp); temp=NULL;
+
+    return out;
+}
+
+/********************************************************//**
+    Inner product between two functions in FT form with weighted
+    space w(x)
+
+    \param[in] a - Function train 1
+    \param[in] b - Function train 2
+
+    \return Inner product \f$ \int a(x)b(x) w(x) dx \f$
+
+    \note 
+    In order for this function to make sense a(x) and b(x)
+    shoud have the same underlying basis
+***********************************************************/
+double function_train_inner_weighted(const struct FunctionTrain * a, 
+                                     const struct FunctionTrain * b)
+{
+    double out = 0.123456789;
+    size_t ii;
+    double * temp = qmarray_kron_integrate_weighted(b->cores[0],a->cores[0]);
+    double * temp2 = NULL;
+
+    //size_t ii;
+    for (ii = 1; ii < a->dim; ii++){
+        temp2 = qmarray_vec_kron_integrate_weighted(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
         temp = calloc_double(stemp);

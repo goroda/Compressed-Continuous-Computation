@@ -22,7 +22,6 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
@@ -37,14 +36,17 @@ else ()
     include_directories(/usr/include)
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
-    #find_package(SWIG REQUIRED)
-    #include(${SWIG_USE_FILE})
 endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
-#set(static_libs 1)
-set(static_libs 0)
+option(BUILD_STATIC_LIB "Build a static library" OFF)
+if (BUILD_STATIC_LIB)
+  set(static_libs 1)  
+else ()
+  set(static_libs 0)
+  set(compiler_flags "${compiler_flags} -fPIC")
+endif()
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
@@ -52,6 +54,7 @@ set(CMAKE_C_FLAGS "${compiler_flags}")
 
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
+include_directories(src)
 include_directories(src/lib_stringmanip)
 include_directories(src/lib_array)
 include_directories(src/lib_linalg)
@@ -77,10 +80,10 @@ include_directories(include)
 
 # set(include_dest "include/c3")
 # set(main_lib_dest "lib/c3")
-set (include_dest "~/Software/c3_installed/include/c3")
-set (main_lib_dest "~/Software/c3_installed/lib/c3")
-set (bin_dest "~/Software/c3_installed/bin")
-set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+# set (include_dest "~/Software/c3_installed/include/c3")
+# set (main_lib_dest "~/Software/c3_installed/lib/c3")
+# set (bin_dest "~/Software/c3_installed/bin")
+# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 # set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
 
 
@@ -92,6 +95,6 @@ add_subdirectory(profiling)
 add_subdirectory(utilities)
 
 
-install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
-install(EXPORT c3 DESTINATION ${lib_dest})
+# install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
+# install(EXPORT c3 DESTINATION ${lib_dest})
 

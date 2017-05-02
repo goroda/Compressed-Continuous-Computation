@@ -10,6 +10,7 @@
 #include "../src/lib_quadrature/lib_quadrature.h"
 #include "../src/lib_stringmanip/stringmanip.h"
 #include "../src/lib_interface/c3_interface.h"
+#include "../src/lib_superlearn/regress.h"
 
 #endif
 

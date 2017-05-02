@@ -46,7 +46,7 @@
 #define FUNCTIONS_H
 
 /* #include "../lib_array/array.h" */
-#include "../lib_array/array.h"
+#include "array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
 #include "hpoly.h"
@@ -55,7 +55,7 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
-#include "../lib_optimization/lib_optimization.h"
+#include "lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -142,8 +142,14 @@ generic_function_daxpby(double, const struct GenericFunction *,
 
 double generic_function_inner(const struct GenericFunction *,
                               const struct GenericFunction *);
+double generic_function_inner_weighted(const struct GenericFunction *, 
+                                       const struct GenericFunction *);
 double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
-                         size_t, struct GenericFunction **);
+                                  size_t, struct GenericFunction **);
+double generic_function_inner_weighted_sum(size_t, size_t, 
+                                           struct GenericFunction **, 
+                                           size_t, 
+                                           struct GenericFunction **);
 double generic_function_norm(const struct GenericFunction *); 
 double generic_function_norm2diff(const struct GenericFunction *, 
                                   const struct GenericFunction *);

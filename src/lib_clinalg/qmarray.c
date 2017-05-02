@@ -35,8 +35,6 @@
 //Code
 
 
-
-
 /** \file qmarray.c
  * Provides algorithms for qmarray manipulation
  */
@@ -942,6 +940,37 @@ qmatqmat_integrate(const struct Qmarray * a,const struct Qmarray * b)
 }
 
 /***********************************************************//**
+    (Weighted) Integral of Transpose qmarray - transpose qmarray mutliplication
+
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
+
+    \return array of integral values
+
+    \note 
+    In order for this function to make sense a(x) and b(x)
+    shoud have the same underlying basis
+***************************************************************/
+double *
+qmatqmat_integrate_weighted(const struct Qmarray * a,const struct Qmarray * b)
+{
+    double * c = calloc_double(a->ncols*b->nrows);
+    size_t ii,jj;
+    for (jj = 0; jj < b->nrows; jj++){
+        for (ii = 0; ii < a->ncols; ii++){
+            // c[jj*a->ncols+ii] = a[:,ii]^T b[jj,:]
+            //c[ii*b->nrows+jj] =  generic_function_sum_prod_integrate(b->ncols, 1, 
+            //        a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
+
+            c[ii*b->nrows+jj] =
+                generic_function_inner_weighted_sum(b->ncols, 1, 
+                                                    a->funcs + ii*a->nrows, b->nrows, b->funcs + jj);
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
     Kronecker product between two qmarrays
 
     \param[in] a - qmarray 1
@@ -973,12 +1002,12 @@ struct Qmarray * qmarray_kron(const struct Qmarray * a,const struct Qmarray * b)
 }
 
 /***********************************************************//**
-    Kronecker product between two qmarrays
+    Integral of kronecker product between two qmarrays
 
     \param[in] a - qmarray 1
     \param[in] b - qmarray 2
 
-    \return c -  qmarray kron(a,b)
+    \return c -  \f$ \int kron(a(x),b(x)) dx \f$
 ***************************************************************/
 double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray * b)
 {
@@ -995,6 +1024,41 @@ double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray *
                     column = ii*b->ncols+kk;
                     row = jj*b->nrows + ll;
                     c[column*totrows + row] = generic_function_inner(
+                        a->funcs[ii*a->nrows+jj],b->funcs[kk*b->nrows+ll]);
+                }
+            }
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
+    Weighted integral of kronecker product between two qmarrays
+
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
+
+    \return c - \f$ \int kron(a(x),b(x)) w(x) dx \f$
+
+    \note 
+    In order for this function to make sense a(x) and b(x)
+    shoud have the same underlying basis
+***************************************************************/
+double * qmarray_kron_integrate_weighted(const struct Qmarray * a, const struct Qmarray * b)
+{
+    double * c = calloc_double(a->nrows*b->nrows * a->ncols*b->ncols);
+
+    size_t ii,jj,kk,ll,column,row, totrows;
+
+    totrows = a->nrows * b->nrows;
+
+    for (ii = 0; ii < a->ncols; ii++){
+        for (jj = 0; jj < a->nrows; jj++){
+            for (kk = 0; kk < b->ncols; kk++){
+                for (ll = 0; ll < b->nrows; ll++){
+                    column = ii*b->ncols+kk;
+                    row = jj*b->nrows + ll;
+                    c[column*totrows + row] = generic_function_inner_weighted(
                         a->funcs[ii*a->nrows+jj],b->funcs[kk*b->nrows+ll]);
                 }
             }
@@ -1035,7 +1099,7 @@ qmarray_vec_kron(const double * a,const struct Qmarray * b,const struct Qmarray 
     \param[in] b - qmarray 1
     \param[in] c - qmarray 2
 
-    \return d - qmarray  b->ncols x (c->ncols)
+    \return d - b->ncols x (c->ncols)
 ***************************************************************/
 double *
 qmarray_vec_kron_integrate(const double * a, const struct Qmarray * b,const struct Qmarray * c)
@@ -1046,6 +1110,33 @@ qmarray_vec_kron_integrate(const double * a, const struct Qmarray * b,const stru
     //printf("got qmatm\n");
     //d = qmaqma(temp,c);
     d = qmatqmat_integrate(c,temp);
+    qmarray_free(temp); temp = NULL;
+    return d;
+}
+
+/***********************************************************//**
+    If a is vector, b and c are quasimatrices then computes
+            \f$ \int a^T kron(b(x),c(x)) w(x) dx  \f$
+
+    \param[in] a - vector,array (b->nrows * c->nrows);
+    \param[in] b - qmarray 1
+    \param[in] c - qmarray 2
+
+    \return d -  b->ncols x (c->ncols)
+
+    \note 
+    In order for this function to make sense b(x) and c(x)
+    shoud have the same underlying basis
+***************************************************************/
+double *
+qmarray_vec_kron_integrate_weighted(const double * a, const struct Qmarray * b,const struct Qmarray * c)
+{
+    double * d = NULL;
+
+    struct Qmarray * temp = qmatm(b,a,c->nrows); // b->ncols * c->ncols
+    //printf("got qmatm\n");
+    //d = qmaqma(temp,c);
+    d = qmatqmat_integrate_weighted(c,temp);
     qmarray_free(temp); temp = NULL;
     return d;
 }

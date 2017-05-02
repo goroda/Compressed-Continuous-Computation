@@ -44,8 +44,8 @@
 #ifndef C3_APPROX_H
 #define C3_APPROX_H
 
-#include "../lib_clinalg/lib_clinalg.h"
-#include "../lib_superlearn/regress.h"
+#include "lib_clinalg/lib_clinalg.h"
+#include "lib_superlearn/regress.h"
 
 enum C3ATYPE { CROSS, REGRESS, C3UNSPEC };
 
