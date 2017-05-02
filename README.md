@@ -46,12 +46,28 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/your/choice
 make install
 ```
 
+### Python interface
+
+I have created a simple python interface to the library. It has an interface to some simple operations. This library requires SWIG and the following commands 
+
+```
+cd wrappers/python     # changes directory to the swig interface file
+./run.sh               # uses SWIG to create a python interface 
+python pytest.py       # run exmaple simple script that performs some operations
+```
+
+I have created a FunctionTrain class in the wrappers/python/c3py.py.
+
+Note: run.sh uses Python 3. If you need 2.7 then remove the -py3 flag in the script.
+
 ## Configuration Options
 
 #### BUILD_STATIC_LIB
 Default: `OFF'
 
 Using this option can toggle whether or not static or shared libraries should be built
+
+
 
 ## Systems I have tested on
 
