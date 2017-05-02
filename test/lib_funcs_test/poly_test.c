@@ -1120,10 +1120,10 @@ void Test_hermite_derivative(CuTest * tc){
     fwrap_set_fvec(fw,Sin3xTx2,NULL);
 
     struct OpeOpts * opts = ope_opts_alloc(HERMITE);
-    ope_opts_set_start(opts,10);
+    ope_opts_set_start(opts,5);
     ope_opts_set_coeffs_check(opts,4);
     ope_opts_set_tol(opts,1e-15);
-    ope_opts_set_maxnum(opts,200);
+    ope_opts_set_maxnum(opts,50);
     ope_opts_set_mean_and_std(opts,0.0,1.0);
     opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
     opoly_t der = orth_poly_expansion_deriv(cpoly);

@@ -1081,7 +1081,7 @@ void Test_ftapprox_cross4(CuTest * tc)
     pw_poly_opts_set_coeffs_check(opts,2);
     pw_poly_opts_set_tol(opts,1e-3);
     pw_poly_opts_set_minsize(opts,1e-2);
-    pw_poly_opts_set_nregions(opts,4);
+    pw_poly_opts_set_nregions(opts,2);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     

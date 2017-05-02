@@ -48,21 +48,27 @@
 
 #include "hpoly.h"
 
-inline static double zero_seq11(size_t n){ return (0.0 + 0.0*n); }
-inline static double one_seq11(size_t n) { return (1.0 + 0.0*n); }
+inline static double zero_seq11(size_t n){ (void) n; return 0.0; }
+inline static double one_seq11(size_t n) { (void) n; return 1.0; }
 inline static double hermc_seq(size_t n)
 {
     return -((double)n - 1.0);
 }
 
-double hermortho(size_t n)
+inline static double an(size_t n){ return 1.0 / sqrt((double)n);}
+inline static double cn(size_t n){ return - sqrt(((double)n-1)/(double)n);}
+
+
+static inline double hermortho(size_t n)
 {
-    double val = 1.0;
-    for (size_t ii = 1; ii < n; ii++){
-        val *= (ii+1);
-    }
-    //return sqrt(2*M_PI)*val;
-    return val;
+    (void)n;
+    return 1.0;
+    /* double val = 1.0; */
+    /* for (size_t ii = 1; ii < n; ii++){ */
+    /*     val *= (ii+1); */
+    /* } */
+    /* //return sqrt(2*M_PI)*val; */
+    /* return val; */
 }
 
 /********************************************************//**
@@ -78,9 +84,11 @@ struct OrthPoly * init_hermite_poly(){
         exit(1);
     }
     p->ptype = HERMITE;
-    p->an = &one_seq11; 
+    /* p->an = &one_seq11; */
+    p->an = an;
     p->bn = &zero_seq11;
-    p->cn = &hermc_seq;
+    /* p->cn = &hermc_seq; */
+    p->cn = cn;
     
     p->lower = -DBL_MAX;
     p->upper = DBL_MAX;
