@@ -7,7 +7,7 @@ def func1(x):
 
 def func2(x):
     # return np.prod(x-1,axis=1)
-    return np.log10(np.sum(x,axis=1)**2)
+    return np.sin(np.sum(x,axis=1))
 
 dim = 25
 ndata = 500
