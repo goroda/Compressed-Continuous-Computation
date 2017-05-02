@@ -161,13 +161,12 @@ void Test_ftapprox_hess(CuTest * tc)
     fwrap_set_fvec(fw,funcHess,NULL);
     // set function monitor
 
-    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,-2.0,2.0);
-    pw_poly_opts_set_maxorder(opts,7);
-    pw_poly_opts_set_coeffs_check(opts,2);
-    pw_poly_opts_set_tol(opts,1e-4);
-    pw_poly_opts_set_minsize(opts,1e-2);
-    pw_poly_opts_set_nregions(opts,5);
-    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
+    double lb = -2.0;
+    double ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
@@ -180,8 +179,8 @@ void Test_ftapprox_hess(CuTest * tc)
     c3approx_init_cross(c3a,init_rank,verbose,start);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
     
-    //printf("ranks are\n");
-    //iprint_sz(dim+1,ft->ranks);
+    /* printf("ranks are\n"); */
+    /* iprint_sz(dim+1,ft->ranks); */
     size_t N = 10;
     double * xtest = linspace(-2.0,2.0,N);
     double err = 0.0;
@@ -232,11 +231,96 @@ void Test_ftapprox_hess(CuTest * tc)
     free_dd(dim,start);
 }
 
+
+void Test_ftapprox_hess2(CuTest * tc)
+{
+    printf("Testing Function: function_train_hessian (piecewise-poly)\n");
+    size_t dim = 3;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcHess,NULL);
+    // set function monitor
+
+    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,-2.0,2.0);
+    pw_poly_opts_set_maxorder(opts,5);
+    pw_poly_opts_set_coeffs_check(opts,2);
+    pw_poly_opts_set_tol(opts,1e-3);
+    /* pw_poly_opts_set_minsize(opts,4); */
+    pw_poly_opts_set_minsize(opts,1e-2);
+    /* pw_poly_opts_set_nregions(opts,5); */
+    pw_poly_opts_set_nregions(opts,2);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 3;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+    
+    /* printf("ranks are\n"); */
+    /* iprint_sz(dim+1,ft->ranks); */
+    size_t N = 10;
+    double * xtest = linspace(-2.0,2.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double eval;
+    double ptt[3];
+    
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            for (size_t kk = 0; kk < N; kk++){
+                //for (ll = 0; ll < N; ll++){
+                    ptt[0] = xtest[ii]; ptt[1] = xtest[jj]; 
+                    ptt[2] = xtest[kk]; //ptt[3] = xtest[ll];
+                    funcHess(1,ptt,&eval,NULL);
+                    den += pow(eval,2.0);
+                    err += pow(eval - 
+                               function_train_eval(ft,ptt),2.0);
+                    //printf("err=%G\n",err);
+               // }
+            }
+        }
+    }
+    err = sqrt(err/den);
+    CuAssertDblEquals(tc,0.0,err,1e-12);
+    free(xtest); xtest = NULL;
+
+    /* printf("hess\n"); */
+    struct FT1DArray * fth = function_train_hessian(ft);
+    double pt[3] = {1.8, -1.0, 1.0};//, 0.5};
+    double * hess = ft1d_array_eval(fth,pt);
+    /* printf("got it\n"); */
+    
+    //dprint2d_col(3,3,hess);
+    CuAssertDblEquals(tc, 2.0*pt[2], hess[0],1e-6);
+    CuAssertDblEquals(tc, 0.0, hess[1],1e-6);
+    CuAssertDblEquals(tc, 2.0*pt[0], hess[2],1e-6);
+    CuAssertDblEquals(tc, hess[1], hess[3],1e-8);
+    CuAssertDblEquals(tc, 0.0, hess[4], 1e-6);
+    CuAssertDblEquals(tc, 4.0*pow(pt[2],3), hess[5], 1e-6);
+    CuAssertDblEquals(tc, hess[2], hess[6], 1e-6);
+    CuAssertDblEquals(tc, hess[5], hess[7], 1e-6);
+    CuAssertDblEquals(tc, 12.0*pt[1]*pow(pt[2],2), hess[8],1e-6);
+    
+    free(hess); hess = NULL;
+    function_train_free(ft); ft = NULL; 
+    ft1d_array_free(fth); fth = NULL;
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+}
+
 CuSuite * CLinalgFuncTrainArrayGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_ftapprox_grad);
     SUITE_ADD_TEST(suite,Test_ft1d_array_serialize);
     SUITE_ADD_TEST(suite, Test_ftapprox_hess);
+    SUITE_ADD_TEST(suite, Test_ftapprox_hess2);
     return suite;
 }
