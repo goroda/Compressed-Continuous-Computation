@@ -150,19 +150,19 @@ struct OrthPoly
 
 };
 
-struct OrthPoly * init_cheb_poly();
-struct OrthPoly * init_leg_poly();
+struct OrthPoly * init_cheb_poly(void);
+struct OrthPoly * init_leg_poly(void);
 void free_orth_poly(struct OrthPoly *);
 unsigned char * serialize_orth_poly(struct OrthPoly *);
 struct OrthPoly * deserialize_orth_poly(unsigned char *);
 
 struct StandardPoly * orth_to_standard_poly(struct OrthPoly *, size_t);
 
-double eval_orth_poly_wp(const struct OrthPoly *, double, double, 
-                             size_t, double);
+/* double eval_orth_poly_wp(const struct OrthPoly *, double, double, *\/ */
+/*                              size_t, double); */
+
 double deriv_legen(double, size_t);
 double * deriv_legen_upto(double, size_t);
-double * orth_poly_deriv_upto(enum poly_type, size_t, double);
 double orth_poly_eval(const struct OrthPoly *, size_t, double);
 
 /** \struct OrthPolyExpansion
@@ -250,26 +250,20 @@ void orth_poly_expansion_savetxt(const struct OrthPolyExpansion *,
 struct OrthPolyExpansion *
 orth_poly_expansion_loadtxt(FILE *);
 
-
 struct StandardPoly * 
 orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion *);
 
+int orth_poly_expansion_arr_eval(size_t,
+                                 struct OrthPolyExpansion **, 
+                                 double, double *);
 
-double legendre_poly_expansion_eval(const struct OrthPolyExpansion *, double);
-int legendre_poly_expansion_arr_eval(size_t,
-                                     struct OrthPolyExpansion **, 
-                                     double, double *);
-int legendre_poly_expansion_arr_evalN(size_t,
-                                      struct OrthPolyExpansion **,
-                                      size_t,
-                                      const double *, size_t,
-                                      double *, size_t);
-int legendre_poly_expansion_param_grad_eval(
-    const struct OrthPolyExpansion *, double, double *, size_t);
+int orth_poly_expansion_arr_evalN(size_t,
+                                  struct OrthPolyExpansion **,
+                                  size_t,
+                                  const double *, size_t,
+                                  double *, size_t);
     
 double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion *, double);
-int chebyshev_poly_expansion_param_grad_eval(
-    const struct OrthPolyExpansion *, double, double *, size_t);
 
 double orth_poly_expansion_eval(const struct OrthPolyExpansion *, double);
 void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,

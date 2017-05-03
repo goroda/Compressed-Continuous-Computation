@@ -70,17 +70,17 @@ void RunAllTests(void) {
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
-    // linear elements
+    /* // linear elements */
     CuSuiteAddSuite(suite, lelm);
-    // other stuff
+    /* // other stuff */
     CuSuiteAddSuite(suite, ll);
     CuSuiteAddSuite(suite, pp);
     CuSuiteAddSuite(suite, pap);
 
-    // Regression
+    /* // Regression */
     CuSuiteAddSuite(suite, preg);
 
-    // Kernels
+    /* // Kernels */
     CuSuiteAddSuite(suite, kern);
 
     CuSuiteRun(suite);

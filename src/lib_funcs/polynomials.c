@@ -272,14 +272,17 @@ static double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double 
 
 
 // Recurrence relationship sequences
-double zero_seq(size_t n){ return (0.0 + 0.0*n); }
-double one_seq(size_t n) { return (1.0 + 0.0*n); }
-double none_seq(size_t n) { return (-1.0 + 0.0*n); }
-double two_seq(size_t n) { return (2.0 + 0.0*n); }
-double n_seq(size_t n) { return ((double) n); }
-double nn_seq (size_t n) { return -n_seq(n); }
-double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);}
-double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );}
+inline static double zero_seq(size_t n){ (void)n; return (0.0); }
+/* inline static double one_seq(size_t n) { (void)n; return (1.0); } */
+inline static double none_seq(size_t n){ (void)n; return (-1.0); }
+inline static double two_seq(size_t n) { (void)n; return (2.0); }
+/* inline static double n_seq(size_t n) { return ((double) n); } */
+/* inline static double nn_seq (size_t n) { return -n_seq(n); } */
+inline static double lega_seq (size_t n) { return ( (double)(2.0 * n -1.0) / (double) n);}
+inline static double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );}
+inline static double lega_seq_norm (size_t n) { return ( sqrt( 4 * (double) (n * n) - 1) / (double) n);}
+inline static double legc_seq_norm (size_t n) {
+    return ( -(sqrt(2 * (double) n + 1) * ((double) n -1)) / (double)n / sqrt( 2 * (double) n - 3));}
 
 // Orthonormality functions
 double chebortho(size_t n) {
@@ -343,16 +346,6 @@ static const double legorthoarr[201] =
             ,2.610966057441253e-03,2.597402597402597e-03,2.583979328165375e-03,2.570694087403599e-03
             ,2.557544757033248e-03,2.544529262086514e-03,2.531645569620253e-03,2.518891687657431e-03
             ,2.506265664160401e-03,2.493765586034913e-03};
-
-double legortho(size_t n){
-    if (n < 201){
-        return legorthoarr[n];
-    }
-    else{
-       // printf("here?! n=%zu\n",n);
-        return (1.0 / (2.0 * (double) n + 1.0));
-    }
-}
 
 // Helper functions
 double orth_poly_expansion_eval2(double x, void * p){
@@ -660,6 +653,19 @@ struct OrthPoly * init_cheb_poly(){
     return p;
 }
 
+
+inline static double legortho(size_t n){
+    (void) n;
+    return 1;
+    /* if (n < 201){ */
+    /*     return legorthoarr[n]; */
+    /* } */
+    /* else{ */
+    /*    // printf("here?! n=%zu\n",n); */
+    /*     return (1.0 / (2.0 * (double) n + 1.0)); */
+    /* } */
+}
+
 /********************************************************//**
 *   Initialize a Legendre polynomial 
 *
@@ -673,15 +679,25 @@ struct OrthPoly * init_leg_poly(){
         exit(1);
     }
     p->ptype = LEGENDRE;
-    p->an = &lega_seq; 
     p->bn = &zero_seq;
-    p->cn = &legc_seq;
+
+
+    /* orthogonal */
+    /* p->an = &lega_seq; */
+    /* p->cn = &legc_seq; */
+    /* p->lin_coeff = 1.0;  */
+
+    /* orthonormal */
+    p->an = &lega_seq_norm;
+    p->cn = &legc_seq_norm;
+    p->lin_coeff = 1.0 * sqrt(3.0);
     
     p->lower = -1.0;
     p->upper = 1.0;
 
     p->const_term = 1.0;
-    p->lin_coeff = 1.0;
+
+
     p->lin_const = 0.0;
 
     p->norm = &legortho;
@@ -820,25 +836,11 @@ struct StandardPoly * orth_to_standard_poly(struct OrthPoly * p, size_t n)
 *
 *   \return out - polynomial value
 *************************************************************/
-double 
+inline static double 
 eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
-                    size_t n, double x)
+                  size_t n, double x)
 {   
-    double out;
-    if (rec->ptype == LEGENDRE){
-        double nt = (double) n;
-        double a = (2.0*nt-1.0) / nt;
-        double c = -(nt-1.0)/nt;
-        out = a * x * p1 + c * p2;
-    }
-    else{
-        out = (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2;
-    }
-    
-    /* if (rec->ptype == HERMITE){ *\/ */
-    /*      out /= sqrt(sqrt(2.0*M_PI)); *\/ */
-    /* /\* } *\/ */
-    return out;
+    return (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2; 
 }
 
 /********************************************************//**
@@ -860,15 +862,19 @@ double * deriv_legen_upto(double x, size_t order){
         size_t ii;
         for (ii = 1; ii < order+1; ii++){
             out[ii] = (double) (order * (order+1)/2.0);
+            
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
     }
     else if (fabs(x-(-1.0)) <= DBL_EPSILON){
         size_t ii;
         for (ii = 1; ii < order+1; ii+=2){
             out[ii] = (double) (order * (order+1)/2.0);
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
         for (ii = 2; ii < order+1; ii+=2){
             out[ii] = -(double) (order * (order+1)/2.0);
+            out[ii] *= sqrt(2*ii+1); // for orthonormal
         }
     }
     else if (order == 1){
@@ -938,30 +944,6 @@ double deriv_legen(double x, size_t order){
 }
 
 /********************************************************//**
-*   Evaluate the derivative of orthogonal polynomials
-*   up to a certain order
-*
-*   \param[in] ptype - polynomial type
-*   \param[in] order - order of the polynomial
-*   \param[in] x     - location at which to evaluate
-*
-*   \return out - orthonormal polynomial expansion 
-*************************************************************/
-double * orth_poly_deriv_upto(enum poly_type ptype, size_t order, double x)
-{
-    double * out = NULL;
-    if (ptype == LEGENDRE){
-        out = deriv_legen_upto(x,order);
-    }
-    else {
-        fprintf(stderr,"Have not implemented orth_poly_deriv for %d\n",ptype);
-        exit(1);
-    }
-    return out;
-
-}
-
-/********************************************************//**
 *   Evaluate the derivative of an orthogonal polynomial
 *
 *   \param[in] ptype - polynomial type
@@ -972,6 +954,7 @@ double * orth_poly_deriv_upto(enum poly_type ptype, size_t order, double x)
 *************************************************************/
 double orth_poly_deriv(enum poly_type ptype, size_t order, double x)
 {
+    assert (1 == 0);
     double out = 0.0;
     if (ptype == LEGENDRE){
         out = deriv_legen(x,order);
@@ -1317,28 +1300,10 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
     assert (isinf(offset) == 0);
 
     struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts,2);
-    if (opts->ptype == LEGENDRE){
-        double m = (p->p->upper - p->p->lower) / 
-                    (p->upper_bound - p->lower_bound);
-        double off = p->p->upper - m * p->upper_bound;
-        //printf("lb=%G,ub=%G\n",lb,ub);
-        //printf("mycalc = %G\n",a/m);
-        //printf("mycalc[0] = %G\n",offset-a/m*off);
-        p->coeff[1] = a/m;
-        p->coeff[0] = offset-off*p->coeff[1];
-    }
-    else if (opts->ptype == HERMITE){
-        p->coeff[1] = a / p->space_transform->lin_slope;
-        p->coeff[0] = offset - p->space_transform->lin_offset * p->coeff[1];
-    }
-    else{
-        struct lin_func lf;
-        lf.slope = a;
-        lf.offset = offset;
-        orth_poly_expansion_approx(eval_lin_func, &lf, p);
-        printf("a=%G,offset=%G,coeff[0]=%G,coeff[1]=%G\n",a,offset,p->coeff[0],p->coeff[1]);
-        printf("\n");
-   }
+    p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
+    p->coeff[0] = (offset - p->p->lin_const -
+                   p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
+                   p->p->const_term;
 
     return p;
 }
@@ -1362,34 +1327,12 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
-
     struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts, 3);
 
-    if (opts->ptype == LEGENDRE){
-        double m = (p->p->upper - p->p->lower) / 
-                    (p->upper_bound - p->lower_bound);
-        double off = p->p->upper - m * p->upper_bound;
-        p->coeff[2] = 2.0*a/3.0/m/m;
-        p->coeff[1] = (-2.0 * a * offset - (3.0 *m * off * p->coeff[2]))/m;
-        p->coeff[0] = (a*offset*offset - p->coeff[2]/2.0*(3*off*off-1.0) - p->coeff[1] * off);
-    }
-    else if(opts->ptype == HERMITE){
-        double m = p->space_transform->lin_slope;
-        double off = p->space_transform->lin_offset;
-        p->coeff[2] = a / m / m;
-        p->coeff[1] = -2.0 * (a * offset + p->coeff[2] * m*off)/m;
-        p->coeff[0] = a * offset * offset - p->coeff[2] * (off * off - 1) - p->coeff[1] * off;
-
-        /* p->coeff[0]= a*offset*offset+a; */
-        /* p->coeff[1] = -2.0*a*offset; */
-
-    }
-    else{
-        struct quad_func qf;
-        qf.scale = a;
-        qf.offset = offset;
-        orth_poly_expansion_approx(eval_quad_func, &qf, p);
-    }
+    struct quad_func qf;
+    qf.scale = a;
+    qf.offset = offset;
+    orth_poly_expansion_approx(eval_quad_func, &qf, p);
 
     return p;
 }
@@ -1415,10 +1358,10 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
     double m = space_mapping_map_inverse_deriv(p->space_transform,0);
     switch (opts->ptype){
     case LEGENDRE:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m);
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(2.0) / sqrt(m); 
         break;
     case HERMITE:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order));
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
         break;
     case CHEBYSHEV:
         fprintf(stderr,"cannot generate orthonormal polynomial of\n");
@@ -1447,16 +1390,50 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 *************************************************************/
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
-    struct OrthPolyExpansion * p = args;
-    assert (p->p->ptype != HERMITE);
 
-    double xnorm = space_mapping_map(p->space_transform,x);
-    double * derivvals = orth_poly_deriv_upto(p->p->ptype,p->num_poly-1,xnorm);
+    struct OrthPolyExpansion * poly = args;
+
+    double x_normalized = space_mapping_map(poly->space_transform,x);
+
+    //values
+    double p[2];
+    double pnew;
+
+    //gradients
+    double pg[2];
+    double pgnew;
+        
+    size_t iter = 0;
     double out = 0.0;
-    for (size_t ii = 0; ii < p->num_poly; ii++){
-        out += p->coeff[ii] * derivvals[ii] * space_mapping_map_deriv(p->space_transform,x);
+    p[0] = poly->p->const_term;
+    pg[0] = 0.0;
+    out += pg[0] * poly->coeff[iter];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = poly->p->lin_const + poly->p->lin_coeff * x_normalized;
+        pg[1] = poly->p->lin_coeff;
+        out += pg[1] * poly->coeff[iter];
+        iter++;
     }
-    free(derivvals); derivvals = NULL;
+
+    double a,b,c;
+    for (iter = 2; iter < poly->num_poly; iter++){
+        a = poly->p->an(iter);
+        b = poly->p->bn(iter);
+        c = poly->p->cn(iter);
+        pnew = eval_orth_poly_wp(poly->p, p[0], p[1], iter, x_normalized);
+        
+        pgnew = (a*x_normalized + b) * pg[1] + a * p[1] + c*pg[0];
+        out += poly->coeff[iter] * pgnew;
+        
+        p[0] = p[1];
+        p[1] = pnew;
+
+        pg[0] = pg[1];
+        pg[1] = pgnew;
+    }
+
+    out *= space_mapping_map_deriv(poly->space_transform,x);
     return out;
 }
 
@@ -1474,41 +1451,33 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 {
-    /* assert (p->p->ptype != HERMITE); */
+    if (p == NULL) return NULL;
+    
     struct OrthPolyExpansion * out = NULL;
-    if ( p == NULL ){
+
+    out = orth_poly_expansion_copy(p);
+    for (size_t ii = 0; ii < out->nalloc; ii++){
+        out->coeff[ii] = 0.0;
+    }
+    if (p->num_poly == 1){
         return out;
     }
-    if  (p->num_poly == 1){
-        out = orth_poly_expansion_init(p->p->ptype,1, 
-                                       p->lower_bound, p->upper_bound);
-        out->coeff[0] = 0.0;
+
+    out->num_poly -= 1;
+    if (p->p->ptype == LEGENDRE){
+
+        double dtransform_dx = space_mapping_map_deriv(p->space_transform,0.0);
+        for (size_t ii = 0; ii < p->num_poly-1; ii++){ // loop over coefficients
+            for (size_t jj = ii+1; jj < p->num_poly; jj+=2){
+                /* out->coeff[ii] += p->coeff[jj]; */
+                out->coeff[ii] += p->coeff[jj]*sqrt(2*jj+1);
+            }
+            /* out->coeff[ii] *= (double) ( 2 * (ii) + 1) * dtransform_dx; */
+            out->coeff[ii] *= sqrt((double) ( 2 * (ii) + 1))* dtransform_dx;
+        }
     }
     else{
-        switch (p->p->ptype) {
-            case LEGENDRE:
-                out = orth_poly_expansion_init(p->p->ptype,p->num_poly-1, 
-                                               p->lower_bound, p->upper_bound);
-
-                double dtransform_dx = space_mapping_map_deriv(p->space_transform,0.0);
-                for (size_t ii = 0; ii < p->num_poly-1; ii++){ // loop over coefficients
-                    for (size_t jj = ii+1; jj < p->num_poly; jj+=2){
-                        out->coeff[ii] += p->coeff[jj];
-                    }
-                    out->coeff[ii] *= (double) ( 2 * (ii) + 1) * dtransform_dx;
-                    
-                }
-            //orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);
-                break;
-            case HERMITE:
-                fprintf(stderr,"Derivative of hermite polynomials not yet implemented\n");
-                exit(1);
-            case CHEBYSHEV:
-                fprintf(stderr,"Derivative of chebyshev polynomials not yet implemented\n");
-                exit(1);
-            case STANDARD:
-                break;
-        }
+        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);      
     }
     return out;
 }
@@ -1734,43 +1703,6 @@ orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion * p)
 }
 
 /********************************************************//**
-*   Evaluate a legendre polynomial expansion 
-*
-*   \param[in] poly - polynomial expansion
-*   \param[in] x    - location at which to evaluate
-*
-*   \return out - polynomial value
-*************************************************************/
-double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
-{
-    double out = 0.0;
-    double p [2];
-    double pnew;
-    
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    
-    size_t iter = 0;
-    p[0] = 1.0;
-    out += p[0] * poly->coeff[iter];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        out += p[1] * poly->coeff[iter];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        
-        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
-        pnew /= (double) iter;
-        out += poly->coeff[iter] * pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    return out;
-}
-
-
-/********************************************************//**
 *   Evaluate each orthonormal polynomial expansion that is in an 
 *   array of generic functions 
 *
@@ -1780,21 +1712,34 @@ double legendre_poly_expansion_eval(const struct OrthPolyExpansion * poly, doubl
 *   \param[in,out] out     - evaluations
 *
 *   \return 0 - successful
-*           1 - not all legendre polynomials
 *
 *   \note
 *   Assumes all functions have the same bounds
 *************************************************************/
-int legendre_poly_expansion_arr_eval(size_t n,
-                                     struct OrthPolyExpansion ** parr, 
-                                     double x, double * out)
+int orth_poly_expansion_arr_eval(size_t n,
+                                 struct OrthPolyExpansion ** parr, 
+                                 double x, double * out)
 {
-    
+    int all_same = 1;
+    enum poly_type ptype = parr[0]->p->ptype;
+    for (size_t ii = 1; ii < n; ii++){
+        if (parr[ii]->p->ptype != ptype){
+            all_same = 0;
+            break;
+        }
+    }
+
+    if ((all_same == 0) || (ptype == CHEBYSHEV)){
+        for (size_t ii = 0; ii < n; ii++){
+            out[ii] = orth_poly_expansion_eval(parr[ii],x);
+        }
+        return 0;
+    }
+
+
+    // all the polynomials are of the same type
     size_t maxpoly = 0;
     for (size_t ii = 0; ii < n; ii++){
-        if (parr[ii]->p->ptype != LEGENDRE){
-            return 1;
-        }
         if (parr[ii]->num_poly > maxpoly){
             maxpoly = parr[ii]->num_poly;
         }
@@ -1806,13 +1751,13 @@ int legendre_poly_expansion_arr_eval(size_t n,
     // double out = 0.0;
     double p[2];
     double pnew;
-    p[0] = 1.0;
+    p[0] = parr[0]->p->const_term;
     size_t iter = 0;
     for (size_t ii = 0; ii < n; ii++){
         out[ii] += p[0] * parr[ii]->coeff[iter];
     }
     iter++;
-    p[1] = x_norm;
+    p[1] = parr[0]->p->lin_const + parr[0]->p->lin_coeff * x_norm;
     for (size_t ii = 0; ii < n; ii++){
         if (parr[ii]->num_poly > iter){
             out[ii] += p[1] * parr[ii]->coeff[iter];
@@ -1820,8 +1765,7 @@ int legendre_poly_expansion_arr_eval(size_t n,
     }
     iter++;
     for (iter = 2; iter < maxpoly; iter++){
-        pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
-        pnew /= (double) iter;
+        pnew = eval_orth_poly_wp(parr[0]->p, p[0], p[1], iter, x_norm);
         for (size_t ii = 0; ii < n; ii++){
             if (parr[ii]->num_poly > iter){
                 out[ii] += parr[ii]->coeff[iter] * pnew;
@@ -1847,27 +1791,16 @@ int legendre_poly_expansion_arr_eval(size_t n,
 *   \param[in]     incy       - increment between evaluations of array (at least n)
 *
 *   \return 0 - successful
-*           1 - not all legendre polynomials
 *
 *   \note
 *   Assumes all functions have the same bounds
 *************************************************************/
-int legendre_poly_expansion_arr_evalN(size_t n,
-                                      struct OrthPolyExpansion ** parr,
-                                      size_t N,
-                                      const double * x, size_t incx,
-                                      double * y, size_t incy)
+int orth_poly_expansion_arr_evalN(size_t n,
+                                  struct OrthPolyExpansion ** parr,
+                                  size_t N,
+                                  const double * x, size_t incx,
+                                  double * y, size_t incy)
 {
-    
-    size_t maxpoly = 0;
-    for (size_t ii = 0; ii < n; ii++){
-        if (parr[ii]->p->ptype != LEGENDRE){
-            return 1;
-        }
-        if (parr[ii]->num_poly > maxpoly){
-            maxpoly = parr[ii]->num_poly;
-        }
-    }
 
     for (size_t jj = 0; jj < N; jj++){
         for (size_t ii = 0; ii < n; ii++){
@@ -1875,36 +1808,15 @@ int legendre_poly_expansion_arr_evalN(size_t n,
         }
     }
 
+    int res;
     for (size_t jj = 0; jj < N; jj++){
-        double x_norm = space_mapping_map(parr[0]->space_transform,x[jj*incx]); 
-        double p[2];
-        double pnew;
-        p[0] = 1.0;
-        size_t iter = 0;
-        size_t incyy = jj * incy;
-        for (size_t ii = 0; ii < n; ii++){
-            y[ii + incyy] += p[0] * parr[ii]->coeff[iter];
-        }
-        iter++;
-        p[1] = x_norm;
-        for (size_t ii = 0; ii < n; ii++){
-            if (parr[ii]->num_poly > iter){
-                y[ii + incyy] += p[1] * parr[ii]->coeff[iter];
-            }
-        }
-        iter++;
-        for (iter = 2; iter < maxpoly; iter++){
-            pnew = (double) (2*iter-1)*x_norm*p[1] - (double)(iter-1)*p[0];
-            pnew /= (double) iter;
-            for (size_t ii = 0; ii < n; ii++){
-                if (parr[ii]->num_poly > iter){
-                    y[ii + incyy] += parr[ii]->coeff[iter] * pnew;
-                }
-            }
-            p[0] = p[1];
-            p[1] = pnew;
+        res = orth_poly_expansion_arr_eval(n, parr, 
+                                           x[jj*incx], y + jj*incy);
+        if (res != 0){
+            return res;
         }
     }
+
 
     for (size_t jj = 0; jj < N; jj++){
         for (size_t ii = 0; ii < n; ii++){
@@ -1924,49 +1836,6 @@ int legendre_poly_expansion_arr_evalN(size_t n,
     
     return 0;
 }
-
-
-/********************************************************//**
-*   Gradients with respect to parameters of an orthonormal polynomial
-*   expansion
-*
-*   \param[in]     poly - polynomial expansion
-*   \param[in]     x    - location at which to evaluate
-*   \param[in,out] grad - gradients
-*   \param[in]     inc  - increment of gradient
-*
-*   \return 0=success
-*************************************************************/
-int legendre_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
-                                            double * grad, size_t inc)
-{
-    double p [2];
-    double pnew;
-       
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    
-    size_t iter = 0;
-    
-    p[0] = 1.0;
-    grad[0*inc] = p[0];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        grad[iter*inc] = p[1];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        pnew = (double) (2*iter-1) * x_norm * p[1] - (double)(iter-1) * p[0];
-        pnew /= (double) iter;
-        grad[iter*inc] = pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    /* printf("iter=%zu grad here = ",iter); dprint(iter+1,grad); */
-    return 0;
-}
-
-
 
 /********************************************************//**
 *   Evaluate a Chebyshev polynomial expansion using clenshaw algorithm
@@ -1995,45 +1864,6 @@ double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion * poly, doub
 }
 
 /********************************************************//**
-*   Gradients with respect to parameters of an orthonormal polynomial
-*   expansion
-*
-*   \param[in]     poly - polynomial expansion
-*   \param[in]     x    - location at which to evaluate
-*   \param[in,out] grad - gradients
-*   \param[in]     inc  - increment of gradient
-*
-*   \return 0=success
-*************************************************************/
-int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * poly, double x,
-                                             double * grad, size_t inc)
-{
-
-    double p [2];
-    double pnew;
-
-    double x_norm = space_mapping_map(poly->space_transform,x);
-    size_t iter = 0;
-    
-    p[0] = 1.0;
-    grad[0*inc] = p[0];
-    iter++;
-    if (poly->num_poly > 1){
-        p[1] = x_norm;
-        grad[iter*inc] = p[1];
-        iter++;
-    }   
-    for (iter = 2; iter < poly->num_poly; iter++){
-        pnew = 2.0 * x_norm * p[1] - p[0];
-        grad[iter*inc] = pnew;
-        p[0] = p[1];
-        p[1] = pnew;
-    }
-    return 0;
-}
-
-
-/********************************************************//**
 *   Evaluate a polynomial expansion consisting of sequentially increasing 
 *   order polynomials from the same family.
 *
@@ -2045,13 +1875,7 @@ int chebyshev_poly_expansion_param_grad_eval(const struct OrthPolyExpansion * po
 double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
-    if (poly->p->ptype == LEGENDRE){
-        out = legendre_poly_expansion_eval(poly,x);
-    }
-    else if (poly->p->ptype == HERMITE){
-        out = hermite_poly_expansion_eval(poly,x);
-    }
-    else if (poly->p->ptype == CHEBYSHEV){
+    if (poly->p->ptype == CHEBYSHEV){
         out = chebyshev_poly_expansion_eval(poly,x);
     }
     else{
@@ -2115,29 +1939,31 @@ void orth_poly_expansion_evalN(const struct OrthPolyExpansion * poly, size_t N,
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
-    int res = 1;
     size_t nparam = orth_poly_expansion_get_num_params(poly);
-    if (poly->p->ptype == LEGENDRE){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = legendre_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
+    for (size_t ii = 0; ii < nx; ii++){
+
+        double p[2];
+        double pnew;
+
+        double x_norm = space_mapping_map(poly->space_transform,x[ii]);
+    
+        size_t iter = 0;
+        p[0] = poly->p->const_term;
+        grad[ii*nparam] = p[0];
+        iter++;
+        if (poly->num_poly > 1){
+            p[1] = poly->p->lin_const + poly->p->lin_coeff * x_norm;
+            grad[ii*nparam + iter] = p[1]; 
+            iter++;
+        }  
+        for (iter = 2; iter < poly->num_poly; iter++){
+            pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];
+            grad[ii*nparam + iter] = pnew;
+            p[0] = p[1];
+            p[1] = pnew;
         }
     }
-    else if (poly->p->ptype == HERMITE){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = hermite_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
-        }
-    }
-    else if (poly->p->ptype == CHEBYSHEV){
-        for (size_t ii = 0; ii < nx; ii++){
-            res = chebyshev_poly_expansion_param_grad_eval(poly,x[ii],grad+ii*nparam,1);
-        }
-    }
-    else{
-        fprintf(stderr, "Cannot evaluate derivative with respect to parameters\n");
-        fprintf(stderr, "for polynomial type %d\n",poly->p->ptype);
-        exit(1);
-    }
-    return res;
+    return 0;    
 }
 
 /********************************************************//**
@@ -3946,6 +3772,9 @@ static int dblcompare(const void * a, const void * b)
 *       Algorithm is based on eigenvalues of non-standard companion matrix from
 *       Roots of Polynomials Expressed in terms of orthogonal polynomials
 *       David Day and Louis Romero 2005
+*
+*       Multiplying by a factor of sqrt(2*N+1) because using orthonormal,
+*       rather than orthogonal polynomials
 *************************************************************/
 double * 
 legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
@@ -3986,19 +3815,29 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         }
     }
     else{
+        /* printf("I am here\n"); */
         double * nscompanion = calloc_double(N*N); // nonstandard companion
         size_t ii;
         double hnn1 = - (double) (N) / (2.0 * (double) (N) - 1.0);
+        /* double hnn1 = - 1.0 / p->p->an(N); */
         nscompanion[1] = 1.0;
-        nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / p->coeff[N];
+        /* nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / p->coeff[N]; */
+        nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / (p->coeff[N] * sqrt(2*N+1));
         for (ii = 1; ii < N-1; ii++){
+            assert (fabs(p->p->bn(ii)) < 1e-14);
             double in = (double) ii;
             nscompanion[ii*N+ii-1] = in / ( 2.0 * in + 1.0);
             nscompanion[ii*N+ii+1] = (in + 1.0) / ( 2.0 * in + 1.0);
-            nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] / p->coeff[N];
+
+            /* nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] / p->coeff[N]; */
+            nscompanion[(N-1)*N + ii] += hnn1 * p->coeff[ii] * sqrt(2*ii+1)/ p->coeff[N] / sqrt(2*N+1);
         }
         nscompanion[N*N-2] += (double) (N-1) / (2.0 * (double) (N-1) + 1.0);
-        nscompanion[N*N-1] += hnn1 * p->coeff[N-1] / p->coeff[N];
+
+        
+        /* nscompanion[N*N-1] += hnn1 * p->coeff[N-1] / p->coeff[N]; */
+        nscompanion[N*N-1] += hnn1 * p->coeff[N-1] * sqrt(2*(N-1)+1)/ p->coeff[N] / sqrt(2*N+1);
+        
         //printf("good up to here!\n");
         //dprint2d_col(N,N,nscompanion);
 
@@ -4053,7 +3892,7 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
       //  printf("eigenvalues \n");
         size_t * keep = calloc_size_t(N);
         for (ii = 0; ii < N; ii++){
-            //printf("(%3.15G, %3.15G)\n",real[ii],img[ii]);
+            /* printf("(%3.15G, %3.15G)\n",real[ii],img[ii]); */
             if ((fabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){
                 if (real[ii] < -1.0){
                     real[ii] = -1.0;

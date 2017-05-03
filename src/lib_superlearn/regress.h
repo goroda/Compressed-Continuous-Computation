@@ -49,8 +49,9 @@
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
 struct FTRegress;
-struct FTRegress * ft_regress_alloc(size_t, struct MultiApproxOpts *,size_t *);
-void ft_regress_set_adapt(struct FTRegress * ftr, int);
+struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
+size_t ft_regress_get_dim(const struct FTRegress *);
+void ft_regress_set_adapt(struct FTRegress *, int);
 void ft_regress_set_maxrank(struct FTRegress *, size_t);
 void ft_regress_set_kickrank(struct FTRegress *, size_t);
 void ft_regress_set_roundtol(struct FTRegress *, double);
@@ -75,7 +76,7 @@ double * ft_regress_get_params(struct FTRegress *, size_t *);
 void ft_regress_update_params(struct FTRegress *, const double *);
 
 struct FunctionTrain *
-ft_regress_run(struct FTRegress *,struct c3Opt *,size_t,const double *, const double *);
+ft_regress_run(struct FTRegress *,struct c3Opt *,size_t,const double* xdata, const double * ydata);
 struct FunctionTrain *
 ft_regress_run_rankadapt(struct FTRegress *, double, size_t, size_t,
                          struct c3Opt *,int,
@@ -136,9 +137,9 @@ void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
 void regress_opts_set_regularization_weight(struct RegressOpts *, double);
 double regress_opts_get_regularization_weight(const struct RegressOpts *);
-void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
-                                    size_t *, size_t,
-                                    enum FTPARAM_ST);
+/* void regress_opts_initialize_memory(struct RegressOpts *, size_t *, */
+/*                                     size_t *, size_t, */
+/*                                     enum FTPARAM_ST); */
 
 double ft_param_eval_objective_aio(struct FTparam *,
                                    struct RegressOpts *,

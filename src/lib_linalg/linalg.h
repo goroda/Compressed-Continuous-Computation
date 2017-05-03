@@ -259,7 +259,7 @@ void init_skf(struct sk_decomp **, size_t, size_t, size_t);
 void sk_decomp_to_full(struct sk_decomp *, double *);
 void free_skf(struct sk_decomp **);
 
-int comp_pivots(const double *, int, int, int *);
+/* int comp_pivots(const double *, int, int, int *); */
 int maxvol_rhs(const double *, size_t, size_t, size_t *, double *); //
 int skeleton(double *, size_t, size_t, size_t, size_t *, size_t *, double);
 int skeleton_func(double (*A)(int,int, int, void*), void *, size_t, 
