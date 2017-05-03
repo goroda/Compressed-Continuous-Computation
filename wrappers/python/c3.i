@@ -74,7 +74,7 @@ typedef long unsigned int size_t;
     struct FunctionTrain * my_ft_regress_run(struct FTRegress * ftr ,struct c3Opt * opt ,size_t len1, const double* xdata, size_t len2, const double * ydata){
         if (len1 != len2*ft_regress_get_dim(ftr)){
             PyErr_Format(PyExc_ValueError,
-                         "Arrays of lengths (%d,%d) given",
+                         "Arrays of lengths (%zu,%zu) given",
                          len1, len2);
             return NULL;
         }
@@ -93,7 +93,7 @@ typedef long unsigned int size_t;
     double my_function_train_eval(struct FunctionTrain * ft ,size_t len1, const double* evalnd_pt){
         if (len1 != function_train_get_dim(ft)){
             PyErr_Format(PyExc_ValueError,
-                         "Evaluation point has incorrect dimensions (%d) instead of %d",
+                         "Evaluation point has incorrect dimensions (%zu) instead of %zu",
                          len1,function_train_get_dim(ft));
             return 0.0;
         }
@@ -122,6 +122,28 @@ typedef long unsigned int size_t;
  }
 
 %typemap(freearg) (size_t * ranks){
+    if ($1) free($1);
+}
+
+%typemap(in) double * onedx {
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_ValueError,"Expecting a list");
+        return NULL;
+    }
+    int size = PyList_Size($input);
+    $1 = (double *) malloc(size * sizeof(double));
+    for (int i = 0; i < size; i++){
+        PyObject *s = PyList_GetItem($input,i);
+        if (!PyFloat_Check(s)) {
+            free($1);
+            PyErr_SetString(PyExc_ValueError, "List items must be floating point values");
+            return NULL;
+        }
+        $1[i] = PyFloat_AsDouble(s);
+    }
+ }
+
+%typemap(freearg) (double * onedx){
     if ($1) free($1);
 }
 

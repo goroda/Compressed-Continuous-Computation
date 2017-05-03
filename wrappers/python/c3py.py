@@ -34,7 +34,7 @@ class FunctionTrain:
         if filename == None:
             self.ft = None
 
-    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,nparam=4):
+    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4):
 
         if self.opts[dim] is not None:
             raise AttributeError('cannot call set_dim_opts because was already called')
@@ -47,6 +47,13 @@ class FunctionTrain:
         elif ftype == "hermite":
             self.opts.insert(dim,["poly",c3.ope_opts_alloc(c3.HERMITE)])
             c3.ope_opts_set_nparams(self.opts[dim][1],nparam)
+        elif ftype == "linelm":
+            x = list(np.linspace(lb,ub))
+            self.opts.insert(dim,["linelm",c3.lin_elem_exp_aopts_alloc(nparam,x)])
+        elif ftype == "kernel":
+            x = list(np.linspace(lb,ub))
+            width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+            self.opts.insert(dim,["kernel",c3.kernel_approx_opts_gauss(nparam,x,kernel_height_scale,kernel_width_scale)])
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
             
@@ -102,7 +109,8 @@ class FunctionTrain:
             c3.ft_regress_set_roundtol(reg,roundtol)
             c3.ft_regress_set_maxrank(reg,maxrank)
             c3.ft_regress_set_kickrank(reg,kickrank)
-            c3.ft_regress_set_verbose(reg,verbose)
+            
+        c3.ft_regress_set_verbose(reg,verbose)
 
         if kristoffel is True:
             c3.ft_regress_set_kristoffel(reg,1)
@@ -111,7 +119,7 @@ class FunctionTrain:
             c3.function_train_free(self.ft)
 
         self.ft = c3.ft_regress_run(reg,self.optimizer,xdata.flatten(order='C'),ydata)
-
+        
         c3.ft_regress_free(reg)
 
         

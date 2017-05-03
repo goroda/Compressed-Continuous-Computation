@@ -53,7 +53,7 @@ void kernel_free(struct Kernel *);
 struct KernelApproxOpts;
 void kernel_approx_opts_free(struct KernelApproxOpts *);
 struct KernelApproxOpts *
-kernel_approx_opts_gauss(size_t, double *, double, double);
+kernel_approx_opts_gauss(size_t, double * onedx, double, double);
 void kernel_approx_opts_set_center_adapt(struct KernelApproxOpts *,int);
 int kernel_approx_opts_linear_p(const struct KernelApproxOpts *);
 size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts *);
