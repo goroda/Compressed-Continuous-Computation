@@ -4857,7 +4857,67 @@ struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
     }
 
     return ftg;
-} 
+}
+
+/********************************************************//**
+    Compute the gradient of a function train
+
+    \param[in]     ft  - Function train
+    \param[in]     x   - location at which to evaluate the gradient
+    \param[in,out] out - allocate space for the gradient
+
+    \return gradient
+***********************************************************/
+/* void function_train_gradient_eval(const struct FunctionTrain * ft, const double * x, double * out) */
+/* { */
+/*     assert (1 == 0); */
+    
+/*     size_t dim  = ft->dim;     */
+/*     size_t maxrank = function_train_get_maxrank(ft);     */
+/*     struct RunningCoreTotal *  evals_lr = running_core_total_alloc(maxrank * maxrank); */
+/*     struct RunningCoreTotal *  evals_rl = running_core_total_alloc(maxrank * maxrank); */
+/*     struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,maxrank * maxrank); */
+/*     double * core_grad_space = calloc_double(maxrank * maxrank); */
+/*     double * eval = NULL; */
+
+/*     size_t r1,r2,totparam=0; */
+/*     for (size_t ii = 0; ii < dim; ii++){ */
+/*         r1 = ft->cores[ii]->nrows; */
+/*         r2 = ft->cores[ii]->ncols; */
+
+/*         eval = qmarray_eval(ft->cores[ii],x[ii]); */
+/*         qmarray_gradient_eval(ft->cores[ii],x[ii],core_grad_space) */
+/*         if (ii == 0){ */
+/*             running_core_total_update_multiple(grads[ii],1,1,r1,r2,core_grad_space,r1*r2,r1*r2); */
+/*         } */
+/*         else{ */
+/*             double * vals = running_core_total_get_vals(evals_lr); */
+/*             grads[ii]->No = 1 */
+/*             grads[ii]->N  = 1; */
+
+/*             running_core_total_update_multiple(grads[ii+1],1,1,) */
+/*             // need to multiply vals * core_grad_space */
+
+/*         } */
+
+/*         running_core_total_update(evals_lr,1,r1,r2,eval,r1*r2); */
+/*     } */
+        
+/*     free(space); space = NULL; */
+/*     running_core_total_free(evals_lr);      evals_lr             = NULL; */
+/*     running_core_total_free(evals_rl);      evals_rl             = NULL; */
+/*     running_core_total_arr_free(dim,grads); grads                = NULL; */
+
+/*     size_t ii; */
+/*     for (ii = 0; ii < ft->dim; ii++){ */
+/*         ftg->ft[ii] = function_train_copy(ft); */
+/*         qmarray_free(ftg->ft[ii]->cores[ii]); */
+/*         ftg->ft[ii]->cores[ii] = NULL; */
+/*         ftg->ft[ii]->cores[ii] = qmarray_deriv(ft->cores[ii]); */
+/*     } */
+
+/*     return ftg; */
+/* }  */
 
 
 /********************************************************//**
@@ -4883,6 +4943,8 @@ struct FT1DArray * ft1d_array_jacobian(const struct FT1DArray * fta)
     }
     return jac;
 }
+
+
 
 /********************************************************//**
     Compute the hessian of a function train
