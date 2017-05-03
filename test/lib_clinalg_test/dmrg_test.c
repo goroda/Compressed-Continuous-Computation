@@ -565,7 +565,7 @@ void Test_diffusion_op_struct(CuTest * tc)
     struct FunctionTrain * shouldbe = function_train_copy(ftsum);
     
     double diff = function_train_norm2diff(is,shouldbe);
-    CuAssertDblEquals(tc,0.0,diff*diff,1e-8);
+    CuAssertDblEquals(tc,0.0,diff*diff,1e-7);
 
     for (ii = 0; ii  < dim; ii++){
         qmarray_free(da[ii]);
