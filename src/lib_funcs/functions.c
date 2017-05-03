@@ -1333,6 +1333,8 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  double generic_function_1d_eval(const struct GenericFunction * f, double x){
      assert (f != NULL);
      double out = 0.1234567890;
+
+
      /* printf("f->fc = %d\n",f->fc); */
      switch (f->fc){
      case CONSTANT:   assert(1 == 0);                         break;
@@ -1845,7 +1847,11 @@ generic_function_1darray_eval2N(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
+        /* printf("generic function, kristoffel_active = %d\n",generic_function_is_kristoffel_active(f[0])); */
         int res = orth_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        /* for (size_t ii = 0; ii < N*n; ii++){ */
+        /*     printf("y[%zu] = %G\n",ii,y[ii]); */
+        /* } */
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){

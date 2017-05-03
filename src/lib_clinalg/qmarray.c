@@ -3281,19 +3281,25 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     size_t size = qma->nrows*qma->ncols;
     /* printf("\t evaluate! size=%zu\n",size); */
     if (out != NULL){
+        /* printf("1darray_eval2N\n"); */
         generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+        /* printf("got 1darray_eval2N incout = %zu\n",incout); */
         for (ii = 0; ii < size; ii++){
-            if (isnan(out[ii*incout])){
+            /* printf("ii = %zu, ii*incout = %zu\n",ii*incout); */
+            if (isnan(out[ii])){
                 fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval is nan\n");
                 fprintf(stderr,"ii=%zu,size=%zu,incout=%zu\n",ii,size,incout);
                 fprintf(stderr,"x = %G\n",x[ii*incx]);
                 exit(1);
             }
-            else if (isinf(out[ii*incout])){
+            else if (isinf(out[ii])){
                 fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval inf\n");
                 exit(1);
             }
         }
+        /* printf("finished checking!\n"); */
+        
+        /* printf("out = "); dprint(size,out); */
     }
 
     if (grad != NULL){
@@ -3519,6 +3525,7 @@ double qmarray_get_kristoffel_weight(const struct Qmarray * qma,
                                      double x)
 {
     double weight = generic_function_get_kristoffel_weight(qma->funcs[0],x);
+    /* printf("qmarray kri weight = %G\n",weight); */
     return weight;
 }
 

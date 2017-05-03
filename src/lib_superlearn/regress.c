@@ -1268,6 +1268,8 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
     double resid;
     if (grad != NULL){
         if (mem->structure == LINEAR_ST){
+            /* printf("In linear_st\n"); */
+            /* printf("kristoffel_active = %d\n",function_train_is_kristoffel_active(ftp->ft)); */
             function_train_linparam_grad_eval(
                 ftp->ft,
                 N,x,
@@ -1685,6 +1687,10 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
             }
         }
         eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,pp->N,pp->x,pp->y,grad);
+        /* if (grad != NULL){ */
+        /*     printf("grad = "); */
+        /*     dprint(nparam,grad); */
+        /* } */
     }
     else{
         ft_param_update_restricted_ranks(pp->ftp,param,pp->opts->restrict_rank_opt);
@@ -1737,6 +1743,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
 
+    /* structure = NONE_ST; */
     /* assert (structure == NONE_ST); */
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
@@ -1991,11 +1998,13 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
     if (use_kristoffel_precond){
         function_train_activate_kristoffel(ftp->ft);
         double normalization = 0.0;
-        double * y = calloc_double(N);
+        y = calloc_double(N);
         for (size_t ii = 0; ii < N; ii++){
             normalization = function_train_get_kristoffel_weight(ftp->ft,x+ ii*ftp->dim);
+            /* printf("normalization = %G\n",normalization); */
             y[ii] = yin[ii] / normalization;
         }
+        /* dprint(N,y); */
     }
     
     struct FunctionTrain * ft = NULL;
