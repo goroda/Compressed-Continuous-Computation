@@ -104,8 +104,8 @@ class FunctionTrain:
             c3.ft_regress_set_kickrank(reg,kickrank)
             c3.ft_regress_set_verbose(reg,verbose)
 
-        # if kristoffel is True:
-        #     c3.ft_regress_set_kristoffel(reg,1)
+        if kristoffel is True:
+            c3.ft_regress_set_kristoffel(reg,1)
                 
         if self.ft is None:
             c3.function_train_free(self.ft)

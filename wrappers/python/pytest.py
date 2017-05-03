@@ -10,7 +10,7 @@ def func2(x):
 
 
 dim = 5                                # number of features
-ndata = 1000                           # number of data points
+ndata = 2000                            # number of data points
 x = np.random.rand(ndata,dim)*2.0-1.0  # training samples
 y1 = func1(x)                          # function values 
 y2 = func2(x)                          # ditto
@@ -62,6 +62,6 @@ print("Fteval =",ft4eval, "Should be =",eval4s)
 # clean up memory for each function train
 ft.close()
 ft2.close()
-ft3.close()
-ft4.close()
+# ft3.close()
+# ft4.close()
 
