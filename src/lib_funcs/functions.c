@@ -461,7 +461,7 @@ generic_function_deriv(const struct GenericFunction * gf)
     case POLYNOMIAL: out->f = orth_poly_expansion_deriv(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
     case RATIONAL:                                              break;
-    case KERNEL: assert(1==0);                                                break;
+    case KERNEL: assert(1==0);                                  break;
     }
     return out;
 }
