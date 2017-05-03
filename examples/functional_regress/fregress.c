@@ -27,6 +27,7 @@ void print_code_usage (FILE * stream, int exit_code)
             " -f --function  Which function to evaluate. \n"
             "                0: a_1x^2 + a_2x^2 (default)\n"
             "                1: more complicated, check code\n"
+            "                2: sum of weighted gaussians bumps\n"
             " -n --number    Number of training samples (default 100).\n"
             " -p --polyorder Polynomial order for parameters (default 4).\n"
             " -b --basis     Basis for spatial variable\n"
@@ -47,6 +48,7 @@ void print_code_usage (FILE * stream, int exit_code)
 
 struct Problem
 {
+    int func;
     size_t ninput;
     size_t noutput;
     double * x;
@@ -77,6 +79,21 @@ static void other(prob_t * prob, double * input, double * output)
     }
 }
 
+static void third(prob_t * prob, double * input, double * output)
+{
+    double mean[6] = {0.15, 0.25, 0.45, 0.65, 0.75, 0.85};
+    /* double stdev[6] = {0.01, 0.02, 0.03, 0.01, 0.05, 0.01}; */
+    double stdev[6] = {0.05, 0.05, 0.05, 0.05, 0.05, 0.05};
+    for (size_t ii = 0; ii < prob->noutput; ii++){
+        output[ii] = 0.0;
+        for (size_t jj = 0; jj < 6; jj++){
+            double bump_height = 1.0 / sqrt(2.0*M_PI * stdev[jj]*stdev[jj]);
+            double exponent = - (prob->x[ii]-mean[jj])*(prob->x[ii]-mean[jj]) / (2.0 * stdev[jj] * stdev[jj]);
+            output[ii] += input[jj] * bump_height * exp(exponent);
+        }
+    }
+}
+
 static double * generate_inputs(size_t n)
 {
     double * x = calloc_double(dx * n);
@@ -93,14 +110,19 @@ static double * generate_inputs(size_t n)
 static double * generate_outputs(prob_t * prob, size_t n, double * inputs)
 {
     double * y = calloc_double(n * dy);
-    if (dx == 2){
+    if (prob->func == 0){
         for (size_t ii = 0; ii < n; ii++){
             quadratic(prob,inputs + ii*dx,y+ii*dy);
         }
     }
-    else {
+    else if (prob->func == 1) {
         for (size_t ii = 0; ii < n; ii++){
             other(prob,inputs + ii*dx,y+ii*dy);
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < n; ii++){
+            third(prob,inputs + ii*dx,y+ii*dy);
         }
     }
 
@@ -204,11 +226,19 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
 
+    prob_t prob;
+    prob.ninput = dx;
+    prob.noutput = dy;
+    prob.x = linspace(0.0,1.0,dy);
+    prob.func = function;    
     if (function == 1){
         dx = 32;
     }
-    else{
+    else if (function == 0){
         dx = 2;
+    }
+    else{
+        dx = 6;
     }
     printf("\n");
     printf("\n");
@@ -229,10 +259,6 @@ int main(int argc, char * argv[])
     printf("\t Parameter polynomial order:     %zu\n",npoly-1);
     printf("\n\n\n\n");
     
-    prob_t prob;
-    prob.ninput = dx;
-    prob.noutput = dy;
-    prob.x = linspace(0.0,1.0,dy);
 
     double * inputs = generate_inputs(ndata);
     double * outputs = generate_outputs(&prob,ndata,inputs);
@@ -241,7 +267,6 @@ int main(int argc, char * argv[])
     
     double * x = calloc_double((dx+1)*dy * ndata);
     double * y = calloc_double(ndata*dy);
-
     
     /* size_t ntotdata = create_unified_data(ndata,inputs,prob.x,outputs,x,y); */    
     create_unified_data(ndata,inputs,prob.x,outputs,x,y);    
@@ -294,10 +319,10 @@ int main(int argc, char * argv[])
     }
     c3opt_set_maxiter(optimizer,1000);
     c3opt_set_gtol(optimizer,1e-6);
-    c3opt_set_relftol(optimizer,1e-5);
+    c3opt_set_relftol(optimizer,1e-10);
     
     struct FTRegress * ftr = ft_regress_alloc(dx+1,fapp,ranks);
-    ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+    ft_regress_set_alg_and_obj(ftr,ALS,FTLS);
     ft_regress_set_adapt(ftr,1);
     ft_regress_set_roundtol(ftr,1e-7);
     ft_regress_set_maxrank(ftr,10);

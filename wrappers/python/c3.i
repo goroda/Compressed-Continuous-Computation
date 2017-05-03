@@ -125,6 +125,28 @@ typedef long unsigned int size_t;
     if ($1) free($1);
 }
 
+%typemap(in) double * onedx {
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_ValueError,"Expecting a list");
+        return NULL;
+    }
+    int size = PyList_Size($input);
+    $1 = (double *) malloc(size * sizeof(double));
+    for (int i = 0; i < size; i++){
+        PyObject *s = PyList_GetItem($input,i);
+        if (!PyFloat_Check(s)) {
+            free($1);
+            PyErr_SetString(PyExc_ValueError, "List items must be floating point values");
+            return NULL;
+        }
+        $1[i] = PyFloat_AsDouble(s);
+    }
+ }
+
+%typemap(freearg) (double * onedx){
+    if ($1) free($1);
+}
+
 
 /* %include "../../include/c3.h" */
 
