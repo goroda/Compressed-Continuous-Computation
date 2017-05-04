@@ -122,6 +122,7 @@ void piecewise_poly_boundaries(const struct PiecewisePoly *,size_t *,double**,si
 
 //operations using one piecewise poly
 double piecewise_poly_eval(const struct PiecewisePoly *, double);
+double piecewise_poly_deriv_eval(const struct PiecewisePoly *, double);
 void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
                           const double *, size_t, double *, size_t);
 void piecewise_poly_scale(double, struct PiecewisePoly *);

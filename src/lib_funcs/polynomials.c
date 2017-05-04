@@ -1390,7 +1390,7 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 *************************************************************/
 double orth_poly_expansion_deriv_eval(double x, void * args)
 {
-
+    assert (args != NULL);
     struct OrthPolyExpansion * poly = args;
 
     double x_normalized = space_mapping_map(poly->space_transform,x);

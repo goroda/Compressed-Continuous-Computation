@@ -4860,64 +4860,88 @@ struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
 }
 
 /********************************************************//**
-    Compute the gradient of a function train
+    Evaluate the gradient of a function train
 
     \param[in]     ft  - Function train
     \param[in]     x   - location at which to evaluate the gradient
     \param[in,out] out - allocate space for the gradient
-
-    \return gradient
 ***********************************************************/
-/* void function_train_gradient_eval(const struct FunctionTrain * ft, const double * x, double * out) */
-/* { */
-/*     assert (1 == 0); */
+void function_train_gradient_eval(const struct FunctionTrain * ft, const double * x, double * out)
+{
+    assert (1 == 0);
     
-/*     size_t dim  = ft->dim;     */
-/*     size_t maxrank = function_train_get_maxrank(ft);     */
-/*     struct RunningCoreTotal *  evals_lr = running_core_total_alloc(maxrank * maxrank); */
-/*     struct RunningCoreTotal *  evals_rl = running_core_total_alloc(maxrank * maxrank); */
-/*     struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,maxrank * maxrank); */
-/*     double * core_grad_space = calloc_double(maxrank * maxrank); */
-/*     double * eval = NULL; */
+    size_t dim  = ft->dim;
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t mr2 = maxrank*maxrank;
+    struct RunningCoreTotal *  evals_lr = running_core_total_alloc(mr2);
+    struct RunningCoreTotal *  evals_rl = running_core_total_alloc(mr2);
+    struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,mr2);
+    double * core_grad_space = calloc_double(mr2);
 
-/*     size_t r1,r2,totparam=0; */
-/*     for (size_t ii = 0; ii < dim; ii++){ */
-/*         r1 = ft->cores[ii]->nrows; */
-/*         r2 = ft->cores[ii]->ncols; */
+    double ** core_evals = malloc(dim * sizeof(double *));
+    for (size_t ii = 0; ii < dim; ii++){
+        core_evals[ii] = calloc_double(mr2);
+    }
 
-/*         eval = qmarray_eval(ft->cores[ii],x[ii]); */
-/*         qmarray_gradient_eval(ft->cores[ii],x[ii],core_grad_space) */
-/*         if (ii == 0){ */
-/*             running_core_total_update_multiple(grads[ii],1,1,r1,r2,core_grad_space,r1*r2,r1*r2); */
-/*         } */
-/*         else{ */
-/*             double * vals = running_core_total_get_vals(evals_lr); */
-/*             grads[ii]->No = 1 */
-/*             grads[ii]->N  = 1; */
+    size_t r1,r2;
+    double * vals = NULL;
+    for (size_t ii = 0; ii < dim; ii++){
+        r1 = ft->cores[ii]->nrows;
+        r2 = ft->cores[ii]->ncols;
 
-/*             running_core_total_update_multiple(grads[ii+1],1,1,) */
-/*             // need to multiply vals * core_grad_space */
+        qmarray_eval(ft->cores[ii],x[ii],core_evals[ii]); // evaluate core
+        qmarray_deriv_eval(ft->cores[ii],x[ii],core_grad_space); // get the gradient of the core
+        if (ii > 0){
+            vals = running_core_total_get_vals(evals_lr);
+            grads[ii]->No = 1;
+            grads[ii]->N  = 1;
+            c3linalg_multiple_vec_mat(1,r1,r2,vals,r1,core_grad_space,mr2,grads[ii]->vals1,mr2);
+            grads[ii]->r2 = r2;
+            grads[ii]->onval = 1;
+        }
+        else{
+            running_core_total_update_multiple(grads[ii],1,1,r1,r2,core_grad_space,r1*r2,r1*r2);
+        }
+        running_core_total_update(evals_lr,1,r1,r2,core_evals[ii],r1*r2);
+    }
 
-/*         } */
-
-/*         running_core_total_update(evals_lr,1,r1,r2,eval,r1*r2); */
-/*     } */
+    
+    size_t backind;
+    double * v = NULL;
+    double * grad_eval = NULL;
+    double * post_vals = NULL;
+    for (size_t zz = 0; zz < dim; zz++){
+        backind = dim-1-zz;
         
-/*     free(space); space = NULL; */
-/*     running_core_total_free(evals_lr);      evals_lr             = NULL; */
-/*     running_core_total_free(evals_rl);      evals_rl             = NULL; */
-/*     running_core_total_arr_free(dim,grads); grads                = NULL; */
+        r1 = ft->cores[backind]->nrows;
+        r2 = ft->cores[backind]->ncols;
 
-/*     size_t ii; */
-/*     for (ii = 0; ii < ft->dim; ii++){ */
-/*         ftg->ft[ii] = function_train_copy(ft); */
-/*         qmarray_free(ftg->ft[ii]->cores[ii]); */
-/*         ftg->ft[ii]->cores[ii] = NULL; */
-/*         ftg->ft[ii]->cores[ii] = qmarray_deriv(ft->cores[ii]); */
-/*     } */
+        //update gradient
+        if (backind < (dim-1)){
+            post_vals = running_core_total_get_vals(evals_rl);
+            grad_eval = running_core_total_get_vals(grads[backind]);
+            out[backind] = cblas_ddot(r1,post_vals,1,grad_eval,1);
+            running_core_total_update(grads[backind],1,r2,1,post_vals,r2);
+        }
+        else{
+            v = running_core_total_get_vals(grads[backind]);
+            out[backind] = v[0];
+        }
+        // update backwards
+        running_core_total_update_rl(evals_rl,1,r1,r2,core_evals[backind],r1*r2);
+    }
 
-/*     return ftg; */
-/* }  */
+    free(core_grad_space); core_grad_space = NULL;
+    running_core_total_free(evals_lr);      evals_lr = NULL;
+    running_core_total_free(evals_rl);      evals_rl = NULL;
+    running_core_total_arr_free(dim,grads); grads    = NULL;
+
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        free(core_evals[ii]); core_evals[ii] = NULL;
+    }
+    free(core_evals); core_evals = NULL;
+}
 
 
 /********************************************************//**

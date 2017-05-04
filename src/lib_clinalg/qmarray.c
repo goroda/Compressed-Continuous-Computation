@@ -3109,7 +3109,7 @@ struct Qmarray * qmarray_blockdiag(struct Qmarray * a, struct Qmarray * b)
 
     \param[in] a - qmarray
 
-    \return qmarray of derivatives
+    \return qmarray of functions representing the derivatives at all values x
 ***************************************************************/
 struct Qmarray * qmarray_deriv(struct Qmarray * a)
 {
@@ -3123,6 +3123,23 @@ struct Qmarray * qmarray_deriv(struct Qmarray * a)
         //printf("got its deriv\n");
     }
     return b;
+}
+
+/***********************************************************//**
+    Evaluate the derivative of every function in the qmarray
+
+    \param[in]     a   - qmarray
+    \param[in]     x   - location at which to evaluate
+    \param[in,out] out - evaluations (previously allocated)
+***************************************************************/
+void qmarray_deriv_eval(const struct Qmarray * a, double x, double * out)
+{
+
+
+    size_t ii;
+    for (ii = 0; ii < a->nrows*a->ncols; ii++){
+        out[ii] = generic_function_deriv_eval(a->funcs[ii],x);
+    }
 }
 
 

@@ -337,6 +337,7 @@ struct FT1DArray{
 
 struct FT1DArray * ft1d_array_alloc(size_t);
 struct FT1DArray * function_train_gradient(const struct FunctionTrain *);
+void function_train_gradient_eval(const struct FunctionTrain *, const double *, double *);
 unsigned char *
 ft1d_array_serialize(unsigned char *, struct FT1DArray *, size_t *);
 unsigned char *
