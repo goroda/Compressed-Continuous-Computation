@@ -13,7 +13,9 @@
 /* #define dx 2 */
 /* #define dx 100 */
 static size_t dx;
-#define dy 16
+static double lb;
+static double ub;
+#define dy 32
 
 static char * program_name;
 
@@ -34,8 +36,13 @@ void print_code_usage (FILE * stream, int exit_code)
             "                0: piecewise linear continuous (default)\n"
             "               >0: radial basis function kernels\n"
             " -s --rankspace Rank between spatial and paramter variables (default 4)\n"
-            " -r --rankparam Rank between parameters (default 2)\n"
-            " -v --verbose   Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
+            " -r --rankparam  Rank between parameters (default 2)\n"
+            " -a --adaptrank  Flag whether or not to adapt rank\n"
+            "                 0: no adaptation (default)\n"
+            "                 1: adaptation (default)\n"
+            " -l --lowerbound Parameter lower bounds (default -1.0)\n"
+            " -u --upperbound Parameter upper bounds (default 1.0)\n"
+            " -v --verbose    Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
             " \n\n"
             " Outputs four files\n"
             " training_funcs.dat  -- training samples"
@@ -82,12 +89,13 @@ static void other(prob_t * prob, double * input, double * output)
 static void third(prob_t * prob, double * input, double * output)
 {
     double mean[6] = {0.15, 0.25, 0.45, 0.65, 0.75, 0.85};
-    /* double stdev[6] = {0.01, 0.02, 0.03, 0.01, 0.05, 0.01}; */
-    double stdev[6] = {0.05, 0.05, 0.05, 0.05, 0.05, 0.05};
+    double stdev[6] = {0.01, 0.02, 0.03, 0.01, 0.05, 0.01};
+    /* double stdev[6] = {0.05, 0.05, 0.05, 0.05, 0.05, 0.05}; */
     for (size_t ii = 0; ii < prob->noutput; ii++){
         output[ii] = 0.0;
         for (size_t jj = 0; jj < 6; jj++){
             double bump_height = 1.0 / sqrt(2.0*M_PI * stdev[jj]*stdev[jj]);
+            /* double bump_height = 1.0;  */
             double exponent = - (prob->x[ii]-mean[jj])*(prob->x[ii]-mean[jj]) / (2.0 * stdev[jj] * stdev[jj]);
             output[ii] += input[jj] * bump_height * exp(exponent);
         }
@@ -100,7 +108,7 @@ static double * generate_inputs(size_t n)
         
     for (size_t ii = 0; ii < n; ii++){
         for (size_t jj = 0; jj < dx; jj++){
-            x[jj + ii*dx] = randu()*2.0-1.0;
+            x[jj + ii*dx] = randu()*(ub-lb) + lb;
         }
     }
 
@@ -167,17 +175,20 @@ static void save_array_with_x(size_t nrows, size_t ncols, double * x,
 int main(int argc, char * argv[])
 {
     int next_option;
-    const char * const short_options = "hf:n:p:b:s:r:v:";
+    const char * const short_options = "hf:n:p:b:s:r:a:l:u:v:";
     const struct option long_options[] = {
-        { "help"     , 0, NULL, 'h' },
-        { "function" , 1, NULL, 'f' },
-        { "number"   , 1, NULL, 'n' },
-        { "polyorder", 1, NULL, 'p' },
-        { "basis"    , 1, NULL, 'b' },
-        { "rankspace", 1, NULL, 's' },
-        { "rankparam", 1, NULL, 'r' },
-        { "verbose"  , 1, NULL, 'v' },
-        { NULL       ,  0, NULL, 0   }
+        { "help"      , 0, NULL, 'h' },
+        { "function"  , 1, NULL, 'f' },
+        { "number"    , 1, NULL, 'n' },
+        { "polyorder" , 1, NULL, 'p' },
+        { "basis"     , 1, NULL, 'b' },
+        { "rankspace" , 1, NULL, 's' },
+        { "rankparam" , 1, NULL, 'r' },
+        { "adaptrank" , 1, NULL, 'a' },
+        { "lowerbound", 1, NULL, 'l'},
+        { "upperbound", 1, NULL, 'u'},
+        { "verbose"   , 1, NULL, 'v' },
+        { NULL        ,  0, NULL, 0   }
     };
 
     size_t npoly = 4;
@@ -187,6 +198,9 @@ int main(int argc, char * argv[])
     size_t basis = 0;
     size_t rank_space = 4;
     size_t rank_param = 2;
+    lb = -1.0;
+    ub = 1.0;
+    unsigned int adapt = 0;
     program_name = argv[0];
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -211,6 +225,15 @@ int main(int argc, char * argv[])
                 break;
             case 'r':
                 rank_param = strtoul(optarg,NULL,10);
+                break;
+            case 'a':
+                adapt = strtoul(optarg,NULL,10);
+                break;
+            case 'l':
+                lb = strtod(optarg,NULL);
+                break;
+            case 'u':
+                ub = strtod(optarg,NULL);
                 break;
             case 'v':
                 verbose = strtoul(optarg,NULL,10);
@@ -240,6 +263,7 @@ int main(int argc, char * argv[])
     else{
         dx = 6;
     }
+    
     printf("\n");
     printf("\n");
     printf("\t Functional regression setup\n");
@@ -278,23 +302,22 @@ int main(int argc, char * argv[])
 
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_nparams(opts,npoly);
-    struct OneApproxOpts * polyopts =
-        one_approx_opts_alloc(POLYNOMIAL,opts);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * polyopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
 
     double width = pow(dy,-0.2)/sqrt(12.0);
     width *= 0.5;
-    /* width *= 20; */
-    struct KernelApproxOpts * kopts =
-        kernel_approx_opts_gauss(prob.noutput,prob.x,1.0,width);
-    struct LinElemExpAopts * lopts =
-        lin_elem_exp_aopts_alloc(prob.noutput,prob.x);
+
+    struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(prob.noutput,prob.x,1.0,width);
+    struct LinElemExpAopts * lopts = lin_elem_exp_aopts_alloc(prob.noutput,prob.x);
 
     struct OneApproxOpts * ko = NULL;
     if (basis == 0){
         ko = one_approx_opts_alloc(LINELM,lopts);
     }
     else{
-        /* printf("width=%G\n",width); */
         ko = one_approx_opts_alloc(KERNEL,kopts);
     }
 
@@ -322,17 +345,17 @@ int main(int argc, char * argv[])
     c3opt_set_relftol(optimizer,1e-10);
     
     struct FTRegress * ftr = ft_regress_alloc(dx+1,fapp,ranks);
-    ft_regress_set_alg_and_obj(ftr,ALS,FTLS);
-    ft_regress_set_adapt(ftr,1);
-    ft_regress_set_roundtol(ftr,1e-7);
-    ft_regress_set_maxrank(ftr,10);
-    ft_regress_set_kickrank(ftr,1);
+    ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+    if (adapt == 1){
+        ft_regress_set_adapt(ftr,1);
+        ft_regress_set_roundtol(ftr,1e-7);
+        ft_regress_set_maxrank(ftr,10);
+        ft_regress_set_kickrank(ftr,1);
+    }
     if (verbose > 0){
         ft_regress_set_verbose(ftr,1);
     }
     struct FunctionTrain * ft_final = ft_regress_run(ftr,optimizer,ndata*dy,x,y);
-
-    function_train_save(ft_final,"ft_saved.c3");
 
     size_t ntest = 1000;
     double * test_inputs = generate_inputs(ntest);
@@ -365,7 +388,11 @@ int main(int argc, char * argv[])
     char ftest[64];
     char ftest_ft[64];
     char ftest_diff[64];
+    char ft_filename[64];
 
+    sprintf(ft_filename,"ft_n%zu_relsquarederr_%3.5G.c3",ndata,diff_se/norm_total);
+    function_train_save(ft_final,ft_filename);
+    
     sprintf(ftest,"testing_funcs_n%zu.dat",ndata);
     sprintf(ftest_ft,"testing_funcs_ft_n%zu.dat",ndata);
     sprintf(ftest_diff,"testing_diff_n%zu.dat",ndata);
