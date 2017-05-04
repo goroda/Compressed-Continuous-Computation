@@ -84,6 +84,26 @@ typedef long unsigned int size_t;
 %ignore ft_regress_run;
 
 
+%rename (cross_validate_init) my_cross_validate_init;
+%exception my_cross_validate_init{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    struct CrossValidate * my_cross_validate_init(size_t dim, size_t len1, const double* xdata, size_t len2, const double * ydata,size_t kfold, int verbose){
+        if (len1 != len2*dim){
+            PyErr_Format(PyExc_ValueError,
+                         "Arrays of lengths (%zu,%zu) given",
+                         len1, len2);
+            return NULL;
+        }
+        return cross_validate_init(len2,dim,xdata,ydata,kfold,verbose);
+    }
+%}
+%ignore cross_validate_init;
+
+
+
 %rename (function_train_eval) my_function_train_eval;
 %exception my_function_train_eval{
     $action
@@ -122,6 +142,57 @@ typedef long unsigned int size_t;
  }
 
 %typemap(freearg) (size_t * ranks){
+    if ($1) free($1);
+}
+
+%typemap(in) void * paramlist {
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_ValueError,"Expecting a list");
+        return NULL;
+    }
+    int size = PyList_Size($input);
+
+    PyObject *s = PyList_GetItem($input,0);
+    int is_size_t = 0;
+    if (PyInt_Check(s)){
+        is_size_t = 1;
+    }
+    else{
+        if (!PyFloat_Check(s)){
+            PyErr_SetString(PyExc_ValueError, "List items must be integers or floats");
+            return NULL;
+        }
+    }
+
+    if (is_size_t == 1){
+        $1 = malloc(size * sizeof(size_t));
+    }
+    else{
+        $1 = malloc(size * sizeof(double));
+    }
+    for (int i = 0; i < size; i++){
+        PyObject *s = PyList_GetItem($input,i);
+        if (is_size_t == 1){
+            if (!PyInt_Check(s)) {
+                free($1);
+                PyErr_SetString(PyExc_ValueError, "List items must the same type");
+                return NULL;
+            }
+            ((size_t *)$1)[i] = PyInt_AsLong(s);
+        }
+        else{
+            if (!PyFloat_Check(s)) {
+                free($1);
+                PyErr_SetString(PyExc_ValueError, "List items must be the same type");
+                return NULL;
+            }
+            ((double *)$1)[i] = PyFloat_AsDouble(s);
+        }
+
+    }
+ }
+
+%typemap(freearg) (void * paramlist){
     if ($1) free($1);
 }
 

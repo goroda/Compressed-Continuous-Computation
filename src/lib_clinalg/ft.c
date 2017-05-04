@@ -1008,7 +1008,7 @@ void running_core_copy_vals(struct RunningCoreTotal * rct, size_t N, size_t No,
 /***********************************************************//**
     Get a reference to the values
 ***************************************************************/
-double * running_core_total_get_vals(struct RunningCoreTotal * rct)
+double * running_core_total_get_vals(const struct RunningCoreTotal * rct)
 {
     if (rct->onval == 1){
         return rct->vals1;
@@ -1719,6 +1719,10 @@ void function_train_core_pre_post_run(struct FunctionTrain * ft, size_t core,
                                 NULL,0,NULL);
         size_t incr = ft_mem_space_get_incr(ft->evalspace4[ii]);
         running_core_total_update_rl(evals_rl,n,r1,r2,ft->evalspace4[ii]->vals,incr);
+
+        /* printf("in pre_post\n"); */
+        /* dprint(r1,running_core_total_get_vals(evals_rl)); */
+
     }
 
 }
@@ -2026,7 +2030,7 @@ void function_train_core_linparam_grad_eval(
     \param[in]     weights - weights for the sum of each column
     \param[in,out] grad    - compute gradient if not null (store gradient here)
 
-    \returns sum of L2 norms of each univariate function
+    \returns sum of squared L2 norms of each univariate function
 
     \note 
     If gradient is not null then it adds scaled values of the new gradients to the
@@ -2048,6 +2052,7 @@ double function_train_param_grad_sqnorm(struct FunctionTrain * ft, double * weig
             out += qmarray_param_grad_sqnorm(ft->cores[ii],weights[ii],NULL);
         }
         running+=incr;
+        /* printf("out = %3.15G\n",out); */
     }
 
     return out;

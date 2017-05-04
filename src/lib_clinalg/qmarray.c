@@ -3283,13 +3283,13 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     if (out != NULL){
         generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
         for (ii = 0; ii < size; ii++){
-            if (isnan(out[ii*incout])){
+            if (isnan(out[ii])){
                 fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval is nan\n");
                 fprintf(stderr,"ii=%zu,size=%zu,incout=%zu\n",ii,size,incout);
                 fprintf(stderr,"x = %G\n",x[ii*incx]);
                 exit(1);
             }
-            else if (isinf(out[ii*incout])){
+            else if (isinf(out[ii])){
                 fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval inf\n");
                 exit(1);
             }

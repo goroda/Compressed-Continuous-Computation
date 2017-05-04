@@ -39,6 +39,8 @@
 #include <math.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
+#include <linalg.h>
 
 #include "array.h"
 #include "CuTest.h"
@@ -189,7 +191,7 @@ void Test_LS_ALS2(CuTest * tc)
         for (size_t jj = 0; jj < ranks[ii]; jj++){
             for (size_t kk = 0; kk < ranks[ii+1]; kk++){
                 for (size_t ll = 0; ll < maxorder+1; ll++){
-                    param_space[onparam] += randu()*2.0-1.0;
+                    param_space[onparam] += (randu()*2.0-1.0);
                     onparam++;
                 }
             }
@@ -197,7 +199,7 @@ void Test_LS_ALS2(CuTest * tc)
     }
 
     struct c3Opt * optimizer = c3opt_create(BFGS);
-    /* c3opt_set_gtol(optimizer,1e-8); */
+    c3opt_set_gtol(optimizer,1e-4);
     
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);
     struct RegressOpts* als_opts = regress_opts_create(dim,ALS,FTLS);
@@ -372,7 +374,7 @@ void Test_function_train_core_param_grad_eval1(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 10; // 10
+    size_t ndata = 1; // 10
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
@@ -422,19 +424,67 @@ void Test_function_train_core_param_grad_eval1(CuTest * tc)
 
     
         /* printf("\t Testing Evaluation\n"); */
+
+
+        
         function_train_core_pre_post_run(a,core,ndata,x,runeval_lr,runeval_rl);
+        /* printf("\n\n"); */
+        /* for (size_t jj = 0; jj < ndata; jj++){ */
+        /*     double * core1 = calloc_double(ranks[0]*ranks[1]); */
+        /*     double * core2 = calloc_double(ranks[1]*ranks[2]); */
+        /*     double * core3 = calloc_double(ranks[2]*ranks[3]); */
+        /*     double * core4 = calloc_double(ranks[3]*ranks[4]); */
+
+        /*     qmarray_eval(a->cores[0],x[jj*dim+0],core1); */
+        /*     qmarray_eval(a->cores[1],x[jj*dim+1],core2); */
+        /*     qmarray_eval(a->cores[2],x[jj*dim+2],core3); */
+        /*     qmarray_eval(a->cores[3],x[jj*dim+3],core4); */
+        /*     double * left_eval = calloc_double(8); // max rank */
+        /*     double * right_eval = calloc_double(8); // max rank; */
+        /*     double * temp = calloc_double(8); */
+        /*     if (core == 0){ */
+        /*         memmove(right_eval,core4,ranks[3]*sizeof(double));                 */
+        /*         cblas_dgemv(CblasColMajor,CblasNoTrans,ranks[2],ranks[3],1.0,core3,ranks[2], */
+        /*                     right_eval,1,0.0,temp,1); */
+        /*         /\* printf("after first right eval\n "); dprint(ranks[2],temp); *\/ */
+                
+        /*         memmove(right_eval,temp,ranks[2]*sizeof(double)); */
+
+        /*         cblas_dgemv(CblasColMajor,CblasNoTrans,ranks[1],ranks[2],1.0,core2,ranks[1], */
+        /*                     right_eval,1,0.0,temp,1); */
+        /*         /\* printf("after second right eval\n "); dprint(ranks[1],temp); *\/ */
+        /*         memmove(right_eval,temp,ranks[1]*sizeof(double)); */
+
+        /*         double * rlvals = running_core_total_get_vals(runeval_rl); */
+        /*         for (size_t zz = 0; zz < ranks[1]; zz++){ */
+        /*             CuAssertDblEquals(tc,right_eval[zz],rlvals[zz],1e-15); */
+        /*         } */
+
+        /*     } */
+
+        /*     free(core1); core1 = NULL; */
+        /*     free(core2); core2 = NULL; */
+        /*     free(core3); core3 = NULL; */
+        /*     free(core4); core4 = NULL; */
+        /*     free(left_eval); left_eval = NULL; */
+        /*     free(right_eval); right_eval = NULL; */
+        /*     free(temp); temp = NULL; */
+            
+        /* } */
+        
+        
         function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,NULL,nparam,vals,NULL,
                                              NULL,0,NULL);
 
         for (size_t ii = 0; ii < ndata; ii++){
-            CuAssertDblEquals(tc,y[ii],vals[ii],1e-13);
+            CuAssertDblEquals(tc,y[ii],vals[ii],1e-14);
         }
     
         /* printf("\t Testing Gradient\n"); */
         function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
                                              core_grad_space,core_space_size,max_func_param_space);
         for (size_t ii = 0; ii < ndata; ii++){
-            CuAssertDblEquals(tc,y[ii],vals[ii],1e-13);
+            CuAssertDblEquals(tc,y[ii],vals[ii],1e-14);
         }
 
         running_core_total_restart(rungrad);
@@ -451,7 +501,7 @@ void Test_function_train_core_param_grad_eval1(CuTest * tc)
 
         /* printf("grad = "); dprint(totparam,grad); */
         for (size_t zz = 0; zz < ndata; zz++){
-            double h = 1e-8;
+            double h = 1e-7;
             for (size_t jj = 0; jj < nparam; jj++){
                 guess[jj] += h;
                 function_train_core_update_params(a,core,nparam,guess);
@@ -600,7 +650,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-8;
+        double h = 1e-7;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -708,7 +758,7 @@ void Test_function_train_param_grad_eval_simple(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-8;
+        double h = 1e-7;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -899,12 +949,12 @@ void Test_LS_AIO2(CuTest * tc)
 
 void Test_LS_AIO3(CuTest * tc)
 {
-    printf("\nLS_AIO3: Testing AIO regression on a randomly generated low rank function \n");
+    printf("\nLS_AIO3: Testing AIO regression on a randomly generated low rank function with kristoffel\n");
     printf("\t  Dimensions: 5\n");
     printf("\t  Ranks:      [1 2 3 2 8 1]\n");
-    printf("\t  LPOLY order: 10\n");
-    printf("\t  nunknowns:   419\n");
-    printf("\t  ndata:       4190\n");
+    printf("\t  LPOLY order: 5\n");
+    printf("\t  nunknowns:   229\n");
+    printf("\t  ndata:       2290\n");
 
     srand(seed);
     
@@ -914,7 +964,7 @@ void Test_LS_AIO3(CuTest * tc)
     size_t ranks[6] = {1,2,3,2,8,1};
     double lb = -1.0;
     double ub = 1.0;
-    size_t maxorder = 10;
+    size_t maxorder = 5;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
@@ -923,7 +973,8 @@ void Test_LS_AIO3(CuTest * tc)
     for (size_t ii = 0; ii < dim; ii++){
         nunknown += ranks[ii]*ranks[ii+1]*(maxorder+1);
     }
-    size_t ndata = 10*nunknown;
+    /* printf("nunknown =%zu\n",nunknown); */
+    size_t ndata = nunknown*10;
     /* printf("\t Ndata: %zu\n",ndata); */
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -938,6 +989,8 @@ void Test_LS_AIO3(CuTest * tc)
         /* y[ii] += randn(); */
     }
 
+    
+
     // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,lb);
@@ -951,11 +1004,12 @@ void Test_LS_AIO3(CuTest * tc)
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-14);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    struct c3Opt* optimizer = c3opt_create(BFGS);
+    struct c3Opt* optimizer = c3opt_create(LBFGS);
     c3opt_set_verbose(optimizer,0);
-    c3opt_set_gtol(optimizer,1e-8);
+    c3opt_set_gtol(optimizer,1e-6);
+    c3opt_set_maxiter(optimizer,1000);
 
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
     double diff = function_train_relnorm2diff(ft_final,a);
@@ -1475,7 +1529,7 @@ void Test_LS_AIO_ftparam_restricted_ranks_opt(CuTest * tc)
     printf("\t start ranks: "); iprint_sz(dim+1,function_train_get_ranks(ftfinal));
     struct FunctionTrain * ftr1 = function_train_round(ftfinal,1e-8,fapp);
     printf("\t rounded ranks 1e-8: "); iprint_sz(dim+1,function_train_get_ranks(ftr1));
-    struct FunctionTrain * ftr2 = function_train_round(ftfinal,1e-5,fapp);
+    struct FunctionTrain * ftr2 = function_train_round(ftfinal,5e-5,fapp);
     printf("\t rounded ranks 1e-5: "); iprint_sz(dim+1,function_train_get_ranks(ftr2));
 
     
@@ -1779,14 +1833,33 @@ void Test_function_train_param_grad_sqnorm(CuTest * tc)
     function_train_get_params(a,guess);
     double * grad = calloc_double(nparam);
     
+
+    double val_alternate = function_train_param_grad_sqnorm(a,weights,NULL);
     double val = function_train_param_grad_sqnorm(a,weights,grad);
 
-    /* printf("val = %G\n",val); */
+    /* printf("val_alternate = %3.15G\n",val_alternate); */
+
+    double val_should = 0.0;
+    for (size_t ii = 0; ii < dim; ii++){
+        for (size_t jj = 0; jj < ranks[ii]*ranks[ii+1]; jj++){
+            val_should +=weights[ii]*generic_function_inner(a->cores[ii]->funcs[jj],a->cores[ii]->funcs[jj]);
+        }
+        /* printf("val_should = %3.15G\n",val_should); */
+    }
+    /* printf("val_should = %3.15G\n",val_should); */
+    /* printf("diff = %3.15G\n",(val_should-val_alternate)/val_should); */
+    CuAssertDblEquals(tc,0.0,(val_should-val_alternate)/val_should,1e-15);
+    CuAssertDblEquals(tc,0.0,(val_should-val)/val_should,1e-15);
+    /* printf("val_shoul = %G\n",val_should); */
+    /* return; */
+
+
+
     size_t running = 0;
     size_t notused;
     for (size_t zz = 0; zz < dim; zz++){
-        double h = 1e-7;
-        /* printf("nparam[%zu] = %zu\n",zz,nparam[zz]); */
+        double h = 1e-8;
+        /* printf("%zu\n",zz); */
         size_t nparam_core = function_train_core_get_nparams(a,zz,&notused);
         for (size_t jj = 0; jj < nparam_core; jj++){
             /* printf("jj = %zu\n",jj); */
@@ -1833,7 +1906,7 @@ void Test_SPARSELS_AIO(CuTest * tc)
         nunknown += ranks[ii]*ranks[ii+1]*(maxorder+1);
     }
     printf("\t  Number of degrees of freedom in truth = %zu\n",nunknown);
-    size_t ndata = 100;
+    size_t ndata = 200;
     printf("\t  Number of data = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -1881,7 +1954,7 @@ void Test_SPARSELS_AIO(CuTest * tc)
     printf("\t  Number of unknowns = %zu\n",nunknown);
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks_approx);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS_SPARSEL2);
-    regress_opts_set_regularization_weight(ropts,7e-4);
+    regress_opts_set_regularization_weight(ropts,7e-3);
     struct c3Opt * optimizer = c3opt_create(BFGS);
     c3opt_set_verbose(optimizer,0);
     /* c3opt_set_gtol(optimizer,0); */
@@ -1908,7 +1981,7 @@ void Test_SPARSELS_AIO(CuTest * tc)
 void Test_SPARSELS_AIOCV(CuTest * tc)
 {
     srand(seed);
-    printf("\nTesting Function: regress_sparse_ls (5 dimensional, max rank = 3, max order = 3) \n");
+    printf("\nTesting Function: regress_sparse_ls with cross validation (5 dimensional, max rank = 3, max order = 3) \n");
 
     size_t dim = 5;
 
@@ -1920,7 +1993,7 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 400;
+    size_t ndata = 200;
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -1956,15 +2029,15 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     ft_regress_set_alg_and_obj(ftr,AIO,FTLS_SPARSEL2);
 
     struct c3Opt * optimizer = c3opt_create(BFGS);
-    
+    /* c3opt_set_verbose(optimizer,1); */
+    c3opt_set_maxiter(optimizer,1000);
     /* // set options for parameters */
-    size_t kfold = 10;
+    size_t kfold = 5;
     int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
     
-    size_t nweight = 12;
-    double weight_ops[12]={1e-14, 1e-13, 1e-12,
-                           1e-11, 1e-10, 1e-9,
+    size_t nweight = 9;
+    double weight_ops[9]={ 1e-11, 1e-10, 1e-9,
                            1e-8, 1e-7, 1e-6,
                            1e-5, 1e-4, 1e-3};
     
@@ -1973,10 +2046,11 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     cv_opt_grid_set_verbose(cvgrid,1);
 
     cross_validate_grid_opt(cv,cvgrid,ftr,optimizer);
-
+    
     double opt_weight = ft_regress_get_regularization_weight(ftr);
     printf("\t (should match best) opt weight = %G\n",opt_weight);
-    
+
+    c3opt_set_maxiter(optimizer,10000);
     struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,ndata,x,y);
 
     double diff = function_train_relnorm2diff(ft,a);
@@ -2040,8 +2114,8 @@ void Test_SPARSELS_cross_validation(CuTest * tc)
     size_t order_ops[6] = {1,2,3,4,5,6};
     size_t nranks = 4;
     size_t rank_ops[4] ={1,2,3,4};
-    size_t nweight = 11;
-    double weight_ops[11]={1e-14,1e-13,1e-12,1e-11,1e-10,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4};
+    size_t nweight = 8;
+    double weight_ops[8]={1e-11,1e-10,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4};
 
     size_t kfold = 10;
     int cvverbose = 0;
@@ -2087,6 +2161,7 @@ void Test_SPARSELS_cross_validation(CuTest * tc)
     }
 
     printf("\n\t Relative error = %G\n",err3/norm);
+    CuAssertDblEquals(tc,0.0,err3/norm,1e-6);
     cross_validate_free(cv); cv = NULL;
     
     free(x); x = NULL;
@@ -2268,16 +2343,16 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
         }
         // no noise!
         y[ii] = ff_reg(x+ii*dim);
-        y[ii] += 0.01*randn();
+        y[ii] += 0.001*randn();
     }
     
 
     // Initialize Approximation Structure
-    size_t nparams = 20;
+    size_t nparams = 5;
     double * centers = linspace(lb,ub,nparams);
     double scale = 1.0;
     double width = pow(nparams,-0.2)*2.0/12.0;
-    width *= 20;
+    width *= 10;
 
     /* printf("\t width = %G\n",width); */
 
@@ -3036,12 +3111,12 @@ void Test_LS_AIO_kernel3(CuTest * tc)
 CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    // next 3 are good
+    /* next 3 are good */
     SUITE_ADD_TEST(suite, Test_LS_ALS);
     SUITE_ADD_TEST(suite, Test_LS_ALS2);
     SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
-    // next 5 are good
+    /* next 5 are good */
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple);
     SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
@@ -3049,7 +3124,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
     SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
-    // next 4 are good
+    /* next 4 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_new);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
@@ -3059,17 +3134,19 @@ CuSuite * CLinalgRegressGetSuite()
     
     /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
 
-    // Next 2 are good
+    /* Next 2 are good */
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
     SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
-    // next 2 are good
+    /* next 2 are good */
     SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
     SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
-    // Next 3 are good
+    /* Next 3 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
+
+    
     SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
     SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
     SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
@@ -3078,4 +3155,5 @@ CuSuite * CLinalgRegressGetSuite()
         
     return suite;
 }
+
 
