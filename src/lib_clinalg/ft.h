@@ -123,6 +123,7 @@ size_t function_train_update_params(struct FunctionTrain *, const double *);
 struct RunningCoreTotal;
 struct RunningCoreTotal * running_core_total_alloc(size_t);
 struct RunningCoreTotal ** running_core_total_arr_alloc(size_t,size_t);
+double * running_core_total_get_vals(const struct RunningCoreTotal *);
 void running_core_total_free(struct RunningCoreTotal *);
 void running_core_total_arr_free(size_t, struct RunningCoreTotal **);
 void running_core_total_restart(struct RunningCoreTotal *);

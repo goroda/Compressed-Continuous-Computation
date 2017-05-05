@@ -1,7 +1,9 @@
 # Compressed continuous computation in python
+from __future__ import print_function
 import c3
 import numpy as np
 import copy
+
 
 class FunctionTrain:
 
@@ -76,13 +78,27 @@ class FunctionTrain:
      
     def set_ranks(self,ranks):
 
+        if (len(ranks) != self.dim+1):
+            raise AttributeError("Ranks must be a list of size dim+1, with the first and last elements = 1")
+
         if (isinstance(ranks,list)):
             self.ranks = copy.deepcopy(ranks)
         else:
             self.ranks = list(copy.deepcopy(ranks))
+            
+        if ranks[0] != 1:
+            print ("Warning: rank[0] is not specified to 1, overwriting ")
+            self.ranks[0] = 1
+            
+        if ranks[self.dim] != 1:
+            print ("Warning: rank[0] is not specified to 1, overwriting ")
+            self.ranks[self.dim] = 1
+
 
     def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",adaptrank=0,\
-                         roundtol=1e-5,maxrank=10,kickrank=2,kristoffel=0,verbose=0):
+                         roundtol=1e-5,maxrank=10,kickrank=2,kristoffel=False,verbose=0,
+                         regweight=1e-7,opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-10,
+                         cvnparam=None,cvregweight=None,kfold=5,cvverbose=0):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -95,13 +111,24 @@ class FunctionTrain:
         if verbose > 1:
             c3.c3opt_set_verbose(self.optimizer,1)
 
+        # Set optimization options
+        c3.c3opt_set_gtol(self.optimizer,opt_gtol)
+        c3.c3opt_set_relftol(self.optimizer,opt_relftol)
+        c3.c3opt_set_absxtol(self.optimizer,opt_absxtol)
+
         self._build_multiopts()
-                
+        
         reg = c3.ft_regress_alloc(self.dim,self.multiopts,self.ranks)
         if alg == "AIO" and obj == "LS":
             c3.ft_regress_set_alg_and_obj(reg,c3.AIO,c3.FTLS)
+        elif alg == "AIO" and obj == "LS_SPARSECORE":
+            c3.ft_regress_set_alg_and_obj(reg,c3.AIO,c3.FTLS_SPARSEL2)
+            c3.ft_regress_set_regularization_weight(reg,regweight)
         elif alg == "ALS" and obj == "LS":
             c3.ft_regress_set_alg_and_obj(reg,c3.ALS,c3.FTLS)
+        elif alg == "ALS" and obj == "LS_SPARSECORE":
+            c3.ft_regress_set_alg_and_obj(reg,c3.ALS,c3.FTLS_SPARSEL2)
+            c3.ft_regress_set_regularization_weight(reg,regweight)
         else:
             raise AttributeError('Option combination of algorithm and objective not implemented ' + alg + obj)
         if adaptrank != 0:
@@ -115,9 +142,34 @@ class FunctionTrain:
         if kristoffel is True:
             c3.ft_regress_set_kristoffel(reg,1)
                 
-        if self.ft is None:
+        if self.ft is not None:
             c3.function_train_free(self.ft)
 
+
+        cv = None
+        cvgrid = None
+        if (cvnparam is not None) and (cvregweight is None):
+            cvgrid = c3.cv_opt_grid_init(1)
+            c3.cv_opt_grid_add_param(cvgrid,"num_param",len(cvnparam),list(cvnparam))
+        elif (cvnparam is None) and (cvregweight is not None):
+            cvgrid = c3.cv_opt_grid_init(1)
+            c3.cv_opt_grid_add_param(cvgrid,"reg_weight",len(cvregweight),list(cvregweight))
+        elif (cvnparam is not None) and (cvregweight is not None):
+            cvgrid = c3.cv_opt_grid_init(2)
+            c3.cv_opt_grid_add_param(cvgrid,"num_param",len(cvnparam),list(cvnparam))
+            c3.cv_opt_grid_add_param(cvgrid,"reg_weight",len(cvregeight),list(cvnparam))
+
+
+        if cvgrid is not None:
+            print("Cross validation is not working yet!\n")
+            c3.cv_opt_grid_set_verbose(cvgrid,cvverbose)
+            
+            cv = c3.cross_validate_init(self.dim,xdata.flatten(order='C'),ydata,kfold,0)
+            c3.cross_validate_grid_opt(cv,cvgrid,reg,self.optimizer)
+            c3.cv_opt_grid_free(cvgrid)
+            c3.cross_validate_free(cv)
+            
+            
         self.ft = c3.ft_regress_run(reg,self.optimizer,xdata.flatten(order='C'),ydata)
         
         c3.ft_regress_free(reg)

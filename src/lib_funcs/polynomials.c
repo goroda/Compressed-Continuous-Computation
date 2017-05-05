@@ -2116,7 +2116,8 @@ orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * pol
     if (poly->p->ptype == LEGENDRE){
         for (size_t ii = 0; ii < poly->num_poly; ii++){
             //the extra 2 is for the weight
-            grad[ii] += 2.0*scale * poly->coeff[ii] * poly->p->norm(ii)*dtransform_dx*2.0; 
+            grad[ii] += 2.0*scale * poly->coeff[ii] * poly->p->norm(ii) * /* *dtransform_dx * */
+                         (poly->upper_bound-poly->lower_bound); 
         }
         res = 0;
     }

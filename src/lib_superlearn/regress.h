@@ -99,7 +99,7 @@ struct CVOptGrid;
 struct CVOptGrid * cv_opt_grid_init(size_t);
 void cv_opt_grid_free(struct CVOptGrid *);
 void cv_opt_grid_set_verbose(struct CVOptGrid *, int);
-void cv_opt_grid_add_param(struct CVOptGrid *, char *, size_t, void *);
+void cv_opt_grid_add_param(struct CVOptGrid *, char *, size_t, void * paramlist);
 
 void cross_validate_grid_opt(struct CrossValidate *,
                              struct CVOptGrid *,

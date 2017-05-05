@@ -1016,6 +1016,76 @@ void Test_legendre_orth_poly_expansion_create_with_params_and_grad(CuTest * tc){
 }
 
 
+void Test_legendre_orth_poly_expansion_squared_norm_param_grad(CuTest * tc){
+    
+    printf("Testing function: orth_poly_expansion_squared_norm_param_grad with legendre poly\n");
+
+    size_t nparams = 10;
+    double params[10] = {0.12,2.04,9.0,-0.2,0.4,
+                         0.6,-0.9,-.2,0.04,1.2};
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-3.0);
+    ope_opts_set_ub(opts,2.0);
+    struct OrthPolyExpansion * ope = NULL;
+    ope = orth_poly_expansion_create_with_params(opts,nparams,params);
+
+
+    double grad[10] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+    double w = 0.5;
+    int res = 
+        orth_poly_expansion_squared_norm_param_grad(ope,w,grad);
+    CuAssertIntEquals(tc,0,res);
+
+
+    // numerical derivative
+    struct OrthPolyExpansion * ope1 = NULL;
+    struct OrthPolyExpansion * ope2 = NULL;
+
+    size_t dim = nparams;
+    double * x1 = calloc_double(dim);
+    double * x2 = calloc_double(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] = params[ii];
+        x2[ii] = params[ii];
+    }
+    
+    double diff = 0.0;
+    double v1,v2;
+    double norm = 0.0;
+    double eps = 1e-8;
+    for (size_t ii = 0; ii < dim; ii++){
+        x1[ii] += eps;
+        x2[ii] -= eps;
+        ope1 = orth_poly_expansion_create_with_params(opts,nparams,x1);
+        v1 = orth_poly_expansion_inner(ope1,ope1)*w;
+
+        ope2 = orth_poly_expansion_create_with_params(opts,nparams,x2);
+        v2 = orth_poly_expansion_inner(ope2,ope2)*w;
+
+        double diff_iter = pow( (v1-v2)/2.0/eps - grad[ii], 2 );
+        /* printf("current diff = %G\n",diff_iter); */
+        /* printf("\t norm = %G\n",grad[ii]); */
+        diff += diff_iter;
+        norm += pow( (v1-v2)/2.0/eps,2);
+        
+        x1[ii] -= eps;
+        x2[ii] += eps;
+
+        orth_poly_expansion_free(ope1); ope1 = NULL;
+        orth_poly_expansion_free(ope2); ope2 = NULL;
+    }
+    if (norm > 1){
+        diff /= norm;
+    }
+    free(x1); x1 = NULL;
+    free(x2); x2 = NULL;
+    CuAssertDblEquals(tc,0.0,diff,1e-7);
+    
+    ope_opts_free(opts); opts = NULL;
+    orth_poly_expansion_free(ope); ope = NULL;
+}
+
+
 CuSuite * LegGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -1036,6 +1106,7 @@ CuSuite * LegGetSuite(){
     SUITE_ADD_TEST(suite, Test_legendre_product);
     SUITE_ADD_TEST(suite, Test_legendre_axpy);
     SUITE_ADD_TEST(suite, Test_legendre_orth_poly_expansion_create_with_params_and_grad);
+    SUITE_ADD_TEST(suite, Test_legendre_orth_poly_expansion_squared_norm_param_grad);
 
     return suite;
 }
