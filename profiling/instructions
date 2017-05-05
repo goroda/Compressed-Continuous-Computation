@@ -6,6 +6,10 @@ python gprof2dot.py -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
 
 
 # for perf
-/usr/bin/perf record -g ./test/lib_clinalg_test/clinalg_test 
+perf record -g ./test/lib_clinalg_test/clinalg_test 
 
+then
+perf report -g
+
+for visualization
 ./flamegraph.sh
