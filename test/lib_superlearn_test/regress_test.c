@@ -655,7 +655,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-7;
+        double h = 1e-6;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -764,7 +764,7 @@ void Test_function_train_param_grad_eval_simple(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-7;
+        double h = 1e-6;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -1011,12 +1011,12 @@ void Test_LS_AIO3(CuTest * tc)
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-2);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    struct c3Opt* optimizer = c3opt_create(LBFGS);
+    struct c3Opt* optimizer = c3opt_create(BFGS);
     c3opt_set_verbose(optimizer,0);
     c3opt_set_gtol(optimizer,1e-6);
-    c3opt_set_maxiter(optimizer,1000);
+    c3opt_set_maxiter(optimizer,2000);
 
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
     double diff = function_train_relnorm2diff(ft_final,a);
