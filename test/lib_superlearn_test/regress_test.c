@@ -949,7 +949,7 @@ void Test_LS_AIO2(CuTest * tc)
 
 void Test_LS_AIO3(CuTest * tc)
 {
-    printf("\nLS_AIO3: Testing AIO regression on a randomly generated low rank function with kristoffel\n");
+    printf("\nLS_AIO3: Testing AIO regression on a randomly generated low rank function\n");
     printf("\t  Dimensions: 5\n");
     printf("\t  Ranks:      [1 2 3 2 8 1]\n");
     printf("\t  LPOLY order: 5\n");
