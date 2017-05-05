@@ -4866,9 +4866,10 @@ struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
     \param[in]     x   - location at which to evaluate the gradient
     \param[in,out] out - allocate space for the gradient
 ***********************************************************/
-void function_train_gradient_eval(const struct FunctionTrain * ft, const double * x, double * out)
+void function_train_gradient_eval(const struct FunctionTrain * ft,
+                                  const double * x,
+                                  double * out)
 {
-    assert (1 == 0);
     
     size_t dim  = ft->dim;
     size_t maxrank = function_train_get_maxrank(ft);
@@ -4920,7 +4921,7 @@ void function_train_gradient_eval(const struct FunctionTrain * ft, const double 
         if (backind < (dim-1)){
             post_vals = running_core_total_get_vals(evals_rl);
             grad_eval = running_core_total_get_vals(grads[backind]);
-            out[backind] = cblas_ddot(r1,post_vals,1,grad_eval,1);
+            out[backind] = cblas_ddot(r2,post_vals,1,grad_eval,1);
             running_core_total_update(grads[backind],1,r2,1,post_vals,r2);
         }
         else{

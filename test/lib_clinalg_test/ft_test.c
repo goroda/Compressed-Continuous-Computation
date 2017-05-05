@@ -68,6 +68,116 @@ static void all_opts_free(
 }
 
 
+void Test_function_train_grad_eval(CuTest * tc)
+{
+    printf("Testing Function: function_train_gradient_eval\n");
+    
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcGrad,NULL);
+    // set function monitor
+
+    double lb = -10.0;
+    double ub = 10.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+
+    double grad_eval[4];
+    double pt[4] = {2.0, -3.1456, 1.0, 0.0};
+    function_train_gradient_eval(ft,pt,grad_eval);
+
+    double eval = function_train_eval(ft,pt);
+    double eval_should = pt[0]*pt[1] + pt[2]*pt[3];
+    CuAssertDblEquals(tc, eval_should, eval,1e-12);
+
+    CuAssertDblEquals(tc, pt[1], grad_eval[0],1e-12);
+    CuAssertDblEquals(tc, pt[0], grad_eval[1],1e-12);
+    CuAssertDblEquals(tc, pt[3], grad_eval[2],1e-12);
+    CuAssertDblEquals(tc, pt[2], grad_eval[3],1e-12);
+    
+    function_train_free(ft); ft = NULL; 
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+}
+
+void Test_function_train_grad_eval2(CuTest * tc)
+{
+    printf("Testing Function: function_train_gradient_eval (2)\n");
+    
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcCheck2,NULL);
+    // set function monitor
+
+    double lb = -10.0;
+    double ub = 10.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 1;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-10);
+    c3approx_set_round_tol(c3a,1e-10);
+    c3approx_set_cross_maxiter(c3a,10);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+
+    /* iprint_sz(dim+1,function_train_get_ranks(ft)); */
+    double grad_eval[4];
+    double pt[4] = {2.0, -3.1456, 1.0, 0.2};
+    function_train_gradient_eval(ft,pt,grad_eval);
+        
+    double eval = function_train_eval(ft,pt);
+    double eval_should;
+    funcCheck2(1,pt,&eval_should,NULL);
+    CuAssertDblEquals(tc, 0.0, (eval_should-eval)/eval_should,1e-7);
+
+
+    double g1_should = 2*pt[0]*pt[1]*pt[1];
+    double g2_should = 2.0*pt[0]*pt[1]*pt[0]  + sin(pt[3]);
+    double g3_should = pt[3];
+    double g4_should = pt[2] + pt[1]*cos(pt[3]);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[0]-g1_should)/g1_should,1e-7);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[1]-g2_should)/g2_should,1e-7);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-7);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,1e-7);
+    
+
+    
+    /* CuAssertDblEquals(tc, pt[3], grad_eval[2],1e-12); */
+    /* CuAssertDblEquals(tc, pt[2], grad_eval[3],1e-12); */
+    
+    function_train_free(ft); ft = NULL; 
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+}
+
+
 void Test_function_train_initsum(CuTest * tc){
 
     printf("Testing function: function_train_initsum \n");
@@ -1812,6 +1922,8 @@ void Test_sin1000dint(CuTest * tc)
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval2);
     SUITE_ADD_TEST(suite, Test_function_train_initsum);
     SUITE_ADD_TEST(suite, Test_function_train_linear);
     SUITE_ADD_TEST(suite, Test_function_train_quadratic);
@@ -1837,6 +1949,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_sin10dint);
     SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
     SUITE_ADD_TEST(suite, Test_sin100dint);
+    
     /* SUITE_ADD_TEST(suite, Test_sin1000dint); */
     return suite;
 }

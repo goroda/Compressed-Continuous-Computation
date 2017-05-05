@@ -282,12 +282,13 @@ int funcGrad(size_t n, const double * x, double * out, void * args)
     return 0;
 }
 
+// 3 dimensional
 int funcHess(size_t n, const double * x, double * out, void * args)
 {
     (void)(args);
     //double out = 2.0*x[0] + x[1]*pow(x[2],4) + x[3]*pow(x[0],2);
     for (size_t ii = 0; ii < n; ii++){
-        out[ii] =  x[ii*3+0] + pow(x[ii*3+0],2)*x[ii*3+2] +  x[ii*3+1] * pow(x[ii*3+2],4) ;// + x[3]*pow(x[0],2);
+        out[ii] =  x[ii*3+0] + pow(x[ii*3+0],2)*x[ii*3+2] +  x[ii*3+1] * pow(x[ii*3+2],4);// + x[3]*pow(x[0],2);
     }
     return 0;
 }
@@ -298,7 +299,8 @@ int funcCheck2(size_t n, const double * x, double * out, void * args)
 {
     (void)(args);
     for (size_t ii = 0; ii < n; ii++){
-        out[ii] = pow(x[ii*4+ 0] * x[ii*4 + 1],2) + x[ii*4 + 2] * x[ii*4+3]  + x[ii*4+1]*sin(x[ii*4+3]); 
+        out[ii] = pow(x[ii*4+ 0] * x[ii*4 + 1],2) + x[ii*4 + 2] * x[ii*4+3] +
+                  x[ii*4+1]*sin(x[ii*4+3]); 
     }
     return 0;
 }
