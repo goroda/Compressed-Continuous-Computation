@@ -139,7 +139,7 @@ class FunctionTrain:
             
         c3.ft_regress_set_verbose(reg,verbose)
 
-        if self.ft is None:
+        if self.ft is not None:
             c3.function_train_free(self.ft)
 
 
@@ -158,7 +158,7 @@ class FunctionTrain:
 
 
         if cvgrid is not None:
-            print("Cross validation is not working yet!\n")
+            #print("Cross validation is not working yet!\n")
             c3.cv_opt_grid_set_verbose(cvgrid,cvverbose)
             
             cv = c3.cross_validate_init(self.dim,xdata.flatten(order='C'),ydata,kfold,0)
