@@ -332,13 +332,13 @@ int main(int argc, char * argv[])
         ft_regress_set_kickrank(ftr,1);        
     }
     
-    /* struct c3Opt * optimizer = c3opt_create(BFGS); */
-    struct c3Opt * optimizer = c3opt_create(SGD);
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    /* struct c3Opt * optimizer = c3opt_create(SGD); */
     if (verbose > 5){
         c3opt_set_verbose(optimizer,1);
     }
-    ft_regress_set_stoch_obj(ftr,1);
-    c3opt_set_sgd_nsamples(optimizer,ndata);
+    /* ft_regress_set_stoch_obj(ftr,1); */
+    /* c3opt_set_sgd_nsamples(optimizer,ndata); */
     opt_maxiter = 1000;
     c3opt_set_maxiter(optimizer,opt_maxiter);
     c3opt_set_gtol(optimizer,tol);

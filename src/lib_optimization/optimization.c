@@ -205,7 +205,7 @@ struct c3SGD * c3sgd_alloc()
 
     sgd->nsamples = 0;
 
-    sgd->do_momentum = 2;
+    sgd->do_momentum = 0;
     sgd->momentum_init = 0.5;
     sgd->momentum_rate = 1.05;
     sgd->nepochs_between_increase = 10;
@@ -1733,7 +1733,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     int ntest_error_increase = 0;
     int invalid_due_to_decrease = 0;
 
-    int do_momentum = opt->sgd->do_momentum; // 1 regular , 2 nesterov accerlated
+    int do_momentum = 0; /* opt->sgd->do_momentum; // 1 regular , 2 nesterov accerlated */
     double nesterov_mu = opt->sgd->momentum_init;
     double momentum_increase = opt->sgd->momentum_rate;
     
@@ -1769,17 +1769,45 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
             *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
 
-            // update first moment
-            for (size_t jj = 0; jj < d; jj++){
-                first_moment[jj] = beta_1 * first_moment[jj] + (1.0 - beta_1) * workspace[jj];
-                second_moment[jj] = beta_2 * second_moment[jj] + (1.0 - beta_2) * workspace[jj] * workspace[jj];
+            if (cblas_ddot(d,workspace,1,workspace,1) < 20){
+                if (do_momentum == 0){
 
-                bias_corrected_first[jj] = first_moment[jj] / ( 1.0 - pow(beta_1,time));
-                bias_corrected_second[jj] = second_moment[jj] / ( 1.0 - pow(beta_2,time));
-                next_step[jj] += -learn_rate * bias_corrected_first[jj] / (sqrt(bias_corrected_second[jj]) + eps);
+                    for (size_t jj = 0; jj < d; jj++){
+                        /* printf("workspace[%zu]= %G\n",jj,workspace[jj]); */
+                        next_step[jj] = current_step[jj] - learn_rate * workspace[jj];
+                    }
+                }
+                else{
+                    // update first moment
+                    for (size_t jj = 0; jj < d; jj++){
+                        first_moment[jj] = beta_1 * first_moment[jj] + (1.0 - beta_1) * workspace[jj];
+                        second_moment[jj] = beta_2 * second_moment[jj] + (1.0 - beta_2) * workspace[jj] * workspace[jj];
+
+                        bias_corrected_first[jj] = first_moment[jj] / ( 1.0 - pow(beta_1,time));
+                        bias_corrected_second[jj] = second_moment[jj] / ( 1.0 - pow(beta_2,time));
+                        next_step[jj] += -learn_rate * bias_corrected_first[jj] / (sqrt(bias_corrected_second[jj]) + eps);
+                    }
+                }
             }
+            sgd_term_check(opt,d,next_step,current_step,ndata_train,
+                           ndata,order,&xdiff,&train_error,&test_error);
+            if (verbose > 0){
+                printf("          %-12zu|",iter+1);
+                if (do_momentum == 0){
+                    printf("   %-19.7G|   %-19.7G| %-19.7G| %-19.5G| %-19.5G",train_error,test_error,xdiff,learn_rate,cblas_ddot(d,workspace,1,workspace,1));
+                }
+                else{
+                    printf("   %-19.7G|   %-19.7G| %-19.7G| %-19.5G| %-19.5G",
+                           train_error,test_error,xdiff,learn_rate,nesterov_mu);
+                }
+                /* printf("x = "); dprint(d,x); */
+                printf("\n");
+            }
+
+            learn_rate *= 0.999;
             time++;
         }
+
 
         
         /* for (size_t ii = 0; ii < ndata_train; ii++){ */
@@ -1854,8 +1882,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         /* /\* } *\/ */
 
         
-        sgd_term_check(opt,d,next_step,current_step,ndata_train,
-                       ndata,order,&xdiff,&train_error,&test_error);
+
         /* if (iter == 0){ */
         /*     best_valid_err = test_error; */
         /*     prev_error = test_error; */
@@ -1885,18 +1912,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         /*     /\* } *\/ */
         /* } */
         
-        if (verbose > 0){
-            printf("          %-12zu|",iter+1);
-            if (do_momentum == 0){
-                printf("   %-19.7G|   %-19.7G| %-19.7G| %-19.5G|",train_error,test_error,xdiff,learn_rate);
-            }
-            else{
-                printf("   %-19.7G|   %-19.7G| %-19.7G| %-19.5G| %-19.5G",
-                       train_error,test_error,xdiff,learn_rate,nesterov_mu);
-            }
-            /* printf("x = "); dprint(d,x); */
-            printf("\n");
-        }
+
 
         /* if ((iter > 0) && (iter % 50) == 0){ */
         /*     if ((new_ten_err > prev_ten_err) && (iter > 100)){ */
