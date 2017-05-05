@@ -46,7 +46,7 @@
 #define FUNCTIONS_H
 
 /* #include "../lib_array/array.h" */
-#include "../lib_array/array.h"
+#include "array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
 #include "hpoly.h"
@@ -55,7 +55,7 @@
 #include "fwrap.h"
 #include "pivoting.h"
 
-#include "../lib_optimization/lib_optimization.h"
+#include "lib_optimization.h"
 
 /** \enum function_class
  * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
@@ -133,7 +133,7 @@ generic_function_quadratic(double,double,enum function_class,void *);
 struct GenericFunction * 
 generic_function_poly_randu(enum poly_type,size_t, double, double);
 struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
-
+double generic_function_deriv_eval(const struct GenericFunction *, double);
 
 // generic operations
 struct GenericFunction *
@@ -142,8 +142,14 @@ generic_function_daxpby(double, const struct GenericFunction *,
 
 double generic_function_inner(const struct GenericFunction *,
                               const struct GenericFunction *);
+double generic_function_inner_weighted(const struct GenericFunction *, 
+                                       const struct GenericFunction *);
 double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
-                         size_t, struct GenericFunction **);
+                                  size_t, struct GenericFunction **);
+double generic_function_inner_weighted_sum(size_t, size_t, 
+                                           struct GenericFunction **, 
+                                           size_t, 
+                                           struct GenericFunction **);
 double generic_function_norm(const struct GenericFunction *); 
 double generic_function_norm2diff(const struct GenericFunction *, 
                                   const struct GenericFunction *);
@@ -202,8 +208,8 @@ generic_function_create_nodal(struct GenericFunction *,size_t, double *);
 struct GenericFunction *
 generic_function_sum_prod(size_t, size_t,  struct GenericFunction **, 
                 size_t, struct GenericFunction **);
-double generic_function_sum_prod_integrate(size_t, size_t,  
-                struct GenericFunction **, size_t, struct GenericFunction **);
+/* double generic_function_sum_prod_integrate(size_t, size_t,   */
+/*                 struct GenericFunction **, size_t, struct GenericFunction **); */
 struct GenericFunction *
 generic_function_prod(struct GenericFunction *, struct GenericFunction *);
 
@@ -277,13 +283,13 @@ void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
 
 // more complicated operations
 
-void generic_function_array_orth1d_columns(
-    struct GenericFunction **,
-    struct GenericFunction **,
-    enum function_class,
-    void *, size_t,
-    size_t, double,
-    double);
+/* void generic_function_array_orth1d_columns( */
+/*     struct GenericFunction **, */
+/*     struct GenericFunction **, */
+/*     enum function_class, */
+/*     void *, size_t, */
+/*     size_t, double, */
+/*     double); */
 
 void generic_function_array_orth(size_t,struct GenericFunction **,
                                  enum function_class,void *);
@@ -354,8 +360,8 @@ generic_function_regress1d(struct Regress1DOpts *, struct c3Opt *, int *);
  *  total dimension of the function
  *  \var FiberCut::dimcut
  *  dimension along which function can vary
- *  \var FiberCut::f
- *  function to cut
+ *  \var FiberCut::fpoint
+ *  pointer to function to cut
  *  \var FiberCut::ftype_flag
  *  0 for two dimensional function, 1 for n-dimensional function
  *  \var FiberCut::args
@@ -370,7 +376,7 @@ struct FiberCut
     union func_type {
         double (*fnd)(double *, void *);
         double (*f2d)(double, double, void *);
-    } f;
+    } fpoint;
     int ftype_flag; // 0 for f2d, 1 for fnd
     void * args;
     double * vals; // (totdim) but vals[dimcut] doesnt matter

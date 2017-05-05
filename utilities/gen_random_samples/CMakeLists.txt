@@ -8,5 +8,5 @@ target_link_libraries(random_sample
     ${blas_lapack}
     -lm)
 
-install(TARGETS random_sample EXPORT random_sample DESTINATION "${bin_dest}")
-
+# install(TARGETS random_sample EXPORT random_sample DESTINATION "${bin_dest}")
+install(TARGETS random_sample DESTINATION bin)

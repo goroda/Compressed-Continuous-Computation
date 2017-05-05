@@ -8,18 +8,6 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 
-# set(include_dest "include/c3-${C3_VERSION}")
-# set(main_lib_dest "lib/c3-${C3_VERSION}")
-# set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
-# set(include_dest "include/c3")
-# set(main_lib_dest "lib/c3")
-set (include_dest "~/Software/c3_installed/include/c3")
-set (main_lib_dest "~/Software/c3_installed/lib/c3")
-set (bin_dest "~/Software/c3_installed/bin")
-set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
 if (APPLE)
     option(USE_CLANG "build application with clang" ON)
     set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn")
@@ -34,29 +22,31 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
 else ()
 
-    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99")
+    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -fno-omit-frame-pointer")
     set(CMAKE_C_COMPILER "cc")
 
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
 
     include_directories(/usr/include)
-    set(blas_lapack "-lblas -llapack")
+    set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
-    #find_package(SWIG REQUIRED)
-    #include(${SWIG_USE_FILE})
 endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
-#set(static_libs 1)
-set(static_libs 0)
+option(BUILD_STATIC_LIB "Build a static library" OFF)
+if (BUILD_STATIC_LIB)
+  set(static_libs 1)  
+else ()
+  set(static_libs 0)
+  set(compiler_flags "${compiler_flags} -fPIC")
+endif()
 
 include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
 
@@ -64,6 +54,7 @@ set(CMAKE_C_FLAGS "${compiler_flags}")
 
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
+include_directories(src)
 include_directories(src/lib_stringmanip)
 include_directories(src/lib_array)
 include_directories(src/lib_linalg)
@@ -80,6 +71,22 @@ include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 include_directories(include)
 
+
+# include(cmake/c3-config.cmake)
+
+# set(include_dest "include/c3-${C3_VERSION}")
+# set(main_lib_dest "lib/c3-${C3_VERSION}")
+# set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+
+# set(include_dest "include/c3")
+# set(main_lib_dest "lib/c3")
+# set (include_dest "~/Software/c3_installed/include/c3")
+# set (main_lib_dest "~/Software/c3_installed/lib/c3")
+# set (bin_dest "~/Software/c3_installed/bin")
+# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+
+
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(examples)
@@ -87,8 +94,7 @@ add_subdirectory(benchmarks)
 add_subdirectory(profiling)
 add_subdirectory(utilities)
 
-# include(cmake/c3-config.cmake)
 
-install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
-install(EXPORT c3 DESTINATION ${lib_dest})
+# install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
+# install(EXPORT c3 DESTINATION ${lib_dest})
 

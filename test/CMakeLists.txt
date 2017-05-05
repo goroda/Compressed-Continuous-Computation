@@ -28,5 +28,5 @@ add_subdirectory(lib_optimization_test)
 # add_subdirectory(lib_tensor_test)
 # add_subdirectory(lib_tensdecomp_test)
 
-# add_subdirectory(lib_probability_test)
+add_subdirectory(lib_probability_test)
 

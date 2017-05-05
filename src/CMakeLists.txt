@@ -31,9 +31,9 @@ set(header lib_stringmanip/stringmanip.h
            lib_clinalg/dmrgprod.h
            lib_clinalg/ft.h
            lib_clinalg/indmanage.h
-           lib_clinalg/lib_clinalg.h
            lib_clinalg/qmarray.h
            lib_clinalg/quasimatrix.h
+           lib_clinalg/lib_clinalg.h
            lib_fft/fft.h
            lib_funcs/fapprox.h
            lib_funcs/functions.h
@@ -64,7 +64,8 @@ set(header lib_stringmanip/stringmanip.h
            lib_tensdecomp/tt_integrate.h
            lib_tensdecomp/tt_multilinalg.h
            lib_tensor/tensor.h
-           c3.h
+           lib_probability/probability.h
+           ../include/c3.h
            )
 
 
@@ -106,27 +107,28 @@ set(src lib_array/array.c
         lib_tensdecomp/tt_integrate.c
         lib_tensdecomp/tt_multilinalg.c
         lib_tensor/tensor.c
+        lib_probability/probability.c
         )
 
 #create a libray containing everything!
-# file(GLOB SRC_FILES */*.c)
-# if (${static_libs} )
-#     add_library(c3 ${SRC_FILES})
-# else ()
-#     add_library(c3 SHARED ${SRC_FILES})
-#     target_link_libraries(c3
-#         ${blas_lapack}
-#         -lm
-#         )
-#  endif()
+file(GLOB SRC_FILES */*.c)
+if (${static_libs} )
+    add_library(c3 ${SRC_FILES})
+else ()
+    add_library(c3 SHARED ${SRC_FILES})
+    target_link_libraries(c3
+        ${blas_lapack}
+        -lm
+        )
+ endif()
 
 
 # configure_file("config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config_impl.h")
-add_library(c3 SHARED ${header} ${src})
-target_link_libraries(c3
-  ${blas_lapack}
-  -lm
-  )
+# add_library(c3 SHARED ${header} ${src})
+# target_link_libraries(c3
+#   ${blas_lapack}
+#   -lm
+#   )
 
 target_include_directories(c3 PUBLIC 
                      $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
@@ -134,6 +136,10 @@ target_include_directories(c3 PUBLIC
                      $<INSTALL_INTERFACE:${include_dest}>
                      $<INSTALL_INTERFACE:${lib_dest}>)
 
-install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
-install(FILES ${header} DESTINATION "${include_dest}")
+# install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
+# install(FILES ${header} DESTINATION "${include_dest}")
+
+# install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
+install(TARGETS c3 DESTINATION lib)
+install(FILES ${header} DESTINATION include/c3)
 

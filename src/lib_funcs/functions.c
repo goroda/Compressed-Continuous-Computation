@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file functions.c
  * Provides basic routines for interfacing specific functions to the outside world through
  * generic functions
@@ -461,7 +457,29 @@ generic_function_deriv(const struct GenericFunction * gf)
     case POLYNOMIAL: out->f = orth_poly_expansion_deriv(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
     case RATIONAL:                                              break;
-    case KERNEL: assert(1==0);                                                break;
+    case KERNEL: assert(1==0);                                  break;
+    }
+    return out;
+}
+
+/********************************************************//**
+    Evaluate the derivative of a generic function
+
+    \param[in] gf - generic function
+    \param[in] x  - location at which to evaluate
+
+    \return value of the derivative
+************************************************************/
+double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
+{
+    double out = 0.1234567890;
+    switch (gf->fc){ 
+    case CONSTANT:   assert (1 == 0);                               break;
+    case PIECEWISE:  out = piecewise_poly_deriv_eval(gf->f,x);      break;
+    case POLYNOMIAL: out = orth_poly_expansion_deriv_eval(x,gf->f); break;
+    case LINELM:     assert (1 == 0);                               break;
+    case RATIONAL:   assert (1 == 0);                               break;
+    case KERNEL:     out = kernel_expansion_deriv_eval(x,gf->f);    break;
     }
     return out;
 }
@@ -661,9 +679,7 @@ generic_function_deriv(const struct GenericFunction * gf)
          //printf("piecewise inner = %G\n",out);
          break;
      case POLYNOMIAL:
-         out = orth_poly_expansion_inner(
-             (struct OrthPolyExpansion *) a->f,
-             (struct OrthPolyExpansion *) b->f);
+         out = orth_poly_expansion_inner(a->f,b->f);
          //printf("poly inner = %G\n",out);
          break;
      case LINELM:
@@ -685,6 +701,44 @@ generic_function_deriv(const struct GenericFunction * gf)
 
      return out;
  }
+
+/********************************************************//**
+*   Compute the weighted inner product between two generic functions
+*
+*   \param[in] a  - generic function
+*   \param[in] b  - generic function
+*
+*   \return out -  int a(x) b(x) w(x) dx 
+************************************************************/
+double generic_function_inner_weighted(const struct GenericFunction * a, 
+                                       const struct GenericFunction * b)
+{
+    assert(a->fc == POLYNOMIAL);
+    assert(b->fc == POLYNOMIAL);
+    double out = 0.123456789;   
+    enum function_class fc = a->fc;
+    
+    switch (fc){
+    case CONSTANT:
+        assert (1 == 0);
+        break;
+    case PIECEWISE:
+        assert (1 == 0);
+        break;
+    case POLYNOMIAL:
+        out = orth_poly_expansion_inner_w(a->f,b->f);
+        break;
+    case LINELM:
+        assert (1 == 0);
+        break;
+    case RATIONAL:
+        break;
+    case KERNEL: 
+        assert (1 == 0);
+        break;
+    }
+    return out;
+}
 
  /********************************************************//**
  *   Compute the sum of the inner products between
@@ -710,6 +764,31 @@ generic_function_deriv(const struct GenericFunction * gf)
      }
      return val;
  }
+
+/********************************************************//**
+*   Compute the sum of the (weighted) inner products between
+*   two arrays of generic functions
+*
+*   \param[in] n   - number of inner products
+*   \param[in] lda - stride of functions to use in a
+*   \param[in] a   - first array of generic functions
+*   \param[in] ldb - stride of functions to use in b
+*   \param[in] b   - second array of generic functions
+*
+*   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) w(x) dx
+************************************************************/
+double generic_function_inner_weighted_sum(size_t n, size_t lda, 
+                                           struct GenericFunction ** a, 
+                                           size_t ldb, 
+                                           struct GenericFunction ** b)
+{
+     double val = 0.0;
+     size_t ii;
+     for (ii = 0; ii < n; ii++){
+         val += generic_function_inner_weighted(a[ii*lda], b[ii*ldb]);
+     }
+     return val;
+}
 
 /********************************************************//**
 *   Compute norm of a generic function
@@ -1737,7 +1816,7 @@ generic_function_1darray_eval2(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
-        int res = legendre_poly_expansion_arr_eval(n,parr,x,out);
+        int res = orth_poly_expansion_arr_eval(n,parr,x,out);
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){
@@ -1784,7 +1863,7 @@ generic_function_1darray_eval2N(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
-        int res = legendre_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        int res = orth_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){
@@ -2235,7 +2314,7 @@ fiber_cut_init2d( double (*f)(double, double, void *), void * args,
                             size_t dim, double val)
 {
     struct FiberCut * fcut = alloc_fiber_cut(2,dim);
-    fcut->f.f2d = f;
+    fcut->fpoint.f2d = f;
     fcut->args = args;
     fcut->ftype_flag=0;
     if (dim == 0){
@@ -2270,7 +2349,7 @@ fiber_cut_2darray( double (*f)(double, double, void *), void * args,
     size_t ii;
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(2,dim);
-        fcut[ii]->f.f2d = f;
+        fcut[ii]->fpoint.f2d = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 0;
         if (dim == 0){
@@ -2309,7 +2388,7 @@ fiber_cut_ndarray( double (*f)(double *, void *), void * args,
 //    printf("vals are \n");
     for (ii = 0; ii < n; ii++){
         fcut[ii] = alloc_fiber_cut(totdim,dim);
-        fcut[ii]->f.fnd = f;
+        fcut[ii]->fpoint.fnd = f;
         fcut[ii]->args = args;
         fcut[ii]->ftype_flag = 1;
         memmove(fcut[ii]->vals, val[ii], totdim*sizeof(double));
@@ -2333,10 +2412,10 @@ double fiber_cut_eval2d(double x, void * vfcut){
     
     double val;
     if (fcut->dimcut == 0){
-        val = fcut->f.f2d(x, fcut->vals[1], fcut->args);
+        val = fcut->fpoint.f2d(x, fcut->vals[1], fcut->args);
     }
     else{
-        val = fcut->f.f2d(fcut->vals[0], x, fcut->args);
+        val = fcut->fpoint.f2d(fcut->vals[0], x, fcut->args);
     }
     return val;
 }
@@ -2355,7 +2434,7 @@ double fiber_cut_eval(double x, void * vfcut){
     
     double val;
     fcut->vals[fcut->dimcut] = x;
-    val = fcut->f.fnd(fcut->vals, fcut->args);
+    val = fcut->fpoint.fnd(fcut->vals, fcut->args);
     return val;
 }
 

@@ -34,9 +34,6 @@
 
 //Code
 
-
-
-
 /** \file probability.c
  * Provides routines for working with probability with function trains
  */
@@ -55,6 +52,542 @@
 #include "probability.h"
 #include "linalg.h"
 #include "lib_clinalg.h"
+
+// Linked list of vectors of indices
+struct IndexList
+{
+    size_t nelem;
+    size_t * vals;
+    struct IndexList * next;
+};
+
+// create an element of the list
+struct IndexList * index_list_create(size_t nelem, size_t * vals)
+{
+    struct IndexList * il = malloc(sizeof(struct IndexList));
+    if (il == NULL){
+        fprintf(stderr,"Failure to allocate index list for sobol indices\n");
+        exit(1);
+    }
+
+    il->nelem = nelem;
+    il->vals = calloc_size_t(nelem);
+    memmove(il->vals,vals,nelem*sizeof(size_t));
+    il->next = NULL;
+    return il;
+}
+
+// destroy the linked list
+void index_list_destroy(struct IndexList * list)
+{
+    if (list != NULL){
+        free(list->vals); list->vals = NULL;
+        index_list_destroy(list->next);
+        free(list); list = NULL;
+
+    }
+}
+
+// append a new element to the end of the list
+void index_list_append(struct IndexList ** list, size_t nelem, size_t * vals)
+{
+    struct IndexList * newitem = index_list_create(nelem,vals);
+
+    if (*list == NULL){
+        *list = newitem;
+    }
+    else{
+        struct IndexList * temp = *list;
+        while (temp->next != NULL){
+            temp = temp->next;
+        }
+        temp->next = newitem;
+    }
+}
+    
+
+// n choose k, order doesn't matter, return ordered sequences in list
+void n_choose_k_no_order(size_t s, size_t n, size_t k,
+                         struct IndexList ** list,
+                         size_t nprev, size_t * prev){
+    
+    size_t * base = calloc_size_t(nprev+1);
+    if (nprev != 0){
+        memmove(base,prev,nprev * sizeof(size_t));
+    }
+    
+    if (k == 1){
+        for (size_t ii = s; ii < n; ii++){
+            base[nprev] = ii;
+            index_list_append(list,nprev+1,base);
+        }
+    }
+    else{
+        for (size_t ii = s; ii < n; ii++){
+            base[nprev] = ii;
+            n_choose_k_no_order(ii+1,n,k-1,list,nprev+1,base);
+        }
+    }
+    free(base); base = NULL;
+}
+// 
+
+
+
+
+/** \struct C3SobolSensitivity
+ * \brief Stores sobol sensitivity information
+ * \var C3SobolSensitivity::dim
+ * number of variables
+ * \var C3SobolSensitivity::total_effects
+ * vector of total effect sensitivities
+ * \var C3SobolSensitivity::variance
+ * Total variance of the output
+ * \var C3SobolSensitivity::max_order
+ * The maximum number of variable interactions (<= dim)
+ * \var C3SobolSensitivity::interactions
+ * A tree structure holding the interaction information
+ */
+typedef struct C3SobolSensitivity
+{
+    size_t dim;
+    double * total_effects;
+
+    double variance;
+    size_t max_order;
+    struct SInteract ** interactions;    
+} c3_sobol_t;
+
+/**********************************************************//**
+    Compute the variance due to the inteaction of certain
+    variables
+
+    \param[in] ft               - function train representing a random variable
+    \param[in] ninteract        - number of variables interacting
+    \param[in] interacting_vars - variables that are interacting
+
+    \returns  Variance_{interacting_vars}(Expectation(ft|interacting_vars))
+**************************************************************/
+double function_train_sobol_interact_var(
+    const struct FunctionTrain * ft,
+    size_t ninteract,
+    const size_t * interacting_vars)
+{
+    int alloc = 0;
+    struct FunctionTrain * ft_1 = NULL;
+    if (ft->dim == ninteract){
+        ft_1 = (struct FunctionTrain * )ft;
+    }
+    else{
+        alloc = 1;
+        size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
+    
+        size_t on_contract = 0;
+        for (size_t ii = 0; ii < ft->dim; ii++){
+            size_t non_interacting = 1;
+            for (size_t jj = 0; jj < ninteract; jj++){
+                if (ii == interacting_vars[jj]){
+                    non_interacting = 0;
+                    break;
+                }
+            }
+
+            if (non_interacting)
+            {
+                ind_contract[on_contract] = ii;
+                on_contract++;
+            }
+        }
+
+
+        ft_1 =
+            function_train_integrate_weighted_subset(ft,
+                                                     ft->dim-ninteract,
+                                                     ind_contract);
+        free(ind_contract); ind_contract = NULL;
+    }
+    double fm = function_train_integrate_weighted(ft_1);
+    double sm = function_train_inner_weighted(ft_1,ft_1);
+    double vari = sm - fm*fm;
+
+    if (alloc == 1){
+        function_train_free(ft_1); ft_1 = NULL;
+    }
+
+    return vari;
+}
+
+// Tree representing sobol indices
+struct SInteract
+{
+    size_t val; // variable that denotes this node of the tree
+    size_t nlabels; // total interactions considered before this node + 1
+    size_t * label; // denotes variables higher in the tree label[nlabels-1] = val
+
+    double vari; // Variance_{interacting_vars}(Expectation(ft|interacting_vars))
+    double var_subtract; // variance of all interactions of combinations of variables
+                         // given in label.
+    int set_sub; // whether or not var_subtract is set
+    
+    // the variance attributed to the variable interactions specified in label is
+    // vari - var_subtract
+
+    // branches to the rest of the variables
+    size_t nleaves;
+    struct SInteract ** leaves;
+};
+
+void sinteract_free(struct SInteract * si)
+{
+    if (si != NULL){
+        free(si->label); si->label = NULL;
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            sinteract_free(si->leaves[ii]); si->leaves[ii] = NULL;
+        }
+        free(si->leaves); si->leaves = NULL;
+        free(si); si = NULL;
+    }
+}
+
+// create a tree structure
+struct SInteract * sinteract_create(size_t val, size_t nleaves,
+                                    size_t n_prev_labels, size_t * prev_labels,
+                                    const struct FunctionTrain * ft)
+{
+    struct SInteract * si = malloc(sizeof(struct SInteract));
+    if (si == NULL){
+        fprintf(stderr, "Failure to allocate sobol interaction list\n");
+        exit(1);
+    }
+
+    si->val = val;
+    si->nleaves = nleaves;
+    if (nleaves > 0){
+        si->leaves = malloc(nleaves * sizeof(struct SInteract *));
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            si->leaves[ii] = NULL;
+        }
+    }
+    else{
+        si->leaves = NULL;
+    }
+    if (n_prev_labels == 0){
+        si->nlabels = 1;
+        si->label = calloc_size_t(1);
+        si->label[0] = val;
+    }
+    else{
+        si->nlabels = n_prev_labels+1;
+        si->label = calloc_size_t(si->nlabels);
+        memmove(si->label,prev_labels,n_prev_labels * sizeof(size_t));
+        si->label[si->nlabels-1] = val;
+    }
+    
+    si->vari = function_train_sobol_interact_var(ft,si->nlabels,si->label);
+    si->set_sub = 0;
+    
+    return si;
+}
+
+// get variance due to interaction
+double sinteract_get_vari(struct SInteract * si, size_t distance, size_t * vars)
+{
+    if (distance == 0){
+        return si->vari;
+    }
+    else{
+        size_t nextind = vars[0] - si->val-1;
+        return sinteract_get_vari(si->leaves[nextind],distance-1,vars+1);
+    }
+}
+
+// get variance due to interaction minus  interactions of combination of variables
+double sinteract_get_sensitivity(struct SInteract * si,
+                                 size_t distance,
+                                 const size_t * vars)
+{
+    if (distance == 0){
+        if (si->set_sub == 1){
+            return si->vari - si->var_subtract;
+        }
+        else{
+            return si->vari;
+        }
+    }
+    else{
+        size_t nextind = vars[0]-si->val-1;
+        return sinteract_get_sensitivity(si->leaves[nextind],distance-1,vars+1);
+    }
+}
+
+void sinteract_print(struct SInteract * si)
+{
+    if (si != NULL){
+        printf("Interaction: ");
+        for (size_t ii = 0; ii < si->nlabels; ii++){
+            printf("%zu ",si->label[ii]);
+        }
+        printf("--> Variance: %G\n",si->vari);
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            sinteract_print(si->leaves[ii]);
+        }
+        
+        /* printf("\n"); */
+    }
+}
+
+void sinteract_apply_external(struct SInteract *si, void (*f)(double,size_t,size_t*,void*),void * arg)
+{
+    if (si != NULL){
+        if (si->set_sub){
+            f(si->vari-si->var_subtract,si->nlabels,si->label,arg);
+        }
+        else{
+            f(si->vari,si->nlabels,si->label,arg);
+        }
+        for (size_t ii = 0; ii < si->nleaves; ii++){
+            sinteract_apply_external(si->leaves[ii],f,arg);
+        }
+    }
+}
+
+void sinteract_push(struct SInteract ** si, size_t val, size_t which_leaf,
+                    size_t nleaves,
+                    const struct FunctionTrain * ft)
+{
+    /* printf("push (val,leaf,nleaves) %zu, %zu, %zu\n",val,which_leaf,nleaves); */
+    struct SInteract * new_leaf =
+        sinteract_create(val, nleaves,
+                         (*si)->nlabels, (*si)->label,
+                         ft);
+    (*si)->leaves[which_leaf] = new_leaf;
+}
+
+
+void sinteract_compute_var_subtract(struct SInteract * element,
+                                    struct C3SobolSensitivity * head_of_tree)
+{
+
+    size_t nlabels = element->nlabels;
+    double var_subtract = 0.0;
+    for (size_t jj = 0; jj < nlabels; jj++){
+        struct IndexList * il = NULL;
+        n_choose_k_no_order(0,nlabels,jj,&il,0,NULL);
+
+        struct IndexList * temp = il;
+        while (temp != NULL){
+            size_t * vars = calloc_size_t(temp->nelem);
+            for (size_t kk = 0; kk < temp->nelem; kk++){
+                vars[kk] = element->label[temp->vals[kk]];
+            }
+
+            double vari = c3_sobol_sensitivity_get_interaction(
+                head_of_tree,temp->nelem,vars);
+            var_subtract += vari;
+
+            temp = temp->next;
+            free(vars); vars = NULL;
+        }
+
+        index_list_destroy(il); il = NULL;
+    }
+    element->set_sub = 1;
+    element->var_subtract = var_subtract;
+}
+
+void get_combination(size_t num_elements, size_t elements_left, size_t start,
+                     struct SInteract ** elements, size_t * index,
+                     const struct FunctionTrain * ft,
+                     struct C3SobolSensitivity * head_of_tree)
+{
+
+
+    sinteract_compute_var_subtract(*elements,head_of_tree);
+    if (elements_left == 1){
+        for (size_t ii = start; ii < num_elements; ii++){
+            sinteract_push(elements,ii,ii-start,0,ft);
+            sinteract_compute_var_subtract((*elements)->leaves[ii-start],
+                                           head_of_tree);
+        }
+    }
+    else{
+        for (size_t ii = num_elements-1; ii >= start; ii--){
+            sinteract_push(elements,ii,ii-start,num_elements-ii-1,ft);
+            get_combination(num_elements, elements_left-1, ii+1,
+                            &((*elements)->leaves[ii-start]),
+                            index, ft, head_of_tree);
+        }
+    }
+}
+
+
+/**********************************************************//**
+    Perform sobol sensitivity analysis
+
+    \param[in] ft    - function train to free
+    \param[in] order - maximum order of interactions to calculate
+
+    \return sobol sensitivity structure
+**************************************************************/
+struct C3SobolSensitivity *
+c3_sobol_sensitivity_calculate(const struct FunctionTrain * ft,
+                               size_t order)
+{
+    size_t dim = function_train_get_dim(ft);    
+    c3_sobol_t * sobol = malloc(sizeof(c3_sobol_t));
+    if (sobol == NULL){
+        fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
+        exit(1);
+    }
+    sobol->dim = dim;
+
+    sobol->max_order = order;
+
+    sobol->interactions = malloc(dim * sizeof(struct SInteract *));
+    if (sobol->interactions == NULL){
+        fprintf(stderr, "Failure to allocate space for sobol sensitivities\n");
+        exit(1);        
+    }
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        sobol->interactions[dim-1-ii] = sinteract_create(dim-1-ii,dim-1,0,NULL,ft);
+        get_combination(dim,order-1,dim-ii,&(sobol->interactions[dim-1-ii]),NULL,
+                        ft,sobol);
+    }
+
+    double mean = function_train_integrate_weighted(ft);
+    double second_moment = function_train_inner_weighted(ft,ft);
+    sobol->variance = second_moment - mean*mean;
+
+    sobol->total_effects = calloc_double(ft->dim);
+    struct FunctionTrain * ft_1 = NULL;;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        ft_1 = function_train_integrate_weighted_subset(ft,1,&ii);
+        
+        double fm = function_train_integrate_weighted(ft_1);
+        double sm = function_train_inner_weighted(ft_1,ft_1);
+        double vari = sm - fm*fm;
+        sobol->total_effects[ii] = (sobol->variance - vari)/sobol->variance;
+        function_train_free(ft_1); ft_1 = NULL;
+    }
+    
+    return sobol;
+}
+
+
+/**********************************************************//**
+    Free memory allocated to sobol sensitivity analysis
+**************************************************************/
+void c3_sobol_sensitivity_free(struct C3SobolSensitivity * si)
+{
+    if (si != NULL){
+        free(si->total_effects); si->total_effects = NULL;
+        for (size_t ii = 0; ii < si->dim; ii++){
+            sinteract_free(si->interactions[ii]);
+            si->interactions[ii] = NULL;
+        }
+        free(si->interactions); si->interactions = NULL;
+        free(si); si = NULL;
+    }
+}
+
+
+/**********************************************************//**
+    Get the contribution to the variance from interaction
+    of a set of variables
+
+    \param[in] sobol     - sobol sensitivity structure
+    \param[in] ninteract - number of variables interacting
+    \param[in] vars      - variables that are interacting
+
+    \return variance contribution to the interaction of *vars*
+**************************************************************/
+double c3_sobol_sensitivity_get_interaction(
+    const c3_sobol_t * sobol, size_t ninteract, const size_t * vars)
+{
+
+    if (ninteract == 1){
+        return sobol->interactions[vars[0]]->vari;
+    }
+    else{
+        return sinteract_get_sensitivity(sobol->interactions[vars[0]],
+                                         ninteract-1,
+                                         vars+1);
+    }
+}
+
+
+/**********************************************************//**
+    Get a total sensitivity
+
+    \param[in] sobol - sobol sensitivity structure
+    \param[in] var   - variable whose total sensitivity to get
+
+    \return total sensitivity of variable *var*
+**************************************************************/
+double c3_sobol_sensitivity_get_total(const c3_sobol_t * sobol, size_t var)
+{
+    return sobol->total_effects[var];
+}
+
+/**********************************************************//**
+    Get the first order main effect sensitivity
+
+    \param[in] sobol - sobol sensitivity structure
+    \param[in] var   - variable whose total sensitivity to get
+
+    \return main sensitivity of variable *var*
+**************************************************************/
+double c3_sobol_sensitivity_get_main(const c3_sobol_t * sobol, size_t var)
+{
+    return sobol->interactions[var]->vari;
+}
+
+
+/**********************************************************//**
+    Get the variance of the random variable
+
+    \param[in] sobol - sobol sensitivity structure
+
+    \return the variable
+**************************************************************/
+double c3_sobol_sensitivity_get_variance(const c3_sobol_t * sobol)
+{
+    return sobol->variance;
+}
+
+
+/**********************************************************//**
+    Print sobol sensitivities
+**************************************************************/
+void c3_sobol_sensitivity_print(const c3_sobol_t * sobol)
+{
+
+    printf("\nTotal variance:\n%G\n",sobol->variance);
+
+    printf("\n\n\n");
+    printf("\nMain effects:\n");
+    for (size_t ii = 0; ii < sobol->dim; ii++){
+        sinteract_print(sobol->interactions[ii]);
+    }
+
+    printf("\nTotal effects:\n");
+    dprint(sobol->dim,sobol->total_effects);
+}
+
+/**********************************************************//**
+    Apply an external function to the main effects along the 
+    sobol index tree
+**************************************************************/
+void c3_sobol_sensitivity_apply_external(const c3_sobol_t * sobol,
+                                         void (*f)(double, size_t, size_t*,void*),
+                                         void * arg)
+{
+
+    for (size_t ii = 0; ii < sobol->dim; ii++){
+        sinteract_apply_external(sobol->interactions[ii],f,arg);
+    }
+}
 
 /***********************************************************//**
     Allocate a linear transform Ax +b

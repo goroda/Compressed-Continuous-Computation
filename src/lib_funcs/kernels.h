@@ -53,7 +53,9 @@ void kernel_free(struct Kernel *);
 struct KernelApproxOpts;
 void kernel_approx_opts_free(struct KernelApproxOpts *);
 struct KernelApproxOpts *
-kernel_approx_opts_gauss(size_t, double *, double, double);
+kernel_approx_opts_gauss(size_t, double * onedx, double, double);
+void kernel_approx_opts_set_center_adapt(struct KernelApproxOpts *,int);
+int kernel_approx_opts_linear_p(const struct KernelApproxOpts *);
 size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts *);
 void kernel_approx_opts_set_nparams(struct KernelApproxOpts *, size_t);
 void kernel_approx_opts_set_lb(struct KernelApproxOpts *, double);
@@ -85,7 +87,7 @@ kernel_expansion_linear(double, double, const struct KernelApproxOpts *);
 double kernel_expansion_eval(struct KernelExpansion *, double);
 void kernel_expansion_evalN(struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
-double kernel_expansion_deriv_eval(struct KernelExpansion *, double);
+double kernel_expansion_deriv_eval(double,void*);
 void kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
 double kernel_expansion_integrate(struct KernelExpansion *);
 double kernel_expansion_inner(struct KernelExpansion *, struct KernelExpansion *);

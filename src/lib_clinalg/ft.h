@@ -50,7 +50,7 @@
 struct FTMemSpace;
 
 /** \struct FunctionTrain
- * \brief Functrain train
+ * \brief Function-train
  * \var FunctionTrain::dim
  * dimension of function
  * \var FunctionTrain::ranks
@@ -105,7 +105,7 @@ double function_train_get_avgrank(const struct FunctionTrain *);
 void function_train_eval_up_to_core(struct FunctionTrain *,
                                     size_t, const double *,
                                     double *, size_t *);
-double function_train_eval(struct FunctionTrain *, const double *);
+double function_train_eval(struct FunctionTrain *, const double * evalnd_pt);
 
 size_t function_train_func_get_nparams(const struct FunctionTrain *,
                                      size_t, size_t, size_t);
@@ -123,6 +123,7 @@ size_t function_train_update_params(struct FunctionTrain *, const double *);
 struct RunningCoreTotal;
 struct RunningCoreTotal * running_core_total_alloc(size_t);
 struct RunningCoreTotal ** running_core_total_arr_alloc(size_t,size_t);
+double * running_core_total_get_vals(const struct RunningCoreTotal *);
 void running_core_total_free(struct RunningCoreTotal *);
 void running_core_total_arr_free(size_t, struct RunningCoreTotal **);
 void running_core_total_restart(struct RunningCoreTotal *);
@@ -137,6 +138,10 @@ void function_train_param_grad_eval(struct FunctionTrain *, size_t,
                                     double *, double *,
                                     double *,
                                     size_t, double *);
+void function_train_param_grad_eval_simple(struct FunctionTrain *, size_t,
+                                           const double *,
+                                           double *, double *);
+
 void function_train_linparam_grad_eval(struct FunctionTrain *, size_t,
                                        const double *,
                                        struct RunningCoreTotal *,
@@ -221,8 +226,13 @@ double
 function_train_integrate(const struct FunctionTrain *);
 double
 function_train_integrate_weighted(const struct FunctionTrain *);
+struct FunctionTrain *
+function_train_integrate_weighted_subset(
+    const struct FunctionTrain * ft, size_t,size_t *);
 double function_train_inner(const struct FunctionTrain *, 
                             const struct FunctionTrain * );
+double function_train_inner_weighted(const struct FunctionTrain *, 
+                                     const struct FunctionTrain *);
 double function_train_norm2(const struct FunctionTrain *);
 struct FunctionTrain * 
 function_train_orthor(struct FunctionTrain *, 
@@ -328,6 +338,7 @@ struct FT1DArray{
 
 struct FT1DArray * ft1d_array_alloc(size_t);
 struct FT1DArray * function_train_gradient(const struct FunctionTrain *);
+void function_train_gradient_eval(const struct FunctionTrain *, const double *, double *);
 unsigned char *
 ft1d_array_serialize(unsigned char *, struct FT1DArray *, size_t *);
 unsigned char *
@@ -341,10 +352,10 @@ struct FT1DArray * function_train_hessian(const struct FunctionTrain *);
 void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
 double * ft1d_array_eval(const struct FT1DArray *, const double *);
 void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);
-struct FunctionTrain *
-ft1d_array_sum_prod(size_t, double *,
-                    const struct FT1DArray *, const struct FT1DArray *,
-                    double);
+/* struct FunctionTrain * */
+/* ft1d_array_sum_prod(size_t, double *, */
+/*                     const struct FT1DArray *, const struct FT1DArray *, */
+/*                     double); */
 
 
 

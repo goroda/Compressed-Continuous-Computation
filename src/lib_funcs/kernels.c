@@ -144,6 +144,8 @@ struct Kernel
     double * params;
 };
 
+
+
 /********************************************************//**
 *   Check if same kernel
 *************************************************************/
@@ -278,6 +280,46 @@ struct Kernel * kernel_gaussian(double scale, double width, double center)
     return kern;
 }
 
+void kernel_to_string(struct Kernel * kern, char * output)
+{
+    if (kern->type == KernGauss){
+        sprintf(output,"Squared Exponential: scale=%G, width^2=%G, center=%G",
+                kern->params[0],kern->params[1],kern->params[2]);
+    }
+}
+
+/********************************************************//**
+*   Update the center of a kernel
+*************************************************************/
+void kernel_update_center(struct Kernel * kern, double center)
+{
+    switch (kern->type){
+    case KernGauss:
+        kern->params[2] = center;
+        break;
+    case KernNone:
+        fprintf(stderr,"No kernel type detected for updating center\n");
+        exit(1);
+    }
+}
+
+/********************************************************//**
+*   Get the center of a kernel
+*************************************************************/
+double kernel_get_center(const struct Kernel * kern)
+{
+    double out = 0.123456789;
+    switch (kern->type){
+    case KernGauss:
+        out = kern->params[2];
+        break;
+    case KernNone:
+        fprintf(stderr,"No kernel type detected for updating center\n");
+        exit(1);
+    }
+    return out;
+}
+
 /********************************************************//**
 *   Evaluate a kernel
 *************************************************************/
@@ -305,6 +347,23 @@ double kernel_deriv(struct Kernel * kern, double x)
     switch (kern->type){
     case KernGauss:
         out = gauss_kernel_deriv(kern->params[0],kern->params[1],kern->params[2],x);
+        break;
+    case KernNone:
+        fprintf(stderr,"No kernel type detected for evaluation\n");
+        exit(1);
+    }
+    return out;
+}
+
+/********************************************************//**
+*   Evaluate the gradient of a kernel at x with respect to the center
+*************************************************************/
+double kernel_grad_center(struct Kernel * kern, double x)
+{
+    double out = 0.0;
+    switch (kern->type){
+    case KernGauss: // just switch center and x because of symmetry!
+        out = gauss_kernel_deriv(kern->params[0],kern->params[1],x,kern->params[2]);
         break;
     case KernNone:
         fprintf(stderr,"No kernel type detected for evaluation\n");
@@ -397,6 +456,9 @@ struct KernelApproxOpts
     // bounds for approximation
     double lb; 
     double ub;
+
+    // additional
+    int adapt_center;
 };
 
 /********************************************************//**
@@ -423,6 +485,8 @@ struct KernelApproxOpts * kernel_approx_opts_alloc()
 
     ko->lb = -DBL_MAX;
     ko->ub = DBL_MAX;
+
+    ko->adapt_center = 0;
     return ko;
 }
 
@@ -475,6 +539,31 @@ kernel_approx_opts_gauss(size_t ncenters, double * centers, double scale, double
 }
 
 
+/********************************************************//**
+*   Set location adaptation (1 = yes, 0 = no)
+*************************************************************/
+void kernel_approx_opts_set_center_adapt(struct KernelApproxOpts * opts,int adapt)
+{
+    assert (opts != NULL);
+    opts->adapt_center = adapt;
+    if (adapt == 1){
+        opts->nregress_params = 2*opts->nnodes;
+    }
+}
+
+/********************************************************//**
+*   Check if linear parameterization (0 if no, 1 if yes)
+*************************************************************/
+int kernel_approx_opts_linear_p(const struct KernelApproxOpts * opts)
+{
+    assert (opts != NULL);
+    int lin = 1;
+    /* printf(" adapt->center = %d\n",opts->adapt_center); */
+    if (opts->adapt_center == 1){
+        lin = 0;
+    }
+    return lin;
+}
 
 /********************************************************//**
 *   Get number of parameters used for regression
@@ -493,7 +582,17 @@ void kernel_approx_opts_set_nparams(struct KernelApproxOpts * opts, size_t npara
 {
     assert (opts != NULL);
     opts->nregress_params = nparam;
-    opts->nnodes = nparam;
+    if (opts->adapt_center == 0){
+        opts->nnodes = nparam;
+    }
+    else{
+        if (nparam %2 != 0){
+            fprintf(stderr, "Adapting of kernel centers is turned on\n");
+            fprintf(stderr, "Therefore must set an even number of parameters\n");
+            exit(1);
+        }
+        opts->nnodes = nparam/2;
+    }
 
     free(opts->centers); opts->centers = NULL;
     assert (opts->prac_lb < DBL_MAX);
@@ -528,9 +627,10 @@ struct KernelExpansion
     double * coeff;
     struct Kernel ** kernels;
 
-    
     double lb;
     double ub;
+
+    size_t include_kernel_param;
 };
 
 /********************************************************//**
@@ -569,6 +669,8 @@ struct KernelExpansion * kernel_expansion_alloc(size_t nalloc)
     ke->kernels = kernel_array_alloc(nalloc);
     ke->lb = -DBL_MAX;
     ke->ub = DBL_MAX;
+
+    ke->include_kernel_param = 0;
     return ke;
 }
 
@@ -586,8 +688,12 @@ unsigned char *
 serialize_kernel_expansion(unsigned char * ser, struct KernelExpansion * kern, size_t * totSizeIn)
 {
     assert (kern->nkernels > 0);
-    // nkernels, (coeff+size), kernels, lb, ub,
-    size_t totsize = sizeof(size_t) + kern->nkernels * sizeof(double) + sizeof(size_t) + 2 * sizeof(double);
+    // nkernels, (coeff+size), kernels, lb, ub, include_kernel_param
+    size_t totsize =
+        sizeof(size_t) + kern->nkernels * sizeof(double) +
+        sizeof(size_t) + 2 * sizeof(double) +
+        sizeof(size_t);
+    
     for (size_t ii = 0; ii < kern->nkernels; ii++){
         size_t ksize = 0;
         serialize_kernel(ser,kern->kernels[ii],&ksize);
@@ -606,6 +712,7 @@ serialize_kernel_expansion(unsigned char * ser, struct KernelExpansion * kern, s
     }
     ptr = serialize_double(ptr,kern->lb);
     ptr = serialize_double(ptr,kern->ub);
+    ptr = serialize_size_t(ptr,kern->include_kernel_param);
     return ptr;
 }
 
@@ -643,9 +750,9 @@ deserialize_kernel_expansion( unsigned char * ser, struct KernelExpansion ** ker
 
     ptr = deserialize_double(ptr,&((*kern)->lb));
     ptr = deserialize_double(ptr,&((*kern)->ub));
+    ptr = deserialize_size_t(ptr,&((*kern)->include_kernel_param));
     /* printf("lb,ub=%G,%G\n",(*kern)->lb,(*kern)->ub); */
     return ptr;
-    
 }
 
 
@@ -665,6 +772,8 @@ struct KernelExpansion * kernel_expansion_copy(struct KernelExpansion * ke)
     }
     out->lb = ke->lb;
     out->ub = ke->ub;
+
+    out->include_kernel_param = ke->include_kernel_param;
     return out;
 }
 
@@ -778,6 +887,8 @@ kernel_expansion_init(const struct KernelApproxOpts * opts)
 
     ke->lb = opts->lb;
     ke->ub = opts->ub;
+
+    ke->include_kernel_param = (size_t)opts->adapt_center;
     /* kernel_expansion_set_bounds(ke,opts->centers[0],opts->centers[opts->nnodes-1]); */
 
     return ke;
@@ -789,8 +900,22 @@ kernel_expansion_init(const struct KernelApproxOpts * opts)
 void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
 {
 
-    assert (ke->nkernels == dim);
-    memmove(ke->coeff,param,dim*sizeof(double));
+    if (ke->include_kernel_param == 0){
+        assert (ke->nkernels == dim);
+        memmove(ke->coeff,param,dim*sizeof(double));
+    }
+    else{
+        if (dim == ke->nkernels){ // still just update the coeffs
+            memmove(ke->coeff,param,dim*sizeof(double));
+        }
+        else{
+            assert (ke->nkernels = dim/2);
+            memmove(ke->coeff,param,dim/2 * sizeof(double));
+            for (size_t ii = 0; ii < ke->nkernels; ii++){
+                kernel_update_center(ke->kernels[ii],param[ii+dim/2]);
+            }
+        }
+    }
 }
 
 /********************************************************//**
@@ -954,6 +1079,7 @@ void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
 *************************************************************/
 double kernel_expansion_deriv_eval(double x, void * kernin)
 {
+    assert (kernin != NULL);
     struct KernelExpansion * kern = kernin;
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)
@@ -1067,9 +1193,18 @@ int kernel_expansion_param_grad_eval(
 {
     int res = 0;
     size_t nparams = ke->nkernels;
+    if (ke->include_kernel_param == 1){
+        nparams *= 2;
+    }
     for (size_t ii = 0; ii < nx; ii++){
         for (size_t jj = 0; jj < ke->nkernels; jj++){
             grad[ii*nparams + jj] = kernel_eval(ke->kernels[jj],x[ii]);
+        }
+        if (ke->include_kernel_param == 1){
+            for (size_t jj = 0; jj < ke->nkernels; jj++){
+                grad[ii*nparams+jj+ke->nkernels] =
+                    ke->coeff[jj]*kernel_grad_center(ke->kernels[jj],x[ii]);
+            }
         }
     }
     return res;
@@ -1091,6 +1226,11 @@ int
 kernel_expansion_squared_norm_param_grad(const struct KernelExpansion * ke,
                                          double scale, double * grad)
 {
+
+    if (ke->include_kernel_param == 1){
+        assert (1 == 0);
+    }
+    
     int res = 1;
     for (size_t ii = 0; ii < ke->nkernels; ii++){
         double g1 = 0.0;
@@ -1111,7 +1251,12 @@ kernel_expansion_squared_norm_param_grad(const struct KernelExpansion * ke,
 size_t kernel_expansion_get_num_params(const struct KernelExpansion * ke)
 {
     assert (ke != NULL);
-    return ke->nkernels;
+    if (ke->include_kernel_param == 0){
+        return ke->nkernels;        
+    }
+    else{
+        return 2*ke->nkernels;
+    }
 }
 
 /********************************************************//**
@@ -1121,7 +1266,15 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
 {
     assert (ke != NULL);
     memmove(param,ke->coeff,ke->nkernels * sizeof(double));
-    return ke->nkernels;
+    if (ke->include_kernel_param == 0){
+        return ke->nkernels;
+    }
+    else{
+        for (size_t ii = 0; ii < ke->nkernels; ii++){
+            param[ii+ke->nkernels] = kernel_get_center(ke->kernels[ii]);
+        }
+        return 2 * ke->nkernels;
+    }
 }
 
 
@@ -1242,18 +1395,20 @@ void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct K
     }
 }
 
-
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 
                             void * args)
 {
 
     (void)(prec);
+    char kern[256];
     if (args == NULL){
         printf("Kernel Expansion:\n");
         printf("--------------------------------\n");
         printf("Number of kernels = %zu\n",k->nkernels);
         for (size_t ii = 0; ii < k->nkernels; ii++){
-            printf("Kernel %zu: weight=%G \n\n",ii,k->coeff[ii]);
+            kernel_to_string(k->kernels[ii],kern);
+            printf("Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
+            printf("\t %s\n\n",kern);
             /* print_kernel(k); */
         }
     }

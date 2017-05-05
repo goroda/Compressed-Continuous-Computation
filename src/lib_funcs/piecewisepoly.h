@@ -61,7 +61,7 @@ enum poly_type pw_poly_opts_get_ptype(const struct PwPolyOpts *);
 
 void pw_poly_opts_set_minsize(struct PwPolyOpts *,double);
 void pw_poly_opts_set_maxorder(struct PwPolyOpts *, size_t);
-void pw_poly_opts_set_maxnum(struct PwPolyOpts *, size_t);
+/* void pw_poly_opts_set_maxnum(struct PwPolyOpts *, size_t); */
 void pw_poly_opts_set_nregions(struct PwPolyOpts *, size_t);
 void pw_poly_opts_set_pts(struct PwPolyOpts *, size_t, double *);
 void pw_poly_opts_set_tol(struct PwPolyOpts *, double);
@@ -91,7 +91,7 @@ struct PiecewisePoly
 };
 
 //allocation and deallocation
-struct PiecewisePoly * piecewise_poly_alloc();
+struct PiecewisePoly * piecewise_poly_alloc(void);
 struct PiecewisePoly ** piecewise_poly_array_alloc(size_t);
 struct PiecewisePoly * piecewise_poly_copy(const struct PiecewisePoly *);
 void piecewise_poly_free(struct PiecewisePoly *);
@@ -109,7 +109,7 @@ struct PiecewisePoly *
 piecewise_poly_linear(double, double, struct PwPolyOpts *);
 struct PiecewisePoly * 
 piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *);
-void piecewise_poly_split(struct PiecewisePoly *, double);
+/* void piecewise_poly_split(struct PiecewisePoly *, double); */
 void piecewise_poly_splitn(struct PiecewisePoly *, size_t, const double *);
 
 //basic functions to extract information
@@ -122,6 +122,7 @@ void piecewise_poly_boundaries(const struct PiecewisePoly *,size_t *,double**,si
 
 //operations using one piecewise poly
 double piecewise_poly_eval(const struct PiecewisePoly *, double);
+double piecewise_poly_deriv_eval(const struct PiecewisePoly *, double);
 void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
                           const double *, size_t, double *, size_t);
 void piecewise_poly_scale(double, struct PiecewisePoly *);
@@ -145,8 +146,8 @@ struct PiecewisePoly *
 piecewise_poly_finer_grid(const struct PiecewisePoly *, size_t, double *);
 
 //operations using two piecewise polynomials
-void piecewise_poly_match(struct PiecewisePoly *, struct PiecewisePoly **,
-                     struct PiecewisePoly *, struct PiecewisePoly **);
+void piecewise_poly_match(const struct PiecewisePoly *, struct PiecewisePoly **,
+                          const struct PiecewisePoly *, struct PiecewisePoly **);
 struct PiecewisePoly *
 piecewise_poly_prod(const struct PiecewisePoly *,const struct PiecewisePoly *);
 double piecewise_poly_inner(const struct PiecewisePoly *,const struct PiecewisePoly *);
@@ -174,14 +175,14 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts *, struct Fwrap *);
 
 ///////////////////////////////////////////////
 
-struct OrthPolyExpansion * piecewise_poly_trim_left(struct PiecewisePoly **);
+/* struct OrthPolyExpansion * piecewise_poly_trim_left(struct PiecewisePoly **); */
 
 int piecewise_poly_check_discontinuity(struct PiecewisePoly *, 
                                        struct PiecewisePoly *, 
                                        int, double);
 
-struct PiecewisePoly *
-piecewise_poly_merge_left(struct PiecewisePoly **, struct PwPolyOpts *);
+/* struct PiecewisePoly * */
+/* piecewise_poly_merge_left(struct PiecewisePoly **, struct PwPolyOpts *); */
 
 
 double minmod_eval(double, double *, double *, size_t,size_t, size_t);
@@ -190,9 +191,9 @@ int minmod_disc_exists(double, double *, double *, size_t,size_t, size_t);
 void locate_jumps(double (*)(double, void *), void *,
                   double, double, size_t, double, double **, size_t *);
 
-struct PiecewisePoly *
-piecewise_poly_approx2(double (*)(double, void *), void *, double,
-                        double, struct PwPolyOpts *);
+/* struct PiecewisePoly * */
+/* piecewise_poly_approx2(double (*)(double, void *), void *, double, */
+/*                         double, struct PwPolyOpts *); */
 // serialization and printing
 unsigned char * 
 serialize_piecewise_poly(unsigned char *, struct PiecewisePoly *, size_t *); 

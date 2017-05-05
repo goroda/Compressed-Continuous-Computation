@@ -816,10 +816,35 @@ piecewise_poly_eval(const struct PiecewisePoly * poly, double x){
         out = orth_poly_expansion_eval(poly->ope, x);
     }
     else{
-        size_t ii;
-        for (ii = 0; ii < poly->nbranches; ii++){
-            if (x <= piecewise_poly_ub(poly->branches[ii])){
+        for (size_t ii = 0; ii < poly->nbranches; ii++){
+            if (x < piecewise_poly_ub(poly->branches[ii])+1e-14){
                 out = piecewise_poly_eval(poly->branches[ii],x);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
+/********************************************************//**
+*   Evaluate the derivative a piecewise polynomial
+*
+*   \param[in] poly - pw poly
+*   \param[in] x    - location at which to evaluate
+*
+*   \return out 
+*************************************************************/
+double piecewise_poly_deriv_eval(const struct PiecewisePoly * poly, double x)
+{
+    
+    double out = 0.1234567890;
+    if (poly->leaf == 1){
+        out = orth_poly_expansion_deriv_eval(x,poly->ope);
+    }
+    else{
+        for (size_t ii = 0; ii < poly->nbranches; ii++){
+            if (x < piecewise_poly_ub(poly->branches[ii])+1e-14){
+                out = piecewise_poly_deriv_eval(poly->branches[ii],x);
                 break;
             }
         }
@@ -885,7 +910,12 @@ piecewise_poly_deriv(const struct PiecewisePoly * p)
     }
     else if (p->leaf == 1){
         pnew = piecewise_poly_alloc();
+        assert (p->ope != NULL);
+        /* printf("p->ope->nalloc = %zu\n",p->ope->nalloc); */
+        /* print_orth_poly_expansion(p->ope,0,NULL); */
         pnew->ope = orth_poly_expansion_deriv(p->ope);
+        /* printf("got deriv\n"); */
+        pnew->leaf = 1;
     }
     else{
         pnew = piecewise_poly_alloc();
@@ -906,6 +936,8 @@ piecewise_poly_deriv(const struct PiecewisePoly * p)
 *   \param[in] poly  - pw polynomial to integrate
 *
 *   \return Integral of approximation
+*  
+*   \note Should make this tail recursive in the future
 *************************************************************/
 double
 piecewise_poly_integrate(const struct PiecewisePoly * poly)
@@ -1244,7 +1276,8 @@ piecewise_poly_finer_grid(const struct PiecewisePoly * a, size_t N, double * nod
 {
 
     struct Fwrap * fw = fwrap_create(1,"general-vec");
-    fwrap_set_fvec(fw,pw_eval,&a);
+    /* printf("nbranches of a = %zu\n",a->nbranches); */
+    fwrap_set_fvec(fw,pw_eval,(void*)a);
 
     struct PiecewisePoly * p = NULL;
     if (N == 2){
@@ -1252,16 +1285,21 @@ piecewise_poly_finer_grid(const struct PiecewisePoly * a, size_t N, double * nod
         p = piecewise_poly_copy(a);
     }
     else{
+
+        p = piecewise_poly_alloc();
+        p->nbranches = N-1;
+        p->leaf = 0;
+        p->ope = NULL;
+        
         struct OpeOpts * aopts = ope_opts_alloc(LEGENDRE);
         ope_opts_set_start(aopts,8);
         ope_opts_set_coeffs_check(aopts,2);
         ope_opts_set_tol(aopts,1e-14);
         
-        p->leaf = 0;
-        p->nbranches = N-1;
         p->branches = piecewise_poly_array_alloc(N-1);
         size_t ii;
         for (ii = 0; ii < N-1; ii++){
+            /* printf("lb,ub = (%G,%G)\n",nodes[ii],nodes[ii+1]); */
             ope_opts_set_lb(aopts,nodes[ii]);
             ope_opts_set_ub(aopts,nodes[ii+1]);
             p->branches[ii] = piecewise_poly_alloc();
@@ -1276,64 +1314,6 @@ piecewise_poly_finer_grid(const struct PiecewisePoly * a, size_t N, double * nod
 }
 
 //////////////////////////////////////
-/********************************************************//**
-*   Compute the product of two piecewise polynomials
-*
-*   \param[in] a  - first pw polynomial
-*   \param[in] b  - second pw polynomial
-*
-*   \return c - pw polynomial
-*
-*   \note 
-*        Computes c(x) = a(x)b(x) where c is same form as a
-*************************************************************/
-struct PiecewisePoly *
-piecewise_poly_prod(const struct PiecewisePoly * a,
-                    const struct PiecewisePoly * b)
-{
-    enum poly_type ptype = piecewise_poly_get_ptype(a);
-    double lb = piecewise_poly_lb(a);
-    double ub = piecewise_poly_ub(a);
-    struct PwPolyOpts * aopts = pw_poly_opts_alloc(ptype,lb,ub);
-    pw_poly_opts_set_maxorder(aopts,7);
-    pw_poly_opts_set_coeffs_check(aopts,2);
-    pw_poly_opts_set_tol(aopts,1e-7);
-    pw_poly_opts_set_minsize(aopts,1e-3);
-    pw_poly_opts_set_nregions(aopts,5);
-
-    struct PwCouple pwc;
-    pwc.a = a;
-    pwc.b = b;
-    
-    struct Fwrap * fw = fwrap_create(1,"general-vec");
-    fwrap_set_fvec(fw,pw_eval_prod,&pwc);
-    struct PiecewisePoly *c = 
-        piecewise_poly_approx1_adapt(aopts,fw);
-    
-    /* double pt = 0.0; */
-    /* double eval = piecewise_poly_eval(c,pt); */
-    /* printf("(x,y)=(%G,%G)\n",pt,eval); */
-    /* pt = 1.0; */
-    /* eval = piecewise_poly_eval(c,pt); */
-    /* printf("(x,y)=(%G,%G)\n",pt,eval); */
-    /* pt = -1.0; */
-    /* eval = piecewise_poly_eval(c,pt); */
-    /* printf("(x,y)=(%G,%G)\n",pt,eval); */
-
-    /* pt = -2.0; */
-    /* eval = piecewise_poly_eval(c,pt); */
-    /* printf("(x,y)=(%G,%G)\n",pt,eval); */
-    /* pt = 3.0; */
-    /* eval = piecewise_poly_eval(c,pt); */
-    /* printf("(x,y)=(%G,%G)\n",pt,eval); */
-
-    
-    pw_poly_opts_free(aopts); aopts = NULL;
-    fwrap_destroy(fw);
-    //printf("out of prod \n");
-    return c;
-}
-
 
 /********************************************************//**
 *   Inner product between two pw polynomials 
@@ -1350,17 +1330,26 @@ double
 piecewise_poly_inner(const struct PiecewisePoly * a,
                      const struct PiecewisePoly * b)
 {
+    if ((a->leaf == 1) && (b->leaf == 1)){
+        return orth_poly_expansion_inner(a->ope,b->ope);
+    }
     //printf("there!\n");
-    struct PiecewisePoly * c = piecewise_poly_prod(a,b);
-    /*
-    printf("===============================================\n");
-    print_piecewise_poly(c,3,NULL);
-    printf("===============================================\n");
-    */
-    //printf("got prod\n");
-    double out = piecewise_poly_integrate(c);
-    piecewise_poly_free(c);
-    return out;
+
+    struct PiecewisePoly * aa = NULL;
+    struct PiecewisePoly * bb = NULL;
+    piecewise_poly_match(a,&aa,b,&bb);
+    
+    piecewise_poly_flatten(aa);
+    piecewise_poly_flatten(bb);
+    
+    double integral = 0;
+    for (size_t ii = 0; ii < aa->nbranches; ii++){
+        integral += orth_poly_expansion_inner(aa->branches[ii]->ope,bb->branches[ii]->ope);
+    }
+
+    piecewise_poly_free(aa); aa = NULL;
+    piecewise_poly_free(bb); bb = NULL;
+    return integral;
 }
 
 /********************************************************//**
@@ -1427,44 +1416,14 @@ piecewise_poly_daxpby(double a,const struct PiecewisePoly * x,
         piecewise_poly_scale(a,p);
         return p;
     }
-    assert (x != NULL);
-    assert (y != NULL);
-    /* printf("x == NULL = %d\n",x==NULL); */
-    /* printf("y == NULL = %d\n",y==NULL); */
-    /* printf("x == leaf = %d\n",x->leaf); */
-    /* printf("y == leaf = %d\n",y->leaf); */
-    /* printf("x->ope == NULL %d\n",x->ope==NULL); */
-    enum poly_type ptype = piecewise_poly_get_ptype(x);
-    double lb = piecewise_poly_lb(x);
-    double ub = piecewise_poly_ub(x);
-    /* assert (fabs(lb-ub) > 1e-10); */
 
-    /* printf("ptype = %d\n",ptype); */
-    /* printf("lb = %G\n",lb); */
-    /* printf("ub = %G\n",ub); */
-    /* printf("a = %G\n",a); */
-    /* printf("b=%G\n",b); */
-    struct PwPolyOpts * aopts = pw_poly_opts_alloc(ptype,lb,ub);
-    pw_poly_opts_set_maxorder(aopts,7);
-    pw_poly_opts_set_coeffs_check(aopts,2);
-    pw_poly_opts_set_tol(aopts,1e-8);
-    pw_poly_opts_set_minsize(aopts,1e-3);
-    pw_poly_opts_set_nregions(aopts,5);
-    
-    struct PwCouple pwc;
-    pwc.a = x;
-    pwc.b = y;
-    pwc.coeff[0] = a;
-    pwc.coeff[1] = b;
-
-    struct Fwrap * fw = fwrap_create(1,"general-vec");
-    fwrap_set_fvec(fw,pw_eval_sum,&pwc);
-
-    struct PiecewisePoly * c = piecewise_poly_approx1_adapt(aopts,fw);
-
-    fwrap_destroy(fw);
-    pw_poly_opts_free(aopts);
-    return c;
+    struct PiecewisePoly * xx = NULL;
+    struct PiecewisePoly * yy = NULL;
+    piecewise_poly_match(x,&xx,y,&yy);
+    struct PiecewisePoly * c = piecewise_poly_matched_daxpby(a,xx,b,yy);
+    piecewise_poly_free(xx); xx = NULL;
+    piecewise_poly_free(yy); yy= NULL;
+    return c;    
 }
 
 
@@ -1530,6 +1489,10 @@ piecewise_poly_matched_daxpby(double a,const struct PiecewisePoly * x,
             c->ope = orth_poly_expansion_daxpby(a,x->ope,b,y->ope);
         }
         else{
+            if (x->nbranches != y->nbranches){
+                printf("x nbranches = %zu\n",x->nbranches);
+                printf("y nbranches = %zu\n",y->nbranches);
+            }
             assert (x->nbranches == y->nbranches);
             c->leaf = 0;
             c->nbranches = y->nbranches;
@@ -1581,6 +1544,32 @@ piecewise_poly_matched_prod(const struct PiecewisePoly * a,
     }
     return c;
 }
+
+/********************************************************//**
+*   Compute the product of two piecewise polynomials
+*
+*   \param[in] a  - first pw polynomial
+*   \param[in] b  - second pw polynomial
+*
+*   \return c - pw polynomial
+*
+*   \note 
+*        Computes c(x) = a(x)b(x) where c is same form as a
+*************************************************************/
+struct PiecewisePoly *
+piecewise_poly_prod(const struct PiecewisePoly * a,
+                    const struct PiecewisePoly * b)
+{
+    struct PiecewisePoly * aa = NULL;
+    struct PiecewisePoly * bb = NULL;
+
+    piecewise_poly_match(a,&aa,b,&bb);
+    struct PiecewisePoly * out = piecewise_poly_matched_prod(aa,bb);
+    piecewise_poly_free(aa); aa = NULL;
+    piecewise_poly_free(bb); bb = NULL;
+    return out;
+}
+
 
 /********************************************************
 *   Match the discretizations of two pw polys
@@ -1634,26 +1623,42 @@ piecewise_poly_matched_prod(const struct PiecewisePoly * a,
 *   \param[in,out] bout - new matched pw polynomial 2 (unallocated)
 *
 *   \note
+*       Should check if matching in the first place
 *       New lower bound is highest lower bound, and new upper bound is lowest upper bound
 *************************************************************/
 void
-piecewise_poly_match(struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
-                     struct PiecewisePoly * bin, struct PiecewisePoly ** bout)
+piecewise_poly_match(const struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
+                     const struct PiecewisePoly * bin, struct PiecewisePoly ** bout)
 {
     double * nodesa = NULL;
     double * nodesb = NULL;
     size_t Na, Nb;
     piecewise_poly_boundaries(ain, &Na, &nodesa,NULL);
     piecewise_poly_boundaries(bin, &Nb, &nodesb,NULL);
+
+    if (Na == Nb){
+        int same = 1;
+        for (size_t ii = 0; ii < Na; ii++){
+            if (fabs(nodesa[ii] - nodesb[ii]) > 1e-15) {
+                same = 0;
+                break;
+            }
+        }
+        if (same == 1){
+            free(nodesa); nodesa = NULL;
+            free(nodesb); nodesb = NULL;
+            *aout = piecewise_poly_copy(ain);
+            *bout = piecewise_poly_copy(bin);
+            piecewise_poly_flatten(*aout);
+            piecewise_poly_flatten(*bout);
+            return;
+        }
+    }
     
     
     double lb = nodesa[0] < nodesb[0] ? nodesa[0] : nodesb[0];
     double ub = nodesa[Na-1] > nodesb[Nb-1] ? nodesa[Na-1] : nodesb[Nb-1];
     
-    //printf("Na = %zu, Nb = %zu\n",Na,Nb);
-    //printf("lower bound = %3.5f\n",lb);
-    //printf("upper bound = %3.5f\n",ub);
-
     double * nodes = calloc_double(Na + Nb);
     nodes[0] = lb;
 
@@ -1688,6 +1693,7 @@ piecewise_poly_match(struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
         cind++;
     }
 
+
     double * newnodes = realloc(nodes, cind * sizeof(double));
     if (newnodes == NULL){
         fprintf(stderr,"Error (re)allocating memory in piecewise_poly_match");
@@ -1696,14 +1702,9 @@ piecewise_poly_match(struct PiecewisePoly * ain, struct PiecewisePoly ** aout,
     else{
         nodes = newnodes;
     }
-
     
-    printf("Number of matched nodes are %zu \n", cind);
-    dprint(cind,nodes);
-
     *aout = piecewise_poly_finer_grid(ain, cind, nodes);
     *bout = piecewise_poly_finer_grid(bin, cind, nodes);
-    printf("done with finer grid\n");
     free(nodesa); nodesa = NULL;
     free(nodesb); nodesb = NULL;
     free(nodes); nodes = NULL;
@@ -2224,14 +2225,17 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
 
     size_t N = aopts->maxorder+1;
     struct PiecewisePoly * poly = piecewise_poly_alloc();
+    /* printf("initializing poly nregions = %zu\n",aopts->nregions); */
+
     if (aopts->nregions == 1){
         poly->leaf = 1;
+        poly->nbranches = 0;
         poly->ope = orth_poly_expansion_init(aopts->ptype, N, aopts->lb, aopts->ub);
         orth_poly_expansion_approx_vec(poly->ope,fw);
         orth_poly_expansion_round(&(poly->ope));
     }
     else{
-        //printf("lb=%G,ub=%G,num=%zu\n",lb,ub,aopts->nregions);
+        /* printf("lb=%G,ub=%G,num=%zu\n",lb,ub,aopts->nregions); */
         poly->leaf = 0;
         double * pts = NULL;
         if (aopts->pts == NULL){
@@ -2322,7 +2326,7 @@ pw_adapt_help_adapt(struct PwPolyOpts * aopts,
 {
     struct PiecewisePoly * poly = pw_adapt_help_approx(aopts,fw,lb,ub);
     size_t ii,jj;
-    //printf("nbranches = %zu\n",poly->nbranches);
+    /* printf("nbranches = %zu\n",poly->nbranches); */
     for (ii = 0; ii < poly->nbranches; ii++){
         size_t npolys = poly->branches[ii]->ope->num_poly;
         double lbs = piecewise_poly_lb(poly->branches[ii]);
@@ -2347,13 +2351,13 @@ pw_adapt_help_adapt(struct PwPolyOpts * aopts,
                 break;
             }
         }
-        //printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize);
+        /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
         if ( (ubs-lbs) < aopts->minsize ){
             refine = 0;
         }
         //*
         if (refine == 1){
-            //printf("refining branch (%G,%G)\n",lbs,ubs);
+            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
             //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
             //break;
             piecewise_poly_free(poly->branches[ii]);
@@ -2381,8 +2385,10 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
 
     struct PiecewisePoly * poly = piecewise_poly_approx1(aopts,fw);//lb,ub,aopts);
     size_t ii,jj;
-    //printf("nbranches = %zu\n",poly->nbranches);
+    /* printf("nbranches = %zu\n",poly->nbranches); */
     for (ii = 0; ii < poly->nbranches; ii++){
+        /* printf("should not be here!\n"); */
+        /* exit(1); */
         size_t npolys = poly->branches[ii]->ope->num_poly;
         double lbs = piecewise_poly_lb(poly->branches[ii]);
         double ubs = piecewise_poly_ub(poly->branches[ii]);
@@ -2406,13 +2412,13 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
                 break;
             }
         }
-        //printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize);
+        /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
         if ( (ubs-lbs) < aopts->minsize ){
             refine = 0;
         }
         //*
         if (refine == 1){
-            //printf("refining branch (%G,%G)\n",lbs,ubs);
+            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
             //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
             //break;
             piecewise_poly_free(poly->branches[ii]);

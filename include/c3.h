@@ -1,15 +1,16 @@
 #ifndef C3_H
 #define C3_H
 
-#include "../src/lib_array/array.h"
-#include "../src/lib_clinalg/lib_clinalg.h"
-#include "../src/lib_funcs/lib_funcs.h"
-#include "../src/lib_linalg/lib_linalg.h"
-#include "../src/lib_probability/lib_probability.h"
-#include "../src/lib_optimization/lib_optimization.h"
-#include "../src/lib_quadrature/lib_quadrature.h"
-#include "../src/lib_stringmanip/stringmanip.h"
-#include "../src/lib_interface/c3_interface.h"
+#include "array.h"
+#include "lib_clinalg.h"
+#include "lib_funcs.h"
+#include "lib_linalg.h"
+#include "lib_probability.h"
+#include "lib_optimization.h"
+#include "lib_quadrature.h"
+#include "stringmanip.h"
+#include "c3_interface.h"
+#include "regress.h"
 
 #endif
 

@@ -48,7 +48,7 @@
 
 void RunAllTests(void) {
     
-    printf("Running Test Suite: lib_clinalg\n");
+    printf("Running Test Suite: lib_superlearn\n");
     srand(time(NULL));
 
     CuString * output = CuStringNew();

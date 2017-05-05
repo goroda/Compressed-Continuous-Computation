@@ -53,10 +53,9 @@
 #define SQRTPIINV 0.631618777746064701290010510108243075846860739510341013477
 #endif
 
-struct OrthPoly * init_hermite_poly();
-double hermite_poly_expansion_eval(struct OrthPolyExpansion *, double);
-double hermite_integrate(struct OrthPolyExpansion *);
-int hermite_poly_expansion_param_grad_eval(
-    struct OrthPolyExpansion *, double, double *, size_t);
+struct OrthPoly;
+struct OrthPoly * init_hermite_poly(void);
+double hermite_integrate(const struct OrthPolyExpansion *);
+
 
 #endif

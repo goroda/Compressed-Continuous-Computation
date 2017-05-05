@@ -214,6 +214,30 @@ struct FTparam
     struct MultiApproxOpts * approx_opts;
 };
 
+
+/***********************************************************//**
+    Specify what type of structure exists in the parameterization
+    
+    \param[in] ftp - parameterized function train
+    
+    \returns LINEAR_ST if linear or NONE_ST if nonlinear
+***************************************************************/
+enum FTPARAM_ST ft_param_extract_structure(const struct FTparam * ftp)
+{
+    enum FTPARAM_ST structure = LINEAR_ST;
+
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+        int islin = multi_approx_opts_linear_p(ftp->approx_opts,ii);
+        if (islin == 0){
+            structure = NONE_ST;
+            break;
+        }
+    }
+
+    return structure;
+    
+}
+
 /** \struct RegressOpts
  * \brief Options for regression
  * \var RegressOpts::type
@@ -966,6 +990,94 @@ struct FunctionTrain * ft_param_get_ft(const struct FTparam * ftp)
     return ftp->ft;
 }
 
+/***********************************************************//**
+    Create a parameterization that is initialized to a constant
+
+    \param[in,out] ftp     - parameterized FTP
+    \param[in]     val     - number of data points
+    \param[in]     perturb - perturbation to zero elements
+***************************************************************/
+void ft_param_create_constant(struct FTparam * ftp, double val,
+                              double perturb)
+{
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+
+    struct FunctionTrain * const_ft =
+        function_train_constant(val,ftp->approx_opts);
+
+    // free previous parameters
+    free(ftp->params); ftp->params = NULL;
+    ftp->params = calloc_double(ftp->nparams);
+    for (size_t ii = 0; ii < ftp->nparams; ii++){
+        ftp->params[ii] = perturb*(randu()*2.0-1.0);
+    }
+
+    size_t onparam = 0;
+    size_t onfunc = 0;
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+
+        size_t mincol = 1;
+        size_t maxcol = ranks[ii+1];
+        if (mincol > maxcol){
+            mincol = maxcol;
+        }
+
+        size_t minrow = 1;
+        size_t maxrow = ranks[ii];
+        if (minrow > maxrow ){
+            minrow = maxrow;
+        }
+
+        size_t nparam_temp = function_train_core_get_nparams(const_ft,ii,NULL);
+        double * temp_params = calloc_double(nparam_temp);
+        function_train_core_get_params(const_ft,ii,temp_params);
+        size_t onparam_temp = 0;
+
+        /* printf("on core = %zu\n,ii"); */
+        for (size_t col = 0; col < mincol; col++){
+            for (size_t row = 0; row < minrow; row++){
+
+                size_t nparam_temp_func =
+                    function_train_func_get_nparams(const_ft,ii,row,col);
+
+                size_t minloop = nparam_temp_func;
+                size_t maxloop = ftp->nparams_per_uni[onfunc];
+                if (maxloop < minloop){
+                    minloop = maxloop;
+                }
+                for (size_t ll = 0; ll < minloop; ll++){
+                    /* ftp->params[onparam] = temp_params[onparam_temp]; */
+                    ftp->params[onparam] += temp_params[onparam_temp];
+                    /* ftp->params[onparam] += 0.001*randn(); */
+                    onparam++;
+                    onparam_temp++;
+                }
+                for (size_t ll = minloop; ll < maxloop; ll++){
+                    /* ftp->params[onparam] = 0.0; */
+                    onparam++;
+                }
+                onfunc++;
+            }
+            
+            for (size_t row = minrow; row < maxrow; row++){
+                onparam += ftp->nparams_per_uni[onfunc];
+                onfunc++;
+            }
+        }
+        for (size_t col = mincol; col < maxcol; col++){
+            for (size_t row = 0; row < maxrow; row++){
+                onparam += ftp->nparams_per_uni[onfunc];
+                onfunc++;
+            }
+        }
+
+        free(temp_params); temp_params = NULL;
+    }
+
+    // update the function train
+    function_train_update_params(ftp->ft,ftp->params);
+    function_train_free(const_ft); const_ft = NULL;
+}
 
 /***********************************************************//**
     Create a parameterization from a linear least squares fit to 
@@ -1211,7 +1323,7 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             }
             cblas_daxpy(ftp->nparams, -resid,
                         mem->grad->vals + ii * ftp->nparams, 1,
-                        grad,1);
+                        grad,1);            
         }
         out /= (double) N;
         for (size_t ii = 0; ii < ftp->nparams; ii++){
@@ -1227,6 +1339,10 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
             fprintf(stderr,"N = %zu\n",N);
             exit(1);
         }
+
+        /* printf("\n"); */
+        /* dprint(nparam,param); */
+        /* printf("eval = %G\n",eval); */
     }
     else{
         function_train_param_grad_eval(
@@ -1563,6 +1679,7 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
                                  double * grad, void * args)
 {
 
+
     for (size_t ii = 0; ii < nparam; ii++){
         if (isnan(param[ii])){
             fprintf(stderr,"Optimizer requesting params that are NaN\n");
@@ -1578,7 +1695,9 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     struct PP * pp = args;
 
     // check if special structure exists / initialized
+    /* printf("check structure\n"); */
     regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);
+    /* printf("done\n"); */
     regress_mem_manager_reset_running(pp->mem);
 
     int restrict_needed = restrict_ranksp(pp->opts);
@@ -1613,7 +1732,9 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
         fprintf(stderr,"Regress aio objective is Inf\n");
         exit(1);
     }
-    
+
+
+
     return eval;
 }
 
@@ -1707,10 +1828,8 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 
     size_t * ranks = function_train_get_ranks(ftp->ft);
 
-    enum FTPARAM_ST structure = NONE_ST;
-    if (ropts->stoch_obj == 0){
-        structure = LINEAR_ST;
-    }
+    enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
+
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
                                   ftp->nparams_per_core,ranks,
@@ -1838,8 +1957,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
                       size_t N, const double * x, const double * y)
 {
 
-    /* enum FTPARAM_ST structure = NONE_ST; */
-    enum FTPARAM_ST structure = LINEAR_ST;
+    enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
     size_t * ranks = function_train_get_ranks(ftp->ft);
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
@@ -2071,16 +2189,15 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
 }
 
 /***********************************************************//**
-    Set option specifying will use a stochastic optimizer
+    Get dimension
     
-    \param[in,out] ftr - regression structure
-    \param[in]     on  - 1 for yes, 0 for no
+    \param[in] ftr - regression structure
+    \returns dimension
 ***************************************************************/
-void ft_regress_set_stoch_obj(struct FTRegress * ftr, int on)
+size_t ft_regress_get_dim(const struct FTRegress * ftr)
 {
     assert (ftr != NULL);
-    assert (ftr->regopts != NULL);
-    regress_opts_set_stoch_obj(ftr->regopts,on);
+    return ftr->dim;
 }
 
 
@@ -2384,7 +2501,7 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
         /* yavg /= (double) N; */
 
-        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-12);
+        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-3);
 
         
         /* ft_param_create_from_constant */
@@ -2439,7 +2556,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     ftr->adapt = 0; // turn off adaptation since in here!
     size_t * ranks = calloc_size_t(ftr->dim+1);
 
-    size_t kfold = 3;
+    size_t kfold = 5;
     int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(N,ftr->dim,x,y,kfold,cvverbose);
 
@@ -2511,7 +2628,9 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         size_t nparams_rounded = function_train_get_nparams(ftround);
         if (ftr->regopts->verbose > 0){
             printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
-            printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            if (opt_only_restricted == 1){
+                printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+            }
             printf("Nrounded params: %zu\n",nparams_rounded);
         }
 
@@ -2773,7 +2892,6 @@ double cross_validate_run(struct CrossValidate * cv,
 
         struct FunctionTrain * ft = ft_regress_run(reg,optimizer,ntrain,xtrain,ytrain);
         
-
         double newerr = 0.0;
         double newnorm = 0.0;
         for (size_t jj = 0; jj < batch; jj++){

@@ -55,7 +55,7 @@
 #include "fwrap.h"
 
 struct LinElemExpAopts;
-struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double *);
+struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t, double * onedx);
 struct LinElemExpAopts *
 lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
@@ -97,7 +97,7 @@ struct LinElemExp{
 
 size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
 size_t lin_elem_exp_get_num_params(const struct LinElemExp *);
-struct LinElemExp * lin_elem_exp_alloc();
+struct LinElemExp * lin_elem_exp_alloc(void);
 struct LinElemExp * lin_elem_exp_copy(struct LinElemExp *);
 void lin_elem_exp_free(struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_init(size_t, double *, double *);

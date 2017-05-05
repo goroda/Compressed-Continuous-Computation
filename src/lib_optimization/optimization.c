@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file optimization.c
  * Provides routines for optimization
  */
@@ -1970,6 +1966,9 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     opt->niters = 1;    
 
     *fval = c3opt_eval(opt,x,grad);
+
+    /* //HIHO */
+    /* exit(1); */
     if (isnan(*fval)){
         fprintf(stderr,"Initial optimization function valueis NaN\n");
         exit(1);
@@ -2141,6 +2140,8 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             }
         }
         double diff = fabs(*fval - fvaltemp);
+
+        /* printf("diff = %G, relftol = %G, diff < relftol = %d\n",diff,relftol,diff<relftol); */
         if (fabs(fvaltemp) > 1e-10){
             diff /= fabs(fvaltemp);
         }
@@ -2168,15 +2169,18 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                 converged = 1;
             }
             else if (diff < relftol){
+                /* printf ("HEEERE\n"); */
                 ret = C3OPT_FTOL_REACHED;
-                if (fabs(diff) < 1e-30){
-                    if (xdiff < 1e-30){
-                        converged = 1;
-                    }
-                }
-                else{
+                /* if (fabs(diff) < 1e-30){ */
+                /*     printf("really? %G\n",diff); */
+                /*     if (xdiff < 1e-30){ */
+                /*         converged = 1; */
+                /*     } */
+                /* } */
+                /* else{ */
+                    /* printf("SHOULD BE HERE!\n"); */
                     converged = 1;
-                }
+                /* } */
             }
             else if (xdiff < absxtol){
                 if (iter > 3){
@@ -2189,7 +2193,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         
         if (verbose > 0){
             printf("Iteration:%zu/%zu\n",iter,maxiter);
-            printf("\t f(x)          = %3.5G\n",*fval);
+            printf("\t f(x)          = %3.15G\n",*fval);
             printf("\t |f(x)-f(x_p)| = %3.5G\n",diff);
             printf("\t |x - x_p|/|x_p| = %3.5G\n",xdiff/xnorm);
             printf("\t p^Tg =        = %3.5G\n",eta);

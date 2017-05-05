@@ -133,13 +133,17 @@ struct Qmarray * qmaqmat(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmatqmat(const struct Qmarray * a, const struct Qmarray * b);
 double * qmatqma_integrate(const struct Qmarray *,const struct Qmarray *);
 double * qmaqmat_integrate(const struct Qmarray *, const struct Qmarray *);
+double * qmatqmat_integrate_weighted(const struct Qmarray *,const struct Qmarray *);
 double * qmatqmat_integrate(const struct Qmarray *,const  struct Qmarray *);
 struct Qmarray * qmarray_kron(const struct Qmarray *, const struct Qmarray *);
 double * qmarray_kron_integrate(const struct Qmarray *, const struct Qmarray *);
+double * qmarray_kron_integrate_weighted(const struct Qmarray *, const struct Qmarray *);
 struct Qmarray * qmarray_vec_kron(const double *, const struct Qmarray *,
                                   const struct Qmarray *);
 double * qmarray_vec_kron_integrate(const double *, const struct Qmarray *,
                                     const struct Qmarray *);
+double * qmarray_vec_kron_integrate_weighted(
+    const double *, const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_mat_kron(size_t, const double *, const struct Qmarray *,
                                   const struct Qmarray *);
 struct Qmarray * qmarray_kron_mat(size_t, const double *, const struct Qmarray *,
@@ -166,9 +170,9 @@ int qmarray_householder_rows(struct Qmarray *, struct Qmarray *,
                              struct Qmarray *, double *);
 struct Qmarray *
 qmarray_householder_simple(char *, struct Qmarray *, double *,struct OneApproxOpts *);
-struct Qmarray *
-qmarray_householder_simple_grid(char *, struct Qmarray *, double *,
-                                struct c3Vector *);
+/* struct Qmarray * */
+/* qmarray_householder_simple_grid(char *, struct Qmarray *, double *, */
+/*                                 struct c3Vector *); */
 
 int qmarray_svd(struct Qmarray *, struct Qmarray **, double *, double *,
                 struct OneApproxOpts *);
@@ -183,6 +187,7 @@ struct Qmarray * qmarray_stackh(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_stackv(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_deriv(struct Qmarray *);
+void qmarray_deriv_eval(const struct Qmarray *, double, double *);
 void qmarray_roundt(struct Qmarray **, double);
 
 void qmarray_eval(struct Qmarray *, double, double *);

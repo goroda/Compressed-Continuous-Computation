@@ -44,13 +44,13 @@
 #ifndef C3_FT_REGRESSION
 #define C3_FT_REGRESSION
 
-#include "../lib_clinalg/ft.h"
+#include "ft.h"
 
 enum REGTYPE {ALS,AIO,REGNONE};
 enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
 struct FTRegress;
-struct FTRegress * ft_regress_alloc(size_t, struct MultiApproxOpts *,size_t *);
-void ft_regress_set_stoch_obj(struct FTRegress *, int);
+struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
+size_t ft_regress_get_dim(const struct FTRegress *);
 void ft_regress_set_adapt(struct FTRegress *, int);
 void ft_regress_set_maxrank(struct FTRegress *, size_t);
 void ft_regress_set_kickrank(struct FTRegress *, size_t);
@@ -76,7 +76,7 @@ double * ft_regress_get_params(struct FTRegress *, size_t *);
 void ft_regress_update_params(struct FTRegress *, const double *);
 
 struct FunctionTrain *
-ft_regress_run(struct FTRegress *,struct c3Opt *,size_t,const double *, const double *);
+ft_regress_run(struct FTRegress *,struct c3Opt *,size_t,const double* xdata, const double * ydata);
 struct FunctionTrain *
 ft_regress_run_rankadapt(struct FTRegress *, double, size_t, size_t,
                          struct c3Opt *,int,
@@ -98,7 +98,7 @@ struct CVOptGrid;
 struct CVOptGrid * cv_opt_grid_init(size_t);
 void cv_opt_grid_free(struct CVOptGrid *);
 void cv_opt_grid_set_verbose(struct CVOptGrid *, int);
-void cv_opt_grid_add_param(struct CVOptGrid *, char *, size_t, void *);
+void cv_opt_grid_add_param(struct CVOptGrid *, char *, size_t, void * paramlist);
 
 void cross_validate_grid_opt(struct CrossValidate *,
                              struct CVOptGrid *,
@@ -116,7 +116,9 @@ void ft_param_free(struct FTparam *);
 size_t ft_param_get_nparams(const struct FTparam *);
 size_t * ft_param_get_nparams_per_core(const struct FTparam *);
 struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
-void ft_param_create_from_lin_ls(struct FTparam *, size_t, const double *, const double *,
+void ft_param_create_constant(struct FTparam *, double, double);
+void ft_param_create_from_lin_ls(struct FTparam *, size_t,
+                                 const double *, const double *,
                                  double);
 void ft_param_update_params(struct FTparam *, const double *);
 void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);
@@ -136,9 +138,9 @@ void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
 void regress_opts_set_regularization_weight(struct RegressOpts *, double);
 double regress_opts_get_regularization_weight(const struct RegressOpts *);
-void regress_opts_initialize_memory(struct RegressOpts *, size_t *,
-                                    size_t *, size_t,
-                                    enum FTPARAM_ST);
+/* void regress_opts_initialize_memory(struct RegressOpts *, size_t *, */
+/*                                     size_t *, size_t, */
+/*                                     enum FTPARAM_ST); */
 
 double ft_param_eval_objective_aio(struct FTparam *,
                                    struct RegressOpts *,
