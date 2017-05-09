@@ -3195,7 +3195,7 @@ void Test_LS_AIO3_sgd(CuTest * tc)
     struct c3Opt * optimizer = c3opt_create(SGD);
     c3opt_set_verbose(optimizer,1);
     c3opt_set_sgd_nsamples(optimizer,ndata);
-    c3opt_set_sgd_learn_rate(optimizer,1e-7);
+    c3opt_set_sgd_learn_rate(optimizer,1e-4);
     c3opt_set_maxiter(optimizer,6000);
 
     /* struct c3Opt* optimizer = c3opt_create(BFGS); */

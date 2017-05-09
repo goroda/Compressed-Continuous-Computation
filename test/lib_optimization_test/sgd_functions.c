@@ -112,6 +112,100 @@ static double lin_ls_5d(size_t dim, size_t ind, const double * x, double * grad,
 }
 
 
+static double quad_ls_2d_start[2] = {-5.0, 3.0};
+static double quad_ls_2d_sol[3] = {0.3,-0.2, 0.0}; // last one is value at minimum
+static double quad_ls_2d(size_t dim, size_t ind, const double * x, double * grad, void * arg)
+{
+
+    (void)(dim);
+
+    struct SgdData * data = arg;
+
+    double guess = 0.0;
+    double true_val = 0.0;
+    for (size_t ii = 0; ii < 2; ii++){
+        guess    += pow(data->x[ind*2+ii] - x[ii]             ,2);
+        true_val += pow(data->x[ind*2+ii] - quad_ls_2d_sol[ii],2);
+    }
+
+    double resid = true_val - guess;
+    double loss = resid * resid;
+
+    if (grad != NULL){
+        grad[0] = 2 * resid * 2.0 * (data->x[ind*2+0] - x[0]);
+        grad[1] = 2 * resid * 2.0 * (data->x[ind*2+1] - x[1]);
+    }
+
+    return loss;
+}
+
+
+static double quad_ls_5d_start[5] = {-5.0, 3.0,2.0,-0.1, 0};
+static double quad_ls_5d_sol[6] = {9.0,8.0,-0.0,0.0,10, 0.0}; // last one is value at minimum
+static double quad_ls_5d(size_t dim, size_t ind, const double * x, double * grad, void * arg)
+{
+
+    (void)(dim);
+
+    struct SgdData * data = arg;
+
+    double guess = 0.0;
+    double true_val = 0.0;
+    for (size_t ii = 0; ii < 5; ii++){
+        guess    += pow(data->x[ind*2+ii] - x[ii]             ,2);
+        true_val += pow(data->x[ind*2+ii] - quad_ls_5d_sol[ii],2);
+    }
+
+    double resid = true_val - guess;
+    double loss = resid * resid;
+
+    if (grad != NULL){
+        grad[0] = 2 * resid * 2.0 * (data->x[ind*2+0] - x[0]);
+        grad[1] = 2 * resid * 2.0 * (data->x[ind*2+1] - x[1]);
+        grad[2] = 2 * resid * 2.0 * (data->x[ind*2+2] - x[2]);
+        grad[3] = 2 * resid * 2.0 * (data->x[ind*2+3] - x[3]);
+        grad[4] = 2 * resid * 2.0 * (data->x[ind*2+4] - x[4]);
+    }
+
+    return loss;
+}
+
+static double logistic_3d_start[3] = {2.0,-0.8,1.0};
+static double logistic_3d_sol[4] = {0.2,1.0,3.0,0.0}; // last one is value at minimum
+static double logistic_3d(size_t dim, size_t ind, const double * x, double * grad, void * arg)
+{
+    (void)(dim);
+
+    struct SgdData * data = arg;
+
+    // assign true value
+    double val = 0.0;
+    if ((logistic_3d_sol[0] + data->x[ind*2] * logistic_3d_sol[1] + data->x[ind*2+1] * logistic_3d_sol[1]) > 0.0){
+        val = 1.0;
+    }
+    
+    /* printf("val = %G\n",val); */
+    double beta_func = x[0] + x[1]*data->x[ind*2] + x[2]*data->x[ind*2+1];
+    double exp_beta_func = exp(beta_func);
+    double loglike = -log(1+exp(beta_func)) + val*(beta_func);
+    
+
+    if (grad != NULL){
+        grad[0] = - 1.0 / (1 + exp_beta_func) * exp_beta_func                + val;
+        grad[1] = - 1.0 / (1 + exp_beta_func) * exp_beta_func * data->x[2*ind]   + val*data->x[2*ind];
+        grad[2] = - 1.0 / (1 + exp_beta_func) * exp_beta_func * data->x[2*ind+1] + val*data->x[2*ind+1];
+
+        grad[0] *= -1; // because maximize log like
+        grad[1] *= -1; // because maximize log like
+        grad[2] *= -1; // because maximize log like
+    }
+
+    return -loglike; // because maximize log like
+}
+
+
+
+
 struct SgdTestProblem sprobs[34];
 void create_sgd_probs(){
         
@@ -124,6 +218,21 @@ void create_sgd_probs(){
     sprobs[1].eval = lin_ls_5d;
     sprobs[1].start = lin_ls_5d_start;
     sprobs[1].sol = lin_ls_5d_sol;
+
+    sprobs[2].dim = 2;
+    sprobs[2].eval = quad_ls_2d;
+    sprobs[2].start = quad_ls_2d_start;
+    sprobs[2].sol = quad_ls_2d_sol;
+
+    sprobs[3].dim   = 5;
+    sprobs[3].eval  = quad_ls_5d;
+    sprobs[3].start = quad_ls_5d_start;
+    sprobs[3].sol   = quad_ls_5d_sol;
+
+    sprobs[4].dim   = 3;
+    sprobs[4].eval  = logistic_3d;
+    sprobs[4].start = logistic_3d_start;
+    sprobs[4].sol   = logistic_3d_sol;
 }
 
 

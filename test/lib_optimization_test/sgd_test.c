@@ -143,6 +143,7 @@ void Test_sgd_p2(CuTest * tc)
     data.prob = p;
     
     struct c3Opt * opt = c3opt_alloc(SGD,dim);
+    c3opt_set_sgd_learn_rate(opt,1e-1);
     c3opt_set_sgd_nsamples(opt,N);
     c3opt_add_objective_stoch(opt,sgd_test_problem_eval,&data);
     c3opt_set_maxiter(opt,10);
@@ -182,14 +183,216 @@ void Test_sgd_p2(CuTest * tc)
     free(start); start = NULL;
 }
 
+void Test_sgd_p3(CuTest * tc)
+{
+    srand(seed);
+    printf("\n////////////////////////////////////////////\n");
+    printf("SGD Test: 3\n");
+
+    size_t f1 = 2;
+    struct SgdTestProblem p = sprobs[f1];
+    size_t dim = sgd_test_problem_get_dim(&p);
+    CuAssertIntEquals(tc,2,dim);
+
+    size_t N = 10;
+    double x[50000];
+
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = 2.0*randu()-1;
+        }
+    }
+    
+    struct SgdData data;
+    data.N = N;
+    data.x = x;
+    data.prob = p;
+    
+    struct c3Opt * opt = c3opt_alloc(SGD,dim);
+    c3opt_set_sgd_learn_rate(opt,1e-2);
+    c3opt_set_sgd_nsamples(opt,N);
+    c3opt_add_objective_stoch(opt,sgd_test_problem_eval,&data);
+    c3opt_set_maxiter(opt,200);
+    c3opt_set_verbose(opt,1);
+
+    double * start_ref = sgd_test_problem_get_start(&p);
+
+    double val;
+    double * start = calloc_double(dim);
+    memmove(start,start_ref, dim * sizeof(double));
+    int res = c3opt_minimize(opt,start,&val);
+    CuAssertIntEquals(tc,1,res>=0);
+
+    double * soll = sgd_test_problem_get_sol(&p);
+
+    //minimum
+    double err = fabs(soll[dim]-val);
+    if (fabs(soll[dim]) > 1){
+        err /= fabs(soll[dim]);
+    }
+    CuAssertDblEquals(tc,0.0,err,1e-8);
+    
+    //minimizer
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,soll[ii],start[ii],1e-4);
+    }
+
+    printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
+    printf("\t\t Minimum Found:                : %3.6E\n\n",val);
+
+    printf("\t\t Number of Function Evaluations: %zu\n",c3opt_get_nevals(opt));
+    printf("\t\t Number of Gradient Evaluations: %zu\n",c3opt_get_ngvals(opt));
+    printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
+    printf("////////////////////////////////////////////\n");
+
+    c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
+}
+
+
+void Test_sgd_p4(CuTest * tc)
+{
+    srand(seed);
+    printf("\n////////////////////////////////////////////\n");
+    printf("SGD Test: 4\n");
+
+    size_t f1 = 3;
+    struct SgdTestProblem p = sprobs[f1];
+    size_t dim = sgd_test_problem_get_dim(&p);
+    CuAssertIntEquals(tc,5,dim);
+
+    size_t N = 500;
+    double x[50000];
+
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = 2.0*randu()-1;
+        }
+    }
+    
+    struct SgdData data;
+    data.N = N;
+    data.x = x;
+    data.prob = p;
+    
+    struct c3Opt * opt = c3opt_alloc(SGD,dim);
+    c3opt_set_sgd_learn_rate(opt,1e-3);
+    c3opt_set_sgd_nsamples(opt,N);
+    c3opt_add_objective_stoch(opt,sgd_test_problem_eval,&data);
+    c3opt_set_maxiter(opt,200);
+    c3opt_set_verbose(opt,1);
+
+    double * start_ref = sgd_test_problem_get_start(&p);
+
+    double val;
+    double * start = calloc_double(dim);
+    memmove(start,start_ref, dim * sizeof(double));
+    int res = c3opt_minimize(opt,start,&val);
+    CuAssertIntEquals(tc,1,res>=0);
+
+    double * soll = sgd_test_problem_get_sol(&p);
+
+    //minimum
+    double err = fabs(soll[dim]-val);
+    if (fabs(soll[dim]) > 1){
+        err /= fabs(soll[dim]);
+    }
+    CuAssertDblEquals(tc,0.0,err,1e-8);
+    
+    //minimizer
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,soll[ii],start[ii],1e-4);
+    }
+
+    printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
+    printf("\t\t Minimum Found:                : %3.6E\n\n",val);
+
+    printf("\t\t Number of Function Evaluations: %zu\n",c3opt_get_nevals(opt));
+    printf("\t\t Number of Gradient Evaluations: %zu\n",c3opt_get_ngvals(opt));
+    printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
+    printf("////////////////////////////////////////////\n");
+
+    c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
+}
+
+
+void Test_sgd_p5(CuTest * tc)
+{
+    srand(seed);
+    printf("\n////////////////////////////////////////////\n");
+    printf("SGD Test: 5 (logistic regression)\n");
+
+    size_t f1 = 4;
+    struct SgdTestProblem p = sprobs[f1];
+    size_t dim = sgd_test_problem_get_dim(&p);
+    CuAssertIntEquals(tc,3,dim);
+
+    size_t N = 500;
+    double x[50000];
+
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < dim-1; jj++){
+            x[ii*2+jj] = 2.0*randu()-1;
+        }
+    }
+    
+    struct SgdData data;
+    data.N = N;
+    data.x = x;
+    data.prob = p;
+    
+    struct c3Opt * opt = c3opt_alloc(SGD,dim);
+    c3opt_set_sgd_learn_rate(opt,1e0);
+    c3opt_set_sgd_nsamples(opt,N);
+    c3opt_add_objective_stoch(opt,sgd_test_problem_eval,&data);
+    c3opt_set_maxiter(opt,200);
+    c3opt_set_verbose(opt,1);
+
+    double * start_ref = sgd_test_problem_get_start(&p);
+
+    double val;
+    double * start = calloc_double(dim);
+    memmove(start,start_ref, dim * sizeof(double));
+    int res = c3opt_minimize(opt,start,&val);
+    CuAssertIntEquals(tc,1,res>=0);
+
+    double * soll = sgd_test_problem_get_sol(&p);
+
+    //minimum -> dont check because maximizing log likelihood)
+    
+    //minimizer
+    dprint(dim,soll);
+    dprint(dim,start);
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     CuAssertDblEquals(tc,soll[ii],start[ii],1e-4); */
+    /* } */
+
+    printf("\t\t *True* Minimum:               : %3.6E\n", soll[dim]);
+    printf("\t\t Minimum Found:                : %3.6E\n\n",val);
+
+    printf("\t\t Number of Function Evaluations: %zu\n",c3opt_get_nevals(opt));
+    printf("\t\t Number of Gradient Evaluations: %zu\n",c3opt_get_ngvals(opt));
+    printf("\t\t Number of iterations:           %zu\n",c3opt_get_niters(opt));
+    printf("////////////////////////////////////////////\n");
+
+    c3opt_free(opt); opt = NULL;
+    free(start); start = NULL;
+}
+
+
+
 
 CuSuite * SGDGetSuite(){
     //printf("----------------------------\n");
 
     CuSuite * suite = CuSuiteNew();
 
-    SUITE_ADD_TEST(suite, Test_sgd_p1);
-    SUITE_ADD_TEST(suite, Test_sgd_p2);
+    /* SUITE_ADD_TEST(suite, Test_sgd_p1); */
+    /* SUITE_ADD_TEST(suite, Test_sgd_p2); */
+    /* SUITE_ADD_TEST(suite, Test_sgd_p3); */
+    /* SUITE_ADD_TEST(suite, Test_sgd_p4); */
+    SUITE_ADD_TEST(suite, Test_sgd_p5);
 
     return suite;
 }
