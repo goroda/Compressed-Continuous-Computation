@@ -343,7 +343,7 @@ void Test_sgd_p5(CuTest * tc)
     data.prob = p;
     
     struct c3Opt * opt = c3opt_alloc(SGD,dim);
-    c3opt_set_sgd_learn_rate(opt,1e0);
+    c3opt_set_sgd_learn_rate(opt,0.9);
     c3opt_set_sgd_nsamples(opt,N);
     c3opt_add_objective_stoch(opt,sgd_test_problem_eval,&data);
     c3opt_set_maxiter(opt,200);

@@ -1830,6 +1830,9 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
 
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
 
+    if (ropts->stoch_obj == 1){
+        structure = NONE_ST; // don't take advante of structure in this case
+    }
     struct RegressionMemManager * mem =
         regress_mem_manager_alloc(ftp->dim,N,
                                   ftp->nparams_per_core,ranks,
@@ -2380,6 +2383,20 @@ void ft_regress_set_alg_and_obj(struct FTRegress * ftr, enum REGTYPE type, enum 
     }
     ftr->regopts = regress_opts_create(ftr->dim,type,obj);   
 }
+
+/***********************************************************//**
+    Set option specifying will use a stochastic optimizer
+    
+    \param[in,out] ftr - regression structure
+    \param[in]     on  - 1 for yes, 0 for no
+***************************************************************/
+void ft_regress_set_stoch_obj(struct FTRegress * ftr, int on)
+{
+    assert (ftr != NULL);
+    assert (ftr->regopts != NULL);
+    regress_opts_set_stoch_obj(ftr->regopts,on);
+}
+
 
 /***********************************************************//**
     Get the parameters of the underlying FT

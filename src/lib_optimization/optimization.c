@@ -205,7 +205,7 @@ struct c3SGD * c3sgd_alloc()
 
     sgd->nsamples = 0;
 
-    sgd->do_momentum = 0;
+    sgd->do_momentum = 1;
     sgd->momentum_init = 0.5;
     sgd->momentum_rate = 1.05;
     sgd->nepochs_between_increase = 10;
@@ -274,7 +274,6 @@ struct c3Opt
     // for lbfgs
     size_t nvectors_store;
     int init_scale;
-
 
     struct c3SGD * sgd;
     
@@ -1733,7 +1732,8 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     int ntest_error_increase = 0;
     int invalid_due_to_decrease = 0;
 
-    int do_momentum = opt->sgd->do_momentum; // 0 standard, 1 ADAM
+    /* int do_momentum = opt->sgd->do_momentum; // 0 standard, 1 ADAM */
+    int do_momentum = opt->sgd->do_momentum; // 0 standard, 1 ADAM */
     double nesterov_mu = opt->sgd->momentum_init;
     double momentum_increase = opt->sgd->momentum_rate;
     
@@ -1759,14 +1759,19 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     double * bias_corrected_second = calloc_double(d);
     double beta_1 = 0.9;
     double beta_2 = 0.999;
+
+    /* double beta_1 = 0.7; */
+    /* double beta_2 = 0.799; */
     double eps = 1e-8;
     size_t time = 1;
     for (size_t iter = 0; iter < maxiter; iter++){
-
+        shuffle(ndata,order);
         for (size_t ii = 0; ii < ndata_train; ii++){
             memmove(previous_step,current_step,d*sizeof(double));
             memmove(current_step,next_step,d*sizeof(double));
 
+            /* printf(" starting step: "); dprint(d,current_step); */
+            /* printf("point %zu\n",order[ii]); */
             *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
 
             if (do_momentum == 0){
@@ -1789,7 +1794,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
             }
    
         }
-        /* learn_rate *=  */
+        learn_rate *= 0.999;
 
         sgd_term_check(opt,d,next_step,current_step,ndata_train,
                        ndata,order,&xdiff,&train_error,&test_error);
@@ -1800,7 +1805,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
             }
             else{
                 printf("   %-19.7G|   %-19.7G| %-19.7G| %-19.5G| %-19.5G",
-                       train_error,test_error,xdiff,learn_rate,nesterov_mu);
+                       train_error,test_error,xdiff,learn_rate,cblas_ddot(d,workspace,1,workspace,1));
             }
             /* printf("x = "); dprint(d,x); */
             printf("\n");
@@ -1814,6 +1819,8 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         }
 
         opt->niters++;
+        *fval = train_error;
+        memmove(x,next_step,d*sizeof(double));
 
     }
 

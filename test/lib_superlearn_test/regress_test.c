@@ -3119,62 +3119,45 @@ void Test_LS_AIO_kernel3(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
+double fsgd2(const double * x)
+{
+    return  x[1]*x[0] + x[0] + x[1] + x[1]*x[0]*x[0] + x[1]*x[1]*x[1] + sin(x[4]*x[1]) + x[3]*cos(2.0*x[2]); /* + 1.0 / (x[2] + 1.1); */
+}
+
 
 void Test_LS_AIO3_sgd(CuTest * tc)
 {
-    printf("\nLS_AIO3_sgd: Testing AIO regression on a randomly generated low rank function with SGD\n");
-    printf("\t  Dimensions: 5\n");
-    printf("\t  Ranks:      [1 2 3 2 8 1]\n");
-    printf("\t  LPOLY order: 10\n");
-    printf("\t  nunknowns:   419\n");
-    printf("\t  ndata:       838\n");
-
     srand(seed);
-    
-    size_t dim = 5;
+    printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n");
+    printf("                  with stochastic gradient descent\n");
+    printf("\t  Dimensions: 5\n");
+    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
+    printf("\t  LPOLY order: 3\n");
+    printf("\t  nunknowns:   108\n");
+    printf("\t  ndata:       1000\n");
 
-    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
-    size_t ranks[6] = {1,2,2,2,2,1};
+    size_t dim = 5;
     double lb = -1.0;
     double ub = 1.0;
-    size_t maxorder = 5;
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    size_t maxorder = 8;
+    size_t ranks[6] = {1,8,8,9,7,1};
 
     // create data
-    size_t nunknown = 1;
-    for (size_t ii = 0; ii < dim; ii++){
-        nunknown += ranks[ii]*ranks[ii+1]*(maxorder+1);
-    }
-    printf("nunknown = %zu\n",nunknown);
-    size_t ndata = 10*nunknown;
-    /* size_t ndata = 2; */
-    /* printf("\t Ndata: %zu\n",ndata); */
+    size_t ndata = 1000;
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
 
     // // add noise
-    double maxy = 0.0;
-    double miny = 0.0;
     for (size_t ii = 0 ; ii < ndata; ii++){
         for (size_t jj = 0; jj < dim; jj++){
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
-        // no noise!
-        y[ii] = function_train_eval(a,x+ii*dim);
-        if (y[ii] > maxy){
-            maxy = y[ii];
+        y[ii] = fsgd2(x+ii*dim);
+        if (ii == 351){
+            printf("y[351] = %G\n",y[ii]);
         }
-        else if (y[ii] < miny){
-            miny = y[ii];
-        }
-        /* y[ii] += randn(); */
     }
 
-    for (size_t ii = 0; ii < ndata; ii++){
-        y[ii] = (2.0*y[ii] - maxy - miny)/(maxy-miny);
-    }
-    dprint(ndata,y);
 
     // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
@@ -3183,168 +3166,199 @@ void Test_LS_AIO3_sgd(CuTest * tc)
     ope_opts_set_nparams(opts,maxorder+1);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
+    printf("nunknowns = %zu\n",nunknowns);
     for (size_t ii = 0; ii < dim; ii++){
-        /* printf("ii = %zu\n",ii); */
         multi_approx_opts_set_dim(fapp,ii,qmopts);
     }
 
-    struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-4);
-    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    regress_opts_set_stoch_obj(ropts,1);
-    struct c3Opt * optimizer = c3opt_create(SGD);
-    c3opt_set_verbose(optimizer,1);
-    c3opt_set_sgd_nsamples(optimizer,ndata);
-    c3opt_set_sgd_learn_rate(optimizer,1e-4);
-    c3opt_set_maxiter(optimizer,6000);
-
-    /* struct c3Opt* optimizer = c3opt_create(BFGS); */
-    /* c3opt_set_verbose(optimizer,0); */
-    /* c3opt_set_gtol(optimizer,1e-8); */
-
-    struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
-    double num = 0.0;
-    double den = 0.0;
-    double pt[5];
-    for (size_t ii = 0; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            pt[jj] = randu()*(ub-lb) + lb;
-        }
-        double f1 = function_train_eval(ft_final,pt)*(maxy-miny)/2 + (maxy+miny)/2;
-        double f2 = function_train_eval(a,pt);
-        double diff = f1- f2;
-        double diff2 = diff*diff;
-        den += f2 * f2;
-        num += diff2;
-    }
-
-    printf("num = %G\n",num);
-    printf("den = %G\n",den);
+    int sgd = 0;
+    struct c3Opt * optimizer = NULL;
+    struct FTRegress * reg = NULL;
+    if (sgd == 1){
+        
+        optimizer = c3opt_create(SGD);
+        c3opt_set_verbose(optimizer,1);
+        c3opt_set_sgd_nsamples(optimizer,ndata);
+        c3opt_set_sgd_learn_rate(optimizer,1e-3);
+        c3opt_set_maxiter(optimizer,50);
     
-    /* double diff = function_train_relnorm2diff(ft_final,a); */
-    /* printf("\n\t  Relative Error: ||f - f_approx||/||f|| = %G\n",diff); */
-    /* CuAssertDblEquals(tc,0.0,diff,1e-3); */
+        reg = ft_regress_alloc(dim,fapp,ranks);
+        ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+        ft_regress_set_stoch_obj(reg,1);
+    }
+    else{
+        optimizer = c3opt_create(BFGS);
+        c3opt_set_verbose(optimizer,1);
+        /* c3opt_set_sgd_nsamples(optimizer,ndata); */
+        /* c3opt_set_sgd_learn_rate(optimizer,5e-2); */
+        c3opt_set_maxiter(optimizer,50);
+    
+        reg = ft_regress_alloc(dim,fapp,ranks);
+        ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+        ft_regress_set_stoch_obj(reg,0);
+    }
+    
+    struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y);
 
-    /* c3opt_set_sgd_learn_rate(optimizer,1.0); */
-    /* struct FunctionTrain * ft_final2 = c3_regression_run(ftp,ropts,optimizer,ndata,x,y); */
-    /* diff = function_train_relnorm2diff(ft_final2,a); */
-    /* printf("\n\t  Relative Error: ||f - f_approx||/||f|| = %G\n",diff); */
-    /* CuAssertDblEquals(tc,0.0,diff,1e-3); */
+    /* double * params = calloc_double(nunknowns); */
+    /* function_train_get_params(ft2,params); */
+    /* dprint(nunknowns,params); */
+    /* free(params); params = NULL; */
 
-    ft_param_free(ftp);      ftp  = NULL;
-    regress_opts_free(ropts); ropts = NULL;
-    c3opt_free(optimizer);
-    bounding_box_free(bds); bds       = NULL;
-    function_train_free(a); a         = NULL;
-    function_train_free(ft_final); ft_final = NULL;
-    one_approx_opts_free_deep(&qmopts);
-    multi_approx_opts_free(fapp);
+
+    double test_error = 0;
+    double pt[5];
+    size_t N = 100000;
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < 5; jj++){
+            pt[jj] = 2.0*randu()-1.0;
+        }
+        double v1 = function_train_eval(ft2,pt);
+        double v2 = fsgd2(pt);
+        test_error += (v1-v2)*(v1-v2);
+    }
+    test_error /= (double) N;
+    printf("\t  rmse = %G\n",sqrt(test_error));
+    printf("\t  mse = %G\n",test_error);
+
+    
+    ft_regress_free(reg);     reg = NULL;
+    function_train_free(ft2); ft2 = NULL;
+
+    c3opt_free(optimizer); optimizer = NULL;
+
     free(x); x = NULL;
     free(y); y = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+
+    
 }
 
-/* void Test_LS_AIO_new_sgd(CuTest * tc) */
-/* { */
-/*     srand(seed); */
-/*     printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n"); */
-/*     printf("                  with stochastic gradient descent\n"); */
-/*     printf("\t  Dimensions: 5\n"); */
-/*     printf("\t  Ranks:      [1 3 2 4 2 1]\n"); */
-/*     printf("\t  LPOLY order: 3\n"); */
-/*     printf("\t  nunknowns:   108\n"); */
-/*     printf("\t  ndata:       1000\n"); */
+double fsgd(const double * x)
+{
+    return  x[1]*x[0] + x[0] + x[1] + x[1]*x[0]*x[0] + x[1]*x[1]*x[1];
+}
 
-/*     size_t dim = 5; */
-/*     double lb = -1.0; */
-/*     double ub = 1.0; */
-/*     size_t maxorder = 3; */
-/*     /\* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; *\/ */
-/*     /\* size_t ranks[3] = {1,3,1}; *\/ */
-/*     size_t ranks[6] = {1,3,2,4,2,1}; */
-/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
-/*     struct FunctionTrain * a = */
-/*         function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
+
+void Test_LS_AIO_new_sgd(CuTest * tc)
+{
+    srand(seed);
+    printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n");
+    printf("                  with stochastic gradient descent\n");
+    printf("\t  Dimensions: 5\n");
+    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
+    printf("\t  LPOLY order: 3\n");
+    printf("\t  nunknowns:   108\n");
+    printf("\t  ndata:       1000\n");
+
+    size_t dim = 2;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    size_t ranks[3] = {1,4,1};
+    /* size_t ranks[6] = {1,3,2,4,2,1}; */
+
+    // create data
+    size_t ndata = 100;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        y[ii] = fsgd(x+ii*dim);
+        if (ii == 351){
+            printf("y[351] = %G\n",y[ii]);
+        }
+    }
+    printf("y = ");
+    dprint(ndata,y);
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
     
-/*     // create data */
-/*     size_t ndata = 1000; */
-/*     double * x = calloc_double(ndata*dim); */
-/*     double * y = calloc_double(ndata); */
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
 
-/*     // // add noise */
-/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
-/*         for (size_t jj = 0; jj < dim; jj++){ */
-/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
-/*         } */
-/*         y[ii] = function_train_eval(a,x+ii*dim); */
-/*         if (ii == 351){ */
-/*             printf("y[351] = %G\n",y[ii]); */
-/*         } */
-/*     } */
-
-
-/*     // Initialize Approximation Structure */
-/*     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE); */
-/*     ope_opts_set_lb(opts,lb); */
-/*     ope_opts_set_ub(opts,ub); */
-/*     ope_opts_set_nparams(opts,maxorder+1); */
-/*     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts); */
-/*     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim); */
-/*     size_t nunknowns = 0; */
-/*     for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];} */
+    int sgd = 1;
+    struct c3Opt * optimizer = NULL;
+    struct FTRegress * reg = NULL;
+    if (sgd == 1){
+        
+        optimizer = c3opt_create(SGD);
+        c3opt_set_verbose(optimizer,1);
+        c3opt_set_sgd_nsamples(optimizer,ndata);
+        c3opt_set_sgd_learn_rate(optimizer,1e-2);
+        c3opt_set_maxiter(optimizer,1000);
     
-/*     for (size_t ii = 0; ii < dim; ii++){ */
-/*         multi_approx_opts_set_dim(fapp,ii,qmopts); */
-/*     } */
-
-/*     struct c3Opt * optimizer = c3opt_create(SGD); */
-/*     c3opt_set_verbose(optimizer,0); */
-/*     c3opt_set_sgd_nsamples(optimizer,ndata); */
-/*     c3opt_set_maxiter(optimizer,500); */
+        reg = ft_regress_alloc(dim,fapp,ranks);
+        ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+        ft_regress_set_stoch_obj(reg,1);
+    }
+    else{
+        optimizer = c3opt_create(BFGS);
+        c3opt_set_verbose(optimizer,1);
+        /* c3opt_set_sgd_nsamples(optimizer,ndata); */
+        /* c3opt_set_sgd_learn_rate(optimizer,5e-2); */
+        c3opt_set_maxiter(optimizer,100);
     
-/*     struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks); */
-/*     ft_regress_set_alg_and_obj(reg,AIO,FTLS); */
-/*     ft_regress_set_stoch_obj(reg,1); */
-/*     struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y); */
+        reg = ft_regress_alloc(dim,fapp,ranks);
+        ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+        ft_regress_set_stoch_obj(reg,0);
+    }
+    
+    struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y);
 
-/*     double diff = function_train_relnorm2diff(ft2,a); */
-/*     double diffabs = function_train_norm2diff(ft2,a); */
-/*     printf("\t  Relative Error from higher level interface = %G\n",diff); */
-/*     printf("\t  AbsoluteError from higher level interface = %G\n",diffabs); */
+    double * params = calloc_double(nunknowns);
+    function_train_get_params(ft2,params);
+    dprint(nunknowns,params);
 
 
-/*     double test_error = 0; */
-/*     double pt[5]; */
-/*     size_t N = 100000; */
-/*     for (size_t ii = 0; ii < N; ii++){ */
-/*         for (size_t jj = 0; jj < 5; jj++){ */
-/*             pt[jj] = 2.0*randu()-1.0; */
-/*         } */
-/*         double v1 = function_train_eval(ft2,pt); */
-/*         double v2 = function_train_eval(a,pt); */
-/*         test_error += (v1-v2)*(v1-v2); */
-/*     } */
-/*     test_error /= (double) N; */
-/*     printf("\t  rmse = %G\n",sqrt(test_error*pow(2,5)));//\*pow(2,5)); */
-/*     printf("\t  mse = %G\n",test_error); */
+    double test_error = 0;
+    double pt[5];
+    size_t N = 100000;
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < 5; jj++){
+            pt[jj] = 2.0*randu()-1.0;
+        }
+        double v1 = function_train_eval(ft2,pt);
+        double v2 = fsgd(pt);
+        test_error += (v1-v2)*(v1-v2);
+    }
+    test_error /= (double) N;
+    printf("\t  rmse = %G\n",sqrt(test_error));
+    printf("\t  mse = %G\n",test_error);
 
     
-/*     CuAssertDblEquals(tc,0.0,diff,1e-3); */
-    
-/*     ft_regress_free(reg);     reg = NULL; */
-/*     function_train_free(ft2); ft2 = NULL; */
+    ft_regress_free(reg);     reg = NULL;
+    function_train_free(ft2); ft2 = NULL;
 
-/*     c3opt_free(optimizer); optimizer = NULL; */
-/*     bounding_box_free(bds);   bds  = NULL; */
-/*     function_train_free(a);   a    = NULL; */
+    c3opt_free(optimizer); optimizer = NULL;
 
-/*     free(x); x = NULL; */
-/*     free(y); y = NULL; */
+    free(x); x = NULL;
+    free(y); y = NULL;
 
-/*     one_approx_opts_free_deep(&qmopts); */
-/*     multi_approx_opts_free(fapp); */
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
 
     
-/* } */
+}
 
 
 CuSuite * CLinalgRegressGetSuite()
