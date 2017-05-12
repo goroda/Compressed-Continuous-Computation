@@ -321,7 +321,6 @@ void Test_LS_ALS_SPARSE2(CuTest * tc)
     struct FunctionTrain * ft_final = c3_regression_run(ftp,als_opts,optimizer,ndata,x,y);
     double diff = function_train_relnorm2diff(ft_final,a);
     printf("\n\t Relative Error after first round of ALS: ||f - f_approx||/||f|| = %G\n",diff);
-
     
     struct RegressOpts * aio_opts = regress_opts_create(dim,AIO,FTLS_SPARSEL2);
     regress_opts_set_verbose(aio_opts,0);
@@ -3360,49 +3359,49 @@ CuSuite * CLinalgRegressGetSuite()
     CuSuite * suite = CuSuiteNew();
 
     /* next 3 are good */
-    SUITE_ADD_TEST(suite, Test_LS_ALS);
-    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
+    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
     SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
     /* next 5 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple);
-    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
-    SUITE_ADD_TEST(suite, Test_LS_AIO);
-    SUITE_ADD_TEST(suite, Test_LS_AIO2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO3);
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple); */
+    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
 
-    /* next 4 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
+    /* /\* next 4 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     
-    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
+    /* /\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\/ */
 
-    /* Next 2 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
+    /* /\* Next 2 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
 
-    /* next 2 are good */
-    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
-    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
+    /* /\* next 2 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
+    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
 
-    /* Next 3 are good */
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
+    /* /\* Next 3 are good *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin); */
 
     
-    SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rounding); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
 
-    SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd); */
+    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd); */
         
     return suite;
 }
