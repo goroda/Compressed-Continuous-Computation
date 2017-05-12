@@ -3173,7 +3173,7 @@ void Test_LS_AIO3_sgd(CuTest * tc)
         multi_approx_opts_set_dim(fapp,ii,qmopts);
     }
 
-    int sgd = 0;
+    int sgd = 1;
     struct c3Opt * optimizer = NULL;
     struct FTRegress * reg = NULL;
     if (sgd == 1){
