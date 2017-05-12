@@ -3128,18 +3128,17 @@ double fsgd2(const double * x)
 void Test_LS_AIO3_sgd(CuTest * tc)
 {
     srand(seed);
-    printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n");
-    printf("                  with stochastic gradient descent\n");
+    printf("\nLS_AIO_new_sgd: Testing AIO regression on a somewhat complex function \n");
     printf("\t  Dimensions: 5\n");
-    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
-    printf("\t  LPOLY order: 3\n");
-    printf("\t  nunknowns:   108\n");
+    printf("\t  Ranks:      [1 8 8 9 7 1]\n");
+    printf("\t  LPOLY order: 4\n");
+    printf("\t  nunknowns:   1070\n");
     printf("\t  ndata:       1000\n");
 
     size_t dim = 5;
     double lb = -1.0;
     double ub = 1.0;
-    size_t maxorder = 8;
+    size_t maxorder = 4;
     size_t ranks[6] = {1,8,8,9,7,1};
 
     // create data
@@ -3153,9 +3152,6 @@ void Test_LS_AIO3_sgd(CuTest * tc)
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
         y[ii] = fsgd2(x+ii*dim);
-        if (ii == 351){
-            printf("y[351] = %G\n",y[ii]);
-        }
     }
 
 
@@ -3168,21 +3164,22 @@ void Test_LS_AIO3_sgd(CuTest * tc)
     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
     size_t nunknowns = 0;
     for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
-    printf("nunknowns = %zu\n",nunknowns);
+    /* printf("nunknowns = %zu\n",nunknowns); */
     for (size_t ii = 0; ii < dim; ii++){
         multi_approx_opts_set_dim(fapp,ii,qmopts);
     }
 
-    int sgd = 1;
+    int sgd = 1; // SGD gets way better errors than BFGS after 100 iterations
     struct c3Opt * optimizer = NULL;
     struct FTRegress * reg = NULL;
     if (sgd == 1){
         
         optimizer = c3opt_create(SGD);
-        c3opt_set_verbose(optimizer,1);
+        /* c3opt_set_verbose(optimizer,1); */
         c3opt_set_sgd_nsamples(optimizer,ndata);
         c3opt_set_sgd_learn_rate(optimizer,1e-3);
-        c3opt_set_maxiter(optimizer,50);
+        c3opt_set_absxtol(optimizer,1e-20);
+        c3opt_set_maxiter(optimizer,100);
     
         reg = ft_regress_alloc(dim,fapp,ranks);
         ft_regress_set_alg_and_obj(reg,AIO,FTLS);
@@ -3193,7 +3190,7 @@ void Test_LS_AIO3_sgd(CuTest * tc)
         c3opt_set_verbose(optimizer,1);
         /* c3opt_set_sgd_nsamples(optimizer,ndata); */
         /* c3opt_set_sgd_learn_rate(optimizer,5e-2); */
-        c3opt_set_maxiter(optimizer,50);
+        c3opt_set_maxiter(optimizer,100);
     
         reg = ft_regress_alloc(dim,fapp,ranks);
         ft_regress_set_alg_and_obj(reg,AIO,FTLS);
@@ -3222,7 +3219,7 @@ void Test_LS_AIO3_sgd(CuTest * tc)
     test_error /= (double) N;
     printf("\t  rmse = %G\n",sqrt(test_error));
     printf("\t  mse = %G\n",test_error);
-
+    CuAssertDblEquals(tc,0.0,test_error,1e-3);
     
     ft_regress_free(reg);     reg = NULL;
     function_train_free(ft2); ft2 = NULL;
@@ -3247,13 +3244,12 @@ double fsgd(const double * x)
 void Test_LS_AIO_new_sgd(CuTest * tc)
 {
     srand(seed);
-    printf("\nLS_AIO_new_sgd: Testing AIO regression on a randomly generated low rank function \n");
-    printf("                  with stochastic gradient descent\n");
-    printf("\t  Dimensions: 5\n");
-    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
+    printf("\nLS_AIO_new_sgd: Testing AIO regression on a simple function\n");
+    printf("\t  Dimensions: 2\n");
+    printf("\t  Ranks:      [1 4 1]\n");
     printf("\t  LPOLY order: 3\n");
-    printf("\t  nunknowns:   108\n");
-    printf("\t  ndata:       1000\n");
+    printf("\t  nunknowns:   32\n");
+    printf("\t  ndata:       100\n");
 
     size_t dim = 2;
     double lb = -1.0;
@@ -3274,12 +3270,9 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
             x[ii*dim+jj] = randu()*(ub-lb) + lb;
         }
         y[ii] = fsgd(x+ii*dim);
-        if (ii == 351){
-            printf("y[351] = %G\n",y[ii]);
-        }
     }
-    printf("y = ");
-    dprint(ndata,y);
+    /* printf("y = "); */
+    /* dprint(ndata,y); */
 
 
     // Initialize Approximation Structure
@@ -3302,10 +3295,11 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     if (sgd == 1){
         
         optimizer = c3opt_create(SGD);
-        c3opt_set_verbose(optimizer,1);
+        /* c3opt_set_verbose(optimizer,1); */
         c3opt_set_sgd_nsamples(optimizer,ndata);
-        c3opt_set_sgd_learn_rate(optimizer,1e-2);
-        c3opt_set_maxiter(optimizer,1000);
+        c3opt_set_absxtol(optimizer,1e-30);
+        c3opt_set_sgd_learn_rate(optimizer,1e-3);
+        c3opt_set_maxiter(optimizer,2000);
     
         reg = ft_regress_alloc(dim,fapp,ranks);
         ft_regress_set_alg_and_obj(reg,AIO,FTLS);
@@ -3313,10 +3307,10 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     }
     else{
         optimizer = c3opt_create(BFGS);
-        c3opt_set_verbose(optimizer,1);
+        /* c3opt_set_verbose(optimizer,1); */
         /* c3opt_set_sgd_nsamples(optimizer,ndata); */
         /* c3opt_set_sgd_learn_rate(optimizer,5e-2); */
-        c3opt_set_maxiter(optimizer,100);
+        c3opt_set_maxiter(optimizer,1000);
     
         reg = ft_regress_alloc(dim,fapp,ranks);
         ft_regress_set_alg_and_obj(reg,AIO,FTLS);
@@ -3325,9 +3319,9 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     
     struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y);
 
-    double * params = calloc_double(nunknowns);
-    function_train_get_params(ft2,params);
-    dprint(nunknowns,params);
+    /* double * params = calloc_double(nunknowns); */
+    /* function_train_get_params(ft2,params); */
+    /* dprint(nunknowns,params); */
 
 
     double test_error = 0;
@@ -3344,7 +3338,7 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     test_error /= (double) N;
     printf("\t  rmse = %G\n",sqrt(test_error));
     printf("\t  mse = %G\n",test_error);
-
+    CuAssertDblEquals(tc,0.0,test_error,1e-7);
     
     ft_regress_free(reg);     reg = NULL;
     function_train_free(ft2); ft2 = NULL;
@@ -3365,50 +3359,50 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
 
-    /* /\* next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
+    /* next 3 are good */
+    SUITE_ADD_TEST(suite, Test_LS_ALS);
+    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
-    /* /\* next 5 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    /* next 5 are good */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple);
+    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
+    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
-    /* /\* next 4 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
+    /* next 4 are good */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
     
-    /* /\* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); *\/ */
+    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
 
-    /* /\* Next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    /* Next 2 are good */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
-    /* /\* next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    /* next 2 are good */
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
-    /* /\* Next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin); */
+    /* Next 3 are good */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
 
     
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rounding); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
 
     SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
         
     return suite;
 }
