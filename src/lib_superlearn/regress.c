@@ -370,7 +370,7 @@ regress_opts_create(size_t dim, enum REGTYPE type, enum REGOBJ obj)
     Set option specifying will use a stochastic optimizer
     
     \param[in,out] ropts - regression structure
-    \param[in]     on  - 1 for yes, 0 for no
+    \param[in]     on    - 1 for yes, 0 for no
 ***************************************************************/
 void regress_opts_set_stoch_obj(struct RegressOpts * ropts, int on)
 {
