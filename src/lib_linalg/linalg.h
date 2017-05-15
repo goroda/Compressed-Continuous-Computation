@@ -120,7 +120,7 @@
 #else
     /* #include <gsl/gsl_cblas.h> */
     #include <cblas.h>
-    #include "f2c.h" // this is worrysome because it redfines ints and such 
+    #include "f2c.h" // this is worrysome because it redfines ints and such
     #include "clapack.h"
 
     #define dgetri_(X, Y, Z, A , B, C, D ) \

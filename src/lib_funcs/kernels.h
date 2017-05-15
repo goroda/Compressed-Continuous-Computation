@@ -87,7 +87,7 @@ kernel_expansion_linear(double, double, const struct KernelApproxOpts *);
 double kernel_expansion_eval(struct KernelExpansion *, double);
 void kernel_expansion_evalN(struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
-double kernel_expansion_deriv_eval(struct KernelExpansion *, double);
+double kernel_expansion_deriv_eval(double,void*);
 void kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
 double kernel_expansion_integrate(struct KernelExpansion *);
 double kernel_expansion_inner(struct KernelExpansion *, struct KernelExpansion *);

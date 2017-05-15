@@ -37,62 +37,33 @@
 
 
 
-
-#include <stdio.h>
 #include <stdlib.h>
-#include "CuTest.h"
-#include "unconstrained_functions.h"
-#include "sgd_functions.h"
 
-CuSuite * OptGetSuite();
-CuSuite * BFGSGetSuite();
-CuSuite * LBFGSGetSuite();
-CuSuite * BGradGetSuite();
-CuSuite * SGDGetSuite();
+#ifndef SGD_TEST_H
+#define SGD_TEST_H
 
-void RunAllTests(void) {
-    
-    printf("Running test suite for: lib_optimization\n");
+struct SgdTestProblem {
+    size_t dim;
+    double (*eval)(size_t,size_t, const double *,double *, void *);
+    double * start;
+    double * sol;
+};
 
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * opt = OptGetSuite();
-    CuSuite * bfgs = BFGSGetSuite();
-    CuSuite * lbfgs = LBFGSGetSuite();
-    CuSuite * bgrad = BGradGetSuite();
-    CuSuite * sgrad = SGDGetSuite();
+struct SgdData
+{
+    size_t N;
+    const double * x;
+    struct SgdTestProblem prob;
 
-    /* CuSuiteAddSuite(suite, opt); */
+};
 
-    create_unc_probs();
+size_t sgd_test_problem_get_dim(void * arg);
+double * sgd_test_problem_get_start(void * arg);
+double * sgd_test_problem_get_sol(void * arg);
+double sgd_test_problem_eval(size_t dim,size_t,const double * x,double * grad,void *arg);
 
-    /* CuSuiteAddSuite(suite, lbfgs); */
-    /* CuSuiteAddSuite(suite, bfgs); */
+void create_sgd_probs();
 
-    create_sgd_probs();
-    CuSuiteAddSuite(suite, sgrad);
+extern struct SgdTestProblem sprobs[34];
 
-    // batch gradient doesn't work
-    /* CuSuiteAddSuite(suite, bgrad); //something is wrong */
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(opt);
-    CuSuiteDelete(bfgs);
-    CuSuiteDelete(lbfgs);
-    CuSuiteDelete(bgrad);
-    CuSuiteDelete(sgrad);
-    
-    CuStringDelete(output);
-    free(suite);
-   
-}
-
-int main(void) {
-
-    RunAllTests();
-}
+#endif

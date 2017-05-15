@@ -1079,6 +1079,7 @@ void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
 *************************************************************/
 double kernel_expansion_deriv_eval(double x, void * kernin)
 {
+    assert (kernin != NULL);
     struct KernelExpansion * kern = kernin;
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)

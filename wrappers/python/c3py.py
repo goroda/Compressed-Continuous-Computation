@@ -15,7 +15,7 @@ class FunctionTrain:
     """
     def __init__(self,din,filename=None,multiopts=None):
 
-        self.optimizer = c3.c3opt_create(c3.BFGS)
+
 
         self.dim = din
         self.opts = []
@@ -95,26 +95,38 @@ class FunctionTrain:
             self.ranks[self.dim] = 1
 
 
-    def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",adaptrank=0,\
-                         roundtol=1e-5,maxrank=10,kickrank=2,kristoffel=False,verbose=0,
-                         regweight=1e-7,opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-10,
-                         cvnparam=None,cvregweight=None,kfold=5,cvverbose=0):
+    def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",verbose=0,\
+                         opt_type="BFGS",opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-30,opt_maxiter=2000, opt_sgd_learn_rate=1e-3,\
+                         adaptrank=0,roundtol=1e-5,maxrank=10,kickrank=2,\
+                         kristoffel=False,regweight=1e-7,cvnparam=None,cvregweight=None,kfold=5,cvverbose=0):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
         """
         
         #xdata should be ndata x dim
+
         
         assert isinstance(xdata, np.ndarray)
 
+        optimizer = None
+        if opt_type == "BFGS":
+            optimizer = c3.c3opt_create(c3.BFGS)
+        elif opt_type == "SGD":
+            optimizer = c3.c3opt_create(c3.SGD)
+            c3.c3opt_set_sgd_nsamples(optimizer,xdata.shape[0])
+            c3.c3opt_set_sgd_learn_rate(optimizer,1e-3)
+        else:
+            raise AttributeError('Optimizer:  ' + opt_type + " is unknown")
+        
         if verbose > 1:
-            c3.c3opt_set_verbose(self.optimizer,1)
+            c3.c3opt_set_verbose(optimizer,1)
 
         # Set optimization options
-        c3.c3opt_set_gtol(self.optimizer,opt_gtol)
-        c3.c3opt_set_relftol(self.optimizer,opt_relftol)
-        c3.c3opt_set_absxtol(self.optimizer,opt_absxtol)
+        c3.c3opt_set_gtol(optimizer,opt_gtol)
+        c3.c3opt_set_relftol(optimizer,opt_relftol)
+        c3.c3opt_set_absxtol(optimizer,opt_absxtol)
+        c3.c3opt_set_maxiter(optimizer,opt_maxiter)
 
         self._build_multiopts()
         
@@ -142,6 +154,9 @@ class FunctionTrain:
         if kristoffel is True:
             c3.ft_regress_set_kristoffel(reg,1)
                 
+        if opt_type == "SGD":
+            c3.ft_regress_set_stoch_obj(reg,1)
+        
         if self.ft is not None:
             c3.function_train_free(self.ft)
 
@@ -161,18 +176,20 @@ class FunctionTrain:
 
 
         if cvgrid is not None:
-            print("Cross validation is not working yet!\n")
+            #print("Cross validation is not working yet!\n")
             c3.cv_opt_grid_set_verbose(cvgrid,cvverbose)
             
             cv = c3.cross_validate_init(self.dim,xdata.flatten(order='C'),ydata,kfold,0)
-            c3.cross_validate_grid_opt(cv,cvgrid,reg,self.optimizer)
+            c3.cross_validate_grid_opt(cv,cvgrid,reg,optimizer)
             c3.cv_opt_grid_free(cvgrid)
             c3.cross_validate_free(cv)
             
             
-        self.ft = c3.ft_regress_run(reg,self.optimizer,xdata.flatten(order='C'),ydata)
+        self.ft = c3.ft_regress_run(reg,optimizer,xdata.flatten(order='C'),ydata)
         
         c3.ft_regress_free(reg)
+        c3.c3opt_free(optimizer)
+
 
         
     def eval(self,pt):
@@ -207,9 +224,6 @@ class FunctionTrain:
 
     def close(self):
 
-        if self.optimizer is not None:
-            c3.c3opt_free(self.optimizer)
-            self.optimizer = None
 
         if self.ft is not None:
             c3.function_train_free(self.ft)

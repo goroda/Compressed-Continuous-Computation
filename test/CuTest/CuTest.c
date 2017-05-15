@@ -217,7 +217,7 @@ void CuAssertDblEquals_LineMsg(CuTest* tc, const char* file, int line, const cha
 {
 	char buf[STRING_MAX];
 	if (fabs(expected - actual) <= delta) return;
-	sprintf(buf, "expected <%f> but was <%f>", expected, actual); 
+	sprintf(buf, "expected <%3.15G> but was <%3.15G>", expected, actual); 
 
 	CuFail_Line(tc, file, line, message, buf);
 }

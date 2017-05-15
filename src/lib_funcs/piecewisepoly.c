@@ -827,6 +827,32 @@ piecewise_poly_eval(const struct PiecewisePoly * poly, double x){
 }
 
 /********************************************************//**
+*   Evaluate the derivative a piecewise polynomial
+*
+*   \param[in] poly - pw poly
+*   \param[in] x    - location at which to evaluate
+*
+*   \return out 
+*************************************************************/
+double piecewise_poly_deriv_eval(const struct PiecewisePoly * poly, double x)
+{
+    
+    double out = 0.1234567890;
+    if (poly->leaf == 1){
+        out = orth_poly_expansion_deriv_eval(x,poly->ope);
+    }
+    else{
+        for (size_t ii = 0; ii < poly->nbranches; ii++){
+            if (x < piecewise_poly_ub(poly->branches[ii])+1e-14){
+                out = piecewise_poly_deriv_eval(poly->branches[ii],x);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
+/********************************************************//**
 *   Evaluate a piecewise polynomial
 *
 *   \param[in]     poly - function

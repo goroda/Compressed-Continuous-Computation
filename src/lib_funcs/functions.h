@@ -133,7 +133,7 @@ generic_function_quadratic(double,double,enum function_class,void *);
 struct GenericFunction * 
 generic_function_poly_randu(enum poly_type,size_t, double, double);
 struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
-
+double generic_function_deriv_eval(const struct GenericFunction *, double);
 
 // generic operations
 struct GenericFunction *

@@ -969,7 +969,6 @@ static double f23sol[5]   = {0.0,0.0,0.0,0.0,9.37629e-6};
 ///////////////////////////////////////////////////////////////////////////
 //assign problems
 
-
 struct UncTestProblem tprobs[34];
 void create_unc_probs(){
         
@@ -1115,7 +1114,7 @@ void create_unc_probs(){
 }
 
 
-// other functionsx
+// other functions
 size_t unc_test_problem_get_dim(void * arg)
 {
     struct UncTestProblem * p = arg;

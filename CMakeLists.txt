@@ -27,7 +27,7 @@ if (APPLE)
 
 else ()
 
-    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99")
+    set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -fno-omit-frame-pointer")
     set(CMAKE_C_COMPILER "cc")
 
     find_package(BLAS REQUIRED)

@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file functions.c
  * Provides basic routines for interfacing specific functions to the outside world through
  * generic functions
@@ -462,6 +458,28 @@ generic_function_deriv(const struct GenericFunction * gf)
     case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
     case RATIONAL:                                              break;
     case KERNEL: assert(1==0);                                  break;
+    }
+    return out;
+}
+
+/********************************************************//**
+    Evaluate the derivative of a generic function
+
+    \param[in] gf - generic function
+    \param[in] x  - location at which to evaluate
+
+    \return value of the derivative
+************************************************************/
+double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
+{
+    double out = 0.1234567890;
+    switch (gf->fc){ 
+    case CONSTANT:   assert (1 == 0);                               break;
+    case PIECEWISE:  out = piecewise_poly_deriv_eval(gf->f,x);      break;
+    case POLYNOMIAL: out = orth_poly_expansion_deriv_eval(x,gf->f); break;
+    case LINELM:     assert (1 == 0);                               break;
+    case RATIONAL:   assert (1 == 0);                               break;
+    case KERNEL:     out = kernel_expansion_deriv_eval(x,gf->f);    break;
     }
     return out;
 }
