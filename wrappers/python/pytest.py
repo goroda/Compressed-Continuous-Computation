@@ -27,7 +27,7 @@ for ii in range(dim):
 ft.build_data_model(ndata,x,y1,alg="AIO",obj="LS",adaptrank=1,kickrank=1,roundtol=1e-10,verbose=0)
 
 
-## Run a fixed-rank regression routine to approximate the second function
+## Run a fixed-rank regression routine to approximate the second function with stochastic gradient descent
 ft_sgd = c3py.FunctionTrain(dim)
 ranks = [2]*(dim+1)
 ranks[0] = 1
