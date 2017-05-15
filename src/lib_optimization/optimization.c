@@ -1712,7 +1712,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
     double xdiff;
     double old_train = 0.0;
-    double old_test = 0.0;
+    /* double old_test = 0.0; */
     double train_error = 0;
     double test_error = 0;
     double learn_rate = opt->sgd->learn_rate;
@@ -1783,7 +1783,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
 
         old_train = train_error;
-        old_test = test_error;
+        /* old_test = test_error; */
         sgd_term_check(opt,d,next_step,current_step,ndata_train,
                        ndata,order,&xdiff,&train_error,&test_error);
 

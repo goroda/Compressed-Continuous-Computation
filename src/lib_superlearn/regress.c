@@ -635,7 +635,6 @@ int regress_mem_manager_enough(struct RegressionMemManager * mem, size_t N)
     return 1;
 }
 
-
 /***********************************************************//**
     Reset left,right, and gradient running evaluations
     
@@ -646,6 +645,8 @@ void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
     running_core_total_restart(mem->running_evals_lr);
     running_core_total_restart(mem->running_evals_rl);
     running_core_total_arr_restart(mem->dim, mem->running_grad);
+
+    /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
 }
 
 /***********************************************************//**
@@ -1269,6 +1270,7 @@ double ft_param_eval_objective_aio_ls(struct FTparam * ftp,
 {
     double out = 0.0;
     double resid;
+    /* printf("printf calling aio_ls r2 in first core is %zu\n",mem->running_grad[0]->r2); */
     if (grad != NULL){
         if (mem->structure == LINEAR_ST){
             function_train_linparam_grad_eval(
@@ -1551,9 +1553,9 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     if (mem == NULL){
         alloc_mem=1;
 
-        enum FTPARAM_ST structure = NONE_ST;
-        if (regopts->stoch_obj == 0){
-            structure = LINEAR_ST;
+        enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
+        if (regopts->stoch_obj == 1){
+            structure = NONE_ST;
         }
         size_t * ranks = function_train_get_ranks(ftp->ft);
         mem_here = regress_mem_manager_alloc(ftp->dim,N,
@@ -1567,6 +1569,7 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     }
 
     double out = 0.0;
+    /* printf("before calling aio_ls r2 in first core is %zu\n",mem_here->running_grad[0]->r2); */
     out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
     /* if (isnan(out)){ */
     /*     fprintf(stderr,"Result from aio_ls is NaN\n"); */
@@ -1577,7 +1580,7 @@ double ft_param_eval_objective_aio(struct FTparam * ftp,
     /*     exit(1); */
     /* } */
     if (regopts->obj == FTLS_SPARSEL2){        
-        out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad);
+        /* out = ft_param_eval_objective_aio_ls(ftp,mem_here,N,x,y,grad); */
 
         double * weights = calloc_double(ftp->dim);
         for (size_t ii = 0; ii < ftp->dim; ii++){
@@ -1700,6 +1703,8 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     /* printf("done\n"); */
     regress_mem_manager_reset_running(pp->mem);
 
+    /* printf("in regress min_aio r2 in first core is %zu\n",pp->mem->running_grad[0]->r2); */
+    
     int restrict_needed = restrict_ranksp(pp->opts);
     double eval;
     if (restrict_needed == 0){
