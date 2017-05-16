@@ -198,7 +198,7 @@ struct c3SGD * c3sgd_alloc()
     }
 
     sgd->validation_fraction = 0.1;
-    sgd->learn_rate = 1.0;
+    sgd->learn_rate = 1e-3;
     sgd->learn_rate_decay = 0.999;
 
     sgd->nsamples = 0;
@@ -307,6 +307,9 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
     opt->maxiter = 1000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
@@ -457,6 +460,9 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->maxiter = 50000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
