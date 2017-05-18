@@ -48,13 +48,15 @@
 
 #include "hpoly.h"
 
+//for orthogonal
 inline static double zero_seq11(size_t n){ (void) n; return 0.0; }
-inline static double one_seq11(size_t n) { (void) n; return 1.0; }
-inline static double hermc_seq(size_t n)
-{
-    return -((double)n - 1.0);
-}
+/* inline static double one_seq11(size_t n) { (void) n; return 1.0; } */
+/* inline static double hermc_seq(size_t n) */
+/* { */
+/*     return -((double)n - 1.0); */
+/* } */
 
+// for orthonormal
 inline static double an(size_t n){ return 1.0 / sqrt((double)n);}
 inline static double cn(size_t n){ return - sqrt(((double)n-1)/(double)n);}
 

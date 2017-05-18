@@ -2397,56 +2397,66 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
                              struct Fwrap * fw)
 {
 
-    struct PiecewisePoly * poly = piecewise_poly_approx1(aopts,fw);//lb,ub,aopts);
-    size_t ii,jj;
-    /* printf("nbranches = %zu\n",poly->nbranches); */
-    for (ii = 0; ii < poly->nbranches; ii++){
-        /* printf("should not be here!\n"); */
-        /* exit(1); */
-        size_t npolys = poly->branches[ii]->ope->num_poly;
-        double lbs = piecewise_poly_lb(poly->branches[ii]);
-        double ubs = piecewise_poly_ub(poly->branches[ii]);
-        //printf("checking branch (%G,%G)\n",lbs,ubs);
-        int refine = 0;
-        //printf("npolys = %zu\n",npolys);
-        size_t ncheck = aopts->coeff_check < npolys ? 
-                            aopts->coeff_check : npolys;
-        double sum = 0.0;
-        for (jj = 0; jj < npolys; jj++){
-            sum += pow(poly->branches[ii]->ope->coeff[jj],2);
-        }
-        sum = 1.0;
-        //sum = fmax(sum,1.0);
-        for (jj = 0; jj < ncheck; jj++){
-            double c =  poly->branches[ii]->ope->coeff[npolys-1-jj];
-            /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
-            if (fabs(c) > (aopts->epsilon * sum)){
-                refine = 1;
-                /* printf("refine \n"); */
-                break;
-            }
-        }
-        /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
-        if ( (ubs-lbs) < aopts->minsize ){
-            refine = 0;
-        }
-        //*
-        if (refine == 1){
-            printf("refining branch (%G,%G)\n",lbs,ubs);
-            printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
-            //break;
-            piecewise_poly_free(poly->branches[ii]);
-            poly->branches[ii] = NULL;
-            assert(aopts->pts == NULL);
-            poly->branches[ii] = pw_adapt_help_adapt(aopts,fw,lbs,ubs);
-        }
-        //*/
-    }
+    size_t N = aopts->maxorder+1;
+    struct PiecewisePoly * poly = piecewise_poly_alloc();
+    double lb = aopts->lb;
+    double ub = aopts->ub;
+    poly->leaf = 1;
+    poly->nbranches = 0;
+    poly->ope = orth_poly_expansion_init(aopts->ptype,N,lb,ub);
+    orth_poly_expansion_approx_vec(poly->ope,fw);
+    orth_poly_expansion_round(&(poly->ope));
 
-    /* if (aoptsin == NULL){ */
-    /*     free(aopts); */
-    /*     aopts = NULL; */
-    /* } */
+    ///////////////////////////////
+    // check if should break this up
+    ///////////////////////////////
+    int refine = 0;
+    size_t npolys = N;
+    size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
+    /* double coeff_squared_norm = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1); */
+    double sum = 1.0;
+    for (size_t jj = 0; jj < ncheck; jj++){
+        double c =  poly->ope->coeff[npolys-1-jj];
+        /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
+        if (fabs(c) > (aopts->epsilon * sum)){
+            refine = 1;
+            /* printf("refine \n"); */
+            break;
+        }
+    }
+    
+    /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
+    if ( (ub-lb) < aopts->minsize ){
+        refine = 0;
+    }
+    else if (aopts->nregions == 1){
+        refine = 0;
+    }
+    
+    if (refine == 1){
+        printf("refining branch (%G,%G)\n",lb,ub);
+        printf("diff = %G, minsize = %G\n",ub-lb, aopts->minsize);
+
+        double * pts = linspace(lb,ub,aopts->nregions+1);
+        //dprint(aopts->nregions+1,pts);
+        //printf("\n");
+        poly->leaf = 0;
+        orth_poly_expansion_free(poly->ope); poly->ope = NULL;
+        poly->nbranches = aopts->nregions;
+        poly->branches = piecewise_poly_array_alloc(poly->nbranches);
+        double clb,cub; 
+        size_t ii;
+        for (ii = 0; ii < poly->nbranches; ii++){
+            clb = pts[ii];
+            cub = pts[ii+1];
+            aopts->lb = clb;
+            aopts->ub = cub;
+            poly->branches[ii] = piecewise_poly_approx1_adapt(aopts,fw);
+        }
+        aopts->lb = lb;
+        aopts->ub = ub;
+        free(pts); pts = NULL;
+    }
 
     return poly;
 }

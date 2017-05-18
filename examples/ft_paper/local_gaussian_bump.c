@@ -20,13 +20,13 @@ double gauss(const double * x, void * arg)
     size_t *dim = arg;
     size_t d = *dim;
     
-    long double center = gauss_center;
-    long double l = gauss_width;
-    long double preexp = 1.0/(l * sqrt(M_PI*2));
+    double center = gauss_center;
+    double l = gauss_width;
+    double preexp = 1.0/(l * sqrt(M_PI*2));
 
-    long double inexp = 0.0;
+    double inexp = 0.0;
     for (size_t jj = 0; jj < d; jj++){
-        long double dx = x[jj] - center;
+        double dx = x[jj] - center;
         inexp += dx*dx;
     }
     inexp *= -1;
@@ -35,7 +35,7 @@ double gauss(const double * x, void * arg)
     /* printf("inexp = %3.15LE\n",inexp); */
     /* printf("d = %zu\n",d); */
     /* dprint(d,x); */
-    double out = preexp * expl(inexp);
+    double out = preexp * exp(inexp);
     /* long double lout = preexp * exp(inexp); */
     /* printf("out = %3.15E\n",out); */
     /* printf("out = %3.15LE\n",lout); */
