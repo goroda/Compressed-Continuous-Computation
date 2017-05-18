@@ -32,7 +32,7 @@ else ()
 
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
-
+    include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
     include_directories(/usr/include)
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
@@ -48,7 +48,7 @@ else ()
   set(compiler_flags "${compiler_flags} -fPIC")
 endif()
 
-include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
+
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 

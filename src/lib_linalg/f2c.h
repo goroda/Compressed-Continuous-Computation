@@ -7,6 +7,8 @@
 #ifndef F2C_INCLUDE
 #define F2C_INCLUDE
 
+#include <complex.h>
+
 //typedef int integer; //AG modified from long int
 typedef long int integer; //AG modified from long int
 typedef unsigned long int uinteger;
@@ -14,7 +16,8 @@ typedef char *address;
 typedef short int shortint;
 typedef float real;
 typedef double doublereal;
-typedef struct { real r, i; } complex;
+/* typedef struct Complex { real r, i; } complex; */
+/* #define complex struct Complex */
 typedef struct { doublereal r, i; } doublecomplex;
 typedef long int logical;
 typedef short int shortlogical;

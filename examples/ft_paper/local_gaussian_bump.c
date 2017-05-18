@@ -26,6 +26,9 @@ void print_code_usage (FILE * stream, int exit_code)
             " -a --adaptrank  Flag whether or not to adapt rank\n"
             "                 0: no adaptation\n"
             "                 1: adaptation (default)\n"
+            " -d --dumprank2  Dump rank 2 approximation data to show univariate fibers"
+            "                 0: dont dump (default)\n"
+            "                 1: dump\n"
             " -v --verbose    Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
             " \n\n"
             " Outputs four files\n"
@@ -72,13 +75,14 @@ double gauss(const double * x, void * arg)
 int main(int argc, char * argv[])
 {
     int next_option;
-    const char * const short_options = "hf:p:b:a:v:";
+    const char * const short_options = "hf:p:b:a:d:v:";
     const struct option long_options[] = {
         { "help"      , 0, NULL, 'h' },
         { "function"  , 1, NULL, 'f' },
         { "polyorder" , 1, NULL, 'p' },
         { "basis"     , 1, NULL, 'b' },
         { "adaptrank" , 1, NULL, 'a' },
+        { "dumprank2" , 1, NULL, 'd' },
         { "verbose"   , 1, NULL, 'v' },
         { NULL        ,  0, NULL, 0   }
     };
@@ -88,6 +92,7 @@ int main(int argc, char * argv[])
     size_t function = 0;
     size_t basis = 0;
     unsigned int adapt = 1;
+    unsigned int rank_2_print_funcs = 0;
     program_name = argv[0];
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -103,6 +108,9 @@ int main(int argc, char * argv[])
                 break;
             case 'b':
                 basis = strtoul(optarg,NULL,10);
+                break;
+             case 'd':
+                rank_2_print_funcs = strtoul(optarg,NULL,10);
                 break;
             case 'a':
                 adapt = strtoul(optarg,NULL,10);
@@ -122,23 +130,19 @@ int main(int argc, char * argv[])
 
     size_t dim = 3;
 
-
-    size_t nloop = 10;
-    double tol[10] = {1e0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9};
-
     
-    fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
-    for (size_t zz = 0; zz < nloop; zz++){
-
+    if (rank_2_print_funcs == 1){
+        double tol[10] = {1e0,1e-1,1e-2,1e-3,1e-5,1e-6,1e-7,1e-8,1e-9,1e-10};
+        size_t zz = 1; // use tol = 1e-1
+        
         struct FunctionMonitor * fm = function_monitor_initnd(gauss,&dim,dim,1000*dim);
         struct Fwrap * fw = fwrap_create(dim,"general");
         fwrap_set_f(fw,function_monitor_eval,fm);
 
         struct OneApproxOpts * qmopts = NULL;
-        if (basis == 0){
+        if ((basis == 0)){
             struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
             size_t nregion = 3;
-            /* printf("maxorder = %zu\n",maxorder); */
             pw_poly_opts_set_nregions(opts,nregion);
             pw_poly_opts_set_maxorder(opts,maxorder);
             pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
@@ -146,20 +150,21 @@ int main(int argc, char * argv[])
             pw_poly_opts_set_tol(opts,tol[zz]);
             qmopts = one_approx_opts_alloc(PIECEWISE,opts);
         }
-        else if (basis == 1){
+        else if ((basis == 1)){
             double hmin = 1e-2;
             double letol = tol[zz];
             struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,gauss_lb,gauss_ub,letol,hmin);
             qmopts = one_approx_opts_alloc(LINELM,opts);
         }
-        else if (basis == 2){
+        else if ((basis == 2)){
             struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
             ope_opts_set_lb(opts,gauss_lb);
             ope_opts_set_ub(opts,gauss_ub);
-            ope_opts_set_start(opts,5);
+            ope_opts_set_start(opts,tol[zz]);
             ope_opts_set_maxnum(opts,maxorder);
             ope_opts_set_coeffs_check(opts,1);
             ope_opts_set_tol(opts,tol[zz]);
+            
             qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
         }
         else{
@@ -176,17 +181,49 @@ int main(int argc, char * argv[])
             start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
         }
         c3approx_init_cross(c3a,rank,verbose,start);
-        c3approx_set_cross_maxiter(c3a,1);
-        c3approx_set_cross_tol(c3a,1e-14);
-        c3approx_set_round_tol(c3a,1e-14);
+        c3approx_set_cross_maxiter(c3a,2);
+        c3approx_set_cross_tol(c3a,1e-10);
+        c3approx_set_round_tol(c3a,1e-10);
 
+        struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
-        struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,(int)adapt);
-        /* printf("ft ranks = "); iprint_sz(dim+1,function_train_get_ranks(ft)); */
+        size_t nx = 100;
+        double * x = linspace(gauss_lb,gauss_ub,nx);
+        size_t * ranks = function_train_get_ranks(ft);
+        if (dim == 3){
+            char filename[256];
+            FILE * fp;
+            for (size_t core = 0; core < 3; core++){
+                for (size_t jj = 0; jj < ranks[core]*ranks[core+1]; jj++){
+                    struct PiecewisePoly * pw = ft->cores[core]->funcs[jj]->f;
+                    sprintf(filename,"core_%zu_func_%zu.dat",core,jj);
+                    fp = fopen(filename, "w");
+                    fprintf(fp,"x f\n");
+                    for (size_t ii = 0; ii < nx; ii++){
+                        fprintf(fp,"%3.15E %3.15E\n",x[ii], piecewise_poly_eval(pw,x[ii]));
+                    }
+                    fclose(fp);
 
-        /* double intexact_ref = 1.253235e-1; */
+                    double * nodes = NULL;
+                    size_t Nb;
+                    piecewise_poly_boundaries(pw,&Nb, &nodes, NULL);
 
-    
+                    // pieces
+                    sprintf(filename,"core_%zu_func_%zu_pieces.dat",core,jj);
+                    fp = fopen(filename, "w");
+                    fprintf(fp,"x f\n");
+                    for (size_t ii = 0; ii < Nb; ii++){
+                        fprintf(fp,"%3.15E %3.15E\n",nodes[ii], piecewise_poly_eval(pw,nodes[ii]));
+                    }
+                    fclose(fp);
+                    free(nodes); nodes = NULL;
+                    
+                }
+            }
+
+        }
+        free(x); x = NULL;
+        
         double intexact;
         if (dim == 2){
             intexact = 0.5 * gauss_width * sqrt(M_PI/2.0) *
@@ -215,14 +252,128 @@ int main(int argc, char * argv[])
 
     
         /* fprintf(fp, "%zu %3.15E %zu %3.15E \n", dim,,intval,nvals, error); */
-        fprintf(stdout, "%zu %3.2E %3.15E %3.15E %zu %3.15E \n", dim,tol[zz],intexact,intval,nvals, error); 
-
+        fprintf(stdout, "%zu %3.0E %3.15E %3.15E %zu %3.15E \n", dim,tol[zz],intexact,intval,nvals, error); 
+            
+        
         function_train_free(ft); ft = NULL;
         one_approx_opts_free_deep(&qmopts);
         function_monitor_free(fm); fm = NULL;
         fwrap_destroy(fw);
         c3approx_destroy(c3a);
         free_dd(dim,start);
+    }
+    else{
+    
+
+        size_t nloop = 10;
+        double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5};
+
+    
+        fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
+        for (size_t zz = 0; zz < nloop; zz++){
+            if (zz > nloop){
+                break;
+            }
+            /* printf("zz = %zu, nloop = %zu\n",zz,nloop); */
+            struct FunctionMonitor * fm = function_monitor_initnd(gauss,&dim,dim,1000*dim);
+            struct Fwrap * fw = fwrap_create(dim,"general");
+            fwrap_set_f(fw,function_monitor_eval,fm);
+
+            struct OneApproxOpts * qmopts = NULL;
+            if ((basis == 0)){
+                struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
+                size_t nregion = 9;
+                pw_poly_opts_set_nregions(opts,nregion);
+                pw_poly_opts_set_maxorder(opts,maxorder);
+                pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
+                pw_poly_opts_set_coeffs_check(opts,1);
+                pw_poly_opts_set_tol(opts,tol[zz]);
+                qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+            }
+            else if ((basis == 1)){
+                double hmin = 1e-2;
+                double letol = tol[zz];
+                struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,gauss_lb,gauss_ub,letol,hmin);
+                qmopts = one_approx_opts_alloc(LINELM,opts);
+            }
+            else if ((basis == 2)){
+                struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+                ope_opts_set_lb(opts,gauss_lb);
+                ope_opts_set_ub(opts,gauss_ub);
+                ope_opts_set_start(opts,tol[zz]);
+                ope_opts_set_maxnum(opts,maxorder);
+                ope_opts_set_coeffs_check(opts,1);
+                ope_opts_set_tol(opts,tol[zz]);
+            
+                qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+            }
+            else{
+                fprintf(stderr, "Basis type is not recognized\n\n\n");
+                print_code_usage (stderr, 1);
+            }
+    
+
+            struct C3Approx * c3a = c3approx_create(CROSS,dim);
+            size_t rank = 2;
+            double ** start = malloc_dd(dim);
+            for (size_t kk= 0; kk < dim; kk++){
+                c3approx_set_approx_opts_dim(c3a,kk,qmopts);
+                start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
+            }
+            c3approx_init_cross(c3a,rank,verbose,start);
+            c3approx_set_cross_maxiter(c3a,1);
+            c3approx_set_cross_tol(c3a,1e-10);
+            c3approx_set_round_tol(c3a,1e-10);
+
+
+            struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,(int)adapt);
+
+
+            
+            
+            /* printf("ft ranks = "); iprint_sz(dim+1,function_train_get_ranks(ft)); */
+
+            /* double intexact_ref = 1.253235e-1; */
+
+    
+            double intexact;
+            if (dim == 2){
+                intexact = 0.5 * gauss_width * sqrt(M_PI/2.0) *
+                    ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
+                      erf((gauss_center)/(sqrt(2.) * gauss_width))) *
+                     (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
+                      erf((gauss_center)/(sqrt(2.) * gauss_width))));
+            }
+            else{
+                intexact = -0.25 * gauss_width * gauss_width * M_PI *
+                    ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
+                      erf((gauss_center)/(sqrt(2.) * gauss_width))) *
+                     (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
+                      erf((gauss_center)/(sqrt(2.) * gauss_width))) *
+                     (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
+                      erf((gauss_center)/(sqrt(2.) * gauss_width))));
+            }
+            /* double intexact = 0.5 * gauss_width * sqrt(M_PI/2.0) * */
+            /*     ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) - */
+            /*       erf((gauss_center+1)/(sqrt(2.) * gauss_width))) * */
+            /*      (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) - */
+            /*       erf((gauss_center+1)/(sqrt(2.) * gauss_width)))); */
+            double intval = function_train_integrate(ft);
+            double error = fabs(intexact - intval);
+            size_t nvals = nstored_hashtable_cp(fm->evals);
+
+    
+            /* fprintf(fp, "%zu %3.15E %zu %3.15E \n", dim,,intval,nvals, error); */
+            fprintf(stdout, "%zu %3.0E %3.15E %3.15E %zu %3.15E \n", dim,tol[zz],intexact,intval,nvals, error); 
+        
+            function_train_free(ft); ft = NULL;
+            one_approx_opts_free_deep(&qmopts);
+            function_monitor_free(fm); fm = NULL;
+            fwrap_destroy(fw);
+            c3approx_destroy(c3a);
+            free_dd(dim,start);
+
+        }
     }
 
 }
