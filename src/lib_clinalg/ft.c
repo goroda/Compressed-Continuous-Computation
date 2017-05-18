@@ -2788,18 +2788,25 @@ function_train_constant(double a, struct MultiApproxOpts * aopts)
     
     size_t onDim = 0;
 
+
+    double sign = 1;
+    if (a < 0){
+        sign = -1;
+    }
+    double apow = pow(fabs(a),1.0/dim);
+    /* printf("a = %3.15G apow = %3.15G\n",a,apow); */
     struct OneApproxOpts * oneopt = multi_approx_opts_get_aopts(aopts,onDim);
     ft->ranks[onDim] = 1;
     ft->cores[onDim] = qmarray_alloc(1,1);
     ft->cores[onDim]->funcs[0] =
-        generic_function_constant(a,oneopt->fc,oneopt->aopts);
+        generic_function_constant(sign*apow,oneopt->fc,oneopt->aopts);
 
     for (onDim = 1; onDim < dim; onDim++){
         oneopt = multi_approx_opts_get_aopts(aopts,onDim);
         ft->ranks[onDim] = 1;
         ft->cores[onDim] = qmarray_alloc(1,1);
         ft->cores[onDim]->funcs[0] =
-            generic_function_constant(1,oneopt->fc,oneopt->aopts);
+            generic_function_constant(apow,oneopt->fc,oneopt->aopts);
     }
     ft->ranks[dim] = 1;
 
