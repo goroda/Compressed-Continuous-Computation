@@ -53,6 +53,7 @@
 
 #ifndef ZEROTHRESH
     #define ZEROTHRESH 1e2*DBL_EPSILON
+    /* #define ZEROTHRESH 1e-200 */
 #endif
 
 #ifndef VPREPCORE

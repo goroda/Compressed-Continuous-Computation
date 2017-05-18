@@ -51,6 +51,8 @@
 
 //#define ZEROTHRESH 1e-20
 #define ZEROTHRESH  1e0 * DBL_EPSILON
+/* #define ZEROTHRESH  1e0 * DBL_MIN */
+/* #define ZEROTHRESH  1e-200 */
 //#define ZEROTHRESH 0.0
 //#define ZEROTHRESH  1e2 * DBL_EPSILON
 //#define ZEROTHRESH  1e-12
@@ -2918,6 +2920,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     assert (f != NULL);
     
     size_t nquad = poly->num_poly+1;
+    /* size_t nquad = 2.0*poly->num_poly; */
     if (nquad < 1 || nquad > 200){
         return 1;
     }
@@ -2943,6 +2946,10 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
         return_val = cheb_gauss(nquad,qpt,wt);
         break;
     case LEGENDRE:
+        // uncomment next two for cc
+        /* clenshaw_curtis(nquad,qpt,wt); */
+        /* for (size_t ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;} */
+
         return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
         break; 
     case HERMITE:
@@ -2975,9 +2982,9 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     if (return_val != 0){
         return return_val;
     }
-    /* printf("points and values"); */
-    /* dprint(nquad,pt_un); */
-    /* dprint(nquad,fvals); */
+    /* printf("points and values\n"); */
+    /* printf("\t "); dprint(nquad,pt_un); */
+    /* printf("\t ");dprint(nquad,fvals); */
     for (size_t ii = 0; ii < nquad; ii++){
         fvals[ii] *= quadwt[ii];
     }

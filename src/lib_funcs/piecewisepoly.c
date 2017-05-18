@@ -207,7 +207,12 @@ struct PwPolyOpts * pw_poly_opts_alloc(enum poly_type ptype, double lb, double u
     ao->npts = 0;
     ao->pts = NULL;
 
-    ao->opeopts = NULL;
+    ao->opeopts = ope_opts_alloc(ptype);
+    size_t startnum = 3;
+    if ((ao->maxorder+1) < startnum){
+        startnum = ao->maxorder+1;
+    }
+    ope_opts_set_start(ao->opeopts,startnum);
     ao->other = NULL;
     
     return ao;
@@ -243,6 +248,9 @@ void pw_poly_opts_set_ptype(struct PwPolyOpts * pw, enum poly_type ptype)
 {
     assert (pw != NULL);
     pw->ptype = ptype;
+    if (pw->opeopts != NULL){
+        ope_opts_set_ptype(pw->opeopts,ptype);
+    }
 }
 
 enum poly_type pw_poly_opts_get_ptype(const struct PwPolyOpts * pw)
@@ -285,6 +293,11 @@ void pw_poly_opts_set_maxorder(struct PwPolyOpts * pw, size_t maxorder)
 {
     assert (pw != NULL);
     pw->maxorder = maxorder;
+    size_t startnum = 3;
+    if ((pw->maxorder+1) < startnum){
+        startnum = pw->maxorder+1;
+    }
+    ope_opts_set_start(pw->opeopts,startnum);
 }
 
 void pw_poly_opts_set_nregions(struct PwPolyOpts * pw, size_t nregions)
@@ -2266,6 +2279,7 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
             poly->branches[ii]->ope = 
                 orth_poly_expansion_init(aopts->ptype, N, clb, cub);
             orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw);
+            /* printf("coeffs = "); dprint(N,poly->branches[ii]->ope->coeff); */
             orth_poly_expansion_round(&(poly->branches[ii]->ope));
         }
         free(pts); pts = NULL;
@@ -2357,8 +2371,8 @@ pw_adapt_help_adapt(struct PwPolyOpts * aopts,
         }
         //*
         if (refine == 1){
-            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
-            //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
+            printf("refining branch (%G,%G)\n",lbs,ubs);
+            printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
             //break;
             piecewise_poly_free(poly->branches[ii]);
             poly->branches[ii] = NULL;
@@ -2405,10 +2419,10 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
         //sum = fmax(sum,1.0);
         for (jj = 0; jj < ncheck; jj++){
             double c =  poly->branches[ii]->ope->coeff[npolys-1-jj];
-            //printf("coeff = %G\n,",c);
+            /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
             if (fabs(c) > (aopts->epsilon * sum)){
                 refine = 1;
-                //printf("refine \n");
+                /* printf("refine \n"); */
                 break;
             }
         }
@@ -2418,8 +2432,8 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
         }
         //*
         if (refine == 1){
-            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
-            //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
+            printf("refining branch (%G,%G)\n",lbs,ubs);
+            printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
             //break;
             piecewise_poly_free(poly->branches[ii]);
             poly->branches[ii] = NULL;
