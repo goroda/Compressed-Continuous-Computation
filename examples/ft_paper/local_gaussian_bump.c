@@ -123,8 +123,8 @@ int main(int argc, char * argv[])
     size_t dim = 3;
 
 
-    size_t nloop = 6;
-    double tol[6] = {1e0,1e-1,1e-2,1e-3,1e-4,1e-5};
+    size_t nloop = 10;
+    double tol[10] = {1e0,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9};
 
     
     fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
@@ -137,17 +137,18 @@ int main(int argc, char * argv[])
         struct OneApproxOpts * qmopts = NULL;
         if (basis == 0){
             struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
-            size_t nregion = 2;
+            size_t nregion = 3;
+            /* printf("maxorder = %zu\n",maxorder); */
             pw_poly_opts_set_nregions(opts,nregion);
-            pw_poly_opts_set_maxorder(opts,5);
+            pw_poly_opts_set_maxorder(opts,maxorder);
             pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
             pw_poly_opts_set_coeffs_check(opts,1);
             pw_poly_opts_set_tol(opts,tol[zz]);
             qmopts = one_approx_opts_alloc(PIECEWISE,opts);
         }
         else if (basis == 1){
-            double hmin = 1e-15;
-            double letol = 1e-5;
+            double hmin = 1e-2;
+            double letol = tol[zz];
             struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,gauss_lb,gauss_ub,letol,hmin);
             qmopts = one_approx_opts_alloc(LINELM,opts);
         }
@@ -155,10 +156,10 @@ int main(int argc, char * argv[])
             struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
             ope_opts_set_lb(opts,gauss_lb);
             ope_opts_set_ub(opts,gauss_ub);
-            ope_opts_set_start(opts,3);
-            ope_opts_set_maxnum(opts,20);
-            ope_opts_set_coeffs_check(opts,0);
-            ope_opts_set_tol(opts,1e-10);
+            ope_opts_set_start(opts,5);
+            ope_opts_set_maxnum(opts,maxorder);
+            ope_opts_set_coeffs_check(opts,1);
+            ope_opts_set_tol(opts,tol[zz]);
             qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
         }
         else{
