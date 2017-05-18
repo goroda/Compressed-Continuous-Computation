@@ -40,7 +40,7 @@ void print_code_usage (FILE * stream, int exit_code)
             " -r --rankparam  Rank between parameters (default 2)\n"
             " -a --adaptrank  Flag whether or not to adapt rank\n"
             "                 0: no adaptation (default)\n"
-            "                 1: adaptation (default)\n"
+            "                 1: adaptation\n"
             " -l --lowerbound Parameter lower bounds (default -1.0)\n"
             " -u --upperbound Parameter upper bounds (default 1.0)\n"
             " -v --verbose    Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"

@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file piecewisepoly.c
  * Provides routines for using piecewise polynomials
 */
@@ -53,6 +49,7 @@
 #include "array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
+#include "linalg.h"
 
 //#define ZEROTHRESH  2e0 * DBL_EPSILON
 
@@ -2321,35 +2318,31 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
     // check if should break this up
     ///////////////////////////////
     int refine = 0;
-    size_t npolys = N;
-    size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
-    /* double coeff_squared_norm = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1); */
-    double sum = 1.0;
-    for (size_t jj = 0; jj < ncheck; jj++){
-        double c =  poly->ope->coeff[npolys-1-jj];
-        /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
-        if (fabs(c) > (aopts->epsilon * sum)){
-            refine = 1;
-            /* printf("refine \n"); */
-            break;
+    if ( ( (ub-lb) < aopts->minsize) || (aopts->nregions == 1)){
+        refine = 0;
+    }
+    else{
+        size_t npolys = N;
+        size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
+        /* double coeff_squared_norm = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1); */
+        double sum = 1.0;
+        /* double sum = coeff_squared_norm; */
+        for (size_t jj = 0; jj < ncheck; jj++){
+            double c =  poly->ope->coeff[npolys-1-jj];
+            /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
+            if (fabs(c) > (aopts->epsilon * sum)){
+                refine = 1;
+                break;
+            }
         }
     }
     
-    /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
-    if ( (ub-lb) < aopts->minsize ){
-        refine = 0;
-    }
-    else if (aopts->nregions == 1){
-        refine = 0;
-    }
     
     if (refine == 1){
-        printf("refining branch (%G,%G)\n",lb,ub);
-        printf("diff = %G, minsize = %G\n",ub-lb, aopts->minsize);
+        /* printf("refining branch (%G,%G)\n",lb,ub); */
+        /* printf("diff = %G, minsize = %G\n",ub-lb, aopts->minsize); */
 
         double * pts = linspace(lb,ub,aopts->nregions+1);
-        //dprint(aopts->nregions+1,pts);
-        //printf("\n");
         poly->leaf = 0;
         orth_poly_expansion_free(poly->ope); poly->ope = NULL;
         poly->nbranches = aopts->nregions;
