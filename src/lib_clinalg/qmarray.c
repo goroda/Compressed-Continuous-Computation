@@ -55,6 +55,9 @@
 #define ZEROTHRESH 1e2*DBL_EPSILON
 #define ZERO 1e2*DBL_EPSILON
 
+/* #define ZEROTHRESH 1e-200 */
+/* #define ZERO 1e-200 */
+
 #ifndef VQMALU
     #define VQMALU 0
 #endif

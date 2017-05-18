@@ -113,7 +113,7 @@ void free_dd(size_t N, double ** arr){
 void 
 dprint(const size_t N, const double * arr){
     size_t ii = 0;
-    for (ii = 0; ii < N; ii++) printf("%f ",arr[ii]);
+    for (ii = 0; ii < N; ii++) printf("%3.5E ",arr[ii]);
     printf("\n");
 }
 

@@ -1007,10 +1007,11 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
                                         f->coeff, g->coeff);
     }
     else{
-        assert ( (f->num_nodes + g->num_nodes) < 1000);
-        double xnew[1000];
-        double fnew[1000];
-        double gnew[1000];
+        
+        assert ( (f->num_nodes + g->num_nodes) < 100000);
+        double xnew[100000];
+        double fnew[100000];
+        double gnew[100000];
 //        printf("here\n");
 
         size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
@@ -1547,7 +1548,7 @@ void lin_elem_adapt(struct Fwrap * f,
         fwrap_eval(1,&mid,&fmid,f);
 
         if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
-//        if (fabs( (fl+fr)/2.0 - fmid) < delta){
+        /* if (fabs( (fl+fr)/2.0 - fmid  ) < delta){ */
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */
