@@ -25,17 +25,18 @@ void print_code_usage (FILE * stream, int exit_code)
     fprintf(stream, "Two examples of functional regression \n\n");
     fprintf(stream, "Usage: %s options \n", program_name);
     fprintf(stream,
-            " -h --help      Display this usage information.\n"
-            " -f --function  Which function to evaluate. \n"
-            "                0: a_1x^2 + a_2x^2 (default)\n"
-            "                1: more complicated, check code\n"
-            "                2: sum of weighted gaussians bumps\n"
-            " -n --number    Number of training samples (default 100).\n"
-            " -p --polyorder Polynomial order for parameters (default 4).\n"
-            " -b --basis     Basis for spatial variable\n"
-            "                0: piecewise linear continuous (default)\n"
-            "               >0: radial basis function kernels\n"
-            " -s --rankspace Rank between spatial and paramter variables (default 4)\n"
+            " -h --help       Display this usage information.\n"
+            " -f --function   Which function to evaluate. \n"
+            "                  0: a_1x^2 + a_2x^2 (default)\n"
+            "                  1: more complicated, check code\n"
+            "                  2: sum of weighted gaussians bumps\n"
+            "                  3: sum of weighted gaussians bumps with moving centers\n"
+            " -n --number     Number of training samples (default 100).\n"
+            " -p --polyorder  Polynomial order for parameters (default 4).\n"
+            " -b --basis      Basis for spatial variable\n"
+            "                  0: piecewise linear continuous (default)\n"
+            "                 >0: radial basis function kernels\n"
+            " -s --rankspace  Rank between spatial and paramter variables (default 4)\n"
             " -r --rankparam  Rank between parameters (default 2)\n"
             " -a --adaptrank  Flag whether or not to adapt rank\n"
             "                 0: no adaptation (default)\n"
@@ -102,6 +103,27 @@ static void third(prob_t * prob, double * input, double * output)
     }
 }
 
+static void fourth(prob_t * prob, double * input, double * output)
+{
+    for (size_t ii = 0; ii < prob->noutput; ii++){
+        output[ii] = 0.0;
+        for (size_t jj = 0; jj < prob->ninput/2; jj++){
+            double offset = (input[jj+prob->ninput/2]+1)/2.0; // move it to between 0 and 1
+            output[ii] += input[jj] * exp(-pow(prob->x[ii] - offset,2)/1.0);
+        }
+        /* for (size_t jj = 0; jj < prob->ninput/2; jj++){ */
+        /*     double offset = (input[jj+prob->ninput/2]+1)/2.0; // move it to between 0 and 1 */
+        /*     output[ii] += input[jj] * exp(-pow(prob->x[ii] - offset,2)/0.01); */
+        /* } */
+    }
+
+    /* printf("ninput = %zu, dx = %zu\n",prob->ninput,dx); */
+    /* printf("in = "); dprint(prob->ninput,input); */
+    /* printf("out = "); */
+    /* dprint(prob->noutput,output); */
+}
+
+
 static double * generate_inputs(size_t n)
 {
     double * x = calloc_double(dx * n);
@@ -128,9 +150,14 @@ static double * generate_outputs(prob_t * prob, size_t n, double * inputs)
             other(prob,inputs + ii*dx,y+ii*dy);
         }
     }
-    else{
+    else if (prob->func == 2){
         for (size_t ii = 0; ii < n; ii++){
             third(prob,inputs + ii*dx,y+ii*dy);
+        }
+    }
+    else if (prob->func == 3){
+        for (size_t ii = 0; ii < n; ii++){
+            fourth(prob,inputs + ii*dx,y+ii*dy);
         }
     }
 
@@ -249,20 +276,24 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
 
-    prob_t prob;
-    prob.ninput = dx;
-    prob.noutput = dy;
-    prob.x = linspace(0.0,1.0,dy);
-    prob.func = function;    
+
     if (function == 1){
         dx = 32;
     }
     else if (function == 0){
         dx = 2;
     }
-    else{
+    else if (function == 2){
         dx = 6;
     }
+    else if (function == 3){
+        dx = 20;
+    }
+    prob_t prob;
+    prob.ninput = dx;
+    prob.noutput = dy;
+    prob.x = linspace(0.0,1.0,dy);
+    prob.func = function;    
     
     printf("\n");
     printf("\n");
@@ -336,6 +367,12 @@ int main(int argc, char * argv[])
     }
     ranks[dx] = rank_space;
 
+
+    /* struct c3Opt * optimizer = c3opt_create(SGD); */
+    /* c3opt_set_absxtol(optimizer,1e-30); */
+    /* c3opt_set_sgd_nsamples(optimizer,ndata*dy); */
+    /* c3opt_set_sgd_learn_rate(optimizer,1e-3); */
+
     struct c3Opt * optimizer = c3opt_create(BFGS);
     if (verbose > 1){
         c3opt_set_verbose(optimizer,1);
@@ -355,6 +392,8 @@ int main(int argc, char * argv[])
     if (verbose > 0){
         ft_regress_set_verbose(ftr,1);
     }
+
+    /* ft_regress_set_stoch_obj(ftr,1); */
     struct FunctionTrain * ft_final = ft_regress_run(ftr,optimizer,ndata*dy,x,y);
 
     size_t ntest = 1000;

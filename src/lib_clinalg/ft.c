@@ -1125,11 +1125,13 @@ running_core_total_update_multiple(struct RunningCoreTotal * rct, size_t n, size
         exit(1);
     }
     else if ((r1new != rct->r2) && (rct->r2 != 0)){
-        fprintf(stderr,"Dimensions within core update do not match \n");
+        printf("r1new = %zu\n",r1new);
+        printf("rct->r2 = %zu\n",rct->r2);
+        fprintf(stderr,"Dimensions within core update do not match  \n");
         fprintf(stderr,"(for multiple update)\n");
         exit(1);
     }
-    if ((rct->No > 1) && (rct->No != ng)){
+    else if ((rct->No > 1) && (rct->No != ng)){
         fprintf(stderr,"Cannot update with multiple outputs because multiple \n");
         fprintf(stderr,"outputs already exists\n");
         exit(1);
@@ -1536,8 +1538,10 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
         if (grad != NULL){
             // store gradient info
             if (ii == 0){
+                /* printf("here ii = %zu!\n",ii); */
                 running_core_total_update_multiple(grads[ii],n,nparam[ii],r1,r2,
                                                    core_grad_space[ii],r1*r2,inc_grad_n[ii]);
+                /* printf("got it\n"); */
             }
             else{
                 double * vals = running_core_total_get_vals(evals_lr);

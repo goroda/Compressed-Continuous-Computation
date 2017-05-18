@@ -140,9 +140,9 @@ void Test_function_train_grad_eval2(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
-    c3approx_set_cross_tol(c3a,1e-10);
-    c3approx_set_round_tol(c3a,1e-10);
-    c3approx_set_cross_maxiter(c3a,10);
+    c3approx_set_cross_tol(c3a,1e-12);
+    c3approx_set_round_tol(c3a,1e-12);
+    c3approx_set_cross_maxiter(c3a,12);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
     /* iprint_sz(dim+1,function_train_get_ranks(ft)); */
@@ -160,10 +160,10 @@ void Test_function_train_grad_eval2(CuTest * tc)
     double g2_should = 2.0*pt[0]*pt[1]*pt[0]  + sin(pt[3]);
     double g3_should = pt[3];
     double g4_should = pt[2] + pt[1]*cos(pt[3]);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[0]-g1_should)/g1_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[1]-g2_should)/g2_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,1e-7);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[0]-g1_should)/g1_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[1]-g2_should)/g2_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,2e-6);
     
 
     

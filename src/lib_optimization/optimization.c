@@ -175,6 +175,60 @@ size_t c3ls_get_maxiter(struct c3LS * ls)
 }
 ///////////////////////////////////////////////////////
 
+
+struct c3SGD
+{
+    double validation_fraction;
+    
+    double learn_rate;
+    double learn_rate_decay; // percentage decay, when decay needed
+    
+    size_t nsamples;
+
+    int do_momentum;
+    size_t nepochs_between_increase;
+};
+
+struct c3SGD * c3sgd_alloc()
+{
+    struct c3SGD * sgd = malloc(sizeof(struct c3SGD));
+    if (sgd == NULL){
+        fprintf(stderr,"Failure to allocate sgd\n");
+        exit(1);
+    }
+
+    sgd->validation_fraction = 0.1;
+    sgd->learn_rate = 1e-3;
+    sgd->learn_rate_decay = 0.999;
+
+    sgd->nsamples = 0;
+
+    sgd->do_momentum = 1;
+    sgd->nepochs_between_increase = 10;
+
+    return sgd;
+}
+
+struct c3SGD * c3sgd_copy(struct c3SGD * old)
+{
+    struct c3SGD * sgd = c3sgd_alloc();
+    sgd->validation_fraction = old->validation_fraction;
+    sgd->learn_rate = old->learn_rate;
+    sgd->learn_rate_decay = old->learn_rate_decay;
+    sgd->nsamples = old->nsamples;
+    sgd->do_momentum = old->do_momentum;
+    sgd->nepochs_between_increase = old->nepochs_between_increase;
+    
+    return sgd;
+}
+
+void c3sgd_free(struct c3SGD * sgd)
+{
+    if (sgd != NULL){
+        free(sgd); sgd = NULL;
+    }
+}
+
 ///////////////////////////////////////////////////////
 struct c3Opt
 {
@@ -182,6 +236,7 @@ struct c3Opt
     size_t d;
 
     double (*f)(size_t, const double *, double *, void *);
+    double (*fsgd)(size_t,size_t, const double *, double *, void *);
     void * farg;
     
     double * lb;
@@ -214,6 +269,8 @@ struct c3Opt
     size_t nvectors_store;
     int init_scale;
 
+    struct c3SGD * sgd;
+    
     // storing traces
     int store_grad;
     int store_func;
@@ -250,9 +307,13 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
     opt->maxiter = 1000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
+    opt->sgd = NULL;
     if (alg == BFGS){
         opt->grad = 1;
         opt->workspace = NULL; 
@@ -264,6 +325,12 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
         /* opt->ls = c3ls_alloc(BACKTRACK,0); */
         /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
         opt->ls = c3ls_alloc(WEAKWOLFE,0);
+    }
+    else if (alg == SGD){
+        opt->grad = 1;
+        opt->workspace = NULL;
+        opt->ls = NULL;
+        opt->sgd = c3sgd_alloc();
     }
     else if (alg==BATCHGRAD){
         opt->grad = 1;
@@ -284,7 +351,7 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
 
     opt->nvectors_store = 40;
     opt->init_scale = 0;
-
+        
     opt->store_grad = 0;
     opt->store_func = 0;
     opt->store_x = 0;
@@ -325,6 +392,10 @@ void c3opt_set_nvars(struct c3Opt * opt, size_t nvars)
         opt->workspace = calloc_double(4*opt->d);
     }
     else if (opt->alg == LBFGS){
+        opt->grad = 1;
+        opt->workspace = calloc_double(4*opt->d);
+    }
+    else if (opt->alg == SGD){
         opt->grad = 1;
         opt->workspace = calloc_double(4*opt->d);
     }
@@ -389,9 +460,13 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->maxiter = 50000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
+    opt->sgd = NULL;
     if (alg == BFGS){
         opt->grad = 1;
         opt->workspace = calloc_double(4*d);
@@ -413,6 +488,12 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
         /* opt->ls = c3ls_alloc(STRONGWOLFE,0); */
         opt->ls = c3ls_alloc(WEAKWOLFE,0);
     }
+    else if (alg == SGD){
+        opt->grad = 1;
+        opt->workspace = calloc_double(4*d);
+        opt->ls = NULL;
+        opt->sgd = c3sgd_alloc();
+    }
     else{
         opt->nlocs = 0;
         opt->grad = 0;
@@ -426,7 +507,7 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
 
     opt->nvectors_store = 40;
     opt->init_scale = 0;
-
+    
     opt->store_grad = 0;
     opt->store_func = 0;
     opt->store_x = 0;
@@ -464,9 +545,15 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
         c3ls_free(opt->ls); opt->ls = NULL;
         opt->ls = c3ls_copy(old->ls);
     }
+    else if (opt->alg == SGD){
+        /* opt->workspace = calloc_double(opt->nlocs * opt->d); */
+        memmove(opt->workspace,old->workspace,4*opt->d*sizeof(double));
+        c3sgd_free(opt->sgd); opt->sgd = NULL;
+        opt->sgd = c3sgd_copy(old->sgd);
+    }
     else if (opt->alg == BRUTEFORCE)
     {
-        opt->workspace = calloc_double(opt->nlocs * opt->d);
+        /* opt->workspace = calloc_double(opt->nlocs * opt->d); */
         memmove(opt->workspace,old->workspace,opt->nlocs*opt->d*sizeof(double));
     }
 
@@ -477,7 +564,7 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     opt->prev_eval = old->prev_eval;
     opt->nvectors_store = old->nvectors_store;
     opt->init_scale = old->init_scale;
-    
+
     opt->store_grad  = old->store_grad;
     opt->store_func = old->store_func;
     opt->store_x     = old->store_x;
@@ -507,7 +594,7 @@ void c3opt_free(struct c3Opt * opt)
         free(opt->ub); opt->ub = NULL;
         free(opt->workspace); opt->workspace = NULL;
         c3ls_free(opt->ls); opt->ls = NULL;
-
+        c3sgd_free(opt->sgd); opt->sgd = NULL;
         free(opt->stored_grad); opt->stored_grad = NULL;
         free(opt->stored_func); opt->stored_func = NULL;
         free(opt->stored_x);    opt->stored_x    = NULL;
@@ -834,6 +921,18 @@ void c3opt_add_objective(struct c3Opt * opt,
 }
 
 /***********************************************************//**
+    Add objective function
+***************************************************************/
+void c3opt_add_objective_stoch(struct c3Opt * opt,
+                               double(*fsgd)(size_t,size_t,const double *,double *,void *),
+                               void * farg)
+{
+    assert (opt != NULL);
+    opt->fsgd = fsgd;
+    opt->farg = farg;
+}
+
+/***********************************************************//**
     Evaluate the objective function
     
     \param[in]     opt  - optimization structure
@@ -856,6 +955,28 @@ double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
         exit(1);
     }
     
+    opt->nevals+=1;
+    if (grad != NULL){
+        opt->ngvals += 1;
+    }
+    return out;
+}
+
+/***********************************************************//**
+    Evaluate the objective function at a single element in the sum
+    
+    \param[in]     opt  - optimization structure
+    \param[in]     ind  - index for sgd
+    \param[in]     x    - location at which to evaluate
+    \param[in,out] grad - gradient of evaluation (evaluates if not NULL)
+
+    \return  Evaluation
+***************************************************************/
+double c3opt_eval_stoch(struct c3Opt * opt, size_t ind, const double * x, double * grad)
+{
+    assert (opt != NULL);
+    assert (opt->fsgd != NULL);
+    double out = opt->fsgd(opt->d,ind,x,grad,opt->farg);
     opt->nevals+=1;
     if (grad != NULL){
         opt->ngvals += 1;
@@ -1447,11 +1568,286 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
 }
 
 /***********************************************************//**
-    Projected Gradient damped BFGS with active sets
-
-    TODO
-    Domgmin Kim 2010 (with suvrit sra)
+    Set the initial learning rate for SGD
 ***************************************************************/
+void c3opt_set_sgd_learn_rate(struct c3Opt * opt, double learn_rate)
+{
+    
+    assert (opt != NULL);
+    assert (opt->sgd != NULL);
+    assert (learn_rate <= 1.0);
+    opt->sgd->learn_rate = learn_rate;
+}
+
+/***********************************************************//**
+    Set the number of samples per epoch for SGD
+***************************************************************/
+void c3opt_set_sgd_nsamples(struct c3Opt * opt, size_t nsamples)
+{
+    assert (opt != NULL);
+    opt->sgd->nsamples = nsamples;
+}
+
+/***********************************************************//**
+    Get the number of samples per epoch for SGD
+***************************************************************/
+size_t c3opt_get_sgd_nsamples(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return opt->sgd->nsamples;
+}
+
+
+static void shuffle(size_t N, size_t * orders)
+{
+    if (N > 1){
+        for (size_t ii = 0; ii < N-1; ii++){
+            size_t jj = ii + rand()/(RAND_MAX / (N - ii) + 1);
+            size_t t = orders[jj];
+            orders[jj] = orders[ii];
+            orders[ii] = t;
+            
+        }
+    }
+}
+
+static void sgd_term_check(struct c3Opt * opt,
+                           size_t d, const double * next_step, const double * current_step,
+                           size_t ndata_train, size_t ndata, const size_t * order,
+                           double * xdiff, double * train_error, double * test_error)
+{
+    *xdiff = 0.0;
+    for (size_t ii = 0; ii < d; ii++){
+        *xdiff += (next_step[ii]-current_step[ii])*(next_step[ii]-current_step[ii]);
+    }
+
+    // check training set error
+    *train_error = 0;
+    for (size_t ii = 0; ii < ndata_train; ii++){
+        *train_error += c3opt_eval_stoch(opt,order[ii],next_step,NULL);
+    }
+    *train_error /= (double)(ndata_train);
+
+    // check test error
+    *test_error = 0;
+    for (size_t ii = ndata_train; ii < ndata; ii++){
+        /* printf("order[%zu] = %zu",ii,order[ii]); */
+        *test_error += c3opt_eval_stoch(opt,order[ii],next_step,NULL);
+    }
+    *test_error /= (double)(ndata - ndata_train);
+}
+
+static void sgd_inter_clean(double ** cs, double ** ps, double ** is, double **ns, size_t ** o)
+{
+    if (*cs != NULL){
+        free(*cs); *cs = NULL;
+    }
+    if (*ps != NULL){
+        free(*ps); *ps = NULL;
+    }
+    if (*is != NULL){
+        free(*is); *is = NULL;        
+    }
+    if (*ns != NULL){
+        free(*ns); *ns = NULL;
+    }
+
+    if (*o != NULL){
+        free(*o); *o = NULL;
+    }
+}
+
+/***********************************************************//**
+    Stochastic gradient descent
+
+    \param[in]     opt        - optimization
+    \param[in,out] x          - starting/final point
+    \param[in,out] fval       - final function value
+
+    \return  0    - success
+            -20+? - failure in gradient (gradient outputs ?)
+             1    - maximum number of iterations reached
+         other    - error in backward_line_search 
+                   (see that function)
+***************************************************************/
+int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
+{
+    
+    size_t d = c3opt_get_d(opt);
+    double * workspace = c3opt_get_workspace(opt);
+    int verbose = c3opt_get_verbose(opt);
+    /* double * lb = c3opt_get_lb(opt); */
+    /* double * ub = c3opt_get_ub(opt); */
+    size_t maxiter = c3opt_get_maxiter(opt);
+    double gtol = c3opt_get_gtol(opt);
+    double relftol = c3opt_get_relftol(opt);
+    double absxtol = c3opt_get_absxtol(opt);
+
+    size_t ndata = c3opt_get_sgd_nsamples(opt);
+    if (ndata < 2){
+        fprintf(stderr, "Must set number of samples per epoch for SGD\n");
+        exit(1);
+    }
+    
+    opt->nevals = 0;
+    opt->ngvals = 0;
+    opt->niters = 0;    
+
+    size_t * order = calloc_size_t(ndata);
+    for (size_t ii = 0; ii < ndata; ii++){
+        order[ii] = ii;
+    }
+
+
+    // shuffle the order, first half will be training set, second will be validation test
+    shuffle(ndata,order);
+    size_t ndata_train = ndata / 1.1;
+    size_t ndata_validate = ndata - ndata_train;
+
+    if (verbose > 0){
+        printf("Stochastic Gradient descent\n");
+        printf("---------------------------\n\n");
+        
+        printf("\t ndata = %zu\n",ndata);
+        printf("\t ndata_train = %zu\n",ndata_train);
+        printf("\t ndata_validate = %zu\n",ndata_validate);
+    }
+    
+    int ret = C3OPT_SUCCESS;
+    
+
+    double xdiff;
+    double old_train = 0.0;
+    /* double old_test = 0.0; */
+    double train_error = 0;
+    double test_error = 0;
+    double learn_rate = opt->sgd->learn_rate;
+
+    if (verbose > 0){
+        printf("\nBegin optimization with learn rate = %G\n",learn_rate);
+        printf("\n");
+        printf("%7s|%22s|%23s|%23s|%10s|%14s\n"," Epoch "," Training Cost function  ", " Validation Cost function ","    ||x-x_p||      "," Learning rate "," g^Tg     ");
+        printf("-----------------------------------------------------------------------------------------------------------------------\n");
+    }
+
+
+    int do_momentum = opt->sgd->do_momentum; // 0 standard, 1 ADAM */
+    
+    // stores the previous iterate
+    double * current_step = calloc_double(d);
+    double * previous_step = calloc_double(d);
+    double * next_step = calloc_double(d);
+    double * inter_step = calloc_double(d);
+    memmove(next_step,x,d*sizeof(double));
+    memmove(current_step,x,d*sizeof(double));
+    memmove(previous_step,x,d*sizeof(double));
+
+
+    double * first_moment = calloc_double(d);
+    double * bias_corrected_first = calloc_double(d);
+    double * second_moment = calloc_double(d);
+    double * bias_corrected_second = calloc_double(d);
+    double beta_1 = 0.9;
+    double beta_2 = 0.999;
+
+    double eps = 1e-8;
+    size_t time = 1;
+    double avg_ginner;
+    size_t iter;
+    for (iter = 0; iter < maxiter; iter++){
+        shuffle(ndata,order);
+        avg_ginner = 0.0;
+        for (size_t ii = 0; ii < ndata_train; ii++){
+            memmove(previous_step,current_step,d*sizeof(double));
+            memmove(current_step,next_step,d*sizeof(double));
+            
+            /* printf(" starting step: "); dprint(d,current_step); */
+            /* printf("point %zu\n",order[ii]); */
+            *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
+            avg_ginner += cblas_ddot(d,workspace,1,workspace,1);
+            if ((do_momentum == 0) || (iter < 10)){
+
+                for (size_t jj = 0; jj < d; jj++){
+                    /* printf("workspace[%zu]= %G\n",jj,workspace[jj]); */
+                    next_step[jj] = current_step[jj] - learn_rate * workspace[jj];
+                }
+            }
+            else{
+                // update first moment
+                for (size_t jj = 0; jj < d; jj++){
+                    first_moment[jj] = beta_1 * first_moment[jj] + (1.0 - beta_1) * workspace[jj];
+                    second_moment[jj] = beta_2 * second_moment[jj] + (1.0 - beta_2) * workspace[jj] * workspace[jj];
+
+                    bias_corrected_first[jj] = first_moment[jj] / ( 1.0 - pow(beta_1,time));
+                    bias_corrected_second[jj] = second_moment[jj] / ( 1.0 - pow(beta_2,time));
+                    next_step[jj] += -learn_rate * bias_corrected_first[jj] / (sqrt(bias_corrected_second[jj]) + eps);
+                }
+            }
+   
+        }
+        learn_rate *= opt->sgd->learn_rate_decay;
+
+
+        old_train = train_error;
+        /* old_test = test_error; */
+        sgd_term_check(opt,d,next_step,current_step,ndata_train,
+                       ndata,order,&xdiff,&train_error,&test_error);
+
+        double grad_inner = avg_ginner / (double)(ndata_train);
+        double dtrain = (train_error - old_train)/train_error;
+        /* double dtest = test_error - old_test; */
+
+        if (verbose > 0){
+            printf("  %-4zu |",iter+1);
+            printf("   %-22.7G|   %-23.7G| %-22.7G| %-14.5G| %-14.5G",train_error,test_error,xdiff,learn_rate,grad_inner);
+            /* printf("x = "); dprint(d,x); */
+            printf("\n");
+        }
+
+        time++;
+
+
+
+        opt->niters++;
+        *fval = train_error;
+        memmove(x,next_step,d*sizeof(double));
+
+        if (grad_inner < gtol){
+            ret = C3OPT_GTOL_REACHED;
+            break;
+        }
+        else if (fabs(dtrain) < relftol){
+            ret = C3OPT_FTOL_REACHED;
+            break;
+        }
+        else if (fabs(xdiff) < absxtol){
+            ret = C3OPT_XTOL_REACHED;
+            break;
+        }
+
+        if (learn_rate < 1e-20){
+            break;
+        }
+
+    }
+
+    memmove(x,next_step,d*sizeof(double));
+
+    if (iter > maxiter-1){
+        ret = C3OPT_MAXITER_REACHED;
+    }
+    
+    free(first_moment); first_moment = NULL;
+    free(second_moment); second_moment = NULL;
+    free(bias_corrected_first); bias_corrected_first = NULL;
+    free(bias_corrected_second); bias_corrected_second = NULL;
+    sgd_inter_clean(&current_step,&previous_step,&inter_step,&next_step,&order);
+    if (verbose > 0){
+        printf("\n");
+    }
+    return ret;
+}
+
 
 
 /***********************************************************//**
@@ -1518,7 +1914,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     cblas_dsymv(CblasColMajor,CblasUpper,
                 d,-1.0,invhess,d,grad,1,0.0,workspace+d,1);
 
-    int ret = C3OPT_SUCCESS;;
+    int ret = C3OPT_SUCCESS;
     
     double grad_norm = sqrt(cblas_ddot(d,grad,1,grad,1));
     double eta;
@@ -2525,6 +2921,9 @@ int c3opt_minimize(struct c3Opt * opt, double * start, double *minf)
         res = c3_opt_lbfgs(opt,start,minf,grad);/* ,invhess); */
         free(grad); grad = NULL;
         /* free(invhess); invhess = NULL; */
+    }
+    else if (opt->alg == SGD){
+        res = c3_opt_sgd(opt,start,minf);
     }
     else if (opt->alg == BATCHGRAD){
         size_t d = c3opt_get_d(opt);

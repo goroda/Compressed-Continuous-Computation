@@ -289,7 +289,7 @@ int main(int argc, char * argv[])
             ranks[ii] = rank;
         }
         else{
-            ranks[ii] = 1;
+            ranks[ii] = 2;
         }
     }
     ranks[0] = 1;
@@ -333,12 +333,17 @@ int main(int argc, char * argv[])
     }
     
     struct c3Opt * optimizer = c3opt_create(BFGS);
+    /* struct c3Opt * optimizer = c3opt_create(SGD); */
     if (verbose > 5){
         c3opt_set_verbose(optimizer,1);
     }
+    /* ft_regress_set_stoch_obj(ftr,1); */
+    /* c3opt_set_sgd_nsamples(optimizer,ndata); */
+    opt_maxiter = 1000;
     c3opt_set_maxiter(optimizer,opt_maxiter);
     c3opt_set_gtol(optimizer,tol);
     c3opt_set_relftol(optimizer,tol);
+    c3opt_set_absxtol(optimizer,tol);
     /* c3opt_ls_set_maxiter(optimizer,10); */
     
     // choose parameters using cross validation

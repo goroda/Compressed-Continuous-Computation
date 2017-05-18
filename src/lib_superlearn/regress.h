@@ -64,6 +64,7 @@ void ft_regress_reset_param(struct FTRegress*, struct MultiApproxOpts *, size_t 
 void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
 void ft_regress_set_obj(struct FTRegress *, enum REGOBJ);
 void ft_regress_set_alg_and_obj(struct FTRegress *, enum REGTYPE, enum REGOBJ);
+void ft_regress_set_stoch_obj(struct FTRegress *, int);
 
 /* void ft_regress_set_parameter(struct FTRegress *, char *, void *); */
 /* void ft_regress_process_parameters(struct FTRegress *); */
@@ -131,6 +132,7 @@ struct RegressOpts *
 regress_opts_create(size_t,enum REGTYPE, enum REGOBJ);
 void regress_opts_free(struct RegressOpts *);
 
+void regress_opts_set_stoch_obj(struct RegressOpts *, int);
 void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
 void regress_opts_set_als_conv_tol(struct RegressOpts *, double);
 void regress_opts_set_verbose(struct RegressOpts *, int);
