@@ -2461,11 +2461,9 @@ void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args)
     if (pw->ope != NULL){
         print_orth_poly_expansion(pw->ope,prec,args);
     }
-    /* else{ */
-    /*     printf("%G\n",pw->split); */
-    /*     printf("| \n"); */
-    /*     print_piecewise_poly(pw->left,prec,args); */
-    /* } */
+    else{
+        printf("Tree structure with %zu branches\n",pw->nbranches);
+    }
 }
 
 

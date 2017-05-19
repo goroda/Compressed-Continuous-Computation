@@ -181,7 +181,7 @@ int main(int argc, char * argv[])
             start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
         }
         c3approx_init_cross(c3a,rank,verbose,start);
-        c3approx_set_cross_maxiter(c3a,2);
+        c3approx_set_cross_maxiter(c3a,3);
         c3approx_set_cross_tol(c3a,1e-10);
         c3approx_set_round_tol(c3a,1e-10);
 
@@ -282,7 +282,7 @@ int main(int argc, char * argv[])
             struct OneApproxOpts * qmopts = NULL;
             if ((basis == 0)){
                 struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
-                size_t nregion = 9;
+                size_t nregion = 3;
                 pw_poly_opts_set_nregions(opts,nregion);
                 pw_poly_opts_set_maxorder(opts,maxorder);
                 pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
@@ -321,9 +321,9 @@ int main(int argc, char * argv[])
                 start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
             }
             c3approx_init_cross(c3a,rank,verbose,start);
-            c3approx_set_cross_maxiter(c3a,1);
-            c3approx_set_cross_tol(c3a,1e-10);
-            c3approx_set_round_tol(c3a,1e-10);
+            c3approx_set_cross_maxiter(c3a,5);
+            c3approx_set_cross_tol(c3a,1e-8);
+            c3approx_set_round_tol(c3a,1e-8);
 
 
             struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,(int)adapt);

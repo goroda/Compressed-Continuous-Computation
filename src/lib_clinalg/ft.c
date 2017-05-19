@@ -4337,10 +4337,17 @@ ftapprox_cross(struct Fwrap * fw,
             //printf("prep core\n");
             /* temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0); */
             temp = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,left_ind,right_ind);
+
+            /* printf("right after prepping core\n"); */
+            /* print_qmarray(temp,0,NULL); */
             //printf("prepped core\n");
 
             R = calloc_double(temp->nrows * temp->nrows);
             Q = qmarray_householder_simple("LQ", temp,R,o);
+
+            /* printf("right after taking QR of prepped core\n"); */
+            /* print_qmarray(Q,0,NULL); */
+            
             Qt = qmarray_transpose(Q);
             pivind = calloc_size_t(ft->ranks[ii]);
             pivx = calloc_double(ft->ranks[ii]);
@@ -4394,6 +4401,8 @@ ftapprox_cross(struct Fwrap * fw,
             free(pivind);
             free(pivx);
             free(R); R=NULL;
+
+            /* break; //AG REMOVE THIS 5/18 */
 
         }
 
