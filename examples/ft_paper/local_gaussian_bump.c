@@ -130,19 +130,18 @@ int main(int argc, char * argv[])
 
     size_t dim = 3;
 
-    
+    size_t nregion = 3;
     if (rank_2_print_funcs == 1){
         double tol[10] = {1e0,1e-1,1e-2,1e-3,1e-5,1e-6,1e-7,1e-8,1e-9,1e-10};
-        size_t zz = 1; // use tol = 1e-1
+        size_t zz = 3; // use tol = 1e-1
         
         struct FunctionMonitor * fm = function_monitor_initnd(gauss,&dim,dim,1000*dim);
         struct Fwrap * fw = fwrap_create(dim,"general");
         fwrap_set_f(fw,function_monitor_eval,fm);
 
         struct OneApproxOpts * qmopts = NULL;
-        if ((basis == 0)){
+        if (basis == 0){
             struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
-            size_t nregion = 3;
             pw_poly_opts_set_nregions(opts,nregion);
             pw_poly_opts_set_maxorder(opts,maxorder);
             pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
@@ -150,17 +149,17 @@ int main(int argc, char * argv[])
             pw_poly_opts_set_tol(opts,tol[zz]);
             qmopts = one_approx_opts_alloc(PIECEWISE,opts);
         }
-        else if ((basis == 1)){
+        else if (basis == 1){
             double hmin = 1e-2;
             double letol = tol[zz];
             struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,gauss_lb,gauss_ub,letol,hmin);
             qmopts = one_approx_opts_alloc(LINELM,opts);
         }
-        else if ((basis == 2)){
+        else if (basis == 2){
             struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
             ope_opts_set_lb(opts,gauss_lb);
             ope_opts_set_ub(opts,gauss_ub);
-            ope_opts_set_start(opts,tol[zz]);
+            ope_opts_set_start(opts,3);
             ope_opts_set_maxnum(opts,maxorder);
             ope_opts_set_coeffs_check(opts,1);
             ope_opts_set_tol(opts,tol[zz]);
@@ -265,8 +264,9 @@ int main(int argc, char * argv[])
     else{
     
 
-        size_t nloop = 10;
-        double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5};
+        size_t nloop = 7;
+        /* double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5}; */
+        double tol[7] = {1e1,1e-1,1e-3,1e-5,1e-7,1e-9,1e-11};
 
     
         fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
@@ -280,9 +280,9 @@ int main(int argc, char * argv[])
             fwrap_set_f(fw,function_monitor_eval,fm);
 
             struct OneApproxOpts * qmopts = NULL;
-            if ((basis == 0)){
+            if (basis == 0){
                 struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
-                size_t nregion = 3;
+
                 pw_poly_opts_set_nregions(opts,nregion);
                 pw_poly_opts_set_maxorder(opts,maxorder);
                 pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
@@ -290,17 +290,17 @@ int main(int argc, char * argv[])
                 pw_poly_opts_set_tol(opts,tol[zz]);
                 qmopts = one_approx_opts_alloc(PIECEWISE,opts);
             }
-            else if ((basis == 1)){
+            else if (basis == 1){
                 double hmin = 1e-2;
                 double letol = tol[zz];
                 struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,gauss_lb,gauss_ub,letol,hmin);
                 qmopts = one_approx_opts_alloc(LINELM,opts);
             }
-            else if ((basis == 2)){
+            else if (basis == 2){
                 struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
                 ope_opts_set_lb(opts,gauss_lb);
                 ope_opts_set_ub(opts,gauss_ub);
-                ope_opts_set_start(opts,tol[zz]);
+                ope_opts_set_start(opts,4);
                 ope_opts_set_maxnum(opts,maxorder);
                 ope_opts_set_coeffs_check(opts,1);
                 ope_opts_set_tol(opts,tol[zz]);
@@ -328,9 +328,6 @@ int main(int argc, char * argv[])
 
             struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,(int)adapt);
 
-
-            
-            
             /* printf("ft ranks = "); iprint_sz(dim+1,function_train_get_ranks(ft)); */
 
             /* double intexact_ref = 1.253235e-1; */

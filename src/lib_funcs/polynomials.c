@@ -3030,8 +3030,8 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
 	
         free(poly->coeff); poly->coeff = NULL;
         /* N = N * 2 - 1; // for nested cc */
-        N = N * 2 + 1; //
-        /* N = N + 5; */
+        /* N = N * 2 + 1; // */
+        N = N + 7;
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
         poly->coeff = calloc_double(poly->nalloc);
