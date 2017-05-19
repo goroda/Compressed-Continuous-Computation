@@ -106,7 +106,7 @@ static void third(prob_t * prob, double * input, double * output)
 static void fourth(prob_t * prob, double * input, double * output)
 {
     double mean[6] = {0.15, 0.25, 0.45, 0.65, 0.75, 0.85};
-    double stdev[6] = {0.1, 0.2, 0.3, 0.1, 0.5, 0.1};
+    double stdev[6] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
     for (size_t ii = 0; ii < prob->noutput; ii++){
         output[ii] = 0.0;
         for (size_t jj = 0; jj < prob->ninput; jj+=2){
