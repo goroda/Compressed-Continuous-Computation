@@ -52,7 +52,7 @@
 
 #include "sgd_functions.h"
 
-static int seed = 1;
+static unsigned int seed = 1;
 void Test_sgd_p1(CuTest * tc)
 {
     srand(seed);
