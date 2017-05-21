@@ -195,9 +195,9 @@ struct PwPolyOpts * pw_poly_opts_alloc(enum poly_type ptype, double lb, double u
 
     ao->maxorder = 10;
     ao->minsize = 1e-2;
-    ao->coeff_check = 2;
+    ao->coeff_check = 3;
     ao->epsilon = 1e-15;
-    ao->nregions = 4; // number of regions to adapt
+    ao->nregions = 5; // number of regions to adapt
 
 
     ao->pts_alloc = 0;
@@ -2244,7 +2244,7 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
         poly->leaf = 1;
         poly->nbranches = 0;
         poly->ope = orth_poly_expansion_init(aopts->ptype, N, aopts->lb, aopts->ub);
-        orth_poly_expansion_approx_vec(poly->ope,fw);
+        orth_poly_expansion_approx_vec(poly->ope,fw,aopts->opeopts);
         orth_poly_expansion_round(&(poly->ope));
     }
     else{
@@ -2282,7 +2282,7 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
             if (aopts->opeopts == NULL){
                 poly->branches[ii]->ope = 
                     orth_poly_expansion_init(aopts->ptype, N, clb, cub);
-                orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw);
+                orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw,aopts->opeopts);
             }
             else{
                 ope_opts_set_lb(aopts->opeopts,clb);
@@ -2396,7 +2396,7 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
     poly->leaf = 1;
     poly->nbranches = 0;
     poly->ope = orth_poly_expansion_init(aopts->ptype,N,aopts->lb,aopts->ub);
-    orth_poly_expansion_approx_vec(poly->ope,fw);
+    orth_poly_expansion_approx_vec(poly->ope,fw,aopts->opeopts);
     orth_poly_expansion_round(&(poly->ope));
     /* poly->ope = orth_poly_expansion_approx_adapt(aopts->opeopts,fw); */
 

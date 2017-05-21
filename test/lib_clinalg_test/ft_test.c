@@ -1162,7 +1162,7 @@ void Test_ftapprox_cross3(CuTest * tc)
 
     double err = sqrt(out1/den);
 
-    CuAssertDblEquals(tc,0.0,err,1e-10);
+    CuAssertDblEquals(tc,0.0,err,9e-10);
 
     //
 

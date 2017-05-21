@@ -101,7 +101,7 @@ void Test_cheb_approx(CuTest * tc){
     size_t N = 50;
     double lb=-1.0,ub=1.0;
     opoly_t cpoly = orth_poly_expansion_init(CHEBYSHEV,N,lb,ub);
-    int res = orth_poly_expansion_approx_vec(cpoly,fw);
+    int res = orth_poly_expansion_approx_vec(cpoly,fw,NULL);
     CuAssertIntEquals(tc,0,res);
 
     // compute error
@@ -127,7 +127,7 @@ void Test_cheb_approx_nonnormal(CuTest * tc){
     size_t N = 50;
     double lb = -2,ub = 3;
     opoly_t cpoly = orth_poly_expansion_init(CHEBYSHEV,N,lb,ub);
-    orth_poly_expansion_approx_vec(cpoly,fw);
+    orth_poly_expansion_approx_vec(cpoly,fw,NULL);
 
     double abs_err;
     double func_norm;
@@ -465,7 +465,7 @@ void Test_legendre_approx(CuTest * tc){
     size_t N = 50;
     double lb=-1.0,ub=1.0;
     opoly_t cpoly = orth_poly_expansion_init(LEGENDRE,N,lb,ub);
-    int res = orth_poly_expansion_approx_vec(cpoly,fw);
+    int res = orth_poly_expansion_approx_vec(cpoly,fw,NULL);
     CuAssertIntEquals(tc,0,res);
 
     // compute error
@@ -491,7 +491,7 @@ void Test_legendre_approx_nonnormal(CuTest * tc){
     size_t N = 50;
     double lb = -2,ub = 3;
     opoly_t cpoly = orth_poly_expansion_init(LEGENDRE,N,lb,ub);
-    int res = orth_poly_expansion_approx_vec(cpoly,fw);
+    int res = orth_poly_expansion_approx_vec(cpoly,fw,NULL);
     CuAssertIntEquals(tc,0,res);
 
     // compute error
@@ -1131,7 +1131,7 @@ void Test_hermite_approx(CuTest * tc){
     // approximation
     size_t N = 20;
     opoly_t cpoly = orth_poly_expansion_init(HERMITE,N,-DBL_MAX,DBL_MAX);
-    int res = orth_poly_expansion_approx_vec(cpoly,fw);
+    int res = orth_poly_expansion_approx_vec(cpoly,fw,NULL);
     CuAssertIntEquals(tc,0,res);
 
     // compute error

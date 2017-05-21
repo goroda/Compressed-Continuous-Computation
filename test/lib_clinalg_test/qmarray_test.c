@@ -451,7 +451,7 @@ void Test_qmarray_householder3(CuTest * tc){
         CuAssertDblEquals(tc,0.0,err,1e-6);
     }
     struct Qmarray * Acopy = qmarray_copy(A);
-    qmarray_test_equality1(tc,A,Acopy,1e-15);
+    qmarray_test_equality1(tc,A,Acopy,2e-13);
 
     double * R = calloc_double(4*4);
     struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
@@ -477,11 +477,11 @@ void Test_qmarray_householder3(CuTest * tc){
 
     double * R2 = calloc_double(4*4);
     struct Quasimatrix * Q2 = quasimatrix_householder_simple(A2,R2,opts);
-    quasimatrix_test_col_orth(tc,Q2,1e-13);
+    quasimatrix_test_col_orth(tc,Q2,2e-13);
 
 
-    CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),1e-13);
-    qmarray_quasimatrix_test_equality1(tc,Q,Q2,1e-13);
+    CuAssertDblEquals(tc, 0.0, norm2diff(R,R2,16),2e-13);
+    qmarray_quasimatrix_test_equality1(tc,Q,Q2,2e-13);
 
     qmarray_free(A);
     qmarray_free(Acopy);

@@ -823,6 +823,8 @@ struct OpeOpts{
     // for hermite
     double mean;
     double std;
+
+    enum quad_rule qrule;
 };
 
 struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
@@ -852,6 +854,8 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
     ao->mean = 0.0;
     ao->std  = 1.0;
 
+    ao->qrule = C3_GAUSS_QUAD;
+    
     return ao;
 }
 
@@ -949,6 +953,15 @@ enum poly_type ope_opts_get_ptype(const struct OpeOpts * ope)
     return ope->ptype;
 }
 
+void ope_opts_set_qrule(struct OpeOpts * ope, enum quad_rule qrule)
+{
+    assert (ope != NULL);
+    if ((qrule != C3_GAUSS_QUAD) && (qrule != C3_CC_QUAD)){
+        fprintf(stderr,"Specified qrule %d is not known\n",qrule);
+        exit(1);
+    }
+    ope->qrule = qrule;
+}
 
 /********************************************************//**
 *   Get number of free parameters
@@ -2903,6 +2916,7 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
 *  
 *  \param[in,out] poly - orthogonal polynomial expansion
 *  \param[in]     f    - wrapped function
+*  \param[in]     opts - approximation options
 *
 *  \return 0 - no problems, > 0 problem
 *
@@ -2910,23 +2924,24 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
 *************************************************************/
 int
 orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
-                               struct Fwrap * f)
+                               struct Fwrap * f,
+                               const struct OpeOpts * opts)
 {
     assert (poly != NULL);
     assert (f != NULL);
-    
+
+    enum quad_rule qrule = C3_GAUSS_QUAD;
     size_t nquad = poly->num_poly+1;
-    /* size_t nquad = 2.0*poly->num_poly; */
+    if (opts != NULL){
+        qrule = opts->qrule;
+        if (qrule == C3_CC_QUAD){
+            nquad = 2*poly->num_poly;
+        }
+    }
+
     if (nquad < 1 || nquad > 200){
         return 1;
     }
-
-    /* double m = 1.0; */
-    /* double off = 0.0; */
-    /* if (poly->p->ptype != HERMITE){ */
-    /*     m = (poly->upper_bound - poly->lower_bound) / (poly->p->upper - poly->p->lower); */
-    /*     off = poly->upper_bound - m * poly->p->upper; */
-    /* } */
 
     double fvals[200];
     double pt_un[200];
@@ -2939,16 +2954,24 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     int return_val = 0;
     switch (poly->p->ptype) { 
     case CHEBYSHEV:
+        assert (qrule == C3_GAUSS_QUAD);        
         return_val = cheb_gauss(nquad,qpt,wt);
         break;
     case LEGENDRE:
-        // uncomment next two for cc
-        /* clenshaw_curtis(nquad,qpt,wt); */
-        /* for (size_t ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;} */
-
-        return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
+        if (qrule == C3_GAUSS_QUAD){
+            return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
+        }
+        else if (qrule == C3_CC_QUAD){
+            clenshaw_curtis(nquad,qpt,wt);
+            for (size_t ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;}
+        }
+        else{
+            fprintf(stderr,"Specified quadrature rule not valid for legendre poly\n");
+            exit(1);
+        }
         break; 
     case HERMITE:
+        assert (qrule == C3_GAUSS_QUAD);        
         return_val = gauss_hermite(nquad,qpt,wt);
         break;
     case STANDARD:
@@ -2968,7 +2991,6 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     }
     
     for (size_t ii = 0; ii < nquad; ii++){ 
-        /* pt_un[ii] =  m * quadpt[ii] + off; */
         pt_un[ii] = space_mapping_map_inverse(poly->space_transform,quadpt[ii]);
     }
 
@@ -2978,9 +3000,6 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     if (return_val != 0){
         return return_val;
     }
-    /* printf("points and values\n"); */
-    /* printf("\t "); dprint(nquad,pt_un); */
-    /* printf("\t ");dprint(nquad,fvals); */
     for (size_t ii = 0; ii < nquad; ii++){
         fvals[ii] *= quadwt[ii];
     }
@@ -3012,7 +3031,7 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
     size_t N = aopts->start_num;
     struct OrthPolyExpansion * poly = NULL;
     poly = orth_poly_expansion_init_from_opts(aopts,N);
-    orth_poly_expansion_approx_vec(poly,fw);
+    orth_poly_expansion_approx_vec(poly,fw,aopts);
 
     size_t coeffs_too_big = 0;
     for (ii = 0; ii < aopts->coeffs_check; ii++){
@@ -3029,14 +3048,17 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
         coeffs_too_big = 0;
 	
         free(poly->coeff); poly->coeff = NULL;
-        /* N = N * 2 - 1; // for nested cc */
-        /* N = N * 2 + 1; // */
-        N = N + 7;
+        if (aopts->qrule == C3_CC_QUAD){
+            N = N * 2 ; // for nested cc
+        }
+        else{
+            N = N + 7;
+        }
         poly->num_poly = N;
         poly->nalloc = N + OPECALLOC;
         poly->coeff = calloc_double(poly->nalloc);
 //        printf("Number of coefficients to check = %zu\n",aopts->coeffs_check);
-        orth_poly_expansion_approx_vec(poly,fw);
+        orth_poly_expansion_approx_vec(poly,fw,aopts);
 	    double sum_coeff_squared = 0.0;
         for (ii = 0; ii < N; ii++){ 
             sum_coeff_squared += pow(poly->coeff[ii],2); 

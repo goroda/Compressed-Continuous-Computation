@@ -677,7 +677,7 @@ void Test_pw_daxpby(CuTest * tc){
 
     }
     err = sqrt(err/errden);
-    CuAssertDblEquals(tc, 0.0, err, 1e-11);
+    CuAssertDblEquals(tc, 0.0, err, 2e-11);
 
     free(xtest); xtest = NULL;
     POLY_FREE(a); a = NULL;
@@ -825,7 +825,7 @@ void Test_maxmin_pw(CuTest * tc){
     double min = piecewise_poly_min(pl, &loc);
     double absmax = piecewise_poly_absmax(pl, &loc,NULL);
 
-    CuAssertDblEquals(tc, 1.0, max, 1e-10);
+    CuAssertDblEquals(tc, 0.0, (1.0-max)/1.0, 1e-8);
     CuAssertDblEquals(tc, -1.0, min, 1e-10);
     CuAssertDblEquals(tc, 1.0, absmax, 1e-10);
 
