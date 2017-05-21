@@ -1602,7 +1602,7 @@ static void shuffle(size_t N, size_t * orders)
 {
     if (N > 1){
         for (size_t ii = 0; ii < N-1; ii++){
-            size_t jj = ii + rand()/(RAND_MAX / (N - ii) + 1);
+            size_t jj = ii + (size_t)rand()/(RAND_MAX / (N - ii) + 1);
             size_t t = orders[jj];
             orders[jj] = orders[ii];
             orders[ii] = t;
@@ -1701,7 +1701,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
     // shuffle the order, first half will be training set, second will be validation test
     shuffle(ndata,order);
-    size_t ndata_train = ndata / 1.1;
+    size_t ndata_train = (size_t) lrint(ndata / 1.1);
     size_t ndata_validate = ndata - ndata_train;
 
     if (verbose > 0){

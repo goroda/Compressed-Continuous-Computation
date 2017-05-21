@@ -692,14 +692,14 @@ static const long double legcseqnorm[201] = {
 
 inline static double lega_seq_norm (size_t n) {
     if (n <= 200){
-        return legaseqnorm[n];
+        return (double) legaseqnorm[n];
     }
     return ( sqrt( 4 * (double) (n * n) - 1) / (double) n);
 }
 
 inline static double legc_seq_norm (size_t n) {
     if (n <= 200){
-        return legcseqnorm[n];
+        return (double) legcseqnorm[n];
     }
     return ( -(sqrt(2 * (double) n + 1) * ((double) n -1)) / (double)n / sqrt( 2 * (double) n - 3));}
 

@@ -665,7 +665,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-6;
+        double h = 1e-4;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -774,7 +774,7 @@ void Test_function_train_param_grad_eval_simple(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-6;
+        double h = 1e-4;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){

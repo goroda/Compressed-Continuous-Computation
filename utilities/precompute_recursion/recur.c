@@ -8,13 +8,6 @@
 #include "lib_clinalg.h"
 #include "quadrature.h"
 
-inline static double 
-eval_orth_poly_wp(const struct OrthPoly * rec, double p2, double p1, 
-                  size_t n, double x)
-{
-    return (rec->an(n) * x + rec->bn(n)) * p1 + rec->cn(n) * p2; 
-}
-
 int main()
 {
     // generate the three term product
