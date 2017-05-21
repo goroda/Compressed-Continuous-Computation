@@ -5,11 +5,7 @@
 #include <complex.h>
 #include <assert.h>
 
-#include "array.h"
-#include "lib_clinalg.h"
-#include "lib_funcs.h"
-
-#include "c3_interface.h"
+#include "c3.h"
 
 double sinsum(const double * x, void * args)
 {

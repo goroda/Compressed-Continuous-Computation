@@ -2935,7 +2935,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     if (opts != NULL){
         qrule = opts->qrule;
         if (qrule == C3_CC_QUAD){
-            nquad = 2*poly->num_poly;
+            nquad = 2*poly->num_poly-1;
         }
     }
 
@@ -3049,7 +3049,7 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
 	
         free(poly->coeff); poly->coeff = NULL;
         if (aopts->qrule == C3_CC_QUAD){
-            N = N * 2 ; // for nested cc
+            N = N * 2 - 1; // for nested cc
         }
         else{
             N = N + 7;
