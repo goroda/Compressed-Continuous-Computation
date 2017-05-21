@@ -1701,7 +1701,8 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
     // shuffle the order, first half will be training set, second will be validation test
     shuffle(ndata,order);
-    size_t ndata_train = (size_t) floor(ndata / 1.1);
+
+    size_t ndata_train = (size_t) lrint(ndata / 1.1);
     size_t ndata_validate = ndata - ndata_train;
 
     if (verbose > 0){
