@@ -30,7 +30,7 @@ void print_code_usage (FILE * stream, int exit_code)
             "                  0: a_1x^2 + a_2x^2 (default)\n"
             "                  1: more complicated, check code\n"
             "                  2: sum of weighted gaussians bumps\n"
-            "                  3: sum of weighted gaussians bumps with moving centers\n"
+            "                  3: sum of (modulated) weighted gaussians bumps\n"
             " -n --number     Number of training samples (default 100).\n"
             " -p --polyorder  Polynomial order for parameters (default 4).\n"
             " -b --basis      Basis for spatial variable\n"
@@ -76,11 +76,11 @@ static void other(prob_t * prob, double * input, double * output)
 {
     double sum = 0.0;
     for (size_t ii = 0; ii < dx/2; ii++){
-        sum += (input[ii]+1)/2.0;
+        sum += (input[ii]-lb)/(ub-lb);
     }
     double coeff = 0.0;
     for (size_t ii = 0; ii < dx/2; ii++){
-        coeff += (input[ii+dx/2]+1)/2.0;
+        coeff += (input[ii+dx/2]-lb)/(ub-lb);
     }
     for (size_t ii = 0; ii < prob->noutput; ii++){
         output[ii] = sin(sum * prob->x[ii])  + 0.05 * coeff * exp(-pow(prob->x[ii]-0.5,2)/0.01);
@@ -105,22 +105,25 @@ static void third(prob_t * prob, double * input, double * output)
 
 static void fourth(prob_t * prob, double * input, double * output)
 {
+    /* double mean[19] = {0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, */
+    /*                    0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95}; */
+
+    double mean[6] = {0.15, 0.25, 0.45, 0.65, 0.75, 0.85};
+    double stdev[6] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
     for (size_t ii = 0; ii < prob->noutput; ii++){
         output[ii] = 0.0;
-        for (size_t jj = 0; jj < prob->ninput/2; jj++){
-            double offset = (input[jj+prob->ninput/2]+1)/2.0; // move it to between 0 and 1
-            output[ii] += input[jj] * exp(-pow(prob->x[ii] - offset,2)/1.0);
+        double val = 0.0;
+        for (size_t jj = 0; jj < prob->ninput; jj++){
+            val += (input[jj] - lb)/(ub-lb);
         }
-        /* for (size_t jj = 0; jj < prob->ninput/2; jj++){ */
-        /*     double offset = (input[jj+prob->ninput/2]+1)/2.0; // move it to between 0 and 1 */
-        /*     output[ii] += input[jj] * exp(-pow(prob->x[ii] - offset,2)/0.01); */
+        /* output[ii] += sin(val + prob->x[ii]);AAAAAAAAAAAAAAAA */
+        /* for (size_t jj = 0; jj < 6; jj++){ */
+        /*     double exponent = -(prob->x[ii]-mean[jj])*(prob->x[ii]-mean[jj]) / (2.0 * stdev[jj] * stdev[jj]); */
+        /*     output[ii] += exp(exponent); */
         /* } */
-    }
 
-    /* printf("ninput = %zu, dx = %zu\n",prob->ninput,dx); */
-    /* printf("in = "); dprint(prob->ninput,input); */
-    /* printf("out = "); */
-    /* dprint(prob->noutput,output); */
+    }
 }
 
 
@@ -278,7 +281,7 @@ int main(int argc, char * argv[])
 
 
     if (function == 1){
-        dx = 32;
+        dx = 16;
     }
     else if (function == 0){
         dx = 2;
@@ -287,7 +290,9 @@ int main(int argc, char * argv[])
         dx = 6;
     }
     else if (function == 3){
-        dx = 20;
+        fprintf(stderr, "Function 3 does not work yet\n");
+        exit(1);
+        dx = 12;
     }
     prob_t prob;
     prob.ninput = dx;
@@ -330,7 +335,17 @@ int main(int argc, char * argv[])
     /* dprint2d_col(dy,ndata,y); */
     /* printf("ntotal data = %zu\n",ntotdata); */
 
+    /* size_t nparams = 5; */
+    /* double * centers = linspace(lb,ub,nparams); */
+    /* double scale = 1.0; */
+    /* double w = pow(nparams,-0.2)*2.0/12.0; */
+    /* w *= 10; */
+    /* /\* printf("\t width = %G\n",width); *\/ */
 
+    /* struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,w); */
+    /* struct OneApproxOpts * polyopts = one_approx_opts_alloc(KERNEL,opts); */
+
+    
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_nparams(opts,npoly);
     ope_opts_set_lb(opts,lb);
@@ -367,22 +382,11 @@ int main(int argc, char * argv[])
     }
     ranks[dx] = rank_space;
 
-
-    /* struct c3Opt * optimizer = c3opt_create(SGD); */
-    /* c3opt_set_absxtol(optimizer,1e-30); */
-    /* c3opt_set_sgd_nsamples(optimizer,ndata*dy); */
-    /* c3opt_set_sgd_learn_rate(optimizer,1e-3); */
-
-    struct c3Opt * optimizer = c3opt_create(BFGS);
-    if (verbose > 1){
-        c3opt_set_verbose(optimizer,1);
-    }
-    c3opt_set_maxiter(optimizer,1000);
-    c3opt_set_gtol(optimizer,1e-6);
-    c3opt_set_relftol(optimizer,1e-10);
-    
     struct FTRegress * ftr = ft_regress_alloc(dx+1,fapp,ranks);
     ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+
+    /* ft_regress_set_alg_and_obj(ftr,AIO,FTLS_SPARSEL2); */
+    ft_regress_set_regularization_weight(ftr,1e-10);
     if (adapt == 1){
         ft_regress_set_adapt(ftr,1);
         ft_regress_set_roundtol(ftr,1e-7);
@@ -392,8 +396,24 @@ int main(int argc, char * argv[])
     if (verbose > 0){
         ft_regress_set_verbose(ftr,1);
     }
+    
 
+    /* struct c3Opt * optimizer = c3opt_create(SGD); */
+    /* c3opt_set_absxtol(optimizer,1e-30); */
+    /* c3opt_set_sgd_nsamples(optimizer,ndata*dy); */
+    /* c3opt_set_sgd_learn_rate(optimizer,1e-3); */
     /* ft_regress_set_stoch_obj(ftr,1); */
+    /* c3opt_set_maxiter(optimizer,50); */
+    
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    c3opt_set_maxiter(optimizer,1000);
+    if (verbose > 1){
+        c3opt_set_verbose(optimizer,1);
+    }
+    c3opt_set_gtol(optimizer,1e-8);
+    c3opt_set_relftol(optimizer,1e-10);
+
+
     struct FunctionTrain * ft_final = ft_regress_run(ftr,optimizer,ndata*dy,x,y);
 
     size_t ntest = 1000;
