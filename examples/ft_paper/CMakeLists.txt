@@ -31,3 +31,9 @@ target_link_libraries(genznd -g
     ${blas_lapack}
     -lm)
 
+add_executable(genznd_diff genznd_diff.c)
+target_link_libraries(genznd_diff -g
+    c3                             
+    ${blas_lapack}
+    -lm)
+
