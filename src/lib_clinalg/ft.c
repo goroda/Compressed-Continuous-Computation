@@ -4918,6 +4918,7 @@ void function_train_gradient_eval(const struct FunctionTrain * ft,
 
         qmarray_eval(ft->cores[ii],x[ii],core_evals[ii]); // evaluate core
         qmarray_deriv_eval(ft->cores[ii],x[ii],core_grad_space); // get the gradient of the core
+        
         if (ii > 0){
             vals = running_core_total_get_vals(evals_lr);
             grads[ii]->No = 1;
