@@ -58,7 +58,7 @@ int main()
         fprintf(stderr, "cat: can't open file\n");
         return 0;
     }
-    fprintf(fp, "dim int N relerr \n");
+    fprintf(fp, "dim int N relerr diff reldifferr\n");
 
     size_t ii,dim;
     for (ii = 0; ii < ndims; ii++){
@@ -93,17 +93,36 @@ int main()
 
         
         struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+
+        double * pt = calloc_double(dim);
+        double sum = 0.0;
+        for (size_t zz = 0; zz < dim; zz++){
+            pt[zz] = 0.2;
+            sum+= pt[zz];
+        }
+        double * derivs = calloc_double(dim);
+        double grad_should_be = dim*5.0*exp(5*sum);
+        function_train_gradient_eval(ft,pt,derivs);
+        double grad_is = 0.0;
+        for (size_t zz = 0; zz < dim; zz++){
+            grad_is += derivs[zz];
+        }
+        free(pt); pt = NULL;
+        free(derivs); derivs = NULL;
         
         double shouldbe = compute_int(dim);
 
         double intval = function_train_integrate(ft);// * exp(5.0*0.5*(double)dim) ;
-        printf("shouldbe =%3.15G intval=%3.15G\n",shouldbe,intval);
+        printf("(grad,int) = (%3.15E,%3.5E) is (%3.15E,%3.5E\n",
+               grad_should_be,shouldbe,
+               grad_is,intval);
         double relerr = fabs(intval-shouldbe)/fabs(shouldbe);
-        printf(".......... rel error is %G\n", relerr);
+        double relerrgrad = fabs(grad_is-grad_should_be)/fabs(grad_should_be);
+        printf(".......... rel error is %3.5E,%3.5E\n", relerrgrad,relerr);
         size_t nvals = nstored_hashtable_cp(fm->evals);
 
-        fprintf(fp, "%zu %3.15E %zu %3.15E \n", 
-                    dim, intval,nvals, relerr); 
+        fprintf(fp, "%zu %3.15E %zu %3.15E %3.15E %3.15E\n", 
+                dim, intval,nvals, relerr,grad_is,relerrgrad); 
 
         function_train_free(ft); ft = NULL;
         function_monitor_free(fm); fm = NULL;
