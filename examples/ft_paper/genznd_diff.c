@@ -47,10 +47,10 @@ double compute_diff(const double * x, size_t dim)
 int main()
 {
 
-    size_t dim = 5;
+    size_t dim = 10;
     double pt[10];
     for (size_t ii = 0; ii < dim; ii++){
-        pt[ii] = 0.3;
+        pt[ii] = 0.2;
     }
     double grad[10];
 
@@ -63,7 +63,7 @@ int main()
         fprintf(stderr, "cat: can't open file\n");
         return 0;
     }
-    fprintf(fp, "dim int N relerr \n");
+    fprintf(fp, "tol deriv N relerr \n");
 
     double tols[11] = {1e-2,1e-4,1e-6,1e-8,1e-10,1e-12,1e-14,1e-16,1e-18,1e-22,1e-24};
     size_t ntols = 9;
@@ -116,8 +116,8 @@ int main()
         size_t nvals = nstored_hashtable_cp(fm->evals);
         printf("shouldbe =%3.15G gradis=%3.15G,nvals=%zu\n",shouldbe,gradis,nvals);
         printf(".......... abs,rel error is %3.5E,%3.5E\n", abserr,relerr);
-        fprintf(fp, "%zu %3.15E %zu %3.15E \n", 
-                    dim, gradis,nvals, relerr); 
+        fprintf(fp, "%3.15E %3.15E %zu %3.15E \n", 
+                    tols[ii],gradis,nvals, relerr); 
 
         function_train_free(ft); ft = NULL;
         function_monitor_free(fm); fm = NULL;
