@@ -119,87 +119,54 @@
                    
 #else
     /* #include <gsl/gsl_cblas.h> */
+
     #include <cblas.h>
-    #include "f2c.h" // this is worrysome because it redfines ints and such
-    #include "clapack.h"
 
-    #define dgetri_(X, Y, Z, A , B, C, D ) \
-            ( dgetri_( (integer *) X, Y, (integer *) Z, (integer *) A, \
-                        B, (integer *)C , (integer *) D) )
-    #define dgetrf_(X, Y, Z, A ,B, C ) \
-            ( dgetrf_( (integer *) X,(integer *) Y, Z, (integer *) A, \
-                       (integer *) B, (integer *)C ))
-    #define dorgqr_(X,Y,Z,A,B,C,D,E,F) \
-            ( dorgqr_( (integer *) X, (integer *) Y, (integer *) Z, A, \
-                       (integer *) B, C , D, (integer *) E, (integer *)F) )
-    #define dgeqrf_(X, Y, Z, A , B, C, D, E ) \
-            ( dgeqrf_( (integer *) X,  (integer *)Y, Z, (integer *) A, \
-                        B, C, (integer *) D, (integer *) E) )
+void * dgetri_( int * X, double *Y, int * Z, int * A, 
+                double *B, int *C , int * D);
+void dgetrf_( int * X,int * Y, double*Z, int * A, 
+              int * B, int *C );
+void dorgqr_( int * X, int * Y, int * Z, double *A,
+             int * B, double *C , double *D, int * E, int *F);
+void dgeqrf_( int *X, int *Y, double *Z, int * A, double * B, double * C, int * D, int * E);
+void dgeev_( char * X, char *Y, int * Z, double *A, 
+            int * B, double * C, double *D, double *E, int * F, double *G, int * H, 
+            double *I, int * J, int *K );
+void dgebal_( char *X,  int *Y, double *Z, int * A,
+             int * B, int *C, double *D, int * E);
+void dhseqr_( char *X, char *Y, int *Z, int *A,                         \
+             int * B, double *C, int *D, double *E, double *F, double *G, int * H, 
+             double *I, int * J, int *K );
+void dorgrq_( int * X, int * Y, int * Z, double *A,
+             int * B, double *C , double *D, int * E, int *F);
+void dgerqf_( int * X,  int *Y, double *Z, int * A, 
+             double *B, double *C, int * D, int * E);
+void dgesdd_(char *X, int * Y, int *Z, double *A, int * B, 
+            double * C,double * D,int * E,double * F, int * G, double *H, int * I,
+            int * J, int * K );
+void dstev_( char *X,  int *Y, double *Z, double *A,
+             double *B, int *C, double *D, int * E);
+void dsyev_(char *A,char *B,int * C,double *D,int * E,double *F,
+            double *G, int* H, int * J);
+void dpotrf_(char *X, int*Y, double *Z, int * A, int * B );
+void dpotri_(char *X, int*Y, double *Z, int * A, int* B);
+void dtrtri_(char *X,char*Y, int *Z, double *A, int * B, int * C);
+void dgesv_(int *X, int *Y, double*Z, int * A, int * B, 
+            double*C, int * D, int * E);
+void dgelsd_( int *X, int *Y, int *Z, 
+              double *A, int *B, double *C, 
+              int *D, double * E,   
+              double *F, int *G, double *H, int *I, 
+              int *J, int *K);
+    /* #define dstegr_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q) \ */
+    /*         ( dstegr_(X,Y,(integer *)Z,A,B,C,D,\ */
+    /*                (integer *)E,(integer *)F,G,(integer *)H, \ */
+    /*                I,J,(integer *)K,(integer *)L,M,(integer *)N, \ */
+    /*                (integer *)O,(integer *)P,(integer *)Q)) */
 
-    #define dorgrq_(X,Y,Z,A,B,C,D,E,F) \
-            ( dorgrq_( (integer *) X, (integer *) Y, (integer *) Z, A, \
-                       (integer *) B, C , D, (integer *) E, (integer *)F) )
-    #define dgerqf_(X, Y, Z, A , B, C, D, E ) \
-            ( dgerqf_( (integer *) X,  (integer *)Y, Z, (integer *) A, \
-                        B, C, (integer *) D, (integer *) E) )
-
-    #define dgesdd_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K) \
-            ( dgesdd_(X, (integer *)Y, (integer *)Z, A, (integer *) B,\
-                C,D,(integer *) E, F, (integer *) G, H, (integer *) I,\
-                (integer *) J, (integer *) K ) )
-
-    #define dstev_(X, Y, Z, A , B, C, D, E ) \
-            ( dstev_( X,  (integer *)Y, Z, A, \
-                        B, (integer *)C, D, (integer *) E) )
-
-    #define dgeev_(X, Y, Z, A , B, C, D, E,F,G,H,I,J,K ) \
-            ( dgeev_( X, Y, (integer *)Z, A, \
-                   (integer *) B, C, D, E, (integer *) F, G, (integer *) H, \
-                   I, (integer *) J, (integer *)K ) )
-
-    #define dsyev_(A,B,C,D,E,F,G,H,J) \
-        ( dsyev_(A,B,(integer *) C,D,(integer *) E,F, \
-            G, (integer *) H, (integer *) J) )
-
-    #define dhseqr_(X, Y, Z, A , B, C, D, E,F,G,H,I,J,K ) \
-            ( dhseqr_( X, Y, (integer *)Z, (integer *)A, \
-                   (integer *) B, C, (integer *)D, E, F, G, (integer *) H, \
-                   I, (integer *) J, (integer *)K ) )
-
-    #define dgebal_(X, Y, Z, A , B, C, D, E ) \
-            ( dgebal_( X,  (integer *)Y, Z, (integer *) A, \
-                       (integer *) B, (integer *)C, D, (integer *) E) )
-
-    #define dpotrf_(X,Y,Z,A,B) \
-            ( dpotrf_(X, (integer *)Y, Z, (integer *) A, (integer *) B ))
-
-    #define dpotri_(X,Y,Z,A,B) \
-            ( dpotri_(X, (integer *)Y, Z, (integer *) A, (integer *) B ))
-
-    #define dtrtri_(X,Y,Z,A,B,C) \
-            ( dtrtri_(X,Y, (integer *)Z, A, (integer *) B, (integer *) C ))
-
-    #define dgesv_(X,Y,Z,A,B,C,D,E) \
-            ( dgesv_((integer *)X, (integer *)Y, Z, (integer *) A, (integer *) B, \
-                C, (integer *) D, (integer *) E))
-
-    #define dstegr_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q) \
-            ( dstegr_(X,Y,(integer *)Z,A,B,C,D,\
-                   (integer *)E,(integer *)F,G,(integer *)H, \
-                   I,J,(integer *)K,(integer *)L,M,(integer *)N, \
-                   (integer *)O,(integer *)P,(integer *)Q))
-
-    #define dgels_(X,Y,Z,A,B,C,D,E,F,G,H)                                   \
-            ( dgels_(X,(integer * )Y,(integer *)Z,(integer *)A,B,(integer *)C, \
-                       D, (integer *) E,F,(integer *)G,(integer *)H))
-
-    #define dgelsd_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K)                         \
-            ( dgelsd_( (integer *)X, (integer *)Y, (integer *)Z, \
-                       (doublereal *)A, (integer *)B, (doublereal *)C,  \
-                       (integer *)D, (doublereal *) E,                  \
-	                   (doublereal *)F, (integer *)G, (doublereal *)H, (integer *)I, \
-                           (integer *)J, (integer *)K))
-
+    /* #define dgels_(X,Y,Z,A,B,C,D,E,F,G,H)                                   \ */
+    /*         ( dgels_(X,(integer * )Y,(integer *)Z,(integer *)A,B,(integer *)C, \ */
+    /*                    D, (integer *) E,F,(integer *)G,(integer *)H)) */
 
 #endif
 
