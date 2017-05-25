@@ -2071,10 +2071,11 @@ int minmod_disc_exists(double x, double * total, double * evals,
             h = diff;
         }
     }
-    
+
+    /* printf("jump=%G h=%G\n",jump,h); */
     double oom = floor(log10(h));
-    //double oom = ceil(log10(h));
-    //printf("oom=%G\n",oom);
+    /* double oom = ceil(log10(h)); */
+    /* printf("oom=%G\n",oom); */
     int disc = 1;
     if (fabs(jump) <= pow(10.0,oom)){
     //if (fabs(jump) <= pow(10.0,oom)){
@@ -2088,14 +2089,14 @@ int minmod_disc_exists(double x, double * total, double * evals,
 /********************************************************//**
 *   Jump detector, locates jumps (discontinuities) in a one dimensional function
 *   
-*   \param f [in] - one dimensional function
-*   \param lb [in] - lower bound of domain
-*   \param ub [in] - upper bound of domain
-*   \param nsplit [in] - number of subdomains to split if disc possibly exists
-*   \param tol [in] - closest distance between two function evaluations, defines the
-*   resolution
-*   \param edges [inout] - array of edges (location of jumps)
-*   \param nEdge [inout] - number of edges 
+*   \param f      [in]    - one dimensional function
+*   \param lb     [in]    - lower bound of domain
+*   \param ub     [in]    - upper bound of domain
+*   \param nsplit [in]    - number of subdomains to split if disc possibly exists
+*   \param tol    [in]    - closest distance between two function evaluations, defines the
+*                           resolution
+*   \param edges  [inout] - array of edges (location of jumps)
+*   \param nEdge  [inout] - number of edges 
 *
 *************************************************************/
 void locate_jumps(struct Fwrap * f,
@@ -2104,7 +2105,8 @@ void locate_jumps(struct Fwrap * f,
 {
     size_t minm = 2;
     size_t maxm = 5; // > nsplit ? nsplit-1 : 8 ;
-    //size_t maxm = 5 >= nsplit ? nsplit-1 : 8 ;
+    /* size_t maxm = 5 >= nsplit ? nsplit-1 : 8 ; */
+    /* size_t maxm = nsp; */
 
     if ((ub-lb) < tol){
         //printf("add edge between (%G,%G)\n",lb,ub);
@@ -2118,25 +2120,25 @@ void locate_jumps(struct Fwrap * f,
 
     }
     else{
-        //printf("refine from %G - %G\n",lb,ub);
+        printf("refine from %G - %G\n",lb,ub);
         double * pts = linspace(lb,ub,nsplit+1);
+        dprint(nsplit+1,pts);
         double * vals = calloc_double(nsplit+1);
         size_t ii;
-        size_t return_val = fwrap_eval(nsplit+1,pts,vals,f);
+        int return_val = fwrap_eval(nsplit+1,pts,vals,f);
         assert (return_val == 0);
-        /* for (ii = 0; ii < nsplit+1; ii++){ */
-        /*     vals[ii] = f(pts[ii],args);     */
-        /* } */
         double x;
         int disc;
-        //double jump;
+        double jump;
+        printf("\n");
         for (ii = 0; ii < nsplit; ii++){
             x = (pts[ii] + pts[ii+1])/2.0;
             disc = minmod_disc_exists(x,pts,vals,nsplit+1,minm,maxm);
-            //jump = minmod_eval(x,pts,vals,nsplit+1,minm,maxm);
-            //printf("checking disc at %G = (%G,%d)\n",x,jump,disc);
-            //printf("disc exists at %G\n",x);
+            jump = minmod_eval(x,pts,vals,nsplit+1,minm,maxm);
+            printf("checking disc at %G = (%G,%d)\n",x,jump,disc);
+
             if (disc == 1){ // discontinuity potentially exists so refine
+                printf("\tdisc exists so refine lb=%G,ub=%G\n",pts[ii],pts[ii+1]);
                 locate_jumps(f,pts[ii],pts[ii+1],nsplit,tol,edges,nEdge);
             }
         }
@@ -2148,58 +2150,39 @@ void locate_jumps(struct Fwrap * f,
 /********************************************************
 *   Create Approximation by polynomial annihilation-based splitting
 *   
-*   \param f [in] - function to approximate
-*   \param args [in] - function arguments
-*   \param lb [in] - lower bound of input space
-*   \param ub [in] - upper bound of input space
+*   \param fw      [in] - function to approximate
 *   \param aoptsin [in] - approximation options
 *
 *   \return p - polynomial
 *************************************************************/
-/*
+
 struct PiecewisePoly *
-piecewise_poly_approx2(double (*f)(double, void *), void * args, double lb,
-                        double ub, struct PwPolyOpts * aoptsin)
+piecewise_poly_approx2(struct Fwrap * fw,
+                       struct PwPolyOpts * aoptsin)
 {
-    struct PwPolyOpts * aopts = NULL;
-    if (aoptsin != NULL){
-        aopts = aoptsin;
-    }
-    else{
-        aopts = malloc(sizeof(struct PwPolyOpts));
-        if (aopts == NULL){
-            fprintf(stderr, "cannot allocate space for pw adapt opts");
-            exit(1);
-        }
-        aopts->ptype = LEGENDRE;
-        aopts->maxorder = 30;
-        aopts->minsize = 1e-13;
-        aopts->coeff_check = 4;
-        aopts->epsilon = 1e-10;
-        aopts->other = NULL;
-    }
+    assert (aoptsin != NULL);
+    struct PwPolyOpts * aopts = aoptsin;
+    struct PiecewisePoly * p = NULL;
+    
+    double lb = pw_poly_opts_get_lb(aopts);
+    double ub = pw_poly_opts_get_ub(aopts);
     
     double * edges = NULL;
     size_t nEdge = 0;
-    //printf("locate jumps!\n");
-    locate_jumps(f,args,lb,ub,aopts->maxorder,aopts->minsize,&edges,&nEdge);
-
-    //printf("number of edges are %zu\n",nEdge);
-    //printf("Edges are\n");
-    //size_t iii;
-    //for (iii = 0; iii < nEdge;iii++){
-    //    printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n",
-    //        edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize);
-    //}
-    //dprint(nEdge,edges);
+    printf("locate jumps!\n");
+    locate_jumps(fw,lb,ub,aopts->nregions,aopts->minsize,&edges,&nEdge);
+    printf("number of edges are %zu\n",nEdge);
+    printf("Edges are\n");
+    size_t iii;
+    for (iii = 0; iii < nEdge;iii++){
+       printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n",
+           edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize);
+    }
+    dprint(nEdge,edges);
     //
 
-    struct OpeAdaptOpts adopts;
-    adopts.start_num = 6;
-    adopts.coeffs_check = aopts->coeff_check;
-    adopts.tol = aopts->epsilon;
-    
-    double * nodes = calloc_double(nEdge*2+2);
+    size_t nNodes = nEdge*2+2;
+    double * nodes = calloc_double(nNodes);
     nodes[0] = lb;
     size_t ii,jj = 1;
     for (ii = 0; ii < nEdge; ii++){
@@ -2208,21 +2191,18 @@ piecewise_poly_approx2(double (*f)(double, void *), void * args, double lb,
         jj += 2;
     }
     nodes[nEdge*2+1] = ub;
-    
-    struct PiecewisePoly * p = 
-        piecewise_poly_approx_from_nodes(f, args, aopts->ptype,
-                         nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts);
+
+    dprint(nNodes,nodes);
+
+    exit (1);
+    /* struct PiecewisePoly * p =  */
+    /*     piecewise_poly_approx_from_nodes(f, args, aopts->ptype, */
+    /*                      nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts); */
     
     free(edges); edges = NULL;
     free(nodes); nodes = NULL;
-
-    if (aoptsin == NULL){
-        free(aopts);
-        aopts = NULL;
-    }
     return p;
 }
-*/
 
 /********************************************************//**
 *   Create Approximation by hierarchical splitting

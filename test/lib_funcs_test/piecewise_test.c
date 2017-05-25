@@ -1043,52 +1043,6 @@ void Test_locate_jumps2(CuTest * tc)
     free(edges);
 }
 
-
-
-
-CuSuite * PiecewisePolyGetSuite(){
-    CuSuite * suite = CuSuiteNew();
-    
-    /* SUITE_ADD_TEST(suite, Test_pw_linear); */
-    /* SUITE_ADD_TEST(suite, Test_pw_quad); */
-    /* SUITE_ADD_TEST(suite, Test_pw_approx); */
-    /* SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal); */
-    /* SUITE_ADD_TEST(suite, Test_pw_approx1_adapt); */
-    /* SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird); */
-    /* SUITE_ADD_TEST(suite, Test_pw_approx1); */
-    /* SUITE_ADD_TEST(suite, Test_pw_flatten); */
-    /* SUITE_ADD_TEST(suite, Test_poly_match); */
-    /* SUITE_ADD_TEST(suite, Test_pw_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_pw_integrate2); */
-    /* SUITE_ADD_TEST(suite, Test_pw_prod); */
-    /* SUITE_ADD_TEST(suite, Test_pw_inner); */
-    /* SUITE_ADD_TEST(suite, Test_pw_norm); */
-    /* SUITE_ADD_TEST(suite, Test_pw_norm2); */
-    /* SUITE_ADD_TEST(suite, Test_pw_daxpby); */
-    /* SUITE_ADD_TEST(suite, Test_pw_daxpby2); */
-    /* SUITE_ADD_TEST(suite, Test_pw_derivative); */
-    /* SUITE_ADD_TEST(suite, Test_pw_real_roots); */
-    /* SUITE_ADD_TEST(suite, Test_maxmin_pw); */
-    /* SUITE_ADD_TEST(suite, Test_pw_serialize); */
-    /* SUITE_ADD_TEST(suite, Test_pw_savetxt); */
-
-
-    SUITE_ADD_TEST(suite, Test_minmod_disc_exists);
-    SUITE_ADD_TEST(suite, Test_locate_jumps);
-    SUITE_ADD_TEST(suite, Test_locate_jumps2);
-
-    
-    // these below don't work yet
-
-
-    
-    //SUITE_ADD_TEST(suite, Test_pw_approx1pa);
-    //SUITE_ADD_TEST(suite, Test_pw_approx12);
-    //SUITE_ADD_TEST(suite, Test_pw_approx12pa);
-    //SUITE_ADD_TEST(suite, Test_pw_trim);
-    return suite;
-}
-
 int pap1(size_t N, const double * x,double * out, void * args)
 {
     (void)(args);
@@ -1098,6 +1052,77 @@ int pap1(size_t N, const double * x,double * out, void * args)
 	
     return 0;
 }
+
+void Test_polyannih(CuTest * tc){
+
+    printf("Testing function: approx (1/1) \n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,pw_multi_disc,NULL);
+
+    // approximation
+    double lb = -5.0, ub = 5.0;
+    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub);
+    pw_poly_opts_set_minsize(opts,1e-1);
+    pw_poly_opts_set_tol(opts,1e-5);
+    pw_poly_opts_set_maxorder(opts,8);
+    pw_poly_opts_set_nregions(opts,5);
+    opoly_t pw = piecewise_poly_approx2(fw,opts);
+
+    // error
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,1000,pw,pap1,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-13);
+
+    fwrap_destroy(fw);
+    pw_poly_opts_free(opts);
+    POLY_FREE(pw);
+}
+
+
+CuSuite * PiecewisePolyGetSuite(){
+    CuSuite * suite = CuSuiteNew();
+    
+    SUITE_ADD_TEST(suite, Test_pw_linear);
+    SUITE_ADD_TEST(suite, Test_pw_quad);
+    SUITE_ADD_TEST(suite, Test_pw_approx);
+    SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal);
+    SUITE_ADD_TEST(suite, Test_pw_approx1_adapt);
+    SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird);
+    SUITE_ADD_TEST(suite, Test_pw_approx1);
+    SUITE_ADD_TEST(suite, Test_pw_flatten);
+    SUITE_ADD_TEST(suite, Test_poly_match);
+    SUITE_ADD_TEST(suite, Test_pw_integrate);
+    SUITE_ADD_TEST(suite, Test_pw_integrate2);
+    SUITE_ADD_TEST(suite, Test_pw_prod);
+    SUITE_ADD_TEST(suite, Test_pw_inner);
+    SUITE_ADD_TEST(suite, Test_pw_norm);
+    SUITE_ADD_TEST(suite, Test_pw_norm2);
+    SUITE_ADD_TEST(suite, Test_pw_daxpby);
+    SUITE_ADD_TEST(suite, Test_pw_daxpby2);
+    SUITE_ADD_TEST(suite, Test_pw_derivative);
+    SUITE_ADD_TEST(suite, Test_pw_real_roots);
+    SUITE_ADD_TEST(suite, Test_maxmin_pw);
+    SUITE_ADD_TEST(suite, Test_pw_serialize);
+    SUITE_ADD_TEST(suite, Test_pw_savetxt);
+
+
+    /* SUITE_ADD_TEST(suite, Test_minmod_disc_exists); */
+    /* SUITE_ADD_TEST(suite, Test_locate_jumps); */
+    /* SUITE_ADD_TEST(suite, Test_locate_jumps2); */
+    /* SUITE_ADD_TEST(suite, Test_polyannih); */
+    
+    // these below don't work yet
+    //SUITE_ADD_TEST(suite, Test_pw_approx1pa);
+    //SUITE_ADD_TEST(suite, Test_pw_approx12);
+    //SUITE_ADD_TEST(suite, Test_pw_approx12pa);
+    //SUITE_ADD_TEST(suite, Test_pw_trim);
+    return suite;
+}
+
 
 void Test_pap1(CuTest * tc){
 
@@ -1138,13 +1163,6 @@ CuSuite * PolyApproxSuite(){
 
 //old stuff
 /*
-
-
-
-
-
-
-
 void Test_pw_approx1pa(CuTest * tc){
    
     printf("Testing functions: piecewise_poly_approx2 (1/2) \n");

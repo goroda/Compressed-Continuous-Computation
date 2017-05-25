@@ -43,6 +43,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <assert.h>
 
 #include "stringmanip.h"
 #include "monitoring.h"
@@ -72,6 +74,7 @@ function_monitor_initnd( double (*f)(const double *, void *), void * args, size_
     fm->args = args;
     fm->f.fnd = f;
     fm->evals = create_hashtable_cp(tsize);
+    /* printf("initialized!\n"); */
     return fm;
 }
 
@@ -89,6 +92,83 @@ void function_monitor_free( struct FunctionMonitor * fm)
     }
 }
 
+#define FRAC_MAX 9223372036854775807LL // 2**63-1 
+
+struct dbl_packed
+{
+    int exp;
+    long long frac;
+};
+
+void pack(double x, struct dbl_packed * r)
+{
+    double xf = fabs(frexp(x,&r->exp))-0.5;
+    if (xf < 0.0){
+        r->frac = 0;
+        return;
+    }
+    r->frac = 1 + (long long)(xf * 2.0  * (FRAC_MAX-1));
+    if (x < 0.0){
+        r->frac = -r->frac;
+    }
+}
+
+double unpack(const struct dbl_packed * p)
+{
+    double xf, x;
+    if (p->frac == 0){
+        return 0.0;
+    }
+    xf = ((double)(llabs(p->frac)-1) / (FRAC_MAX-1)) /2.0;
+    x = ldexp(xf + 0.5,p->exp);
+    if (p->frac < 0){
+        x = -x;
+    }
+    return x;
+}
+
+char * serialize_double_here(double x)
+{
+    struct dbl_packed dbl;
+    pack(x,&dbl);
+
+    size_t nBytes = sizeof(int) + sizeof(long long);
+    char * mem = malloc(nBytes);
+    memcpy(mem,&(dbl.exp),sizeof(int));
+    memcpy(mem+sizeof(int),&(dbl.frac),sizeof(long long));
+    return mem;
+}
+
+double deserialize_double_here(char * ser)
+{
+    struct dbl_packed dbl;
+    memcpy(&(dbl.exp),ser,sizeof(int));
+    /* ser = ser + sizeof(int); */
+    memcpy(&(dbl.frac),ser+sizeof(int),sizeof(long long));
+
+    double x = unpack(&dbl);
+    return x;
+}
+
+char * serialize_double_arr(size_t n, const double * x)
+{
+    size_t size_of_one_double = sizeof(int) + sizeof(long long);
+    char * mem = malloc(n * (size_of_one_double)+sizeof(char));
+    size_t onbyte = 0;
+    for (size_t ii = 0; ii < n; ii++){
+        char * temp = serialize_double_here(x[ii]);
+        memcpy(mem+onbyte,temp,size_of_one_double);
+        free(temp); temp = NULL;
+        onbyte += size_of_one_double;
+    }
+    char t = '\0';
+    memcpy(mem+onbyte,&t,sizeof(char));
+    return mem;
+}
+
+
+
+
 /***********************************************************//**
     Evaluate a function using the function monitor to recall/store evaluations
 
@@ -101,26 +181,39 @@ double function_monitor_eval(const double * x, void * args)
 {
     //printf("In eval function monitor \n");   
     struct FunctionMonitor * fm = args;
-    
-    //printf("serial;ize it \n");
-    //printf("x = ");
-    //printf("fm->dim=%zu\n",fm->dim);
-    //dprint(fm->dim,x);
-    //printf("ok!\n");
+
     char * ser = serialize_darray_to_text(fm->dim,x);
+    /* char * ser = serialize_double_arr(fm->dim,x); */
 
     char * sval = lookup_key(fm->evals,ser);
     //printf("sval = %s\n",sval);
     double val;
     if (sval != NULL){
-        val = deserialize_double_from_text(sval);
-        //memmove(&val, sval, sizeof(double));
-        //printf("here! val=%3.5f\n",val);
+        /* val = deserialize_double_from_text(sval); */
+        val = deserialize_double_here(sval);
+
+        /* double valcheck = fm->f.fnd(x,fm->args); */
+        /* double diff = fabs(valcheck-val); */
+        /* if (diff > 1e-20){ */
+        /*     printf("diff = %3.15E,val=%3.15E,valcheck=%3.15E\n",diff,val,valcheck); */
+        /*     assert(1 == 0); */
+        /* } */
+
     }
     else{
         val = fm->f.fnd(x,fm->args);
-        //printf("val=%G\n",val);
-        sval = serialize_double_to_text(val);
+        
+        /* sval = serialize_double_to_text(val); */
+        sval = serialize_double_here(val);
+
+        /* double val_should = deserialize_double_here(sval); */
+        /* double diff = fabs(val_should-val); */
+        /* if (diff > 1e-20){ */
+        /*     printf("diff ser = %3.15E\n",diff); */
+        /*     assert(1 == 0); */
+        /* } */
+
+        
         //printf("sval = %s\n",sval);
         struct Cpair * cp = cpair_create(ser,sval);
         add_cpair(fm->evals, cp);
@@ -228,15 +321,18 @@ struct Cpair * cpair_create(char * a, char * b)
         exit(1);
     }
     size_t N1 = strlen(a);
-    size_t N2 = strlen(b);
-
     pair->a = malloc((N1+1)*sizeof(char));
-    pair->b = malloc((N2+1)*sizeof(char));
-
     strncpy(pair->a,a,N1);
-    strncpy(pair->b,b,N2);
     pair->a[N1] = '\0';
-    pair->b[N2] = '\0';
+
+    /* size_t N2 = strlen(b); */    
+    /* pair->b = malloc((N2+1)*sizeof(char)); */
+    pair->b = malloc(sizeof(int) + sizeof(long long));
+
+
+    /* strncpy(pair->b,b,N2); */
+    /* pair->b[N2] = '\0'; */
+    memcpy(pair->b,b,sizeof(int) + sizeof(long long));
 
     return pair;
 }
@@ -303,9 +399,16 @@ void print_pair_list(struct PairList * pl){
 int cpair_isequal(struct Cpair * a, struct Cpair * b){
     int out = 0;
     if ( strcmp(a->a,b->a) == 0){
-        if (strcmp(a->b, b->b) == 0){
+        /* if (strcmp(a->b, b->b) == 0){ */
+        /*     out = 1; */
+        /* } */
+        
+        double v1 = deserialize_double_here(a->b);
+        double v2 = deserialize_double_here(b->b);
+        if (fabs(v1 - v2) < 1e-20){
             out = 1;
         }
+        
     }
     return out;
 }
@@ -424,13 +527,17 @@ char * lookup_key(struct HashtableCpair * ht , char * key)
     size_t val = hashsimple(ht->size,key);
     
     char * out = NULL;
-    size_t N;
+    /* size_t N; */
     for (pl = ht->table[val]; pl != NULL; pl = pl->next){
         if (strcmp(key,pl->data->a) == 0){
-            N = strlen(pl->data->b);
-            out = malloc((N+1)*sizeof(char));
-            memmove(out,pl->data->b,N*sizeof(char));
-            out[N]='\0';
+            /* N = strlen(pl->data->b); */
+            /* out = malloc((N+1)*sizeof(char)); */
+            /* memmove(out,pl->data->b,N*sizeof(char)); */
+            /* out[N]='\0'; */
+
+            out = malloc(sizeof(int) + sizeof(long long));
+            memcpy(out,pl->data->b,sizeof(int) + sizeof(long long));
+            /* out[N]='\0'; */
             return out;
         }
     }
