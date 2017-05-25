@@ -13,9 +13,11 @@ double compute_int(size_t dim)
     return inttotal;
 }
 
+static size_t ncalls;
 double discnd(const double * x, void * args)
 {
-     
+
+    ncalls++;
     size_t * dim = args;
     
     int big = 0;
@@ -77,12 +79,13 @@ int main()
     double tols[11] = {1e-2,1e-4,1e-6,1e-8,1e-10,1e-12,1e-14,1e-16,1e-18,1e-20,1e-24};
     size_t ntols = 9;
     for (size_t ii = 0; ii < ntols; ii++){
+        ncalls = 0;
         /* aopts.epsilon = aopts.epsilon * 2.0; */
         printf("On tol (%zu/%zu) : %G \n",ii,ntols-1,tols[ii]);
 
         struct Fwrap * fw = fwrap_create(dim,"general");
         
-        struct FunctionMonitor * fm = function_monitor_initnd(discnd,&dim,dim,1000*dim);
+        struct FunctionMonitor * fm = function_monitor_initnd(discnd,&dim,dim,10000*dim);
         fwrap_set_f(fw,function_monitor_eval,fm);
         
         /* fwrap_set_f(fw,discnd,&dim); */
@@ -132,7 +135,8 @@ int main()
 
         double abserr = fabs(gradis-shouldbe);
         double relerr = abserr/(fabs(shouldbe)+1e-20);
-        size_t nvals = nstored_hashtable_cp(fm->evals);
+        /* size_t nvals = nstored_hashtable_cp(fm->evals); */
+        size_t nvals = ncalls;
         printf("shouldbe =%3.15G gradis=%3.15G,nvals=%zu\n",shouldbe,gradis,nvals);
         printf(".......... abs,rel error is %3.5E,%3.5E\n", abserr,relerr);
         printf(".......... int error is %3.5E\n",int_rel_err);
