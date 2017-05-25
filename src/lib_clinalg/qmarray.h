@@ -44,8 +44,6 @@
 #ifndef QMARRAY_H
 #define QMARRAY_H
 
-#include <stdlib.h>
-
 #include "quasimatrix.h"
 
 /* struct Qmarray; */

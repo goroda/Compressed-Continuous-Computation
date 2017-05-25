@@ -44,7 +44,7 @@
 #ifndef PIECEWISEPOLY_H
 #define PIECEWISEPOLY_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 struct PwPolyOpts;
 struct PwPolyOpts;
