@@ -477,7 +477,7 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
     case CONSTANT:   assert (1 == 0);                               break;
     case PIECEWISE:  out = piecewise_poly_deriv_eval(gf->f,x);      break;
     case POLYNOMIAL: out = orth_poly_expansion_deriv_eval(x,gf->f); break;
-    case LINELM:     assert (1 == 0);                               break;
+    case LINELM:     out = lin_elem_exp_deriv_eval(gf->f,x);        break;
     case RATIONAL:   assert (1 == 0);                               break;
     case KERNEL:     out = kernel_expansion_deriv_eval(x,gf->f);    break;
     }

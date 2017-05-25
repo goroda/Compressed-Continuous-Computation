@@ -593,6 +593,50 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
     double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
     return value;
 }
+
+/********************************************************//**
+*   Evaluate the derivative of a linear  lin elem expansion
+*
+*   \param[in] f - function
+*   \param[in] x - location
+*
+*   \return value
+*************************************************************/
+double lin_elem_exp_deriv_eval(const struct LinElemExp * f, double x)
+{
+    if ((x < f->nodes[0]) || (x > f->nodes[f->num_nodes-1])){
+        return 0.0;
+    }
+    
+    size_t indmin = lin_elem_exp_find_interval(f,x);
+    /* printf("indmin = %zu\n",indmin); */
+    /* printf("x = %G\n",x); */
+
+    if (fabs(x - f->nodes[indmin]) <= 1e-15){
+        if (indmin == 0){
+            double plus = f->coeff[indmin+1];
+            double curr = f->coeff[indmin];
+            return (plus-curr)/(f->nodes[indmin+1]-f->nodes[indmin]);
+        }
+        else if (indmin < f->num_nodes-1){
+            double plus = f->coeff[indmin+1];
+            double minus = f->coeff[indmin-1];
+            return (plus-minus)/(f->nodes[indmin+1]-f->nodes[indmin-1]);
+        }
+        else{
+            double curr = f->coeff[indmin];
+            double minus = f->coeff[indmin-1];
+            return (curr-minus)/(f->nodes[indmin]-f->nodes[indmin-1]);
+        }
+    }
+   
+    double den = f->nodes[indmin+1]-f->nodes[indmin];
+    double dtdx = -1.0/den;
+    
+    double value = (f->coeff[indmin]- f->coeff[indmin+1])*dtdx;
+    return value;
+}
+
 /********************************************************//**
 *   Evaluate the lin elem expansion
 *

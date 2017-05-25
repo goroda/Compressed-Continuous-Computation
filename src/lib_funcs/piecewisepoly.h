@@ -188,7 +188,7 @@ int piecewise_poly_check_discontinuity(struct PiecewisePoly *,
 double minmod_eval(double, double *, double *, size_t,size_t, size_t);
 int minmod_disc_exists(double, double *, double *, size_t,size_t, size_t);
 
-void locate_jumps(double (*)(double, void *), void *,
+void locate_jumps(struct Fwrap *,
                   double, double, size_t, double, double **, size_t *);
 
 /* struct PiecewisePoly * */

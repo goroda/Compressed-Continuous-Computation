@@ -89,7 +89,7 @@ int main(int argc, char * argv[])
 
     size_t maxorder = 5;
     int verbose = 0;
-    size_t function = 0;
+    size_t function = 0;    
     size_t basis = 0;
     unsigned int adapt = 1;
     unsigned int rank_2_print_funcs = 0;
@@ -128,6 +128,7 @@ int main(int argc, char * argv[])
 
     } while (next_option != -1);
 
+    (void)function; // silence compiler
     size_t dim = 3;
 
     size_t nregion = 3;
@@ -144,7 +145,7 @@ int main(int argc, char * argv[])
             struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
             pw_poly_opts_set_nregions(opts,nregion);
             pw_poly_opts_set_maxorder(opts,maxorder);
-            pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
+            pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,3));
             pw_poly_opts_set_coeffs_check(opts,1);
             pw_poly_opts_set_tol(opts,tol[zz]);
             qmopts = one_approx_opts_alloc(PIECEWISE,opts);
@@ -177,7 +178,7 @@ int main(int argc, char * argv[])
         double ** start = malloc_dd(dim);
         for (size_t kk= 0; kk < dim; kk++){
             c3approx_set_approx_opts_dim(c3a,kk,qmopts);
-            start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
+            start[kk] = linspace(gauss_lb,gauss_ub,rank);
         }
         c3approx_init_cross(c3a,rank,verbose,start);
         c3approx_set_cross_maxiter(c3a,3);
@@ -275,9 +276,12 @@ int main(int argc, char * argv[])
                 break;
             }
             /* printf("zz = %zu, nloop = %zu\n",zz,nloop); */
-            struct FunctionMonitor * fm = function_monitor_initnd(gauss,&dim,dim,1000*dim);
             struct Fwrap * fw = fwrap_create(dim,"general");
+            
+            struct FunctionMonitor * fm = function_monitor_initnd(gauss,&dim,dim,1000*dim);
             fwrap_set_f(fw,function_monitor_eval,fm);
+            
+            /* fwrap_set_f(fw,gauss,&dim); */
 
             struct OneApproxOpts * qmopts = NULL;
             if (basis == 0){
@@ -285,7 +289,7 @@ int main(int argc, char * argv[])
 
                 pw_poly_opts_set_nregions(opts,nregion);
                 pw_poly_opts_set_maxorder(opts,maxorder);
-                pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,15));
+                pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,3));
                 pw_poly_opts_set_coeffs_check(opts,1);
                 pw_poly_opts_set_tol(opts,tol[zz]);
                 qmopts = one_approx_opts_alloc(PIECEWISE,opts);
@@ -321,7 +325,8 @@ int main(int argc, char * argv[])
                 start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
             }
             c3approx_init_cross(c3a,rank,verbose,start);
-            c3approx_set_cross_maxiter(c3a,5);
+            c3approx_set_adapt_kickrank(c3a,1);
+            c3approx_set_cross_maxiter(c3a,10);
             c3approx_set_cross_tol(c3a,1e-8);
             c3approx_set_round_tol(c3a,1e-8);
 

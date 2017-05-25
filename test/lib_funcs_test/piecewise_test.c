@@ -932,41 +932,156 @@ void Test_pw_savetxt(CuTest * tc){
 
 }
 
+void Test_minmod_disc_exists(CuTest * tc)
+{
+    printf("Testing functions: minmod_disc_exists \n");
+
+    size_t N = 20;
+    double * xtest = linspace(-4.0,1.0,N);
+    double * vals = calloc_double(N);
+    pw_disc(N,xtest,vals,NULL);
+
+    size_t minm = 2;
+    size_t maxm = 5;
+    
+    double x;
+    int disc;
+    double jumpval;
+    for (size_t ii = 0; ii < N-1; ii++){
+        x = (xtest[ii]+xtest[ii+1])/2.0;
+        disc = minmod_disc_exists(x,xtest,vals,N,minm,maxm);
+        jumpval = minmod_eval(x,xtest,vals,N,minm,maxm);
+        printf("x,disc,jumpval = %G,%d,%G\n",x,disc,jumpval);
+        if ( (xtest[ii] < 0.0) && (xtest[ii+1]) > 0.0){
+            CuAssertIntEquals(tc,1,disc);
+            break;
+        }
+        /* else{ */
+        /*    CuAssertIntEquals(tc,0,disc); */
+        /* } */
+    }
+    free(xtest); xtest = NULL;
+    free(vals); vals = NULL;
+}
+
+void Test_locate_jumps(CuTest * tc)
+{
+    printf("Testing functions: locate_jumps (1/2) \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,pw_disc,NULL);
+
+    double lb = -4.0;
+    double ub = 1.0;
+    double tol = DBL_EPSILON/1000.0;
+    size_t nsplit = 10;
+
+    double * edges = NULL;
+    size_t nEdge = 0;
+    
+    locate_jumps(fw,lb,ub,nsplit,tol,&edges,&nEdge);
+    printf("number of edges = %zu\n",nEdge);
+    printf("Edges = \n");
+    size_t ii = 0;
+    for (ii = 0; ii < nEdge; ii++){
+        CuAssertDblEquals(tc,0.0,edges[ii],1e-12);
+        printf("%G ", edges[ii]);
+    }
+    printf("\n");
+    fwrap_destroy(fw); fw = NULL;
+    CuAssertIntEquals(tc,1,1);
+    free(edges); edges = NULL;
+}
+
+static int pw_multi_disc(size_t N, const double * x, double * out , void * args){
+    
+    assert ( args == NULL );
+    double split1 = 0.0;
+    double split2 = 0.5;
+    for (size_t ii = 0; ii < N; ii++){
+        if (x[ii] < split1){
+            out[ii] = pow(x[ii],2) + 2.0 * x[ii] + 1.0;
+        }
+        else if (x[ii] < split2){
+            out[ii] = sin(x[ii]);
+        }
+        else{
+            out[ii] = exp(x[ii]);
+        }
+    }
+    return 0;
+}
+
+
+void Test_locate_jumps2(CuTest * tc)
+{
+    printf("Testing functions: locate_jumps (2/2)\n");
+    
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,pw_multi_disc,NULL);
+
+    double lb = -4.0;
+    double ub = 1.0;
+    double tol = 1e-7;
+    size_t nsplit = 10;
+
+    double * edges = NULL;
+    size_t nEdge = 0;
+    
+    locate_jumps(fw,lb,ub,nsplit,tol,&edges,&nEdge);
+    printf("number of edges = %zu\n",nEdge);
+    printf("Edges = \n");
+    size_t ii = 0;
+    for (ii = 0; ii < nEdge; ii++){
+        
+       printf("%G ", edges[ii]);
+    }
+    printf("\n");
+    free(edges); edges = NULL;
+    fwrap_destroy(fw); fw = NULL;
+    CuAssertIntEquals(tc,1,1);
+    free(edges);
+}
+
 
 
 
 CuSuite * PiecewisePolyGetSuite(){
     CuSuite * suite = CuSuiteNew();
     
-    SUITE_ADD_TEST(suite, Test_pw_linear);
-    SUITE_ADD_TEST(suite, Test_pw_quad);
-    SUITE_ADD_TEST(suite, Test_pw_approx);
-    SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal);
-    SUITE_ADD_TEST(suite, Test_pw_approx1_adapt);
-    SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird);
-    SUITE_ADD_TEST(suite, Test_pw_approx1);
-    SUITE_ADD_TEST(suite, Test_pw_flatten);
-    SUITE_ADD_TEST(suite, Test_poly_match);
-    SUITE_ADD_TEST(suite, Test_pw_integrate);
-    SUITE_ADD_TEST(suite, Test_pw_integrate2);
-    SUITE_ADD_TEST(suite, Test_pw_prod);
-    SUITE_ADD_TEST(suite, Test_pw_inner);
-    SUITE_ADD_TEST(suite, Test_pw_norm);
-    SUITE_ADD_TEST(suite, Test_pw_norm2);
-    SUITE_ADD_TEST(suite, Test_pw_daxpby);
-    SUITE_ADD_TEST(suite, Test_pw_daxpby2);
-    SUITE_ADD_TEST(suite, Test_pw_derivative);
-    SUITE_ADD_TEST(suite, Test_pw_real_roots);
-    SUITE_ADD_TEST(suite, Test_maxmin_pw);
-    SUITE_ADD_TEST(suite, Test_pw_serialize);
-    SUITE_ADD_TEST(suite, Test_pw_savetxt);
+    /* SUITE_ADD_TEST(suite, Test_pw_linear); */
+    /* SUITE_ADD_TEST(suite, Test_pw_quad); */
+    /* SUITE_ADD_TEST(suite, Test_pw_approx); */
+    /* SUITE_ADD_TEST(suite, Test_pw_approx_nonnormal); */
+    /* SUITE_ADD_TEST(suite, Test_pw_approx1_adapt); */
+    /* SUITE_ADD_TEST(suite, Test_pw_approx_adapt_weird); */
+    /* SUITE_ADD_TEST(suite, Test_pw_approx1); */
+    /* SUITE_ADD_TEST(suite, Test_pw_flatten); */
+    /* SUITE_ADD_TEST(suite, Test_poly_match); */
+    /* SUITE_ADD_TEST(suite, Test_pw_integrate); */
+    /* SUITE_ADD_TEST(suite, Test_pw_integrate2); */
+    /* SUITE_ADD_TEST(suite, Test_pw_prod); */
+    /* SUITE_ADD_TEST(suite, Test_pw_inner); */
+    /* SUITE_ADD_TEST(suite, Test_pw_norm); */
+    /* SUITE_ADD_TEST(suite, Test_pw_norm2); */
+    /* SUITE_ADD_TEST(suite, Test_pw_daxpby); */
+    /* SUITE_ADD_TEST(suite, Test_pw_daxpby2); */
+    /* SUITE_ADD_TEST(suite, Test_pw_derivative); */
+    /* SUITE_ADD_TEST(suite, Test_pw_real_roots); */
+    /* SUITE_ADD_TEST(suite, Test_maxmin_pw); */
+    /* SUITE_ADD_TEST(suite, Test_pw_serialize); */
+    /* SUITE_ADD_TEST(suite, Test_pw_savetxt); */
 
 
+    SUITE_ADD_TEST(suite, Test_minmod_disc_exists);
+    SUITE_ADD_TEST(suite, Test_locate_jumps);
+    SUITE_ADD_TEST(suite, Test_locate_jumps2);
+
+    
     // these below don't work yet
 
-    //SUITE_ADD_TEST(suite, Test_minmod_disc_exists);
-    //SUITE_ADD_TEST(suite, Test_locate_jumps);
-    //SUITE_ADD_TEST(suite, Test_locate_jumps2);
+
+    
     //SUITE_ADD_TEST(suite, Test_pw_approx1pa);
     //SUITE_ADD_TEST(suite, Test_pw_approx12);
     //SUITE_ADD_TEST(suite, Test_pw_approx12pa);
@@ -1025,104 +1140,9 @@ CuSuite * PolyApproxSuite(){
 /*
 
 
-void Test_minmod_disc_exists(CuTest * tc)
-{
-    printf("Testing functions: minmod_disc_exists \n");
 
-    size_t N = 20;
-    double * xtest = linspace(-4.0,1.0,N);
-    double * vals = calloc_double(N);
-    size_t ii;
-    for (ii = 0; ii < N; ii++){
-        vals[ii] = pw_disc(xtest[ii],NULL);
-    }
-    size_t minm = 2;
-    size_t maxm = 5;
-    
-    double x;
-    int disc;
-    //double jumpval;
-    for (ii = 0; ii < N-1; ii++){
-        x = (xtest[ii]+xtest[ii+1])/2.0;
-        disc = minmod_disc_exists(x,xtest,vals,N,minm,maxm);
-        //jumpval = minmod_eval(x,xtest,vals,N,minm,maxm);
-        //printf("x,disc,jumpval = %G,%d,%G\n",x,disc,jumpval);
-        if ( (xtest[ii] < 0.0) && (xtest[ii+1]) > 0.0){
-            CuAssertIntEquals(tc,1,disc);
-            break;
-        }
-        //else{
-        //    CuAssertIntEquals(tc,0,disc);
-        //}
-    }
-    free(xtest); xtest = NULL;
-    free(vals); vals = NULL;
-}
 
-void Test_locate_jumps(CuTest * tc)
-{
-    printf("Testing functions: locate_jumps (1/2) \n");
-    
-    double lb = -4.0;
-    double ub = 1.0;
-    double tol = DBL_EPSILON/1000.0;
-    size_t nsplit = 10;
 
-    double * edges = NULL;
-    size_t nEdge = 0;
-    
-    locate_jumps(pw_disc,NULL,lb,ub,nsplit,tol,&edges,&nEdge);
-    //printf("number of edges = %zu\n",nEdge);
-    //printf("Edges = \n");
-    //size_t ii = 0;
-    //for (ii = 0; ii < nEdge; ii++){
-    //    printf("%G ", edges[ii]);
-    //}
-    //printf("\n");
-    CuAssertIntEquals(tc,1,1);
-    free(edges); edges = NULL;
-}
-
-double pw_multi_disc(double x, void * args){
-    
-    assert ( args == NULL );
-    double split1 = 0.0;
-    double split2 = 0.5;
-    if (x < split1){
-        return pow(x,2) + 2.0 * x + 1.0;
-    }
-    else if (x < split2){
-        return sin(x);
-    }
-    else{
-        return exp(x);
-    }
-}
-
-void Test_locate_jumps2(CuTest * tc)
-{
-    printf("Testing functions: locate_jumps (2/2)\n");
-    
-    double lb = -4.0;
-    double ub = 1.0;
-    double tol = 1e-7;
-    size_t nsplit = 10;
-
-    double * edges = NULL;
-    size_t nEdge = 0;
-    
-    locate_jumps(pw_multi_disc,NULL,lb,ub,nsplit,tol,&edges,&nEdge);
-    //printf("number of edges = %zu\n",nEdge);
-    //printf("Edges = \n");
-    //size_t ii = 0;
-    //for (ii = 0; ii < nEdge; ii++){
-    //    printf("%G ", edges[ii]);
-    //}
-    //printf("\n");
-    free(edges); edges = NULL;
-    CuAssertIntEquals(tc,1,1);
-    free(edges);
-}
 
 
 void Test_pw_approx1pa(CuTest * tc){

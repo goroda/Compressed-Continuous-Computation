@@ -2089,7 +2089,6 @@ int minmod_disc_exists(double x, double * total, double * evals,
 *   Jump detector, locates jumps (discontinuities) in a one dimensional function
 *   
 *   \param f [in] - one dimensional function
-*   \param args [in] - function arguments
 *   \param lb [in] - lower bound of domain
 *   \param ub [in] - upper bound of domain
 *   \param nsplit [in] - number of subdomains to split if disc possibly exists
@@ -2099,7 +2098,7 @@ int minmod_disc_exists(double x, double * total, double * evals,
 *   \param nEdge [inout] - number of edges 
 *
 *************************************************************/
-void locate_jumps(double (*f)(double, void *), void * args,
+void locate_jumps(struct Fwrap * f,
                   double lb, double ub, size_t nsplit, double tol,
                   double ** edges, size_t * nEdge)
 {
@@ -2123,9 +2122,11 @@ void locate_jumps(double (*f)(double, void *), void * args,
         double * pts = linspace(lb,ub,nsplit+1);
         double * vals = calloc_double(nsplit+1);
         size_t ii;
-        for (ii = 0; ii < nsplit+1; ii++){
-            vals[ii] = f(pts[ii],args);    
-        }
+        size_t return_val = fwrap_eval(nsplit+1,pts,vals,f);
+        assert (return_val == 0);
+        /* for (ii = 0; ii < nsplit+1; ii++){ */
+        /*     vals[ii] = f(pts[ii],args);     */
+        /* } */
         double x;
         int disc;
         //double jump;
@@ -2136,7 +2137,7 @@ void locate_jumps(double (*f)(double, void *), void * args,
             //printf("checking disc at %G = (%G,%d)\n",x,jump,disc);
             //printf("disc exists at %G\n",x);
             if (disc == 1){ // discontinuity potentially exists so refine
-                locate_jumps(f,args,pts[ii],pts[ii+1],nsplit,tol,edges,nEdge);
+                locate_jumps(f,pts[ii],pts[ii+1],nsplit,tol,edges,nEdge);
             }
         }
         free(pts); pts = NULL;
@@ -2331,11 +2332,14 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
         }
         else{
             size_t ncheck = aopts->coeff_check < N ? aopts->coeff_check : N;
+            /* printf("\n\ncheck refine\n"); */
             for (size_t jj = 0; jj < ncheck; jj++){
                 double c =  pw->branches[ii]->ope->coeff[N-1-jj];
                 /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,normalization,aopts->epsilon); */
+                /* printf("cleft = %3.15E,cright=%3.15E\n",c*c,normalization*aopts->epsilon); */
                 if (c*c > (aopts->epsilon * normalization)){
                     refine = 1;
+                    /* printf("refine!\n"); */
                     break;
                 }
             }
@@ -2396,11 +2400,12 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
         
         size_t npolys = N;
         size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
-        double coeff_squared_norm = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1);
+        double normalization = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1);
+        /* double normalization = 1.0; */
         for (size_t jj = 0; jj < ncheck; jj++){
             double c =  poly->ope->coeff[npolys-1-jj];
             /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
-            if (c*c > (aopts->epsilon * coeff_squared_norm)){
+            if (c*c > (aopts->epsilon * normalization)){
                 refine = 1;
                 break;
             }
