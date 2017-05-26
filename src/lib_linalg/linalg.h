@@ -115,7 +115,6 @@
                        (__CLPK_integer *)D, (__CLPK_doublereal *) E, \
 	                   (__CLPK_doublereal *)F, (__CLPK_integer *)G, (__CLPK_doublereal *)H, \
                        (__CLPK_integer *)I, (__CLPK_integer *)J, (__CLPK_integer *)K))
-
                    
 #else
     /* #include <gsl/gsl_cblas.h> */
