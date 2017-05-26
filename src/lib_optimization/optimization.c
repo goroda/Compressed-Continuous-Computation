@@ -3204,8 +3204,8 @@ newton(double ** start, size_t dim, double step_size, double tol,
         
     int done = 0;
     double * p = calloc_double(dim);
-    size_t * piv = calloc_size_t(dim);
-    size_t one = 1;
+    int * piv = calloc_int(dim);
+    int one = 1;
     double diff;
     //double diffrel;
     double den;
@@ -3215,7 +3215,7 @@ newton(double ** start, size_t dim, double step_size, double tol,
         double * grad = g(*start,args);
         double * hess = h(*start, args);
         int info;
-        dgesv_(&dim,&one,hess,&dim,piv,grad,&dim, &info);
+        dgesv_((int*)&dim,&one,hess,(int*)&dim,piv,grad,(int*)&dim, &info);
         assert(info == 0);
         
         diff = 0.0;
@@ -3305,9 +3305,9 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     
 //    printf("here here\n");
     int one=1,info;
-    size_t * piv = calloc_size_t(d);
+    int * piv = calloc_int(d);
     memmove(space+d,grad,d*sizeof(double));
-    dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+    dgesv_((int*)&d,&one,hess,(int*)&d,piv,space+d,(int*)&d,&info);
     free(piv); piv = NULL;
     assert(info == 0);
 
@@ -3355,8 +3355,8 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         }
 
         memmove(space+d,grad,d*sizeof(double));
-        piv = calloc_size_t(d);
-        dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+        piv = calloc_int(d);
+        dgesv_((int*)&d,&one,hess,(int*)&d,piv,space+d,(int*)&d,&info);
         free(piv); piv = NULL;
         assert(info == 0);
 

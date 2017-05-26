@@ -188,23 +188,23 @@ qr(size_t m, size_t n, double * a, size_t lda)
     int info = 0;
 
     //get optimal workspace size
-    dgeqrf_(&m,&n, a, &lda, tau, work, &lworkinit, &info);
+    dgeqrf_((int*)&m,(int*)&n, a, (int*)&lda, tau, work, &lworkinit, &info);
     if (info) printf("error in getting workspace for qr %d ",info);
 
     // optimal workspace is returned in *work
-    size_t lwork = (size_t) lrint(work[0]); 
+    int lwork = (int) lrint(work[0]); 
     free(work);
-    if (NULL == ( work = malloc(lwork * sizeof(work[0])))){
+    if (NULL == ( work = malloc((size_t)lwork * sizeof(work[0])))){
         fprintf(stderr, "failed to allocate memory.\n");
         exit(1);
     }
 
     // do actual computation
-    dgeqrf_(&m,&n, a, &lda, tau, work, &lwork, &info);
+    dgeqrf_((int*)&m,(int*)&n, a, (int*)&lda, tau, work, &lwork, &info);
     if (info) printf("error in QR computation  %d ",info);
      
     //printf("m=%d n=%d\n ", m, n);
-    dorgqr_(&m,&n, &tau_size, a, &lda, tau, work, &lwork, &info); // third element is min(n,m)
+    dorgqr_((int*)&m,(int*)&n, (int *)&tau_size, a,(int*) &lda, tau, work, &lwork, &info); // third element is min(n,m)
     if (info) printf("error in computing Q of QR %d ",info);
     free(work);
     free(tau);
@@ -235,7 +235,7 @@ rq_with_rmult(size_t m, size_t n, double * a, size_t lda, size_t bm,
     int info = 0;
 
     //get optimal workspace size
-    dgerqf_(&m,&n, a, &lda, tau, work, &lworkinit, &info);
+    dgerqf_((int*)&m,(int*)&n, a,(int*) &lda, tau, work, &lworkinit, &info);
     if (info) printf("error in getting workspace for qr %d ",info);
 
     // optimal workspace is returned in *work
@@ -247,14 +247,14 @@ rq_with_rmult(size_t m, size_t n, double * a, size_t lda, size_t bm,
     }
 
     // do actual computation
-    dgerqf_(&m,&n, a, &lda, tau, work, &lwork, &info);
+    dgerqf_((int*)&m,(int*)&n, a, (int*)&lda, tau, work, (int*)&lwork, &info);
     if (info) printf("error in QR computation  %d ",info);
      
     cblas_dtrmm(CblasColMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, bm, bn, 1.0, 
            a+(n-m)*m, m, b, ldb);
 
     //printf("m=%d n=%d\n ", m, n);
-    dorgrq_(&m,&n, &tau_size, a, &lda, tau, work, &lwork, &info); // third element is min(n,m)
+    dorgrq_((int*)&m,(int*)&n, (int*)&tau_size, a, (int*)&lda, tau, work, (int*)&lwork, &info); // third element is min(n,m)
     if (info) printf("error in computing Q of QR %d ",info);
     free(work);
     free(tau);
@@ -296,7 +296,7 @@ void svd(size_t m, size_t n, size_t lda, double *a, double *u, double *s,
     
 
     //get optimal workspace size
-    dgesdd_("A", &m, &n, a, &lda, s, u, &m, vt, &n, work, &lworkinit, iwork, &info);
+    dgesdd_("A", (int*)&m, (int *)&n, a, (int*)&lda, s, u, (int*)&m, vt, (int *)&n, work, &lworkinit, iwork, &info);
     if (info) printf("error in getting workspace %d \n",info);
 
     // optimal workspace is returned in *work
@@ -308,7 +308,7 @@ void svd(size_t m, size_t n, size_t lda, double *a, double *u, double *s,
     }
 
     // do actual computation
-    dgesdd_("A",&m,&n,a,&lda,s,u,&m,vt,&n,work,&lwork,iwork,&info);
+    dgesdd_("A",(int*)&m,(int *)&n,a,(int*)&lda,s,u,(int*)&m,vt,(int *)&n,work,(int*)&lwork,iwork,&info);
     if (info > 0){
         if (LAPACKWARN == 1){
             if (info) printf("error in SVD computation  %d\n ",info);
@@ -1008,10 +1008,10 @@ skeleton_func2(int (*Ap)(double *, double, size_t, size_t,
 
         }
 
-        dgeqrf_(&m,&r, C, &m, tau, work, &lwork, &info);
+        dgeqrf_((int*)&m,(int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info);
         if (info < 0) printf("Something wrong with computing QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
-        dorgqr_(&m,&r, &r, C, &m, tau, work, &lwork, &info); // third element is min(n,m)
+        dorgqr_((int*)&m,(int*)&r, (int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info); // third element is min(n,m)
         if (info < 0) printf("Something wrong with QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
         
@@ -1164,10 +1164,10 @@ int skeleton_func(double (*A)(int,int, int, void *), void * aargs,
     iteration = 0;
     while (converged == 0){
         //obtain qr decomposition of R
-        dgeqrf_(&n,&r, R, &n, tau, work, &lwork, &info);
+        dgeqrf_((int *)&n,(int*)&r, R, (int *)&n, tau, work, (int*)&lwork, &info);
         if (info < 0) printf("Something wrong with computing QR of R\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
-        dorgqr_(&n,&r, &r, R, &n, tau, work, &lwork, &info); // third element is min(n,m)
+        dorgqr_((int *)&n,(int*)&r, (int*)&r, R, (int *)&n, tau, work, (int*)&lwork, &info); // third element is min(n,m)
         if (info < 0) printf("Something wrong with QR of R\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
         
@@ -1187,10 +1187,10 @@ int skeleton_func(double (*A)(int,int, int, void *), void * aargs,
             }
         }
 
-        dgeqrf_(&m,&r, C, &m, tau, work, &lwork, &info);
+        dgeqrf_((int*)&m,(int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info);
         if (info < 0) printf("Something wrong with computing QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
-        dorgqr_(&m,&r, &r, C, &m, tau, work, &lwork, &info); // third element is min(n,m)
+        dorgqr_((int*)&m,(int*)&r, (int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info); // third element is min(n,m)
         if (info < 0) printf("Something wrong with QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
         
@@ -1306,10 +1306,10 @@ int skeleton(double * A, size_t n, size_t m,
     iteration = 0;
     while (converged == 0){
         //obtain qr decomposition of R
-        dgeqrf_(&n,&r, R, &n, tau, work, &lwork, &info);
+        dgeqrf_((int *)&n,(int*)&r, R, (int *)&n, tau, work, (int*)&lwork, &info);
         if (info < 0) printf("Something wrong with computing QR of R\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
-        dorgqr_(&n,&r, &r, R, &n, tau, work, &lwork, &info); // third element is min(n,m)
+        dorgqr_((int *)&n,(int*)&r, (int*)&r, R, (int *)&n, tau, work, (int*)&lwork, &info); // third element is min(n,m)
         if (info < 0) printf("Something wrong with QR of R\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
         
@@ -1326,10 +1326,10 @@ int skeleton(double * A, size_t n, size_t m,
             }
         }
 
-        dgeqrf_(&m,&r, C, &m, tau, work, &lwork, &info);
+        dgeqrf_((int*)&m,(int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info);
         if (info < 0) printf("Something wrong with computing QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
-        dorgqr_(&m,&r, &r, C, &m, tau, work, &lwork, &info); // third element is min(n,m)
+        dorgqr_((int*)&m,(int*)&r, (int*)&r, C, (int*)&m, tau, work, (int*)&lwork, &info); // third element is min(n,m)
         if (info < 0) printf("Something wrong with QR of C\n ");
         if (info > 0) printf("Input %d of QR is not correct\n ", info);
         
@@ -1425,7 +1425,7 @@ int maxvol_rhs(const double * A, size_t n, size_t r, size_t * rows, double * Asi
 
     temp2 = calloc_double(n*r);
     memmove(temp2, A, n*r*siz);
-    dgetrf_(&r,&r, temp2, &r, ipiv, &info); //lu decomp
+    dgetrf_((int*)&r,(int*)&r, temp2, (int*)&r, ipiv, &info); //lu decomp
     if (info < 0) printf("Input %d of LU is not correct\n ", info);
     //if (info > 0) printf("Rank is too high, suggest lowering it\n");
 
@@ -1461,11 +1461,11 @@ int maxvol_rhs(const double * A, size_t n, size_t r, size_t * rows, double * Asi
     
 
     getrows(A, Asinv, rows,n,r);
-    dgetrf_(&r,&r, Asinv, &r, ipiv2, &info2); 
+    dgetrf_((int*)&r,(int*)&r, Asinv, (int*)&r, ipiv2, &info2); 
     //if (info2 > 0) { printf("Ainv is singular in maxvol_rhs\n "); exit(1); }
     //if (info2 < 0) { printf("Input %d of LU is not correct in maxvol_rhs\n ", info2); exit(1); }
         
-    dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
+    dgetri_((int*)&r, Asinv, (int*)&r, ipiv2, work, (int*)&lwork, &info2); //invert
     
     cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, n, r, r, 1.0, A,n, Asinv, r, 0.0, B, n);
     
@@ -1586,7 +1586,7 @@ void linear_ls(size_t nrows, size_t ncols, double * A, double * y, double * x)
     /* dgels_(trans,&nrows,&ncols,&nrhs,A,&nrows,y,&nrows,work,&lworkinit,&info); */
 
     /* printf("compute workspace\n"); */
-    dgelsd_(&nrows,&ncols,&nrhs,A,&nrows,tempy,&maxdim,s,&rcond,&rank,work,&lworkinit,iwork,&info);
+    dgelsd_((int*)&nrows,(int*)&ncols,(int*)&nrhs,A,(int*)&nrows,tempy,(int*)&maxdim,s,&rcond,(int*)&rank,work,&lworkinit,(int*)iwork,&info);
     free(iwork); iwork = NULL;
     
     size_t optimal_work = (size_t) work[0];
@@ -1601,7 +1601,7 @@ void linear_ls(size_t nrows, size_t ncols, double * A, double * y, double * x)
     int lwork = optimal_work;
     iwork = calloc_size_t(optimal_work * mindim);
     /* dgels_(trans,&nrows,&ncols,&nrhs,A,&nrows,y,&nrows,work,&lwork,&info); */
-    dgelsd_(&nrows,&ncols,&nrhs,A,&nrows,tempy,&maxdim,s,&rcond,&rank,work,&lwork,iwork,&info);
+    dgelsd_((int*)&nrows,(int*)&ncols,(int*)&nrhs,A,(int*)&nrows,tempy,(int*)&maxdim,s,&rcond,(int*)&rank,work,&lwork,(int*)iwork,&info);
     if (info != 0){
         fprintf(stderr, "Error computing linear regression\n");
         exit(1);

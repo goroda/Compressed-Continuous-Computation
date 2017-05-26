@@ -40,6 +40,7 @@ endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
+
 option(BUILD_STATIC_LIB "Build a static library" OFF)
 if (BUILD_STATIC_LIB)
   set(static_libs 1)  

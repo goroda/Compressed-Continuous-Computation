@@ -113,7 +113,7 @@ double * sqrtCov(size_t N, double * eigs, double * cov)
     size_t lwork = N*8;
     double * work = calloc_double(lwork);
     int info;
-    dsyev_("V","L",&N,cov,&N,eigs,work,&lwork,&info);
+    dsyev_("V","L",(int*)&N,cov,(int*)&N,eigs,work,(int*)&lwork,&info);
     if (info != 0){
         fprintf(stderr, "info = %d in computing sqrt of cov\n",info);
     }

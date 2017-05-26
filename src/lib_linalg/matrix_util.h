@@ -34,16 +34,10 @@
 
 //Code
 
-
-
-
-
-
-
 #ifndef MATRIX_UTIL_H
 #define MATRIX_UTIL_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 struct mat {
     size_t nrows;

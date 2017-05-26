@@ -38,6 +38,7 @@
 /* \file kernels.h */
 /* Provides header files for kernels.c */
 
+
 double gauss_kernel_eval(double, double, double, double);
 double gauss_kernel_deriv(double, double, double, double);
 double gauss_kernel_integrate(double, double, double, double, double);

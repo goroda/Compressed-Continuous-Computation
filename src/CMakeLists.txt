@@ -26,6 +26,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_array/array.h
            lib_superlearn/regress.h
            lib_interface/c3_interface.h
+           lib_interface/approximate.h
            lib_clinalg/diffusion.h
            lib_clinalg/dmrg.h
            lib_clinalg/dmrgprod.h
@@ -51,8 +52,6 @@ set(header lib_stringmanip/stringmanip.h
            lib_linalg/lib_linalg.h
            lib_linalg/linalg.h
            lib_linalg/matrix_util.h
-           lib_linalg/f2c.h
-           lib_linalg/clapack.h
            lib_optimization/lib_optimization.h
            lib_optimization/optimization.h
            lib_quadrature/legquadrules.h
@@ -64,7 +63,9 @@ set(header lib_stringmanip/stringmanip.h
            lib_tensdecomp/tt_integrate.h
            lib_tensdecomp/tt_multilinalg.h
            lib_tensor/tensor.h
+           lib_probability/lib_probability.h
            lib_probability/probability.h
+           lib_probability/probability_utils.h
            ../include/c3.h
            )
 

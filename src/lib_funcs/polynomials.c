@@ -4128,7 +4128,7 @@ standard_poly_real_roots(struct StandardPoly * p, size_t * nkeep)
 
     //printf("hello! n=%d \n",n);
     dgeev_("N","N", &n, t_companion, &n, real, img, NULL, &n,
-            NULL, &n, iwork, &lwork, &info);
+           NULL, &n, iwork, &lwork, &info);
     
     //printf("info = %d", info);
 
@@ -4291,10 +4291,10 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         double * scale = calloc_double(N);
         //*
         //Balance
-        size_t ILO, IHI;
+        int ILO, IHI;
         //printf("am I here? N=%zu \n",N);
         //dprint(N*N,nscompanion);
-        dgebal_("S", &N, nscompanion, &N,&ILO,&IHI,scale,&info);
+        dgebal_("S", (int*)&N, nscompanion, (int *)&N,&ILO,&IHI,scale,&info);
         //printf("yep\n");
         if (info < 0){
             fprintf(stderr, "Calling dgebl had error in %d-th input in the legendre_expansion_real_roots function\n",info);
@@ -4313,14 +4313,14 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         double * real = calloc_double(N);
         double * img = calloc_double(N);
         //printf("allocated eigs N = %zu\n",N);
-        size_t lwork = 8 * N;
+        int lwork = 8 * (int)N;
         //printf("got lwork\n");
         double * iwork = calloc_double(8*N);
         //printf("go here");
 
         //dgeev_("N","N", &N, nscompanion, &N, real, img, NULL, &N,
         //        NULL, &N, iwork, &lwork, &info);
-        dhseqr_("E","N",&N,&ILO,&IHI,nscompanion,&N,real,img,NULL,&N,iwork,&lwork,&info);
+        dhseqr_("E","N",(int*)&N,&ILO,&IHI,nscompanion,(int*)&N,real,img,NULL,(int*)&N,iwork,&lwork,&info);
         //printf("done here");
 
         if (info < 0){
