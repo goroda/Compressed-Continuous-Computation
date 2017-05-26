@@ -194,7 +194,7 @@ qr(size_t m, size_t n, double * a, size_t lda)
     // optimal workspace is returned in *work
     int lwork = (int) lrint(work[0]); 
     free(work);
-    if (NULL == ( work = malloc(lwork * sizeof(work[0])))){
+    if (NULL == ( work = malloc((size_t)lwork * sizeof(work[0])))){
         fprintf(stderr, "failed to allocate memory.\n");
         exit(1);
     }
