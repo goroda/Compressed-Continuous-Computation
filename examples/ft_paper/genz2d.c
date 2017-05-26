@@ -58,7 +58,7 @@ int main(void)
     }
     c3approx_init_cross(c3a,rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-1);
-    c3approx_set_cross_maxiter(c3a,1);
+    c3approx_set_cross_maxiter(c3a,3);
     c3approx_set_verbose(c3a,2);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 

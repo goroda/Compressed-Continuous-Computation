@@ -153,16 +153,25 @@ double deserialize_double_here(char * ser)
 char * serialize_double_arr(size_t n, const double * x)
 {
     size_t size_of_one_double = sizeof(int) + sizeof(long long);
-    char * mem = malloc(n * (size_of_one_double)+sizeof(char));
+    /* char * mem = malloc(n * (size_of_one_double)+sizeof(char)); */
+    char * mem = malloc(n * 20 * sizeof(char));
+    for (size_t ii = 0; ii < n*10; ii++){
+        mem[ii] = '\0';
+    }
+    printf("n = %zu\n",n);
     size_t onbyte = 0;
     for (size_t ii = 0; ii < n; ii++){
         char * temp = serialize_double_here(x[ii]);
         memcpy(mem+onbyte,temp,size_of_one_double);
         free(temp); temp = NULL;
         onbyte += size_of_one_double;
+        printf("onbyte = %zu\n",ii);
     }
-    char t = '\0';
-    memcpy(mem+onbyte,&t,sizeof(char));
+
+    /* mem[onbyte] = '\0'; */
+    /* char t = '\0'; */
+    /* memcpy(mem+onbyte,&t,sizeof(char)); */
+    /* printf("%s\n",mem); */
     return mem;
 }
 
@@ -197,7 +206,7 @@ double function_monitor_eval(const double * x, void * args)
         /* if (diff > 1e-20){ */
         /*     printf("diff = %3.15E,val=%3.15E,valcheck=%3.15E\n",diff,val,valcheck); */
         /*     assert(1 == 0); */
-        /* } */
+        /* }; */
 
     }
     else{
@@ -213,7 +222,6 @@ double function_monitor_eval(const double * x, void * args)
         /*     assert(1 == 0); */
         /* } */
 
-        
         //printf("sval = %s\n",sval);
         struct Cpair * cp = cpair_create(ser,sval);
         add_cpair(fm->evals, cp);
@@ -255,7 +263,8 @@ void function_monitor_print_to_file(struct FunctionMonitor * fm, FILE * fp)
         while (cur != NULL){
             serx = cur->data->a;
             sery = cur->data->b;
-            val = deserialize_double_from_text(sery);
+            /* val = deserialize_double_from_text(sery); */
+            val = deserialize_double_here(sery);
             x = deserialize_darray_from_text(serx,&dim);
             for (jj = 0; jj < dim; jj++){
                 fprintf(fp,"%3.15f ",x[jj]);

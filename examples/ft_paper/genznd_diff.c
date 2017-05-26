@@ -77,7 +77,7 @@ int main()
 
     double int_shouldbe = compute_int(dim);
     double tols[11] = {1e-2,1e-4,1e-6,1e-8,1e-10,1e-12,1e-14,1e-16,1e-18,1e-20,1e-24};
-    size_t ntols = 11;
+    size_t ntols = 10;
     for (size_t ii = 0; ii < ntols; ii++){
         ncalls = 0;
         /* aopts.epsilon = aopts.epsilon * 2.0; */
@@ -94,7 +94,7 @@ int main()
         size_t nregions = 3;
         pw_poly_opts_set_nregions(opts,nregions);
         pw_poly_opts_set_maxorder(opts,6);
-        pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregions,6));
+        pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregions,3));
         pw_poly_opts_set_coeffs_check(opts,1);
         pw_poly_opts_set_tol(opts,tols[ii]);
         struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);

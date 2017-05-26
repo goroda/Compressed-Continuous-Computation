@@ -2155,54 +2155,53 @@ void locate_jumps(struct Fwrap * f,
 *
 *   \return p - polynomial
 *************************************************************/
-
-struct PiecewisePoly *
-piecewise_poly_approx2(struct Fwrap * fw,
-                       struct PwPolyOpts * aoptsin)
-{
-    assert (aoptsin != NULL);
-    struct PwPolyOpts * aopts = aoptsin;
-    struct PiecewisePoly * p = NULL;
+/* struct PiecewisePoly * */
+/* piecewise_poly_approx2(struct Fwrap * fw, */
+/*                        struct PwPolyOpts * aoptsin) */
+/* { */
+/*     assert (aoptsin != NULL); */
+/*     struct PwPolyOpts * aopts = aoptsin; */
+/*     struct PiecewisePoly * p = NULL; */
     
-    double lb = pw_poly_opts_get_lb(aopts);
-    double ub = pw_poly_opts_get_ub(aopts);
+/*     double lb = pw_poly_opts_get_lb(aopts); */
+/*     double ub = pw_poly_opts_get_ub(aopts); */
     
-    double * edges = NULL;
-    size_t nEdge = 0;
-    printf("locate jumps!\n");
-    locate_jumps(fw,lb,ub,aopts->nregions,aopts->minsize,&edges,&nEdge);
-    printf("number of edges are %zu\n",nEdge);
-    printf("Edges are\n");
-    size_t iii;
-    for (iii = 0; iii < nEdge;iii++){
-       printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n",
-           edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize);
-    }
-    dprint(nEdge,edges);
-    //
+/*     double * edges = NULL; */
+/*     size_t nEdge = 0; */
+/*     printf("locate jumps!\n"); */
+/*     locate_jumps(fw,lb,ub,aopts->nregions,aopts->minsize,&edges,&nEdge); */
+/*     printf("number of edges are %zu\n",nEdge); */
+/*     printf("Edges are\n"); */
+/*     size_t iii; */
+/*     for (iii = 0; iii < nEdge;iii++){ */
+/*        printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n", */
+/*            edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize); */
+/*     } */
+/*     dprint(nEdge,edges); */
+/*     // */
 
-    size_t nNodes = nEdge*2+2;
-    double * nodes = calloc_double(nNodes);
-    nodes[0] = lb;
-    size_t ii,jj = 1;
-    for (ii = 0; ii < nEdge; ii++){
-        nodes[jj] = edges[ii] - aopts->minsize;
-        nodes[jj+1] = edges[ii] + aopts->minsize;
-        jj += 2;
-    }
-    nodes[nEdge*2+1] = ub;
+/*     size_t nNodes = nEdge*2+2; */
+/*     double * nodes = calloc_double(nNodes); */
+/*     nodes[0] = lb; */
+/*     size_t ii,jj = 1; */
+/*     for (ii = 0; ii < nEdge; ii++){ */
+/*         nodes[jj] = edges[ii] - aopts->minsize; */
+/*         nodes[jj+1] = edges[ii] + aopts->minsize; */
+/*         jj += 2; */
+/*     } */
+/*     nodes[nEdge*2+1] = ub; */
 
-    dprint(nNodes,nodes);
+/*     dprint(nNodes,nodes); */
 
-    exit (1);
-    /* struct PiecewisePoly * p =  */
-    /*     piecewise_poly_approx_from_nodes(f, args, aopts->ptype, */
-    /*                      nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts); */
+/*     exit (1); */
+/*     /\* struct PiecewisePoly * p =  *\/ */
+/*     /\*     piecewise_poly_approx_from_nodes(f, args, aopts->ptype, *\/ */
+/*     /\*                      nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts); *\/ */
     
-    free(edges); edges = NULL;
-    free(nodes); nodes = NULL;
-    return p;
-}
+/*     free(edges); edges = NULL; */
+/*     free(nodes); nodes = NULL; */
+/*     return p; */
+/* } */
 
 /********************************************************//**
 *   Create Approximation by hierarchical splitting
@@ -2298,14 +2297,20 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
 
     double true_lb = piecewise_poly_lb(pw);
     double true_ub = piecewise_poly_ub(pw);
-    
+
+    /* printf("refining (%G,%G)\n",true_lb,true_ub); */
+    /* printf("number of branches = %zu\n",pw->nbranches); */
     assert (pw->ope == NULL);
     int refined_once = 0;
+
     for (size_t ii = 0; ii < pw->nbranches; ii++){
+
 
         assert (pw->branches[ii]->leaf == 1);
         double lb = piecewise_poly_lb(pw->branches[ii]);
         double ub = piecewise_poly_ub(pw->branches[ii]);
+        /* printf("\t refining branch %zu\n",ii); */
+        /* printf("\tlb=%G,ub=%G,diff=%3.5E,minsize=%3.5E\n",lb,ub,ub-lb,aopts->minsize); */
         int refine = 0;
         if ( ( (ub-lb) < aopts->minsize) || (aopts->nregions == 1)){
             refine = 0;
@@ -2341,8 +2346,12 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
 
     piecewise_poly_flatten(pw);
     if (refined_once == 1){ // recurse
+        /* printf("\t\t recurse!\n"); */
         adapt_help(pw,aopts,fw);
     }
+    /* else{ */
+    /*     printf("done!\n"); */
+    /* } */
     
 }
 

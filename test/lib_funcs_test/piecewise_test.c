@@ -1053,34 +1053,34 @@ int pap1(size_t N, const double * x,double * out, void * args)
     return 0;
 }
 
-void Test_polyannih(CuTest * tc){
+/* void Test_polyannih(CuTest * tc){ */
 
-    printf("Testing function: approx (1/1) \n");
+/*     printf("Testing function: approx (1/1) \n"); */
 
-    // function
-    struct Fwrap * fw = fwrap_create(1,"general-vec");
-    fwrap_set_fvec(fw,pw_multi_disc,NULL);
+/*     // function */
+/*     struct Fwrap * fw = fwrap_create(1,"general-vec"); */
+/*     fwrap_set_fvec(fw,pw_multi_disc,NULL); */
 
-    // approximation
-    double lb = -5.0, ub = 5.0;
-    struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub);
-    pw_poly_opts_set_minsize(opts,1e-1);
-    pw_poly_opts_set_tol(opts,1e-5);
-    pw_poly_opts_set_maxorder(opts,8);
-    pw_poly_opts_set_nregions(opts,5);
-    opoly_t pw = piecewise_poly_approx2(fw,opts);
+/*     // approximation */
+/*     double lb = -5.0, ub = 5.0; */
+/*     struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub); */
+/*     pw_poly_opts_set_minsize(opts,1e-1); */
+/*     pw_poly_opts_set_tol(opts,1e-5); */
+/*     pw_poly_opts_set_maxorder(opts,8); */
+/*     pw_poly_opts_set_nregions(opts,5); */
+/*     opoly_t pw = piecewise_poly_approx2(fw,opts); */
 
-    // error
-    double abs_err;
-    double func_norm;
-    compute_error_vec(lb,ub,1000,pw,pap1,NULL,&abs_err,&func_norm);
-    double err = abs_err / func_norm;
-    CuAssertDblEquals(tc, 0.0, err, 1e-13);
+/*     // error */
+/*     double abs_err; */
+/*     double func_norm; */
+/*     compute_error_vec(lb,ub,1000,pw,pap1,NULL,&abs_err,&func_norm); */
+/*     double err = abs_err / func_norm; */
+/*     CuAssertDblEquals(tc, 0.0, err, 1e-13); */
 
-    fwrap_destroy(fw);
-    pw_poly_opts_free(opts);
-    POLY_FREE(pw);
-}
+/*     fwrap_destroy(fw); */
+/*     pw_poly_opts_free(opts); */
+/*     POLY_FREE(pw); */
+/* } */
 
 
 CuSuite * PiecewisePolyGetSuite(){
