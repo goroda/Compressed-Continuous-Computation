@@ -43,6 +43,8 @@
 #include <assert.h>
 #include <math.h>
 
+#include "superlearn_util.h"
+
 /** \struct RegMemSpace
  * \brief Memory manager for certain regression objects
  * \var RegMemSpace::ndata
@@ -151,59 +153,6 @@ size_t reg_mem_space_get_data_inc(const struct RegMemSpace * rmem)
     return rmem->one_data_size;
 }
 
-
-/** \struct Regression Memory Manager
- * \brief Manages all memory for supervised learning
- * \var RegressionMemManager::dim
- * size of feature space
- * \var RegressionMemManager::N
- * number of data points for which to store objects
- * \var RegressionMemManager::running_evals_lr
- * space for storing the evaluations of cores from left to right
- * \var RegressionMemManager::running_evals_rl
- * space for storing the evaluations of cores from right to left
- * \var RegressionMemManager::running_grad
- * Running evaluations of gradient from left to right
- * \var RegressionMemManager::evals
- * space for storing the evaluations of an FT at all the data apoints
- * \var RegressionMemManager::grad
- * space for storing the gradient of the FT at all the data points
- * \var RegressionMemManager::grad_space
- * space for gradient computations
- * \var RegressionMemManager::all_grads
- * space for storing the gradients of univariate functions in particular cores
- * \var RegressionMemManager::fparam_space
- * space for storing the gradients of any single univariate function
- * \var RegressionMemManager::structure
- * flag for whether or not the parameters are linearly mapped to outputs
- * \var RegressionMemManager::once_eval_structure
- * flag for whether or structure has been precomputed
- * \var RegressionMemManager::lin_structure_vals
- * precomputed elements for linearly dependent parameters
- * \var RegressionMemManager::lin_structure_inc
- * precomputed incremement for linearly dependent parameters between data points
- */ 
-struct RegressionMemManager
-{
-
-    size_t dim;
-    size_t N;
-    struct RunningCoreTotal *  running_evals_lr;
-    struct RunningCoreTotal *  running_evals_rl;
-    struct RunningCoreTotal ** running_grad;
-    struct RegMemSpace *       evals;
-    struct RegMemSpace *       grad;
-    struct RegMemSpace *       grad_space;
-    struct RegMemSpace **      all_grads;
-    struct RegMemSpace *       fparam_space;
-
-    enum FTPARAM_ST structure;
-    int once_eval_structure;
-
-    double ** lin_structure_vals;
-    size_t * lin_structure_inc;
-
-};
 
 
 

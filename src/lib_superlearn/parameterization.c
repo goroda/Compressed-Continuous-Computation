@@ -38,39 +38,13 @@
  * Provides routines for parameterizing the FT
  */
 
+#include <string.h>
+#include <assert.h>
 
-/** \struct FTparam
- * \brief Stores an FT and parameterization information
- * \var FTparam::ft
- * function-train 
- * \var FTparam::dim
- * size of input space
- * \var FTparam::nparams_per_uni
- * number of parameters in each univariate function of each core
- * \var FTparam::nparams_per_core
- * number of parameters in each core
- * \var FTparam::max_param_uni
- * Upper bound on the maximum number of parameters within any given function
- * \var FTparam::nparams
- * Number of total params describing the function train
- * \var FTparam::params
- * Array of the parameters describing the FT
- * \var FTparam::approx_opts
- * Approximation options
- */
-struct FTparam
-{
-    struct FunctionTrain * ft;
-    size_t dim;
+#include "ft.h"
+#include "lib_linalg.h"
 
-    size_t * nparams_per_uni; // number of parmaters per univariate funciton
-    size_t * nparams_per_core;
-    size_t max_param_uni;
-    size_t nparams;
-    double * params;
-    
-    struct MultiApproxOpts * approx_opts;
-};
+#include "parameterization.h"
 
 
 /***********************************************************//**
