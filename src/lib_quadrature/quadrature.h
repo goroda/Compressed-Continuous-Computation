@@ -43,12 +43,14 @@
 #ifndef QUADRATURE_H
 #define QUADRATURE_H
 
-#include <stdlib.h>
-
+#include <stddef.h>
 
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433
 #endif
+
+enum quad_rule {C3_GAUSS_QUAD,C3_CC_QUAD};
+
 double * trap_w(size_t, double);
 double * simpson_w(size_t, double);
 

@@ -65,19 +65,20 @@ int main( int argc, char *argv[])
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_lb(opts,-1.0);
     ope_opts_set_ub(opts,1.0);
-    ope_opts_set_start(opts,5);
-    ope_opts_set_coeffs_check(opts,4);
-    ope_opts_set_tol(opts,1e-8);
+    ope_opts_set_start(opts,2);
+    ope_opts_set_coeffs_check(opts,1);
+    ope_opts_set_tol(opts,1e-5);
+    ope_opts_set_qrule(opts,C3_CC_QUAD);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     int verbose = 2;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
-        start[ii] = linspace(-0.1,0.1,rank);
+        start[ii] = linspace(1.0,1.0,rank);
     }
     c3approx_init_cross(c3a,rank,verbose,start);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     char final_errs[256];
     sprintf(final_errs,"%s-final.dat",params);

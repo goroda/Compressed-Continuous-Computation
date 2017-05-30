@@ -44,7 +44,7 @@
 #ifndef PIECEWISEPOLY_H
 #define PIECEWISEPOLY_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 struct PwPolyOpts;
 struct PwPolyOpts;
@@ -188,12 +188,13 @@ int piecewise_poly_check_discontinuity(struct PiecewisePoly *,
 double minmod_eval(double, double *, double *, size_t,size_t, size_t);
 int minmod_disc_exists(double, double *, double *, size_t,size_t, size_t);
 
-void locate_jumps(double (*)(double, void *), void *,
+void locate_jumps(struct Fwrap *,
                   double, double, size_t, double, double **, size_t *);
+struct PiecewisePoly *
+piecewise_poly_approx2(struct Fwrap *, struct PwPolyOpts *);
+                       
 
-/* struct PiecewisePoly * */
-/* piecewise_poly_approx2(double (*)(double, void *), void *, double, */
-/*                         double, struct PwPolyOpts *); */
+
 // serialization and printing
 unsigned char * 
 serialize_piecewise_poly(unsigned char *, struct PiecewisePoly *, size_t *); 

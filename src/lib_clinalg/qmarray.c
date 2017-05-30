@@ -55,6 +55,9 @@
 #define ZEROTHRESH 1e2*DBL_EPSILON
 #define ZERO 1e2*DBL_EPSILON
 
+/* #define ZEROTHRESH 1e-200 */
+/* #define ZERO 1e-200 */
+
 #ifndef VQMALU
     #define VQMALU 0
 #endif
@@ -2601,7 +2604,7 @@ int qmarray_qhouse(struct Qmarray * Q, struct Qmarray * V)
 ***************************************************************/
 int 
 qmarray_householder_rows(struct Qmarray * A, struct Qmarray * E, 
-        struct Qmarray * V, double * L)
+                         struct Qmarray * V, double * L)
 {
     size_t ii, jj;
     struct Quasimatrix * e = NULL;
@@ -2836,8 +2839,22 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
         else{
             struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
             int out = qmarray_householder_rows(A,Q,V,R);
+            /* printf("\n\n\n\n"); */
+            /* printf("right after qmarray_householder_rows \n"); */
+            /* print_qmarray(Q,0,NULL); */
+
+            /* printf("\n\n\n\n"); */
+            /* printf("VV  right after qmarray_householder_rows \n"); */
+            /* print_qmarray(V,0,NULL); */
+
             assert(out == 0);
             out = qmarray_qhouse_rows(Q,V);
+
+            /* printf("\n\n\n\n"); */
+            /* printf("right after qmarray_qhouse_rows \n"); */
+            /* print_qmarray(Q,0,NULL); */
+            /* printf("\n\n\n\n"); */
+
             assert(out == 0);
             qmarray_free(V); V = NULL;
         }

@@ -160,10 +160,10 @@ void Test_function_train_grad_eval2(CuTest * tc)
     double g2_should = 2.0*pt[0]*pt[1]*pt[0]  + sin(pt[3]);
     double g3_should = pt[3];
     double g4_should = pt[2] + pt[1]*cos(pt[3]);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[0]-g1_should)/g1_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[1]-g2_should)/g2_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-7);
-    CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,2e-7);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[0]-g1_should)/g1_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[1]-g2_should)/g2_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-6);
+    CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,2e-6);
     
 
     
@@ -1162,7 +1162,7 @@ void Test_ftapprox_cross3(CuTest * tc)
 
     double err = sqrt(out1/den);
 
-    CuAssertDblEquals(tc,0.0,err,1e-10);
+    CuAssertDblEquals(tc,0.0,err,9e-10);
 
     //
 

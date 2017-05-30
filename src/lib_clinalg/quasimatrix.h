@@ -44,9 +44,6 @@
 #ifndef QUASIMATRIX_H
 #define QUASIMATRIX_H
 
-#include <stdlib.h>
-#include <stdio.h>
-
 #include "lib_funcs.h"
 
 struct Quasimatrix;

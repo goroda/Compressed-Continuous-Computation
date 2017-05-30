@@ -46,10 +46,11 @@
 #define M_PI 3.14159265358979323846264338327
 #endif
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #include "fwrap.h"
+#include "quadrature.h"
 
 struct SpaceMapping;
 double space_mapping_map(struct SpaceMapping * map, double x);
@@ -77,6 +78,7 @@ double ope_opts_get_ub(const struct OpeOpts *);
 void ope_opts_set_mean_and_std(struct OpeOpts *, double, double);
 void ope_opts_set_ptype(struct OpeOpts *, enum poly_type);
 enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
+void ope_opts_set_qrule(struct OpeOpts *, enum quad_rule);
 size_t ope_opts_get_nparams(const struct OpeOpts *);
 void ope_opts_set_nparams(struct OpeOpts *, size_t);
 void ope_opts_set_kristoffel_weight(struct OpeOpts *, int);
@@ -296,7 +298,8 @@ void orth_poly_expansion_approx (double (*)(double,void *), void *,
                                  struct OrthPolyExpansion *);
 int
 orth_poly_expansion_approx_vec(struct OrthPolyExpansion *,
-                               struct Fwrap *);
+                               struct Fwrap *,
+                               const struct OpeOpts *);
                                
     /* int (*A)(size_t, double *,double *,void *), void *, */
     /* struct OrthPolyExpansion *); */

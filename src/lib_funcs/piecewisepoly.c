@@ -34,10 +34,6 @@
 
 //Code
 
-
-
-
-
 /** \file piecewisepoly.c
  * Provides routines for using piecewise polynomials
 */
@@ -53,6 +49,7 @@
 #include "array.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
+#include "linalg.h"
 
 //#define ZEROTHRESH  2e0 * DBL_EPSILON
 
@@ -196,10 +193,10 @@ struct PwPolyOpts * pw_poly_opts_alloc(enum poly_type ptype, double lb, double u
     ao->lb = lb;
     ao->ub = ub;
 
-    ao->maxorder = 7;
+    ao->maxorder = 10;
     ao->minsize = 1e-2;
-    ao->coeff_check = 2;
-    ao->epsilon = 1e-12;
+    ao->coeff_check = 3;
+    ao->epsilon = 1e-15;
     ao->nregions = 5; // number of regions to adapt
 
 
@@ -208,6 +205,12 @@ struct PwPolyOpts * pw_poly_opts_alloc(enum poly_type ptype, double lb, double u
     ao->pts = NULL;
 
     ao->opeopts = NULL;
+    /* ao->opeopts = ope_opts_alloc(ptype); */
+    /* size_t startnum = 3; */
+    /* if ((ao->maxorder+1) < startnum){ */
+    /*     startnum = ao->maxorder+1; */
+    /* } */
+    /* ope_opts_set_start(ao->opeopts,startnum); */
     ao->other = NULL;
     
     return ao;
@@ -243,6 +246,9 @@ void pw_poly_opts_set_ptype(struct PwPolyOpts * pw, enum poly_type ptype)
 {
     assert (pw != NULL);
     pw->ptype = ptype;
+    if (pw->opeopts != NULL){
+        ope_opts_set_ptype(pw->opeopts,ptype);
+    }
 }
 
 enum poly_type pw_poly_opts_get_ptype(const struct PwPolyOpts * pw)
@@ -285,6 +291,13 @@ void pw_poly_opts_set_maxorder(struct PwPolyOpts * pw, size_t maxorder)
 {
     assert (pw != NULL);
     pw->maxorder = maxorder;
+    if (pw->opeopts != NULL){
+        size_t startnum = 3;
+        if ((pw->maxorder+1) < startnum){
+            startnum = pw->maxorder+1;
+        }
+        ope_opts_set_start(pw->opeopts,startnum);
+    }
 }
 
 void pw_poly_opts_set_nregions(struct PwPolyOpts * pw, size_t nregions)
@@ -2058,10 +2071,11 @@ int minmod_disc_exists(double x, double * total, double * evals,
             h = diff;
         }
     }
-    
+
+    /* printf("jump=%G h=%G\n",jump,h); */
     double oom = floor(log10(h));
-    //double oom = ceil(log10(h));
-    //printf("oom=%G\n",oom);
+    /* double oom = ceil(log10(h)); */
+    /* printf("oom=%G\n",oom); */
     int disc = 1;
     if (fabs(jump) <= pow(10.0,oom)){
     //if (fabs(jump) <= pow(10.0,oom)){
@@ -2075,24 +2089,24 @@ int minmod_disc_exists(double x, double * total, double * evals,
 /********************************************************//**
 *   Jump detector, locates jumps (discontinuities) in a one dimensional function
 *   
-*   \param f [in] - one dimensional function
-*   \param args [in] - function arguments
-*   \param lb [in] - lower bound of domain
-*   \param ub [in] - upper bound of domain
-*   \param nsplit [in] - number of subdomains to split if disc possibly exists
-*   \param tol [in] - closest distance between two function evaluations, defines the
-*   resolution
-*   \param edges [inout] - array of edges (location of jumps)
-*   \param nEdge [inout] - number of edges 
+*   \param f      [in]    - one dimensional function
+*   \param lb     [in]    - lower bound of domain
+*   \param ub     [in]    - upper bound of domain
+*   \param nsplit [in]    - number of subdomains to split if disc possibly exists
+*   \param tol    [in]    - closest distance between two function evaluations, defines the
+*                           resolution
+*   \param edges  [inout] - array of edges (location of jumps)
+*   \param nEdge  [inout] - number of edges 
 *
 *************************************************************/
-void locate_jumps(double (*f)(double, void *), void * args,
+void locate_jumps(struct Fwrap * f,
                   double lb, double ub, size_t nsplit, double tol,
                   double ** edges, size_t * nEdge)
 {
     size_t minm = 2;
     size_t maxm = 5; // > nsplit ? nsplit-1 : 8 ;
-    //size_t maxm = 5 >= nsplit ? nsplit-1 : 8 ;
+    /* size_t maxm = 5 >= nsplit ? nsplit-1 : 8 ; */
+    /* size_t maxm = nsp; */
 
     if ((ub-lb) < tol){
         //printf("add edge between (%G,%G)\n",lb,ub);
@@ -2106,24 +2120,26 @@ void locate_jumps(double (*f)(double, void *), void * args,
 
     }
     else{
-        //printf("refine from %G - %G\n",lb,ub);
+        printf("refine from %G - %G\n",lb,ub);
         double * pts = linspace(lb,ub,nsplit+1);
+        dprint(nsplit+1,pts);
         double * vals = calloc_double(nsplit+1);
         size_t ii;
-        for (ii = 0; ii < nsplit+1; ii++){
-            vals[ii] = f(pts[ii],args);    
-        }
+        int return_val = fwrap_eval(nsplit+1,pts,vals,f);
+        assert (return_val == 0);
         double x;
         int disc;
-        //double jump;
+        double jump;
+        printf("\n");
         for (ii = 0; ii < nsplit; ii++){
             x = (pts[ii] + pts[ii+1])/2.0;
             disc = minmod_disc_exists(x,pts,vals,nsplit+1,minm,maxm);
-            //jump = minmod_eval(x,pts,vals,nsplit+1,minm,maxm);
-            //printf("checking disc at %G = (%G,%d)\n",x,jump,disc);
-            //printf("disc exists at %G\n",x);
+            jump = minmod_eval(x,pts,vals,nsplit+1,minm,maxm);
+            printf("checking disc at %G = (%G,%d)\n",x,jump,disc);
+
             if (disc == 1){ // discontinuity potentially exists so refine
-                locate_jumps(f,args,pts[ii],pts[ii+1],nsplit,tol,edges,nEdge);
+                printf("\tdisc exists so refine lb=%G,ub=%G\n",pts[ii],pts[ii+1]);
+                locate_jumps(f,pts[ii],pts[ii+1],nsplit,tol,edges,nEdge);
             }
         }
         free(pts); pts = NULL;
@@ -2134,81 +2150,58 @@ void locate_jumps(double (*f)(double, void *), void * args,
 /********************************************************
 *   Create Approximation by polynomial annihilation-based splitting
 *   
-*   \param f [in] - function to approximate
-*   \param args [in] - function arguments
-*   \param lb [in] - lower bound of input space
-*   \param ub [in] - upper bound of input space
+*   \param fw      [in] - function to approximate
 *   \param aoptsin [in] - approximation options
 *
 *   \return p - polynomial
 *************************************************************/
-/*
-struct PiecewisePoly *
-piecewise_poly_approx2(double (*f)(double, void *), void * args, double lb,
-                        double ub, struct PwPolyOpts * aoptsin)
-{
-    struct PwPolyOpts * aopts = NULL;
-    if (aoptsin != NULL){
-        aopts = aoptsin;
-    }
-    else{
-        aopts = malloc(sizeof(struct PwPolyOpts));
-        if (aopts == NULL){
-            fprintf(stderr, "cannot allocate space for pw adapt opts");
-            exit(1);
-        }
-        aopts->ptype = LEGENDRE;
-        aopts->maxorder = 30;
-        aopts->minsize = 1e-13;
-        aopts->coeff_check = 4;
-        aopts->epsilon = 1e-10;
-        aopts->other = NULL;
-    }
+/* struct PiecewisePoly * */
+/* piecewise_poly_approx2(struct Fwrap * fw, */
+/*                        struct PwPolyOpts * aoptsin) */
+/* { */
+/*     assert (aoptsin != NULL); */
+/*     struct PwPolyOpts * aopts = aoptsin; */
+/*     struct PiecewisePoly * p = NULL; */
     
-    double * edges = NULL;
-    size_t nEdge = 0;
-    //printf("locate jumps!\n");
-    locate_jumps(f,args,lb,ub,aopts->maxorder,aopts->minsize,&edges,&nEdge);
+/*     double lb = pw_poly_opts_get_lb(aopts); */
+/*     double ub = pw_poly_opts_get_ub(aopts); */
+    
+/*     double * edges = NULL; */
+/*     size_t nEdge = 0; */
+/*     printf("locate jumps!\n"); */
+/*     locate_jumps(fw,lb,ub,aopts->nregions,aopts->minsize,&edges,&nEdge); */
+/*     printf("number of edges are %zu\n",nEdge); */
+/*     printf("Edges are\n"); */
+/*     size_t iii; */
+/*     for (iii = 0; iii < nEdge;iii++){ */
+/*        printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n", */
+/*            edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize); */
+/*     } */
+/*     dprint(nEdge,edges); */
+/*     // */
 
-    //printf("number of edges are %zu\n",nEdge);
-    //printf("Edges are\n");
-    //size_t iii;
-    //for (iii = 0; iii < nEdge;iii++){
-    //    printf("(-buf, , buf) (%3.15G,%3.15G,%3.15G)\n",
-    //        edges[iii]-aopts->minsize,edges[iii],edges[iii]+aopts->minsize);
-    //}
-    //dprint(nEdge,edges);
-    //
+/*     size_t nNodes = nEdge*2+2; */
+/*     double * nodes = calloc_double(nNodes); */
+/*     nodes[0] = lb; */
+/*     size_t ii,jj = 1; */
+/*     for (ii = 0; ii < nEdge; ii++){ */
+/*         nodes[jj] = edges[ii] - aopts->minsize; */
+/*         nodes[jj+1] = edges[ii] + aopts->minsize; */
+/*         jj += 2; */
+/*     } */
+/*     nodes[nEdge*2+1] = ub; */
 
-    struct OpeAdaptOpts adopts;
-    adopts.start_num = 6;
-    adopts.coeffs_check = aopts->coeff_check;
-    adopts.tol = aopts->epsilon;
-    
-    double * nodes = calloc_double(nEdge*2+2);
-    nodes[0] = lb;
-    size_t ii,jj = 1;
-    for (ii = 0; ii < nEdge; ii++){
-        nodes[jj] = edges[ii] - aopts->minsize;
-        nodes[jj+1] = edges[ii] + aopts->minsize;
-        jj += 2;
-    }
-    nodes[nEdge*2+1] = ub;
-    
-    struct PiecewisePoly * p = 
-        piecewise_poly_approx_from_nodes(f, args, aopts->ptype,
-                         nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts);
-    
-    free(edges); edges = NULL;
-    free(nodes); nodes = NULL;
+/*     dprint(nNodes,nodes); */
 
-    if (aoptsin == NULL){
-        free(aopts);
-        aopts = NULL;
-    }
-    return p;
-}
-*/
+/*     exit (1); */
+/*     /\* struct PiecewisePoly * p =  *\/ */
+/*     /\*     piecewise_poly_approx_from_nodes(f, args, aopts->ptype, *\/ */
+/*     /\*                      nodes,nEdge*2+2, 2.0*aopts->minsize, &adopts); *\/ */
+    
+/*     free(edges); edges = NULL; */
+/*     free(nodes); nodes = NULL; */
+/*     return p; */
+/* } */
 
 /********************************************************//**
 *   Create Approximation by hierarchical splitting
@@ -2231,7 +2224,7 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
         poly->leaf = 1;
         poly->nbranches = 0;
         poly->ope = orth_poly_expansion_init(aopts->ptype, N, aopts->lb, aopts->ub);
-        orth_poly_expansion_approx_vec(poly->ope,fw);
+        orth_poly_expansion_approx_vec(poly->ope,fw,aopts->opeopts);
         orth_poly_expansion_round(&(poly->ope));
     }
     else{
@@ -2247,6 +2240,8 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
         }
         poly->branches = piecewise_poly_array_alloc(poly->nbranches);
 
+        /* printf("nbranches = %zu\n",poly->nbranches); */
+        /* dprint(poly->nbranches+1,pts); */
         double clb,cub; 
         size_t ii;
         for (ii = 0; ii < poly->nbranches; ii++){
@@ -2263,10 +2258,22 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
             
             poly->branches[ii] = piecewise_poly_alloc();
             poly->branches[ii]->leaf = 1;
-            poly->branches[ii]->ope = 
-                orth_poly_expansion_init(aopts->ptype, N, clb, cub);
-            orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw);
+
+            if (aopts->opeopts == NULL){
+                poly->branches[ii]->ope = 
+                    orth_poly_expansion_init(aopts->ptype, N, clb, cub);
+                orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw,aopts->opeopts);
+            }
+            else{
+                ope_opts_set_lb(aopts->opeopts,clb);
+                ope_opts_set_ub(aopts->opeopts,cub);
+                poly->branches[ii]->ope = orth_poly_expansion_approx_adapt(aopts->opeopts,fw);
+                ope_opts_set_lb(aopts->opeopts,pts[0]);
+                ope_opts_set_ub(aopts->opeopts,pts[aopts->nregions]);
+            }
+            /* printf("coeffs = "); dprint(N,poly->branches[ii]->ope->coeff); */
             orth_poly_expansion_round(&(poly->branches[ii]->ope));
+            /* printf("coeffs = "); dprint(N,poly->branches[ii]->ope->coeff); */
         }
         free(pts); pts = NULL;
     }
@@ -2280,94 +2287,72 @@ piecewise_poly_approx1(struct PwPolyOpts * aopts,
     return poly;
 }
 
-static 
-struct PiecewisePoly * pw_adapt_help_approx(struct PwPolyOpts * aopts,
-                                            struct Fwrap * fw,
-                                            double lb,double ub)
+
+static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, struct Fwrap * fw)
 {
+
     size_t N = aopts->maxorder+1;
-    struct PiecewisePoly * poly = piecewise_poly_alloc();
-    if (aopts->nregions == 1){
-        poly->leaf = 1;
-        poly->ope = orth_poly_expansion_init(aopts->ptype,N,lb,ub);
-        orth_poly_expansion_approx_vec(poly->ope,fw);
-        orth_poly_expansion_round(&(poly->ope));
-    }
-    else{
-        //printf("lb=%G,ub=%G,num=%zu\n",lb,ub,aopts->nregions);
-        double * pts = linspace(lb,ub,aopts->nregions+1);
-        //dprint(aopts->nregions+1,pts);
-        //printf("\n");
-        poly->leaf = 0;
-        poly->nbranches = aopts->nregions;
-        poly->branches = piecewise_poly_array_alloc(poly->nbranches);
+    double normalization = piecewise_poly_inner(pw,pw);
+    /* double normalization = 1; */
 
-        double clb,cub; 
-        size_t ii;
-        for (ii = 0; ii < poly->nbranches; ii++){
-            clb = pts[ii];
-            cub = pts[ii+1];
-            
-            poly->branches[ii] = piecewise_poly_alloc();
-            poly->branches[ii]->leaf = 1;
-            poly->branches[ii]->ope = orth_poly_expansion_init(aopts->ptype, N, clb, cub);
-            orth_poly_expansion_approx_vec(poly->branches[ii]->ope,fw);
-            orth_poly_expansion_round(&(poly->branches[ii]->ope));
-        }
-        free(pts); pts = NULL;
-    }
-    return poly;
-}
+    double true_lb = piecewise_poly_lb(pw);
+    double true_ub = piecewise_poly_ub(pw);
 
-static struct PiecewisePoly *
-pw_adapt_help_adapt(struct PwPolyOpts * aopts,
-                    struct Fwrap * fw,
-                    double lb,double ub)
-{
-    struct PiecewisePoly * poly = pw_adapt_help_approx(aopts,fw,lb,ub);
-    size_t ii,jj;
-    /* printf("nbranches = %zu\n",poly->nbranches); */
-    for (ii = 0; ii < poly->nbranches; ii++){
-        size_t npolys = poly->branches[ii]->ope->num_poly;
-        double lbs = piecewise_poly_lb(poly->branches[ii]);
-        double ubs = piecewise_poly_ub(poly->branches[ii]);
-        //printf("checking branch (%G,%G)\n",lbs,ubs);
+    /* printf("refining (%G,%G)\n",true_lb,true_ub); */
+    /* printf("number of branches = %zu\n",pw->nbranches); */
+    assert (pw->ope == NULL);
+    int refined_once = 0;
+
+    for (size_t ii = 0; ii < pw->nbranches; ii++){
+
+
+        assert (pw->branches[ii]->leaf == 1);
+        double lb = piecewise_poly_lb(pw->branches[ii]);
+        double ub = piecewise_poly_ub(pw->branches[ii]);
+        /* printf("\t refining branch %zu\n",ii); */
+        /* printf("\tlb=%G,ub=%G,diff=%3.5E,minsize=%3.5E\n",lb,ub,ub-lb,aopts->minsize); */
         int refine = 0;
-        //printf("npolys = %zu\n",npolys);
-        size_t ncheck = aopts->coeff_check < npolys ? 
-                            aopts->coeff_check : npolys;
-        double sum = 0.0;
-        for (jj = 0; jj < npolys; jj++){
-            sum += pow(poly->branches[ii]->ope->coeff[jj],2);
-        }
-        sum = 1.0;
-        //sum = fmax(sum,1.0);
-        for (jj = 0; jj < ncheck; jj++){
-            double c =  poly->branches[ii]->ope->coeff[npolys-1-jj];
-            //printf("coeff = %G\n,",c);
-            if (fabs(c) > (aopts->epsilon * sum)){
-                refine = 1;
-                //printf("refine \n");
-                break;
-            }
-        }
-        /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
-        if ( (ubs-lbs) < aopts->minsize ){
+        if ( ( (ub-lb) < aopts->minsize) || (aopts->nregions == 1)){
             refine = 0;
         }
-        //*
-        if (refine == 1){
-            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
-            //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
-            //break;
-            piecewise_poly_free(poly->branches[ii]);
-            poly->branches[ii] = NULL;
-            assert(aopts->pts == NULL);
-            poly->branches[ii] = pw_adapt_help_adapt(aopts,fw,lbs,ubs);
+        else{
+            size_t ncheck = aopts->coeff_check < N ? aopts->coeff_check : N;
+            /* printf("\n\ncheck refine\n"); */
+            for (size_t jj = 0; jj < ncheck; jj++){
+                double c =  pw->branches[ii]->ope->coeff[N-1-jj];
+                /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,normalization,aopts->epsilon); */
+                /* printf("cleft = %3.15E,cright=%3.15E\n",c*c,normalization*aopts->epsilon); */
+                if (c*c > (aopts->epsilon * normalization)){
+                    refine = 1;
+                    /* printf("refine!\n"); */
+                    break;
+                }
+            }
         }
-        //*/
+    
+        if (refine == 1){
+            refined_once = 1;
+            /* printf("refining branch (%G,%G)\n",lb,ub); */
+            /* printf("diff = %G, minsize = %G\n",ub-lb, aopts->minsize); */
+
+            aopts->lb = lb;
+            aopts->ub = ub;
+            piecewise_poly_free(pw->branches[ii]); pw->branches[ii] = NULL;
+            pw->branches[ii] = piecewise_poly_approx1(aopts,fw);
+            aopts->lb = true_lb;
+            aopts->ub = true_ub;
+        }
     }
-    return poly;
+
+    piecewise_poly_flatten(pw);
+    if (refined_once == 1){ // recurse
+        /* printf("\t\t recurse!\n"); */
+        adapt_help(pw,aopts,fw);
+    }
+    /* else{ */
+    /*     printf("done!\n"); */
+    /* } */
+    
 }
 
 /********************************************************//**
@@ -2382,59 +2367,50 @@ struct PiecewisePoly *
 piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
                              struct Fwrap * fw)
 {
+    assert (aopts != NULL);
+    assert (aopts->pts == NULL);
 
-    struct PiecewisePoly * poly = piecewise_poly_approx1(aopts,fw);//lb,ub,aopts);
-    size_t ii,jj;
-    /* printf("nbranches = %zu\n",poly->nbranches); */
-    for (ii = 0; ii < poly->nbranches; ii++){
-        /* printf("should not be here!\n"); */
-        /* exit(1); */
-        size_t npolys = poly->branches[ii]->ope->num_poly;
-        double lbs = piecewise_poly_lb(poly->branches[ii]);
-        double ubs = piecewise_poly_ub(poly->branches[ii]);
-        //printf("checking branch (%G,%G)\n",lbs,ubs);
-        int refine = 0;
-        //printf("npolys = %zu\n",npolys);
-        size_t ncheck = aopts->coeff_check < npolys ? 
-                            aopts->coeff_check : npolys;
-        double sum = 0.0;
-        for (jj = 0; jj < npolys; jj++){
-            sum += pow(poly->branches[ii]->ope->coeff[jj],2);
-        }
-        sum = 1.0;
-        //sum = fmax(sum,1.0);
-        for (jj = 0; jj < ncheck; jj++){
-            double c =  poly->branches[ii]->ope->coeff[npolys-1-jj];
-            //printf("coeff = %G\n,",c);
-            if (fabs(c) > (aopts->epsilon * sum)){
+    size_t N = aopts->maxorder+1;
+
+    struct PiecewisePoly * poly = piecewise_poly_alloc();
+
+    poly->leaf = 1;
+    poly->nbranches = 0;
+    poly->ope = orth_poly_expansion_init(aopts->ptype,N,aopts->lb,aopts->ub);
+    orth_poly_expansion_approx_vec(poly->ope,fw,aopts->opeopts);
+    orth_poly_expansion_round(&(poly->ope));
+    /* poly->ope = orth_poly_expansion_approx_adapt(aopts->opeopts,fw); */
+
+    int refine = 0;
+    if ( ( (aopts->ub-aopts->lb) < aopts->minsize) || (aopts->nregions == 1)){
+        refine = 0;
+    }
+    else{
+        
+        size_t npolys = N;
+        size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
+        double normalization = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1);
+        /* double normalization = 1.0; */
+        for (size_t jj = 0; jj < ncheck; jj++){
+            double c =  poly->ope->coeff[npolys-1-jj];
+            /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,sum,aopts->epsilon); */
+            if (c*c > (aopts->epsilon * normalization)){
                 refine = 1;
-                //printf("refine \n");
                 break;
             }
         }
-        /* printf("(ubs-lbs)=%G, minsize=%G \n", ubs-lbs, aopts->minsize); */
-        if ( (ubs-lbs) < aopts->minsize ){
-            refine = 0;
-        }
-        //*
-        if (refine == 1){
-            /* printf("refining branch (%G,%G)\n",lbs,ubs); */
-            //printf("diff = %G, minsize = %G\n",ubs-lbs, aopts->minsize);
-            //break;
-            piecewise_poly_free(poly->branches[ii]);
-            poly->branches[ii] = NULL;
-            assert(aopts->pts == NULL);
-            poly->branches[ii] = pw_adapt_help_adapt(aopts,fw,lbs,ubs);
-        }
-        //*/
     }
 
-    /* if (aoptsin == NULL){ */
-    /*     free(aopts); */
-    /*     aopts = NULL; */
-    /* } */
+    if (refine == 1){
+        piecewise_poly_free(poly); poly = NULL;
+        poly = piecewise_poly_approx1(aopts,fw);
+        adapt_help(poly,aopts,fw);
+    }
 
+    /* ope_opts_free(aopts->opeopts); aopts->opeopts = NULL; */
+    
     return poly;
+    
 }
 
 ////////////////////////////////////////////////////////
@@ -2534,11 +2510,9 @@ void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args)
     if (pw->ope != NULL){
         print_orth_poly_expansion(pw->ope,prec,args);
     }
-    /* else{ */
-    /*     printf("%G\n",pw->split); */
-    /*     printf("| \n"); */
-    /*     print_piecewise_poly(pw->left,prec,args); */
-    /* } */
+    else{
+        printf("Tree structure with %zu branches\n",pw->nbranches);
+    }
 }
 
 

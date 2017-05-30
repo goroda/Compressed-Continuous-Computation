@@ -665,7 +665,7 @@ void Test_function_train_param_grad_eval(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-6;
+        double h = 1e-4;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -774,7 +774,7 @@ void Test_function_train_param_grad_eval_simple(CuTest * tc)
     /* printf("grad = "); dprint(totparam,grad); */
     for (size_t zz = 0; zz < ndata; zz++){
         running = 0;
-        double h = 1e-6;
+        double h = 1e-4;
         for (size_t ii = 0; ii < dim; ii++){
             /* printf("dim = %zu\n",ii); */
             for (size_t jj = 0; jj < nparam[ii]; jj++){
@@ -2252,11 +2252,11 @@ void Test_LS_AIO_kernel(CuTest * tc)
     
 
     // Initialize Approximation Structure
-    size_t nparams = 40;
+    size_t nparams = 10;
     double * centers = linspace(lb,ub,nparams);
     double scale = 1.0;
     double width = pow(nparams,-0.2)*2.0/12.0;
-    width *= 20;
+    width *= 10;
     /* printf("\t width = %G\n",width); */
 
     struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
@@ -2282,11 +2282,15 @@ void Test_LS_AIO_kernel(CuTest * tc)
     
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
 
-    struct c3Opt * optimizer = c3opt_create(BFGS);
+    struct c3Opt * optimizer = c3opt_create(SGD);
+    c3opt_set_sgd_nsamples(optimizer,ndata);
+    regress_opts_set_stoch_obj(ropts,1);
+    
+    /* struct c3Opt * optimizer = c3opt_create(BFGS); */
     c3opt_set_verbose(optimizer,0);
     c3opt_set_gtol(optimizer,1e-5);
     /* c3opt_ls_set_maxiter(optimizer,50); */
-    c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_maxiter(optimizer,500);
     
 
     double resid = 0.0;
@@ -2409,13 +2413,19 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
 
-    struct c3Opt * optimizer = c3opt_create(BFGS);
+    struct c3Opt * optimizer = c3opt_create(SGD);
+    c3opt_set_sgd_nsamples(optimizer,ndata);
+    regress_opts_set_stoch_obj(ropts,1);
+
+    
+    /* struct c3Opt * optimizer = c3opt_create(BFGS); */
+    /* c3opt_ls_set_maxiter(optimizer,50); */
+    
     c3opt_set_verbose(optimizer,0);
     c3opt_set_gtol(optimizer,1e-5);
     c3opt_set_relftol(optimizer,1e-20);
     c3opt_set_absxtol(optimizer,0);
-    c3opt_ls_set_maxiter(optimizer,50);
-    c3opt_set_maxiter(optimizer,2000);
+    c3opt_set_maxiter(optimizer,500);
     
 
     double resid = 0.0;

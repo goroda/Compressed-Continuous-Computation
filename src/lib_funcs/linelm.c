@@ -593,6 +593,50 @@ double lin_elem_exp_eval(const struct LinElemExp * f, double x)
     double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
     return value;
 }
+
+/********************************************************//**
+*   Evaluate the derivative of a linear  lin elem expansion
+*
+*   \param[in] f - function
+*   \param[in] x - location
+*
+*   \return value
+*************************************************************/
+double lin_elem_exp_deriv_eval(const struct LinElemExp * f, double x)
+{
+    if ((x < f->nodes[0]) || (x > f->nodes[f->num_nodes-1])){
+        return 0.0;
+    }
+    
+    size_t indmin = lin_elem_exp_find_interval(f,x);
+    /* printf("indmin = %zu\n",indmin); */
+    /* printf("x = %G\n",x); */
+
+    if (fabs(x - f->nodes[indmin]) <= 1e-15){
+        if (indmin == 0){
+            double plus = f->coeff[indmin+1];
+            double curr = f->coeff[indmin];
+            return (plus-curr)/(f->nodes[indmin+1]-f->nodes[indmin]);
+        }
+        else if (indmin < f->num_nodes-1){
+            double plus = f->coeff[indmin+1];
+            double minus = f->coeff[indmin-1];
+            return (plus-minus)/(f->nodes[indmin+1]-f->nodes[indmin-1]);
+        }
+        else{
+            double curr = f->coeff[indmin];
+            double minus = f->coeff[indmin-1];
+            return (curr-minus)/(f->nodes[indmin]-f->nodes[indmin-1]);
+        }
+    }
+   
+    double den = f->nodes[indmin+1]-f->nodes[indmin];
+    double dtdx = -1.0/den;
+    
+    double value = (f->coeff[indmin]- f->coeff[indmin+1])*dtdx;
+    return value;
+}
+
 /********************************************************//**
 *   Evaluate the lin elem expansion
 *
@@ -971,7 +1015,6 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     double left,mixed,right,dx2;
     for (size_t ii = 0; ii < N-1; ii++){
         dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
-        /* dx2 = f->diff[ii] * f->diff[ii];//(x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
         lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
         value += (f[ii] * g[ii]) / dx2 * left +
                  (f[ii] * g[ii+1]) / dx2 * mixed +
@@ -1007,31 +1050,46 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
                                         f->coeff, g->coeff);
     }
     else{
-        assert ( (f->num_nodes + g->num_nodes) < 1000);
-        double xnew[1000];
-        double fnew[1000];
-        double gnew[1000];
-//        printf("here\n");
 
-        size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
-                                                     xnew,fnew,gnew);
-//        printf("nnodes = %zu\n",nnodes);
+        double xnew[10000];
+        double fnew[10000];
+        double gnew[10000];
+        double * xuse,*fuse,*guse;
+        double * xx = NULL;
+        double * ff = NULL;
+        double * gg = NULL;
+        size_t n_new = f->num_nodes + g->num_nodes;
+        if (n_new >= 10000){
+            xx = calloc_double(n_new);
+            ff = calloc_double(n_new);
+            gg = calloc_double(n_new);
+            xuse = xx;
+            fuse = ff;
+            guse = gg;
+        }
+        else{
+            xuse = xnew;
+            fuse = fnew;
+            guse = gnew;
+        }
+        
+        size_t nnodes = lin_elem_exp_inner_same_grid(f,g, xuse,fuse,guse);
         if (nnodes > 2){
-            //          printf("nnodes = %zu\n",nnodes);
-            // dprint(nnodes,xnew);
-            //dprint(nnodes,fnew);
-            //dprint(nnodes,gnew);
-            value = lin_elem_exp_inner_same(nnodes,xnew,fnew,gnew);
+            value = lin_elem_exp_inner_same(nnodes,xuse,fuse,guse);
         }
         else{
             printf("weird =\n");
-
             printf("f = \n");
             print_lin_elem_exp(f,3,NULL,stdout);
             printf("g = \n");
             print_lin_elem_exp(g,3,NULL,stdout);
-            
             assert(1 == 0);
+        }
+
+        if ( xx != NULL){
+            free(xx); xx = NULL;
+            free(ff); ff = NULL;
+            free(gg); gg = NULL;
         }
         //       printf("there\n");
     }
@@ -1056,9 +1114,6 @@ static int lin_elem_exp_axpy_same(double a, const struct LinElemExp * f,
 {
 
     cblas_daxpy(g->num_nodes,a,f->coeff,1,g->coeff,1);
-    /* for (size_t ii = 0; ii < g->num_nodes; ii++){ */
-    /*     g->coeff[ii] += a*f->coeff[ii]; */
-    /* } */
     return 0;
 }
 
@@ -1547,7 +1602,7 @@ void lin_elem_adapt(struct Fwrap * f,
         fwrap_eval(1,&mid,&fmid,f);
 
         if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
-//        if (fabs( (fl+fr)/2.0 - fmid) < delta){
+        /* if (fabs( (fl+fr)/2.0 - fmid  ) < delta){ */
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */

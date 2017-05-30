@@ -831,8 +831,8 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A,
     double * work = calloc(lwork, sizeof(double));
     int info2;
     
-    dgetrf_(&r,&r, Asinv, &r, ipiv2, &info2); 
-    dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); //invert
+    dgetrf_((int*)&r,(int*)&r, Asinv, (int*)&r, ipiv2, &info2); 
+    dgetri_((int*)&r, Asinv, (int*)&r, ipiv2, work, (int*)&lwork, &info2); //invert
         
     struct Quasimatrix * B = qmm(A,Asinv,r);
     size_t maxcol;
@@ -849,9 +849,9 @@ int quasimatrix_maxvol1d(struct Quasimatrix * A,
             }
         }
 
-        dgetrf_(&r,&r, Asinv, &r, ipiv2, &info2);
+        dgetrf_((int*)&r,(int*)&r, Asinv, (int*)&r, ipiv2, &info2);
         //invert
-        dgetri_(&r, Asinv, &r, ipiv2, work, &lwork, &info2); 
+        dgetri_((int*)&r, Asinv, (int*)&r, ipiv2, work, (int*)&lwork, &info2); 
         quasimatrix_free(B);
         B = qmm(A,Asinv,r);
         maxcol = quasimatrix_absmax(B,&maxloc,&maxval,NULL);

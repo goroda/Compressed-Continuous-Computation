@@ -1683,8 +1683,43 @@ struct PP
 };
 
 
+static double run_ft_param_eval_objective_aio(struct FTparam * ftp, struct RegressOpts * opts,
+                                              struct RegressionMemManager * mem,
+                                              size_t nparam, const double * param, size_t N,
+                                              const double * x, const double * y, double * grad)
+{
+
+    int restrict_needed = restrict_ranksp(opts);
+    double eval;
+    if (restrict_needed == 0){
+        ft_param_update_params(ftp,param);
+        if (grad != NULL){
+            for (size_t ii = 0; ii < nparam; ii++){
+                grad[ii] = 0.0;
+            }
+        }
+        eval = ft_param_eval_objective_aio(ftp,opts,mem,N,x,y,grad);
+    }
+    else{
+        ft_param_update_restricted_ranks(ftp,param,opts->restrict_rank_opt);
+        if (grad != NULL){
+            double * grad_use = calloc_double(ftp->nparams);
+            eval = ft_param_eval_objective_aio_ls(ftp,mem,N,x,y,grad_use);
+            extract_restricted_vals(opts,ftp,grad_use,grad);
+            free(grad_use); grad_use = NULL;
+        }
+        else{
+            eval = ft_param_eval_objective_aio(ftp,opts,mem,N,x,y,grad);
+        }
+    }
+
+    return eval;
+}
+
+
 /***********************************************************//**
     General all-at-once regression objective for c3opt optimizer
+    ** THIS IS AN INTERFACE FUNCTION FOR C3OPT **
 
     \param[in]     nparam - number of parameters
     \param[in]     param  - parameter values
@@ -1713,40 +1748,11 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
     struct PP * pp = args;
 
     // check if special structure exists / initialized
-    /* printf("check structure\n"); */
     regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);
-    /* printf("done\n"); */
     regress_mem_manager_reset_running(pp->mem);
 
-    /* printf("in regress min_aio r2 in first core is %zu\n",pp->mem->running_grad[0]->r2); */
-    
-    int restrict_needed = restrict_ranksp(pp->opts);
-    double eval;
-    if (restrict_needed == 0){
-        ft_param_update_params(pp->ftp,param);
-        if (grad != NULL){
-            for (size_t ii = 0; ii < nparam; ii++){
-                grad[ii] = 0.0;
-            }
-        }
-        eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,pp->N,pp->x,pp->y,grad);
-        /* if (grad != NULL){ */
-        /*     printf("grad = "); */
-        /*     dprint(nparam,grad); */
-        /* } */
-    }
-    else{
-        ft_param_update_restricted_ranks(pp->ftp,param,pp->opts->restrict_rank_opt);
-        if (grad != NULL){
-            double * grad_use = calloc_double(pp->ftp->nparams);
-            eval = ft_param_eval_objective_aio_ls(pp->ftp,pp->mem,pp->N,pp->x,pp->y,grad_use);
-            extract_restricted_vals(pp->opts,pp->ftp,grad_use,grad);
-            free(grad_use); grad_use = NULL;
-        }
-        else{
-            eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,pp->N,pp->x,pp->y,grad);
-        }
-    }
+    double eval = run_ft_param_eval_objective_aio(pp->ftp, pp->opts,pp->mem,nparam,param,pp->N,
+                                                  pp->x,pp->y,grad);
 
     if (isnan(eval)){
         fprintf(stderr,"Regress aio objective is NaN\n");
@@ -1764,7 +1770,8 @@ double regress_opts_minimize_aio(size_t nparam, const double * param,
 
 /***********************************************************//**
     General all-at-once regression objective for c3opt optimizer
-    when stochastic optimization used
+    when stochastic optimization is used 
+    ** THIS IS AN INTERFACE FUNCTION FOR C3OPT **
 
     \param[in]     nparam - number of parameters
     \param[in]     ind    - index of data point
@@ -1788,45 +1795,14 @@ double regress_opts_stoch_minimize_aio(size_t nparam, size_t ind,
         exit(1);
     }
 
+    size_t dim = pp->ftp->dim;
 
     // check if special structure exists / initialized
     regress_mem_manager_check_structure(pp->mem, pp->ftp,pp->x);
     regress_mem_manager_reset_running(pp->mem);
 
-    size_t dim = pp->ftp->dim;
-    
-    int restrict_needed = restrict_ranksp(pp->opts);
-    double eval;
-    if (restrict_needed == 0){
-        ft_param_update_params(pp->ftp,param);
-        if (grad != NULL){
-            for (size_t ii = 0; ii < nparam; ii++){
-                grad[ii] = 0.0;
-            }
-        }
-        eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad);
-        /* printf("eval = %G\n",eval); */
-        /* if (isnan(eval)){ */
-        /*     fprintf(stderr,"eval is NaN\n"); */
-        /*     exit(1); */
-        /* } */
-        /* if (isinf(eval)){ */
-        /*     fprintf(stderr,"eval is inf\n"); */
-        /*     exit(1); */
-        /* } */
-    }
-    else{
-        ft_param_update_restricted_ranks(pp->ftp,param,pp->opts->restrict_rank_opt);
-        if (grad != NULL){
-            double * grad_use = calloc_double(pp->ftp->nparams);
-            eval = ft_param_eval_objective_aio_ls(pp->ftp,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad_use);
-            extract_restricted_vals(pp->opts,pp->ftp,grad_use,grad);
-            free(grad_use); grad_use = NULL;
-        }
-        else{
-            eval = ft_param_eval_objective_aio(pp->ftp,pp->opts,pp->mem,1,pp->x+ind*dim,pp->y+ind,grad);
-        }
-    }
+    double eval = run_ft_param_eval_objective_aio(pp->ftp, pp->opts,pp->mem,nparam,param,1,
+                                                  pp->x+ind*dim,pp->y+ind,grad);   
 
     return eval;
 }

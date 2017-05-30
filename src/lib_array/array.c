@@ -113,7 +113,7 @@ void free_dd(size_t N, double ** arr){
 void 
 dprint(const size_t N, const double * arr){
     size_t ii = 0;
-    for (ii = 0; ii < N; ii++) printf("%f ",arr[ii]);
+    for (ii = 0; ii < N; ii++) printf("%3.5E ",arr[ii]);
     printf("\n");
 }
 
@@ -436,7 +436,8 @@ char * serialize_double_to_text(double x)
                
     //printf("res=%f,exp=%d\n",res,exp);
     int cx;
-    cx = snprintf(buffer, N, "%0.10f:%d", res,exp);
+    /* cx = snprintf(buffer, N, "%0.10f:%d", res,exp); */ // worked before
+    cx = snprintf(buffer, N, "%3.14E:%d", res,exp);
     /* cx = snprintf(buffer, N, "%10.20f:%d", res,exp); */
     //printf("after = %s\n",buffer);
     char * temp2 = NULL;
@@ -451,7 +452,8 @@ char * serialize_double_to_text(double x)
             exit(1);
         }
         N = (size_t)cx;
-        snprintf(buffer, N, "%0.20f:%d", res,exp);
+        /* snprintf(buffer, N, "%0.20f:%d", res,exp); */
+        snprintf(buffer, N, "%3.14E:%d", res,exp);
     }
     else if (cx < 0){
         fprintf(stderr, "some other error writing double \n");

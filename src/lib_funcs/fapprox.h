@@ -44,8 +44,6 @@
 #ifndef FAPPROX_H
 #define FAPPROX_H
 
-#include <stdlib.h>
-
 #include "functions.h"
 
 struct OneApproxOpts

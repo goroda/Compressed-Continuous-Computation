@@ -41,24 +41,26 @@ int main(void)
     struct Fwrap * fw = fwrap_create(dim,"general");
     fwrap_set_f(fw,function_monitor_eval,fm);
     struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
-    pw_poly_opts_set_maxorder(opts,5);
-    pw_poly_opts_set_minsize(opts,1e-3);
-    pw_poly_opts_set_coeffs_check(opts,41);
-    pw_poly_opts_set_tol(opts,1e-8);
+    pw_poly_opts_set_nregions(opts,3);
+    pw_poly_opts_set_maxorder(opts,6);
+    pw_poly_opts_set_minsize(opts,1e-2);
+    pw_poly_opts_set_coeffs_check(opts,1);
+    pw_poly_opts_set_tol(opts,1e-10);
+    
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     int verbose = 2;
-    size_t rank = 2;
+    size_t rank = 1;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
-        start[ii] = linspace(0.0,1.0,rank);
+        start[ii] = linspace(0.1,1.0,rank);
     }
     c3approx_init_cross(c3a,rank,verbose,start);
     c3approx_set_cross_tol(c3a,1e-1);
-    c3approx_set_cross_maxiter(c3a,1);
+    c3approx_set_cross_maxiter(c3a,3);
     c3approx_set_verbose(c3a,2);
-    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     char final_errs[256];
     sprintf(final_errs,"final.dat");

@@ -41,25 +41,30 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
-double * calloc_double(const size_t);
+// allocation functions
+double *  calloc_double(const size_t);
 double ** malloc_dd(const size_t);
-int * calloc_int(const size_t);
-size_t * calloc_size_t(const size_t);
-void copy_dd(size_t, size_t, double **, double **);
-void free_dd(size_t N, double ** arr);
+int    *  calloc_int(const size_t);
+size_t *  calloc_size_t(const size_t);
+void      copy_dd(size_t, size_t, double **, double **);
+void      free_dd(size_t N, double ** arr);
 
+// initialize functions
 double * dones(const size_t);
 double * drandu(const size_t);
 double * darray_val(const size_t, double);
 double * dzeros(const size_t);
-int * izeros(const size_t);
+int    * izeros(const size_t);
 
+// operations on single array
 double dprod(const size_t, const double*);
-int iprod(const size_t, const int*);
+int    iprod(const size_t, const int*);
 size_t iprod_sz(const size_t, const size_t*);
 
+
+// printing functions
 void dprint(const size_t, const double *);
 void dprint2d(const size_t, const size_t, const double *);
 void dprint2dd(const size_t, const size_t,  double **);
@@ -67,18 +72,21 @@ void dprint2d_col(const size_t, const size_t, const double *);
 void iprint(const size_t, const int *);
 void iprint_sz(const size_t, const size_t *);
 
+
+
 double * linspace(const double,const double,const size_t);
 double * logspace(int, int, const size_t);
 double * arange(const double,const double,const double, size_t *);
 double * diag(const size_t, double *);
 double * dconcat_cols(size_t, size_t, size_t, double *, double *);
 
-char * serialize_double_to_text(double);
-double deserialize_double_from_text(char *);
-char * serialize_darray_to_text(size_t, const double *);
+// serialization functions
+char   * serialize_double_to_text(double);
+double   deserialize_double_from_text(char *);
+char   * serialize_darray_to_text(size_t, const double *);
 double * deserialize_darray_from_text(char *, size_t *);
 
-int darray_save(size_t, size_t, double *, char *, int);
+int      darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
 
 struct c3Vector

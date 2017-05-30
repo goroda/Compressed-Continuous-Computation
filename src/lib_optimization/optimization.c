@@ -198,7 +198,7 @@ struct c3SGD * c3sgd_alloc()
     }
 
     sgd->validation_fraction = 0.1;
-    sgd->learn_rate = 1.0;
+    sgd->learn_rate = 1e-3;
     sgd->learn_rate_decay = 0.999;
 
     sgd->nsamples = 0;
@@ -307,6 +307,9 @@ struct c3Opt * c3opt_create(enum c3opt_alg alg)
     opt->maxiter = 1000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
@@ -457,6 +460,9 @@ struct c3Opt * c3opt_alloc(enum c3opt_alg alg, size_t d)
     opt->maxiter = 50000;
     opt->relxtol = 1e-8;
     opt->absxtol = 1e-8;
+    if (alg == SGD){
+        opt->absxtol = 1e-20;
+    }
     opt->relftol = 1e-8;
     opt->gtol = 1e-12;
 
@@ -1596,7 +1602,7 @@ static void shuffle(size_t N, size_t * orders)
 {
     if (N > 1){
         for (size_t ii = 0; ii < N-1; ii++){
-            size_t jj = ii + rand()/(RAND_MAX / (N - ii) + 1);
+            size_t jj = ii + (size_t)rand()/(RAND_MAX / (N - ii) + 1);
             size_t t = orders[jj];
             orders[jj] = orders[ii];
             orders[ii] = t;
@@ -1695,7 +1701,8 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
 
     // shuffle the order, first half will be training set, second will be validation test
     shuffle(ndata,order);
-    size_t ndata_train = ndata / 1.1;
+
+    size_t ndata_train = (size_t) lrint(ndata / 1.1);
     size_t ndata_validate = ndata - ndata_train;
 
     if (verbose > 0){
@@ -3197,8 +3204,8 @@ newton(double ** start, size_t dim, double step_size, double tol,
         
     int done = 0;
     double * p = calloc_double(dim);
-    size_t * piv = calloc_size_t(dim);
-    size_t one = 1;
+    int * piv = calloc_int(dim);
+    int one = 1;
     double diff;
     //double diffrel;
     double den;
@@ -3208,7 +3215,7 @@ newton(double ** start, size_t dim, double step_size, double tol,
         double * grad = g(*start,args);
         double * hess = h(*start, args);
         int info;
-        dgesv_(&dim,&one,hess,&dim,piv,grad,&dim, &info);
+        dgesv_((int*)&dim,&one,hess,(int*)&dim,piv,grad,(int*)&dim, &info);
         assert(info == 0);
         
         diff = 0.0;
@@ -3298,9 +3305,9 @@ int box_damp_newton(size_t d, double * lb, double * ub,
     
 //    printf("here here\n");
     int one=1,info;
-    size_t * piv = calloc_size_t(d);
+    int * piv = calloc_int(d);
     memmove(space+d,grad,d*sizeof(double));
-    dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+    dgesv_((int*)&d,&one,hess,(int*)&d,piv,space+d,(int*)&d,&info);
     free(piv); piv = NULL;
     assert(info == 0);
 
@@ -3348,8 +3355,8 @@ int box_damp_newton(size_t d, double * lb, double * ub,
         }
 
         memmove(space+d,grad,d*sizeof(double));
-        piv = calloc_size_t(d);
-        dgesv_(&d,&one,hess,&d,piv,space+d,&d,&info);
+        piv = calloc_int(d);
+        dgesv_((int*)&d,&one,hess,(int*)&d,piv,space+d,(int*)&d,&info);
         free(piv); piv = NULL;
         assert(info == 0);
 

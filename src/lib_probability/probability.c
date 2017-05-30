@@ -715,7 +715,7 @@ void linear_transform_invert(struct LinearTransform * lt)
             lt->Ainv = calloc_double(lt->dimin*lt->dimout);
             memmove(lt->Ainv, lt->A, lt->dimin * lt->dimout * sizeof(double));
             int info;
-            dtrtri_("L","N",&(lt->dimout),lt->Ainv,&(lt->dimout),&info);
+            dtrtri_("L","N",(int*)&(lt->dimout),lt->Ainv,(int*)&(lt->dimout),&info);
             if (info != 0){
                 fprintf(stderr, "Error inverting lower triangular lin transform %d\n",info);
             }
@@ -1094,7 +1094,7 @@ probability_density_mvn(size_t dim, double * mean, double * cov)
     
     // compute cholesky
     int info;
-    dpotrf_("L",&dim,pdf->lt->A,&dim,&info);
+    dpotrf_("L",(int*)&dim,pdf->lt->A,(int*)&dim,&info);
     pdf->lt->mt = LT;
     if (info != 0){
         fprintf(stdout,"Warning: cholesky finished with info=%d\n",info);

@@ -53,6 +53,7 @@
 
 #ifndef ZEROTHRESH
     #define ZEROTHRESH 1e2*DBL_EPSILON
+    /* #define ZEROTHRESH 1e-200 */
 #endif
 
 #ifndef VPREPCORE
@@ -2792,18 +2793,25 @@ function_train_constant(double a, struct MultiApproxOpts * aopts)
     
     size_t onDim = 0;
 
+
+    double sign = 1;
+    if (a < 0){
+        sign = -1;
+    }
+    double apow = pow(fabs(a),1.0/dim);
+    /* printf("a = %3.15G apow = %3.15G\n",a,apow); */
     struct OneApproxOpts * oneopt = multi_approx_opts_get_aopts(aopts,onDim);
     ft->ranks[onDim] = 1;
     ft->cores[onDim] = qmarray_alloc(1,1);
     ft->cores[onDim]->funcs[0] =
-        generic_function_constant(a,oneopt->fc,oneopt->aopts);
+        generic_function_constant(sign*apow,oneopt->fc,oneopt->aopts);
 
     for (onDim = 1; onDim < dim; onDim++){
         oneopt = multi_approx_opts_get_aopts(aopts,onDim);
         ft->ranks[onDim] = 1;
         ft->cores[onDim] = qmarray_alloc(1,1);
         ft->cores[onDim]->funcs[0] =
-            generic_function_constant(1,oneopt->fc,oneopt->aopts);
+            generic_function_constant(apow,oneopt->fc,oneopt->aopts);
     }
     ft->ranks[dim] = 1;
 
@@ -4329,10 +4337,17 @@ ftapprox_cross(struct Fwrap * fw,
             //printf("prep core\n");
             /* temp = prepCore(ii,nrows,f,args,bd,left_ind,right_ind,cargs,apargs,0); */
             temp = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,left_ind,right_ind);
+
+            /* printf("right after prepping core\n"); */
+            /* print_qmarray(temp,0,NULL); */
             //printf("prepped core\n");
 
             R = calloc_double(temp->nrows * temp->nrows);
             Q = qmarray_householder_simple("LQ", temp,R,o);
+
+            /* printf("right after taking QR of prepped core\n"); */
+            /* print_qmarray(Q,0,NULL); */
+            
             Qt = qmarray_transpose(Q);
             pivind = calloc_size_t(ft->ranks[ii]);
             pivx = calloc_double(ft->ranks[ii]);
@@ -4386,6 +4401,8 @@ ftapprox_cross(struct Fwrap * fw,
             free(pivind);
             free(pivx);
             free(R); R=NULL;
+
+            /* break; //AG REMOVE THIS 5/18 */
 
         }
 
@@ -4961,6 +4978,7 @@ void function_train_gradient_eval(const struct FunctionTrain * ft,
 
         qmarray_eval(ft->cores[ii],x[ii],core_evals[ii]); // evaluate core
         qmarray_deriv_eval(ft->cores[ii],x[ii],core_grad_space); // get the gradient of the core
+        
         if (ii > 0){
             vals = running_core_total_get_vals(evals_lr);
             grads[ii]->No = 1;

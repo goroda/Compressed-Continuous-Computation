@@ -34,16 +34,14 @@
 
 //Code
 
-
-
-
-
 /** \file fwrap.h
  * Provides header files and structure definitions for functions in fwrap.c 
  */
 
 #ifndef FWRAP_H
 #define FWRAP_H
+
+#include <stddef.h>
 
 struct Fwrap;
 struct Fwrap * fwrap_create(size_t, const char *);
