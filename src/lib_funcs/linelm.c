@@ -1015,7 +1015,6 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     double left,mixed,right,dx2;
     for (size_t ii = 0; ii < N-1; ii++){
         dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
-        /* dx2 = f->diff[ii] * f->diff[ii];//(x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
         lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
         value += (f[ii] * g[ii]) / dx2 * left +
                  (f[ii] * g[ii+1]) / dx2 * mixed +
@@ -1051,32 +1050,46 @@ double lin_elem_exp_inner(const struct LinElemExp * f,
                                         f->coeff, g->coeff);
     }
     else{
-        
-        assert ( (f->num_nodes + g->num_nodes) < 100000);
-        double xnew[100000];
-        double fnew[100000];
-        double gnew[100000];
-//        printf("here\n");
 
-        size_t nnodes = lin_elem_exp_inner_same_grid(f,g,
-                                                     xnew,fnew,gnew);
-//        printf("nnodes = %zu\n",nnodes);
+        double xnew[10000];
+        double fnew[10000];
+        double gnew[10000];
+        double * xuse,*fuse,*guse;
+        double * xx = NULL;
+        double * ff = NULL;
+        double * gg = NULL;
+        size_t n_new = f->num_nodes + g->num_nodes;
+        if (n_new >= 10000){
+            xx = calloc_double(n_new);
+            ff = calloc_double(n_new);
+            gg = calloc_double(n_new);
+            xuse = xx;
+            fuse = ff;
+            guse = gg;
+        }
+        else{
+            xuse = xnew;
+            fuse = fnew;
+            guse = gnew;
+        }
+        
+        size_t nnodes = lin_elem_exp_inner_same_grid(f,g, xuse,fuse,guse);
         if (nnodes > 2){
-            //          printf("nnodes = %zu\n",nnodes);
-            // dprint(nnodes,xnew);
-            //dprint(nnodes,fnew);
-            //dprint(nnodes,gnew);
-            value = lin_elem_exp_inner_same(nnodes,xnew,fnew,gnew);
+            value = lin_elem_exp_inner_same(nnodes,xuse,fuse,guse);
         }
         else{
             printf("weird =\n");
-
             printf("f = \n");
             print_lin_elem_exp(f,3,NULL,stdout);
             printf("g = \n");
             print_lin_elem_exp(g,3,NULL,stdout);
-            
             assert(1 == 0);
+        }
+
+        if ( xx != NULL){
+            free(xx); xx = NULL;
+            free(ff); ff = NULL;
+            free(gg); gg = NULL;
         }
         //       printf("there\n");
     }
@@ -1101,9 +1114,6 @@ static int lin_elem_exp_axpy_same(double a, const struct LinElemExp * f,
 {
 
     cblas_daxpy(g->num_nodes,a,f->coeff,1,g->coeff,1);
-    /* for (size_t ii = 0; ii < g->num_nodes; ii++){ */
-    /*     g->coeff[ii] += a*f->coeff[ii]; */
-    /* } */
     return 0;
 }
 

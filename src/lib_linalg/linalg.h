@@ -34,12 +34,6 @@
 
 //Code
 
-
-
-
-
-
-
 #ifndef LINALG_H
 #define LINALG_H
 
@@ -121,51 +115,27 @@
 
     #include <cblas.h>
 
-void * dgetri_( int * X, double *Y, int * Z, int * A, 
-                double *B, int *C , int * D);
-void dgetrf_( int * X,int * Y, double*Z, int * A, 
-              int * B, int *C );
-void dorgqr_( int * X, int * Y, int * Z, double *A,
-             int * B, double *C , double *D, int * E, int *F);
-void dgeqrf_( int *X, int *Y, double *Z, int * A, double * B, double * C, int * D, int * E);
-void dgeev_( char * X, char *Y, int * Z, double *A, 
-            int * B, double * C, double *D, double *E, int * F, double *G, int * H, 
-            double *I, int * J, int *K );
-void dgebal_( char *X,  int *Y, double *Z, int * A,
-             int * B, int *C, double *D, int * E);
-void dhseqr_( char *X, char *Y, int *Z, int *A,                         \
-             int * B, double *C, int *D, double *E, double *F, double *G, int * H, 
-             double *I, int * J, int *K );
-void dorgrq_( int * X, int * Y, int * Z, double *A,
-             int * B, double *C , double *D, int * E, int *F);
-void dgerqf_( int * X,  int *Y, double *Z, int * A, 
-             double *B, double *C, int * D, int * E);
-void dgesdd_(char *X, int * Y, int *Z, double *A, int * B, 
-            double * C,double * D,int * E,double * F, int * G, double *H, int * I,
-            int * J, int * K );
-void dstev_( char *X,  int *Y, double *Z, double *A,
-             double *B, int *C, double *D, int * E);
-void dsyev_(char *A,char *B,int * C,double *D,int * E,double *F,
-            double *G, int* H, int * J);
+void dgetri_(int * X, double *Y, int * Z, int * A, double *B, int *C , int * D);
+void dgetrf_(int * X,int * Y, double*Z, int * A, int * B, int *C );
+void dorgqr_(int * X, int * Y, int * Z, double *A,int * B, double *C , double *D, int * E, int *F);
+void dgeqrf_(int *X, int *Y, double *Z, int * A, double * B, double * C, int * D, int * E);
+void dgeev_(char * X, char *Y, int * Z, double *A, int * B, double * C, double *D, double *E,
+            int * F, double *G, int * H, double *, int *, int *K);
+void dgebal_(char *X,  int *Y, double *Z, int * A, int * B, int *C, double *D, int * E);
+void dhseqr_(char *X, char *Y, int *Z, int *A,int * B, double *C, int *D,
+             double *E, double *F, double *G, int * H, double *, int *, int *K );
+void dorgrq_(int * X, int * Y, int * Z, double *A,int * B, double *C , double *D, int * E, int *F);
+void dgerqf_(int * X,  int *Y, double *Z, int * A, double *B, double *C, int * D, int * E);
+void dgesdd_(char *X, int * Y, int *Z, double *A, int * B,double * C,double * D,
+             int * E,double * F, int * G, double *H, int *, int *, int * K );
+void dstev_(char *X,  int *Y, double *Z, double *A, double *B, int *C, double *D, int * E);
+void dsyev_(char *A,char *B,int * C,double *D,int * E,double *F, double *G, int* H, int * J);
 void dpotrf_(char *X, int*Y, double *Z, int * A, int * B );
 void dpotri_(char *X, int*Y, double *Z, int * A, int* B);
 void dtrtri_(char *X,char*Y, int *Z, double *A, int * B, int * C);
-void dgesv_(int *X, int *Y, double*Z, int * A, int * B, 
-            double*C, int * D, int * E);
-void dgelsd_( int *X, int *Y, int *Z, 
-              double *A, int *B, double *C, 
-              int *D, double * E,   
-              double *F, int *G, double *H, int *I, 
-              int *J, int *K);
-    /* #define dstegr_(X,Y,Z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q) \ */
-    /*         ( dstegr_(X,Y,(integer *)Z,A,B,C,D,\ */
-    /*                (integer *)E,(integer *)F,G,(integer *)H, \ */
-    /*                I,J,(integer *)K,(integer *)L,M,(integer *)N, \ */
-    /*                (integer *)O,(integer *)P,(integer *)Q)) */
-
-    /* #define dgels_(X,Y,Z,A,B,C,D,E,F,G,H)                                   \ */
-    /*         ( dgels_(X,(integer * )Y,(integer *)Z,(integer *)A,B,(integer *)C, \ */
-    /*                    D, (integer *) E,F,(integer *)G,(integer *)H)) */
+void dgesv_(int *X, int *Y, double*Z, int * A, int * B,double*C, int * D, int * E);
+void dgelsd_(int *X, int *Y, int *Z, double *A, int *B, double *C, 
+             int *D, double * E, double *F, int *G, double *H, int *,int *, int *K);
 
 #endif
 
