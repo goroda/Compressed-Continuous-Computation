@@ -46,13 +46,18 @@
 
 #include "ft.h"
 #include "parameterization.h"
+#include "superlearn.h"
 #include "superlearn_util.h"
+#include "learning_options.h"
 
-int ft_param_eval_grad(size_t, size_t *,const double *, const double *, double **,
-                       double **, void *);
+/* int ft_param_eval_grad(size_t,const double *, double **, */
+/*                        double **, struct SLMemManager *, void *); */
+/* int ft_param_learning_interface(size_t nparam, const double * param, */
+/*                                 size_t N, size_t * ind, */
+/*                                 struct SLMemManager * mem, */
+/*                                 struct Data * data, */
+/*                                 double ** evals, double ** grads, void * args); */
 
-enum REGTYPE {ALS,AIO,REGNONE};
-enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
 size_t ft_regress_get_dim(const struct FTRegress *);
@@ -113,24 +118,14 @@ void cross_validate_grid_opt(struct CrossValidate *,
 
 
 
-struct RegressOpts;
-struct RegressOpts * regress_opts_create(size_t,enum REGTYPE, enum REGOBJ);
-void regress_opts_free(struct RegressOpts *);
 
-void regress_opts_set_stoch_obj(struct RegressOpts *, int);
-void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
-void regress_opts_set_als_conv_tol(struct RegressOpts *, double);
-void regress_opts_set_verbose(struct RegressOpts *, int);
-void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
-void regress_opts_set_regularization_weight(struct RegressOpts *, double);
-double regress_opts_get_regularization_weight(const struct RegressOpts *);
 /* void regress_opts_initialize_memory(struct RegressOpts *, size_t *, */
 /*                                     size_t *, size_t, */
 /*                                     enum FTPARAM_ST); */
 
 double ft_param_eval_objective_aio(struct FTparam *,
                                    struct RegressOpts *,
-                                   struct RegressionMemManager *,
+                                   struct SLMemManager *,
                                    size_t,
                                    const double *,
                                    const double *,

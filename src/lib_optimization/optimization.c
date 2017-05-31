@@ -647,13 +647,19 @@ int c3opt_get_lbfgs_scale(struct c3Opt * opt)
 /***********************************************************//**
     1 if bruteforce, 0 otherwise
 ***************************************************************/
-int c3opt_is_bruteforce(struct c3Opt * opt)
+int c3opt_is_bruteforce(const struct c3Opt * opt)
 {
     assert (opt != NULL);
-    if (opt->alg == BRUTEFORCE){
-        return 1;
-    }
-    return 0;
+    return (opt->alg == BRUTEFORCE);
+}
+
+/***********************************************************//**
+    1 if stochastic gradient descent, 0 otherwise
+***************************************************************/
+int c3opt_is_sgd(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return (opt->alg == SGD);
 }
 
 /***********************************************************//**

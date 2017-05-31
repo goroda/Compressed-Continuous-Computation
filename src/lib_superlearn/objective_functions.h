@@ -34,55 +34,41 @@
 
 //Code
 
-/** \file superlearn.c
- * Provides routines for supervised learning
+/** \file objective_functions.h
+ * Provides prototypes for objective_functions.c
  */
 
-#include "superlearn.h"
-#include "objective_functions.h"
+#ifndef C3_OBJECTIVE_FUNCS
+#define C3_OBJECTIVE_FUNCS
 
-double objective_batch(size_t nparam, const double * param, double * grad, void * arg)
+#include <stddef.h>
+
+#include "lib_optimization.h"
+#include "superlearn_util.h"
+
+struct ObjectiveFunction;
+void objective_function_add(struct ObjectiveFunction ** obj, double weight,
+                            double (*func)(size_t nparam, const double * param, double * grad,
+                                           size_t N, size_t * ind,
+                                           struct Data * data, struct SLMemManager * ,void * arg),
+                            void * arg);
+void objective_function_free(struct ObjectiveFunction ** obj);
+double objective_eval(size_t, const double *, double *,
+                      size_t, size_t *, void *);
+
+
+//////////////////////////////////////////
+// Objective functions
+//////////////////////////////////////////
+struct LeastSquaresArgs
 {
-    struct SLP * slp = arg;
-    size_t N = data_get_N(slp->data);
-    return objective_eval(nparam,param,grad,N,NULL,arg);
-}
+    int (*mapping)(size_t nparam, const double * param, size_t N,size_t * ind,
+                   struct SLMemManager * mem, struct Data * data,
+                   double ** evals, double ** grads, void * args);
+    void * args;
+};
 
-double objective_stoch(size_t nparam, size_t ind, const double * param, double * grad, void * arg)
-{
-    return objective_eval(nparam,param,grad,1,&ind,arg);
-}
-
-
-int objective_minimize(struct SLP * slp, struct c3Opt * optimizer,
-                       size_t nparam, double * guess, double *val)
-
-{
-    c3opt_set_nvars(optimizer,nparam);
-    if (c3opt_is_sgd(optimizer)){
-        c3opt_add_objective_stoch(optimizer,objective_stoch,slp);
-    }
-    else{
-        c3opt_add_objective(optimizer,objective_batch,slp);
-    }
-    int res = c3opt_minimize(optimizer,guess,val);
-    return res;
-}
-
-
-int slp_solve(struct SLP * slp, double * guess)
-{
-
-    int res = objective_minimize(slp,slp->optimizer,slp->nparams,guess,&(slp->obj_min));
-    if (res < -1){
-        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
-    }
-    return 0;
-}
-
-
-
-double slp_get_minimum(struct SLP * slp)
-{
-    return slp->obj_min;
-}
+double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
+                                           size_t Ndata, size_t * data_index, struct Data * data,
+                                           struct SLMemManager * mem, void * args);
+#endif

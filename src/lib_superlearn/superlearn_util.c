@@ -44,35 +44,19 @@
 #include <math.h>
 
 #include "superlearn_util.h"
-
-/** \struct RegMemSpace
- * \brief Memory manager for certain regression objects
- * \var RegMemSpace::ndata
- * number of objects being stored
- * \var RegMemSpace::one_data_size
- * size of memory for storing some values corresponding to a single object
- * \var RegMemSpace::vals
- * values stored
- */
-struct RegMemSpace
-{
-    size_t ndata;
-    size_t one_data_size;
-    double * vals;
-};
-
+#include "ft.h"
 
 /***********************************************************//**
-    Allocate regression memory structure
+    Allocate a memory structure for storing an array of an array of doubles
 
-    \param[in] ndata         - number of objects being stored
-    \param[in] one_data_size - number of elements of one object
+    \param[in] ndata         - number of arrays
+    \param[in] one_data_size - size of each array (same size)
 
     \returns Regression memory structure
 ***************************************************************/
-struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
+struct DblMemArray * dbl_mem_array_alloc(size_t ndata, size_t one_data_size)
 {
-    struct RegMemSpace * mem = malloc(sizeof(struct RegMemSpace));
+    struct DblMemArray * mem = malloc(sizeof(struct DblMemArray));
     if (mem == NULL){
         fprintf(stderr, "Failure to allocate memmory of regression\n");
         return NULL;
@@ -97,15 +81,15 @@ struct RegMemSpace * reg_mem_space_alloc(size_t ndata, size_t one_data_size)
     \note
     Each element of the array is the same size
 ***************************************************************/
-struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t one_data_size)
+struct DblMemArray ** dbl_mem_array_arr_alloc(size_t dim, size_t ndata, size_t one_data_size)
 {
-    struct RegMemSpace ** mem = malloc(dim * sizeof(struct RegMemSpace * ));
+    struct DblMemArray ** mem = malloc(dim * sizeof(struct DblMemArray * ));
     if (mem == NULL){
         fprintf(stderr, "Failure to allocate memmory of regression\n");
         return NULL;
     }
     for (size_t ii = 0; ii < dim; ii++){
-        mem[ii] = reg_mem_space_alloc(ndata,one_data_size);
+        mem[ii] = dbl_mem_array_alloc(ndata,one_data_size);
     }
 
     return mem;
@@ -113,11 +97,11 @@ struct RegMemSpace ** reg_mem_space_arr_alloc(size_t dim, size_t ndata, size_t o
 
 
 /***********************************************************//**
-    Free a regression memory structure
+    Free a memory structure
     
     \param[in,out] rmem - structure to free
 ***************************************************************/
-void reg_mem_space_free(struct RegMemSpace * rmem)
+void dbl_mem_array_free(struct DblMemArray * rmem)
 {
     if (rmem != NULL){
         free(rmem->vals); rmem->vals = NULL;
@@ -126,16 +110,16 @@ void reg_mem_space_free(struct RegMemSpace * rmem)
 }
 
 /***********************************************************//**
-    Free an array of regression memory structures
+    Free an array of memory 
 
     \param[in]     dim  - size of array
     \param[in,out] rmem - array of structure to free
 ***************************************************************/
-void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
+void dbl_mem_array_arr_free(size_t dim, struct DblMemArray ** rmem)
 {
     if (rmem != NULL){
         for (size_t ii = 0; ii < dim; ii++){
-            reg_mem_space_free(rmem[ii]); rmem[ii] = NULL;
+            dbl_mem_array_free(rmem[ii]); rmem[ii] = NULL;
         }
         free(rmem); rmem = NULL;
     }
@@ -145,14 +129,26 @@ void reg_mem_space_arr_free(size_t dim, struct RegMemSpace ** rmem)
 /***********************************************************//**
     Return increment between objects 
 
-    \param[in] rmem - regression memomory structure
+    \param[in] rmem - memory structure
 ***************************************************************/
-size_t reg_mem_space_get_data_inc(const struct RegMemSpace * rmem)
+size_t dbl_mem_array_get_data_inc(const struct DblMemArray * rmem)
 {
     assert (rmem != NULL);
     return rmem->one_data_size;
 }
 
+/***********************************************************//**
+    Return a pointer to element of the array
+
+    \param[in] rmem - memory structure
+    \param[in] ind  - index
+***************************************************************/
+double * dbl_mem_array_get_element(const struct DblMemArray * rmem, size_t index)
+{
+    assert (rmem != NULL);
+    assert (index < rmem->ndata);
+    return rmem->vals + index * rmem->one_data_size;
+}
 
 
 
@@ -161,39 +157,44 @@ size_t reg_mem_space_get_data_inc(const struct RegMemSpace * rmem)
     
     \param[in,out] mem - memory to free
 ***************************************************************/
-void regression_mem_manager_free(struct RegressionMemManager * mem)
+void sl_mem_manager_free(struct SLMemManager * mem)
 {
     if (mem != NULL){
     
-        reg_mem_space_free(mem->grad_space);
+        dbl_mem_array_free(mem->grad_space);
         mem->grad_space = NULL;
         
-        reg_mem_space_free(mem->fparam_space);
+        dbl_mem_array_free(mem->fparam_space);
         mem->fparam_space = NULL;
         
-        reg_mem_space_free(mem->evals);
+        dbl_mem_array_free(mem->evals);
         mem->evals = NULL;
         
-        reg_mem_space_free(mem->grad);
+        dbl_mem_array_free(mem->grad);
         mem->grad = NULL;
 
-        reg_mem_space_arr_free(mem->dim,mem->all_grads);
+        dbl_mem_array_arr_free(mem->dim,mem->all_grads);
         mem->all_grads = NULL;
 
         running_core_total_free(mem->running_evals_lr);
         running_core_total_free(mem->running_evals_rl);
         running_core_total_arr_free(mem->dim,mem->running_grad);
 
+
         free(mem->lin_structure_vals); mem->lin_structure_vals = NULL;
         free(mem->lin_structure_inc);  mem->lin_structure_inc  = NULL;
-        
+
+        for (size_t ii = 0; ii < mem->dim; ii++){
+            free(mem->lin_structure_vals_subset[ii]); mem->lin_structure_vals_subset[ii] = NULL;
+        }
+        free(mem->lin_structure_vals_subset); mem->lin_structure_vals_subset = NULL;
         free(mem); mem = NULL;
     }
 
 }
 
 /***********************************************************//**
-    Allocate memory for regression
+    Allocate memory for supervised learning
     
     \param[in] d                    - size of feature space
     \param[in] n                    - number of data points to make room for
@@ -201,28 +202,28 @@ void regression_mem_manager_free(struct RegressionMemManager * mem)
     \param[in] max_param_within_uni - upper bound on number of parameters in a univariate funciton
     \param[in] structure            - either (LINEAR_ST or NONE)
 
-    \returns Regression memomry manager
+    \returns Supervised learning memory manager
 ***************************************************************/
-struct RegressionMemManager *
-regress_mem_manager_alloc(size_t d, size_t n,
+struct SLMemManager *
+sl_mem_manager_alloc(size_t d, size_t n,
                           size_t * num_params_per_core,
                           size_t * ranks,
                           size_t max_param_within_uni,
                           enum FTPARAM_ST structure)
 {
 
-    struct RegressionMemManager * mem = malloc(sizeof(struct RegressionMemManager));
+    struct SLMemManager * mem = malloc(sizeof(struct SLMemManager));
     if (mem == NULL){
-        fprintf(stderr, "Cannot allocate struct RegressionMemManager\n");
+        fprintf(stderr, "Cannot allocate struct SLMemManager\n");
         exit(1);
     }
 
     mem->dim = d;
     mem->N = n;
 
-    mem->fparam_space = reg_mem_space_alloc(1,max_param_within_uni);
+    mem->fparam_space = dbl_mem_array_alloc(1,max_param_within_uni);
 
-    mem->all_grads = malloc(d * sizeof(struct RegMemSpace * ));
+    mem->all_grads = malloc(d * sizeof(struct DblMemArray * ));
     assert (mem->all_grads != NULL);
     size_t mr2_max = 0;
     size_t mr2;
@@ -230,7 +231,7 @@ regress_mem_manager_alloc(size_t d, size_t n,
     size_t max_param_within_core = 0;
     for (size_t ii = 0; ii < d; ii++){
         mr2 = ranks[ii]*ranks[ii+1];
-        mem->all_grads[ii] = reg_mem_space_alloc(n,num_params_per_core[ii] * mr2 );
+        mem->all_grads[ii] = dbl_mem_array_alloc(n,num_params_per_core[ii] * mr2 );
         num_tot_params += num_params_per_core[ii];
         if (mr2 > mr2_max){
             mr2_max = mr2;
@@ -243,11 +244,11 @@ regress_mem_manager_alloc(size_t d, size_t n,
     mem->running_evals_rl = running_core_total_alloc(mr2_max);
     mem->running_grad     = running_core_total_arr_alloc(d,mr2_max);
     
-    mem->grad       = reg_mem_space_alloc(n,num_tot_params);
-    mem->evals      = reg_mem_space_alloc(n,1);
+    mem->grad       = dbl_mem_array_alloc(n,num_tot_params);
+    mem->evals      = dbl_mem_array_alloc(n,1);
 
 
-    mem->grad_space = reg_mem_space_alloc(n, max_param_within_core * mr2_max);
+    mem->grad_space = dbl_mem_array_alloc(n, max_param_within_core * mr2_max);
     if ( structure != LINEAR_ST){
         if (structure != NONE_ST){
             fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
@@ -260,7 +261,13 @@ regress_mem_manager_alloc(size_t d, size_t n,
     assert (mem->lin_structure_vals != NULL);
     mem->lin_structure_inc = calloc_size_t(mem->dim * sizeof(size_t));
     assert (mem->lin_structure_inc != NULL);
-    
+
+
+    mem->lin_structure_vals_subset = malloc(mem->dim * sizeof(double * ));
+    assert (mem->lin_structure_vals_subset != NULL);
+    for (size_t ii = 0; ii < mem->dim; ii++){
+        mem->lin_structure_vals_subset[ii] = NULL;
+    }
     return mem;
     
 }
@@ -274,7 +281,7 @@ regress_mem_manager_alloc(size_t d, size_t n,
 
     \returns 1 if yes, 0  if no
 ***************************************************************/
-int regress_mem_manager_enough(struct RegressionMemManager * mem, size_t N)
+int sl_mem_manager_enough(struct SLMemManager * mem, size_t N)
 {
     if (mem->N < N){
         return 0;
@@ -287,7 +294,7 @@ int regress_mem_manager_enough(struct RegressionMemManager * mem, size_t N)
     
     \param[in,out] mem - memory structure
 ***************************************************************/
-void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
+void sl_mem_manager_reset_running(struct SLMemManager * mem)
 {
     running_core_total_restart(mem->running_evals_lr);
     running_core_total_restart(mem->running_evals_rl);
@@ -295,6 +302,18 @@ void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
 
     /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
 }
+
+/***********************************************************//**
+    Reset the running gradient of a particular core
+    
+    \param[in,out] mem - memory structure
+***************************************************************/
+void sl_mem_manager_reset_core_grad(struct SLMemManager * mem, size_t ii)
+{
+    running_core_total_restart(mem->running_grad[ii]);
+    /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
+}
+
 
 /***********************************************************//**
     Check if special structure exists and if so, precompute
@@ -307,37 +326,140 @@ void regress_mem_manager_reset_running(struct RegressionMemManager * mem)
     This is an aggressive function, there might be a mismatch between the size
     of x, plus recall that x can change for non-batch gradient
 ***************************************************************/
-void regress_mem_manager_check_structure(struct RegressionMemManager * mem,
-                                         const struct FTparam * ftp,
-                                         const double * x)
+void sl_mem_manager_check_structure(struct SLMemManager * mem,
+                                    const struct FTparam * ftp,
+                                    const double * x)
 {
 
+
+    
     if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
         for (size_t ii = 0; ii < ftp->dim; ii++){
             if (ii == 0){
                 qmarray_param_grad_eval(
-                    ftp->ft->cores[ii],mem->N,
-                    x + ii,ftp->dim,
-                    NULL, 0,
+                    ftp->ft->cores[ii],
+                    mem->N,
+                    x + ii,
+                    ftp->dim,
+                    NULL,
+                    0,
                     mem->all_grads[ii]->vals,
-                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
+                    dbl_mem_array_get_data_inc(mem->all_grads[ii]),
                     mem->fparam_space->vals);
             }
             else{
                 qmarray_param_grad_eval_sparse_mult(
                     ftp->ft->cores[ii],
-                    mem->N,x + ii,
+                    mem->N,
+                    x + ii,
                     ftp->dim,
-                    NULL, 0,
+                    NULL,
+                    0,
                     mem->all_grads[ii]->vals,
-                    reg_mem_space_get_data_inc(mem->all_grads[ii]),
+                    dbl_mem_array_get_data_inc(mem->all_grads[ii]),
                     NULL,NULL,0);
             }
 
-            mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals;
-            mem->lin_structure_inc[ii]  = reg_mem_space_get_data_inc(mem->all_grads[ii]);
+            /* mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals; */
+            /* mem->lin_structure_inc[ii]  = dbl_mem_array_get_data_inc(mem->all_grads[ii]); */
         }
         /* printf("OKOKOK\n"); */
         mem->once_eval_structure = 1;
     }
+}
+
+void sl_mem_manager_init_gradient_subset(struct SLMemManager * mem, size_t N, const size_t * ind)
+{
+    if (ind == NULL){
+        for (size_t ii = 0; ii < mem->dim; ii++){
+            mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals;
+            mem->lin_structure_inc[ii] = dbl_mem_array_get_data_inc(mem->all_grads[ii]);
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < mem->dim; ii++){
+            mem->lin_structure_inc[ii] = dbl_mem_array_get_data_inc(mem->all_grads[ii]);
+
+            free(mem->lin_structure_vals_subset[ii]); mem->lin_structure_vals_subset[ii] = NULL;
+            mem->lin_structure_vals_subset[ii] = calloc_double(mem->lin_structure_inc[ii]*N);
+            for (size_t jj = 0; jj < N; jj++){
+                memmove(mem->lin_structure_vals_subset[ii] + jj * mem->lin_structure_inc[ii],
+                        dbl_mem_array_get_element(mem->all_grads[ii],ind[jj]),
+                        mem->lin_structure_inc[ii]*sizeof(double));
+            }
+            mem->lin_structure_vals[ii] = mem->lin_structure_vals_subset[ii];
+        }
+    }
+
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Data management
+////////////////////////////////////////////////////////////////////////////
+
+struct Data
+{
+    size_t N;
+    size_t dim;
+    const double * x;
+    const double * y;
+
+    double * xpointer;
+};
+
+struct Data * data_alloc(size_t N, size_t dim)
+{
+    struct Data * data = malloc(sizeof(struct Data));
+    if (data == NULL){
+        fprintf(stderr,"Failure to allocate memory for data\n");
+        exit(1);
+    }
+
+    data->N = N;
+    data->dim = dim;
+    data->xpointer = calloc_double(N*dim);
+
+    return data;
+}
+
+void data_free(struct Data * data)
+{
+    if (data != NULL){
+        free(data->xpointer);
+        data->xpointer = NULL;
+        free(data); data = NULL;
+    }
+}
+
+size_t data_get_N(const struct Data * data)
+{
+    return data->N;
+}
+
+void data_set_xy(struct Data * data, const double * x, const double * y)
+{
+    data->x = x;
+    data->y = y;
+}
+
+const double * data_get_subset_ref(struct Data * data, size_t Nsub, size_t * indsub)
+{
+    assert (data != NULL);
+    assert (Nsub <= data->N);
+
+    if (indsub == NULL){
+        return data->x;
+    }
+    
+    for (size_t ii = 0; ii < Nsub; ii++){
+        for (size_t jj = 0; jj < data->dim; jj++){
+            data->xpointer[jj + ii*data->dim] = data->x[jj + indsub[ii]*data->dim];
+        }
+    }
+    return data->xpointer;    
+}
+
+double data_subtract_from_y(const struct Data * data, size_t ind, double val)
+{
+    return data->y[ind]-val;
 }
