@@ -45,9 +45,19 @@
 #define C3_FT_REGRESSION
 
 #include "ft.h"
+#include "parameterization.h"
+#include "superlearn.h"
+#include "superlearn_util.h"
+#include "learning_options.h"
 
-enum REGTYPE {ALS,AIO,REGNONE};
-enum REGOBJ  {FTLS,FTLS_SPARSEL2,REGOBJNONE};
+/* int ft_param_eval_grad(size_t,const double *, double **, */
+/*                        double **, struct SLMemManager *, void *); */
+/* int ft_param_learning_interface(size_t nparam, const double * param, */
+/*                                 size_t N, size_t * ind, */
+/*                                 struct SLMemManager * mem, */
+/*                                 struct Data * data, */
+/*                                 double ** evals, double ** grads, void * args); */
+
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
 size_t ft_regress_get_dim(const struct FTRegress *);
@@ -106,46 +116,16 @@ void cross_validate_grid_opt(struct CrossValidate *,
                              struct FTRegress *,
                              struct c3Opt *);
 
-enum FTPARAM_ST {LINEAR_ST, NONE_ST};
 
 
-struct FTparam;
-struct FTparam *
-ft_param_alloc(size_t,struct MultiApproxOpts *,
-               double *, size_t *);
-void ft_param_free(struct FTparam *);
-size_t ft_param_get_nparams(const struct FTparam *);
-size_t * ft_param_get_nparams_per_core(const struct FTparam *);
-struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
-void ft_param_create_constant(struct FTparam *, double, double);
-void ft_param_create_from_lin_ls(struct FTparam *, size_t,
-                                 const double *, const double *,
-                                 double);
-void ft_param_update_params(struct FTparam *, const double *);
-void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);
-void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 
-struct RegressionMemManager;
-
-struct RegressOpts;
-struct RegressOpts *
-regress_opts_create(size_t,enum REGTYPE, enum REGOBJ);
-void regress_opts_free(struct RegressOpts *);
-
-void regress_opts_set_stoch_obj(struct RegressOpts *, int);
-void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
-void regress_opts_set_als_conv_tol(struct RegressOpts *, double);
-void regress_opts_set_verbose(struct RegressOpts *, int);
-void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
-void regress_opts_set_regularization_weight(struct RegressOpts *, double);
-double regress_opts_get_regularization_weight(const struct RegressOpts *);
 /* void regress_opts_initialize_memory(struct RegressOpts *, size_t *, */
 /*                                     size_t *, size_t, */
 /*                                     enum FTPARAM_ST); */
 
 double ft_param_eval_objective_aio(struct FTparam *,
                                    struct RegressOpts *,
-                                   struct RegressionMemManager *,
+                                   struct SLMemManager *,
                                    size_t,
                                    const double *,
                                    const double *,

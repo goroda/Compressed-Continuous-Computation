@@ -39,6 +39,9 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
+#include <stddef.h>
+#include <stdio.h>
+
 enum c3opt_ls_alg {BACKTRACK, STRONGWOLFE, WEAKWOLFE};
 
 enum c3opt_alg {BFGS, LBFGS, BATCHGRAD, BRUTEFORCE, SGD};
@@ -68,7 +71,8 @@ size_t c3opt_get_nvectors_store(const struct c3Opt *);
 void c3opt_set_lbfgs_scale(struct c3Opt *, int);
 int c3opt_get_lbfgs_scale(struct c3Opt *);
 
-int c3opt_is_bruteforce(struct c3Opt *);
+int c3opt_is_bruteforce(const struct c3Opt *);
+int c3opt_is_sgd(const struct c3Opt *);
 void c3opt_add_lb(struct c3Opt *, double *);
 void c3opt_add_ub(struct c3Opt *, double *);
 void c3opt_add_objective(struct c3Opt *,

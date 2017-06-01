@@ -1530,11 +1530,11 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
 
         r1 = ft->cores[ii]->nrows;
         r2 = ft->cores[ii]->ncols;
-        
+
         qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
                                 ft->evalspace4[ii]->vals,
                                 ft_mem_space_get_incr(ft->evalspace4[ii]),
-                                NULL,0,NULL);        
+                                NULL,0,NULL);
         
         if (grad != NULL){
             // store gradient info
