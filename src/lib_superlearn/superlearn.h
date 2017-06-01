@@ -56,6 +56,12 @@ struct SLP
 };
 
 int slp_solve(struct SLP *, double *);
-double slp_get_minimum(struct SLP *);
+
+inline double slp_get_minimum(struct SLP * slp)
+{
+    return slp->obj_min;
+}
+
+
 
 #endif

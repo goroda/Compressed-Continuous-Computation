@@ -1151,11 +1151,15 @@ running_core_total_update_multiple(struct RunningCoreTotal * rct, size_t n, size
         exit(1);
     }
     rct->r2 = r2new;
+    size_t ind1,ind2,ind3,ind4;
     for (size_t ii = 0; ii < n; ii++){
+        ind1 = ii * ng * r2new;
+        ind2 = ii * inc_new_n;
         for (size_t jj = 0; jj < ng; jj++){
+            ind3 = jj * r2new;
+            ind4 = jj * inc_new_ng;
             for (size_t kk = 0; kk < r2new; kk++){
-                rct->vals1[ii * ng * r2new + jj * r2new + kk] =
-                    new_eval[ii * inc_new_n + jj * inc_new_ng + kk];
+                rct->vals1[ind1 + ind3 + kk] = new_eval[ind2 + ind4 + kk];
             }
         }
     }

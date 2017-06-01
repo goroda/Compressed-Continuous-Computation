@@ -54,6 +54,7 @@ double objective_stoch(size_t nparam, size_t ind, const double * param, double *
 }
 
 
+
 int objective_minimize(struct SLP * slp, struct c3Opt * optimizer,
                        size_t nparam, double * guess, double *val)
 
@@ -82,7 +83,3 @@ int slp_solve(struct SLP * slp, double * guess)
 
 
 
-double slp_get_minimum(struct SLP * slp)
-{
-    return slp->obj_min;
-}

@@ -2397,12 +2397,13 @@ int orth_poly_expansion_param_grad_eval(
             p[1] = poly->p->lin_const + poly->p->lin_coeff * x_norm;
             grad[ii*nparam + iter] = p[1]; 
             iter++;
-        }  
-        for (iter = 2; iter < poly->num_poly; iter++){
-            pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];
-            grad[ii*nparam + iter] = pnew;
-            p[0] = p[1];
-            p[1] = pnew;
+
+            for (iter = 2; iter < poly->num_poly; iter++){
+                pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];
+                grad[ii*nparam + iter] = pnew;
+                p[0] = p[1];
+                p[1] = pnew;
+            }
         }
     }
     return 0;    

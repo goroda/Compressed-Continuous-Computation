@@ -3374,20 +3374,24 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
 ***************************************************************/
 void qmarray_linparam_eval(struct Qmarray * qma, size_t N,
                            double * out, size_t incout,
-                           double * grad, size_t incg)
+                           const double * grad, size_t incg)
 
 {
 
     size_t size = qma->nrows*qma->ncols;
-    size_t nparam;
-    for (size_t ii = 0; ii < N; ii++){
+    size_t nparam,onparam;
+    size_t ii,jj,indout,indgrad;
+    double * param;
+    for (ii = 0; ii < N; ii++){
         /* printf("ii = %zu\n",ii); */
-        size_t onparam = 0;
-        for (size_t jj = 0; jj < size; jj++){
-            double * param = generic_function_get_params_ref(qma->funcs[jj],&nparam);
+        onparam=0;
+        indout = incout*ii;
+        indgrad = ii*incg;
+        for (jj = 0; jj < size; jj++){
+            param = generic_function_get_params_ref(qma->funcs[jj],&nparam);
             /* dprint(nparam,grad+ii*incg + onparam); */
-            out[jj + incout*ii] = cblas_ddot(nparam,param,1,
-                                             grad + ii * incg + onparam, 1);
+            out[jj + indout] = cblas_ddot(nparam,param,1,
+                                          grad + indgrad + onparam, 1);
             onparam += nparam;
         }
     }

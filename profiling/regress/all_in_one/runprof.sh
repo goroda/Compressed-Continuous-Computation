@@ -56,6 +56,9 @@ else
     # valgrind --tool=callgrind $REGRESS
     # python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
     # rm callgrind.out.*
+
+    #Do profiling
+    # valgrind --tool=callgrind --simulate-cache=yes $REGRESS
 fi
 
 
