@@ -128,7 +128,8 @@ void sl_mem_manager_check_structure(struct SLMemManager *,
 ***************************************************************/
 inline int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem){
     return ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 1));
-};
+}
+
 void sl_mem_manager_init_gradient_subset(struct SLMemManager *, size_t, const size_t *);
 
 void sl_mem_manager_free(struct SLMemManager *);

@@ -140,8 +140,8 @@ size_t dbl_mem_array_get_data_inc(const struct DblMemArray * rmem)
 /***********************************************************//**
     Return a pointer to element of the array
 
-    \param[in] rmem - memory structure
-    \param[in] ind  - index
+    \param[in] rmem  - memory structure
+    \param[in] index - index
 ***************************************************************/
 double * dbl_mem_array_get_element(const struct DblMemArray * rmem, size_t index)
 {
