@@ -596,3 +596,32 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     free(b); b = NULL;
     free(weights); weights = NULL;
 }
+
+
+
+double ft_param_eval_lin(struct FTparam * ftp, const double * x, const double * grad_evals, double *mem)
+{
+
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    for (size_t kk = 0; kk < ftp->dim; kk++){
+        for (size_t jj = 0; jj < ranks[kk]*ft->ranks[kk+1]; jj++){
+            mem[onuni] = cblas_ddot(ftp->num_param_per_uni[onuni],
+                                    grad_evals + onparam, 1,
+                                    ftp->params + onparam,1);
+            onparam += ftp->num_params_per_uni[onuni];
+            onuni++;
+        }
+
+        if (kk > 0){
+            // replace most recent mem with the product of the previous two cores
+            cblas_dgemv(CblasColMajor,CblasTrans,
+                        ranks[kk],ranks[kk+1], 1.0,
+                        mem - ranks[kk]*ranks[kk+1], ranks[kk],
+                        mem, 1, 0.0, new_place, 1);
+            cblas_dgemv()
+        }
+    }
+    
+}

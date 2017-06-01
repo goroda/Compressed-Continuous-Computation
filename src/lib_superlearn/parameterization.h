@@ -100,4 +100,8 @@ void ft_param_update_inside_restricted_ranks(struct FTparam *,const double *, co
 void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 enum FTPARAM_ST ft_param_extract_structure(const struct FTparam *);
 
+
+
+
+
 #endif

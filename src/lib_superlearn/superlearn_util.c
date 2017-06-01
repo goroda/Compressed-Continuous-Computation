@@ -334,39 +334,27 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
 
     
     if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
-        for (size_t ii = 0; ii < ftp->dim; ii++){
-            if (ii == 0){
-                qmarray_param_grad_eval(
-                    ftp->ft->cores[ii],
-                    mem->N,
-                    x + ii,
-                    ftp->dim,
-                    NULL,
-                    0,
-                    mem->all_grads[ii]->vals,
-                    dbl_mem_array_get_data_inc(mem->all_grads[ii]),
-                    mem->fparam_space->vals);
-            }
-            else{
-                qmarray_param_grad_eval_sparse_mult(
-                    ftp->ft->cores[ii],
-                    mem->N,
-                    x + ii,
-                    ftp->dim,
-                    NULL,
-                    0,
-                    mem->all_grads[ii]->vals,
-                    dbl_mem_array_get_data_inc(mem->all_grads[ii]),
-                    NULL,NULL,0);
-            }
 
-            /* mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals; */
-            /* mem->lin_structure_inc[ii]  = dbl_mem_array_get_data_inc(mem->all_grads[ii]); */
+        struct FunctionTrain * ft = ft_param_get_ft(ft);
+        size_t * ranks = function_train_get_ranks(ft);
+        for (size_t ii = 0; ii < mem->N; ii++){
+            size_t onparam = 0;
+            size_t onuni = 0;
+            for (size_t kk = 0; kk < ftp->dim; kk++){
+                for (size_t jj = 0; jj < ft->ranks[kk]*ft->ranks[kk+1]; jj++){
+                    generic_function_param_grad_eval(
+                        ft->cores[kk]->funcs[jj],1,x+ii*ftp->dim+kk,
+                        mem->lin_structure_vals + ii * ftp->nparam + onparam);
+                    onparam += ftp->num_params_per_uni[onuni];
+                    onuni++;
+                }
+            }
         }
-        /* printf("OKOKOK\n"); */
         mem->once_eval_structure = 1;
     }
 }
+
+
 
 void sl_mem_manager_init_gradient_subset(struct SLMemManager * mem, size_t N, const size_t * ind)
 {
