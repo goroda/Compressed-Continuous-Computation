@@ -1,5 +1,5 @@
-C3HOME=~/Documents/c3
-# C3HOME=~/Software/c3
+# C3HOME=~/Documents/c3
+C3HOME=~/Software/c3
 
 ######################################
 # Function Information
