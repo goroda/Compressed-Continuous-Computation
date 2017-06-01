@@ -816,7 +816,7 @@ void Test_LS_AIO(CuTest * tc)
     printf("\t  Ranks:      [1 2 3 2 3 1]\n");
     printf("\t  LPOLY order: 3\n");
     printf("\t  nunknowns:   92\n");
-    printf("\t  ndata:       300\n");
+    printf("\t  ndata:       350\n");
 
     size_t dim = 5;
 
@@ -829,7 +829,7 @@ void Test_LS_AIO(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 300;
+    size_t ndata = 350;
     /* printf("\t ndata = %zu\n",ndata); */
     /* size_t ndata = 200; */
     double * x = calloc_double(ndata*dim);

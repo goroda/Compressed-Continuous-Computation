@@ -96,6 +96,7 @@ void kernel_expansion_scale(double, struct KernelExpansion *);
 
 size_t kernel_expansion_get_num_params(const struct KernelExpansion *);
 size_t kernel_expansion_get_params(const struct KernelExpansion *, double *);
+double * kernel_expansion_get_params_ref(const struct KernelExpansion *, size_t *);
 void kernel_expansion_orth_basis(size_t, struct KernelExpansion **, struct KernelApproxOpts *);
     
 int kernel_expansion_param_grad_eval(

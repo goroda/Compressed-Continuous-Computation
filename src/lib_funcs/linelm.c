@@ -467,6 +467,21 @@ size_t lin_elem_exp_get_params(const struct LinElemExp * lexp, double * param)
 }
 
 /********************************************************//**
+    Get a reference to parameters of a linear element expansion
+
+    \param[in]     lexp   - expansion
+    \param[in,out] nparam - parameters
+
+    \returns reference to parameters
+*************************************************************/
+double * lin_elem_exp_get_params_ref(const struct LinElemExp * lexp, size_t * nparam)
+{
+    assert (lexp != NULL);
+    *nparam = lexp->num_nodes;
+    return lexp->coeff;
+}
+
+/********************************************************//**
     Update the parameters (coefficients) for a linear element expansion
 
     \param[in] lexp  - expansion

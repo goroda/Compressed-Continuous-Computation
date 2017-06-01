@@ -1531,11 +1531,19 @@ void function_train_linparam_grad_eval(struct FunctionTrain * ft, size_t n,
         r1 = ft->cores[ii]->nrows;
         r2 = ft->cores[ii]->ncols;
 
-        qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
+        if (ii > 0){
+            qmarray_linparam_eval(ft->cores[ii],n,
+                                  ft->evalspace4[ii]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[ii]),
+                                  core_grad_space[ii],inc_grad_n[ii]);
+        }
+        else{
+            qmarray_param_grad_eval(ft->cores[ii],n,x+ii,dim,
                                 ft->evalspace4[ii]->vals,
                                 ft_mem_space_get_incr(ft->evalspace4[ii]),
                                 NULL,0,NULL);
-        
+        }
+
         if (grad != NULL){
             // store gradient info
             if (ii == 0){
@@ -1835,6 +1843,7 @@ void function_train_core_param_grad_eval(struct FunctionTrain * ft,
                                 ft->evalspace4[core]->vals,
                                 ft_mem_space_get_incr(ft->evalspace4[core]),
                                 NULL,0,NULL);
+       
     }
     else{
         if (core == 0){
@@ -1935,15 +1944,30 @@ void function_train_core_linparam_grad_eval(
 
     core_param_grad_prep_memory(ft,n);
 
+    size_t r1 = ft->cores[core]->nrows;
+    size_t r2 = ft->cores[core]->ncols;
 
     if (grad == NULL){
-        function_train_core_param_grad_eval(ft,core,n,x,evals_lr,evals_rl,grads,nparam,out,NULL,NULL,0,NULL);
+
+        if (core > 0){
+            qmarray_linparam_eval(ft->cores[core],n,
+                                  ft->evalspace4[core]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[core]),
+                                  core_grad_space,inc_grad_n);
+        }
+        else{
+            qmarray_param_grad_eval(ft->cores[core],n,x+core,dim,
+                                ft->evalspace4[core]->vals,
+                                ft_mem_space_get_incr(ft->evalspace4[core]),
+                                NULL,0,NULL);
+        }
+
+        // compute evaluation
+        function_train_core_pre_mid_post_combine(ft,core,n,evals_lr,evals_rl,r1,r2,out);
+        
+        /* function_train_core_param_grad_eval(ft,core,n,x,evals_lr,evals_rl,grads,nparam,out,NULL,NULL,0,NULL); */
     }
     else{
-
-        size_t r1 = ft->cores[core]->nrows;
-        size_t r2 = ft->cores[core]->ncols;
-
         if (core == 0){
             running_core_total_update_multiple(grads,n,nparam,r1,r2,
                                                core_grad_space,r1*r2,inc_grad_n);
@@ -1978,7 +2002,8 @@ void function_train_core_linparam_grad_eval(
                         for (size_t zz = 0; zz < nparamf; zz++){
                             size_t modelem = zz * r2 + ll;
                             grads->vals1[on_output + modelem] =
-                                core_grad_space[onnum + jj * inc_grad_n + zz] * vals[active_left];
+                                core_grad_space[onnum + jj * inc_grad_n + zz] *
+                                vals[active_left];
                         }
                             
                         onnum += nparamf;
@@ -1990,10 +2015,19 @@ void function_train_core_linparam_grad_eval(
         }
 
         // get evaluation for core
-        qmarray_param_grad_eval(ft->cores[core],n,x+core,dim,
+
+        if (core > 0){
+            qmarray_linparam_eval(ft->cores[core],n,
+                                  ft->evalspace4[core]->vals,
+                                  ft_mem_space_get_incr(ft->evalspace4[core]),
+                                  core_grad_space,inc_grad_n);
+        }
+        else{
+            qmarray_param_grad_eval(ft->cores[core],n,x+core,dim,
                                 ft->evalspace4[core]->vals,
                                 ft_mem_space_get_incr(ft->evalspace4[core]),
                                 NULL,0,NULL);
+        }
 
         // compute evaluation
         function_train_core_pre_mid_post_combine(ft,core,n,evals_lr,evals_rl,r1,r2,out);

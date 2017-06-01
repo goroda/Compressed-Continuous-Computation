@@ -2908,6 +2908,31 @@ size_t generic_function_get_params(const struct GenericFunction * gf, double * p
 }
 
 /********************************************************//**
+    Get the parameters of generic function
+
+    \param[in] gf         - generic function
+    \param[in,out] nparam - location to write parameters
+
+    \returns reference to parameters
+************************************************************/
+double * generic_function_get_params_ref(const struct GenericFunction * gf, size_t * nparam)
+{
+
+    assert (gf != NULL);
+    double * params = NULL;
+    switch (gf->fc){
+    case CONSTANT:                                                               break;
+    case PIECEWISE:  assert (1 == 0);                                            break;
+    case POLYNOMIAL: params = orth_poly_expansion_get_params_ref(gf->f,nparam);  break;
+    case LINELM:     params = lin_elem_exp_get_params_ref(gf->f,nparam);         break;
+    case RATIONAL:                                                               break;
+    case KERNEL:     params = kernel_expansion_get_params_ref(gf->f,nparam);     break;
+    }   
+
+    return params;
+}
+
+/********************************************************//**
     Add a parametric form to learn
 
     \param[in] opts  - regression options structure

@@ -209,6 +209,8 @@ orth_poly_expansion_init_from_opts(const struct OpeOpts *, size_t);
 struct OrthPolyExpansion * 
 orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
+double * orth_poly_expansion_get_params_ref(const struct OrthPolyExpansion *, size_t *);
+
 void
 orth_poly_expansion_update_params(struct OrthPolyExpansion *,
                                   size_t, const double *);

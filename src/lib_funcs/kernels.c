@@ -1277,6 +1277,17 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
     }
 }
 
+/********************************************************//**
+*   Get parameters defining kernel (for now just coefficients)
+*************************************************************/
+double * kernel_expansion_get_params_ref(const struct KernelExpansion * ke, size_t * nparam)
+{
+    assert (ke != NULL);
+    assert (ke->include_kernel_param == 0);
+    *nparam = ke->nkernels;
+    return ke->coeff;
+}
+
 
 /* static double numint(struct KernelExpansion * a, struct KernelExpansion * b, size_t nint) */
 /* { */

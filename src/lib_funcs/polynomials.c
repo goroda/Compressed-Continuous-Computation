@@ -1563,6 +1563,17 @@ size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion * ope, doub
 }
 
 /********************************************************//**
+*   Get parameters defining polynomial (for now just coefficients)
+*************************************************************/
+double * orth_poly_expansion_get_params_ref(
+    const struct OrthPolyExpansion * ope, size_t *nparam)
+{
+    assert (ope != NULL);
+    *nparam = ope->num_poly;
+    return ope->coeff;
+}
+
+/********************************************************//**
 *   Update an expansion's parameters
 *            
 *   \param[in] ope     - expansion to update

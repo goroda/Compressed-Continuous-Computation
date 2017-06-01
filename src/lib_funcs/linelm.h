@@ -108,6 +108,7 @@ void
 lin_elem_exp_update_params(struct LinElemExp *,
                            size_t, const double *);
 size_t lin_elem_exp_get_params(const struct LinElemExp *, double *);
+double * lin_elem_exp_get_params_ref(const struct LinElemExp *, size_t *);
 
 unsigned char *
 serialize_lin_elem_exp(unsigned char *, struct LinElemExp *,size_t *);
