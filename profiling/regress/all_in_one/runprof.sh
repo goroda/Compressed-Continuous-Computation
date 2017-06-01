@@ -49,13 +49,13 @@ then
    echo $REGRESS $CVPARAM
    $REGRESS $CVPARAM
 else
-    echo $REGRESS
-    $REGRESS # Just generate regression
+    # echo $REGRESS
+    time $REGRESS # Just generate regression
 
     # Do profiling
-    #valgrind --tool=callgrind $REGRESS
-    #python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
-    #rm callgrind.out.*
+    # valgrind --tool=callgrind $REGRESS
+    # python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
+    # rm callgrind.out.*
 fi
 
 

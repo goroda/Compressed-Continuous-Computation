@@ -275,6 +275,7 @@ int main(int argc, char * argv[])
     struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,ndata,x,y);
 
     if (verbose > 0){
+        /* printf("verbose = %d\n",verbose); */
         double diff;
         double err = 0.0;
         double norm = 0.0;
