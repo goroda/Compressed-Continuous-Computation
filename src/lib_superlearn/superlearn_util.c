@@ -180,14 +180,7 @@ void sl_mem_manager_free(struct SLMemManager * mem)
         running_core_total_free(mem->running_evals_rl);
         running_core_total_arr_free(mem->dim,mem->running_grad);
 
-
         free(mem->lin_structure_vals); mem->lin_structure_vals = NULL;
-        free(mem->lin_structure_inc);  mem->lin_structure_inc  = NULL;
-
-        for (size_t ii = 0; ii < mem->dim; ii++){
-            free(mem->lin_structure_vals_subset[ii]); mem->lin_structure_vals_subset[ii] = NULL;
-        }
-        free(mem->lin_structure_vals_subset); mem->lin_structure_vals_subset = NULL;
         free(mem); mem = NULL;
     }
 
@@ -206,10 +199,10 @@ void sl_mem_manager_free(struct SLMemManager * mem)
 ***************************************************************/
 struct SLMemManager *
 sl_mem_manager_alloc(size_t d, size_t n,
-                          size_t * num_params_per_core,
-                          size_t * ranks,
-                          size_t max_param_within_uni,
-                          enum FTPARAM_ST structure)
+                     size_t * num_params_per_core,
+                     size_t * ranks,
+                     size_t max_param_within_uni,
+                     enum FTPARAM_ST structure)
 {
 
     struct SLMemManager * mem = malloc(sizeof(struct SLMemManager));
@@ -257,17 +250,9 @@ sl_mem_manager_alloc(size_t d, size_t n,
     }
     mem->structure = structure;
     mem->once_eval_structure = 0;
-    mem->lin_structure_vals = malloc(mem->dim * sizeof(double * ));
-    assert (mem->lin_structure_vals != NULL);
-    mem->lin_structure_inc = calloc_size_t(mem->dim * sizeof(size_t));
-    assert (mem->lin_structure_inc != NULL);
+    
+    mem->lin_structure_vals = malloc(mem->N * num_tot_params,sizeof(double));
 
-
-    mem->lin_structure_vals_subset = malloc(mem->dim * sizeof(double * ));
-    assert (mem->lin_structure_vals_subset != NULL);
-    for (size_t ii = 0; ii < mem->dim; ii++){
-        mem->lin_structure_vals_subset[ii] = NULL;
-    }
     return mem;
     
 }
@@ -352,33 +337,6 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
         }
         mem->once_eval_structure = 1;
     }
-}
-
-
-
-void sl_mem_manager_init_gradient_subset(struct SLMemManager * mem, size_t N, const size_t * ind)
-{
-    if (ind == NULL){
-        for (size_t ii = 0; ii < mem->dim; ii++){
-            mem->lin_structure_vals[ii] = mem->all_grads[ii]->vals;
-            mem->lin_structure_inc[ii] = dbl_mem_array_get_data_inc(mem->all_grads[ii]);
-        }
-    }
-    else{
-        for (size_t ii = 0; ii < mem->dim; ii++){
-            mem->lin_structure_inc[ii] = dbl_mem_array_get_data_inc(mem->all_grads[ii]);
-
-            free(mem->lin_structure_vals_subset[ii]); mem->lin_structure_vals_subset[ii] = NULL;
-            mem->lin_structure_vals_subset[ii] = calloc_double(mem->lin_structure_inc[ii]*N);
-            for (size_t jj = 0; jj < N; jj++){
-                memmove(mem->lin_structure_vals_subset[ii] + jj * mem->lin_structure_inc[ii],
-                        dbl_mem_array_get_element(mem->all_grads[ii],ind[jj]),
-                        mem->lin_structure_inc[ii]*sizeof(double));
-            }
-            mem->lin_structure_vals[ii] = mem->lin_structure_vals_subset[ii];
-        }
-    }
-
 }
 
 ///////////////////////////////////////////////////////////////////////////

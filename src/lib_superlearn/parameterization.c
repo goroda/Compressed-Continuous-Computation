@@ -599,29 +599,46 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
 
 
 
-double ft_param_eval_lin(struct FTparam * ftp, const double * x, const double * grad_evals, double *mem)
+double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals)
 {
 
     size_t onuni = 0;
     size_t onparam = 0;
     size_t * ranks = function_train_get_ranks(ftp->ft);
-    for (size_t kk = 0; kk < ftp->dim; kk++){
-        for (size_t jj = 0; jj < ranks[kk]*ft->ranks[kk+1]; jj++){
-            mem[onuni] = cblas_ddot(ftp->num_param_per_uni[onuni],
-                                    grad_evals + onparam, 1,
-                                    ftp->params + onparam,1);
-            onparam += ftp->num_params_per_uni[onuni];
-            onuni++;
-        }
 
-        if (kk > 0){
-            // replace most recent mem with the product of the previous two cores
-            cblas_dgemv(CblasColMajor,CblasTrans,
-                        ranks[kk],ranks[kk+1], 1.0,
-                        mem - ranks[kk]*ranks[kk+1], ranks[kk],
-                        mem, 1, 0.0, new_place, 1);
-            cblas_dgemv()
+    size_t maxrank = function_train_get_maxrank(ftp->ft);
+    double * mem = calloc_double(maxrank*maxrank*ftp->dim);
+    size_t r2;
+    double * loc;
+    size_t indmem = 0;
+    assert (ranks[0] == 1);
+    for (size_t kk = 0; kk < ftp->dim; kk++){
+        r2 = ranks[kk]*ranks[kk+1];
+        for (size_t col = 0; col < ranks[kk+1]; col++){
+            if (kk > 0){
+                mem[indmem+ranks[kk]+col] = 0.0;
+                for (size_t row = 0; row < ranks[kk]; row++){
+                    double dd = cblas_ddot(ftp->num_param_per_uni[onuni],
+                                           grad_evals + onparam, 1,
+                                           ftp->params + onparam,1);
+                    mem[indmem+ranks[kk]+col] += mem[indmem+row] * dd;
+                    onparam += ftp->num_params_per_uni[onuni];
+                    onuni++;
+                }
+                indmem += ranks[kk];
+            }
+            else{
+                mem[col] = cblas_ddot(ftp->num_param_per_uni[onuni],
+                                     grad_evals + onparam, 1,
+                                     ftp->params + onparam,1);
+                onparam += ftp->num_params_per_uni[onuni];
+                onuni++;
+            }
+
         }
     }
-    
+
+    double out = mem[indmem];
+    free(mem); mem = NULL;
+    return out;
 }

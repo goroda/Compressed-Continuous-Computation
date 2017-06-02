@@ -123,7 +123,7 @@ static int ft_param_eval_grad(size_t N, const double * x, double ** evals,
     return 0;
 }
 
-static int ft_linparam_eval_grad(size_t N, const double * x, double ** evals,
+static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
                                  double ** grads,  struct SLMemManager * mem, void * arg)
 {
 
@@ -146,14 +146,19 @@ static int ft_linparam_eval_grad(size_t N, const double * x, double ** evals,
             /* dprint(N*ftp->nparams,*grads); */
         }
         else{
-            /* printf("grad is null\n"); */
-            function_train_linparam_grad_eval(
-                ftp->ft,
-                N, x,
-                mem->running_evals_lr,NULL,NULL,
-                ftp->nparams_per_core,
-                mem->evals->vals, NULL,mem->lin_structure_vals,mem->lin_structure_inc);
-            *evals = mem->evals->vals;
+            if (ind == NULL){
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_eval_lin(ftp, mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            }
+            else{
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_eval_lin(ftp,mem->lin_structure_vals + ind[ii] * ftp->nparams);
+
+                }
+            }
         }
     }
     else if (ropts->type == ALS){
@@ -363,8 +368,7 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
     // Evaluate function train
     const double * x = data_get_subset_ref(data,N,ind);
     if (sl_mem_manager_gradient_precomputedp(mem)){
-        sl_mem_manager_init_gradient_subset(mem,N,ind);
-        ft_linparam_eval_grad(N,x,evals,grads,mem,args);        
+        ft_linparam_eval_grad(N,ind,evals,grads,mem,args);        
     }
     else{
         ft_param_eval_grad(N,x,evals,grads,mem,args);        

@@ -91,8 +91,6 @@ size_t dbl_mem_array_get_data_inc(const struct DblMemArray *);
  * flag for whether or structure has been precomputed
  * \var SLMemManager::lin_structure_vals
  * precomputed elements for linearly dependent parameters
- * \var SLMemManager::lin_structure_inc
- * precomputed incremement for linearly dependent parameters between data points
  */ 
 struct SLMemManager
 {
@@ -111,11 +109,7 @@ struct SLMemManager
     enum FTPARAM_ST structure;
     int once_eval_structure;
 
-    double ** lin_structure_vals;
-    size_t * lin_structure_inc;
-
-    double ** lin_structure_vals_subset;
-
+    double * lin_structure_vals;
 };
 void sl_mem_manager_reset_running(struct SLMemManager *);
 void sl_mem_manager_reset_core_grad(struct SLMemManager *, size_t);
