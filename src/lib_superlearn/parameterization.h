@@ -93,12 +93,17 @@ void ft_param_create_constant(struct FTparam *, double, double);
 void ft_param_create_from_lin_ls(struct FTparam *, size_t,
                                  const double *, const double *,
                                  double);
+
 void ft_param_update_params(struct FTparam *, const double *);
 void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);
 void ft_param_update_inside_restricted_ranks(struct FTparam *,const double *, const size_t *);
                                              
 void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 enum FTPARAM_ST ft_param_extract_structure(const struct FTparam *);
+
+double ft_param_eval_lin(struct FTparam *, const double *);
+double ft_param_gradeval_lin(struct FTparam *, const double *,double *);
+
 
 
 

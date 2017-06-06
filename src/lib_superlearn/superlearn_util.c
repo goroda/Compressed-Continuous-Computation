@@ -251,7 +251,7 @@ sl_mem_manager_alloc(size_t d, size_t n,
     mem->structure = structure;
     mem->once_eval_structure = 0;
     
-    mem->lin_structure_vals = malloc(mem->N * num_tot_params,sizeof(double));
+    mem->lin_structure_vals = malloc(mem->N * num_tot_params * sizeof(double));
 
     return mem;
     
@@ -320,8 +320,7 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
     
     if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
 
-        struct FunctionTrain * ft = ft_param_get_ft(ft);
-        size_t * ranks = function_train_get_ranks(ft);
+        struct FunctionTrain * ft = ft_param_get_ft(ftp);
         for (size_t ii = 0; ii < mem->N; ii++){
             size_t onparam = 0;
             size_t onuni = 0;
@@ -329,8 +328,8 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
                 for (size_t jj = 0; jj < ft->ranks[kk]*ft->ranks[kk+1]; jj++){
                     generic_function_param_grad_eval(
                         ft->cores[kk]->funcs[jj],1,x+ii*ftp->dim+kk,
-                        mem->lin_structure_vals + ii * ftp->nparam + onparam);
-                    onparam += ftp->num_params_per_uni[onuni];
+                        mem->lin_structure_vals + ii * ftp->nparams + onparam);
+                    onparam += ftp->nparams_per_uni[onuni];
                     onuni++;
                 }
             }

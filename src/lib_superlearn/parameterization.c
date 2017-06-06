@@ -597,48 +597,196 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     free(weights); weights = NULL;
 }
 
-
-
 double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals)
 {
 
+    /* printf("ft_param_eval_lin\n"); */
     size_t onuni = 0;
     size_t onparam = 0;
     size_t * ranks = function_train_get_ranks(ftp->ft);
 
     size_t maxrank = function_train_get_maxrank(ftp->ft);
     double * mem = calloc_double(maxrank*maxrank*ftp->dim);
-    size_t r2;
-    double * loc;
+
+    // Except for the first core
+    // previous core runs form indmem to indmem + ranks[kk]
+    // new core evaluation runs from indmeme+ranks[kk] to indmeme+ranks[kk}+ranks[kk+1]
     size_t indmem = 0;
     assert (ranks[0] == 1);
-    for (size_t kk = 0; kk < ftp->dim; kk++){
-        r2 = ranks[kk]*ranks[kk+1];
+
+    for (size_t col = 0; col < ranks[1]; col++){
+        mem[col] = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,
+                              ftp->params + onparam,1);
+        onparam += ftp->nparams_per_uni[onuni];
+        onuni++;
+    }
+
+    for (size_t kk = 1; kk < ftp->dim; kk++){
         for (size_t col = 0; col < ranks[kk+1]; col++){
-            if (kk > 0){
-                mem[indmem+ranks[kk]+col] = 0.0;
-                for (size_t row = 0; row < ranks[kk]; row++){
-                    double dd = cblas_ddot(ftp->num_param_per_uni[onuni],
-                                           grad_evals + onparam, 1,
-                                           ftp->params + onparam,1);
-                    mem[indmem+ranks[kk]+col] += mem[indmem+row] * dd;
-                    onparam += ftp->num_params_per_uni[onuni];
-                    onuni++;
-                }
-                indmem += ranks[kk];
-            }
-            else{
-                mem[col] = cblas_ddot(ftp->num_param_per_uni[onuni],
-                                     grad_evals + onparam, 1,
-                                     ftp->params + onparam,1);
-                onparam += ftp->num_params_per_uni[onuni];
+            mem[indmem+ranks[kk]+col] = 0.0;
+            for (size_t row = 0; row < ranks[kk]; row++){
+                double dd = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,
+                                       ftp->params + onparam,1);
+                mem[indmem+ranks[kk]+col] += mem[indmem+row] * dd;
+                onparam += ftp->nparams_per_uni[onuni];
                 onuni++;
             }
-
+        }
+        if (kk > 0){
+            indmem += ranks[kk];
         }
     }
 
     double out = mem[indmem];
     free(mem); mem = NULL;
+    /* printf("got it\n"); */
+    return out;
+}
+
+double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
+                             double * grad)
+{
+
+    /* printf("ft_param_gradeval_lin\n"); */
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+
+    size_t maxrank = function_train_get_maxrank(ftp->ft);
+    double * mem = calloc_double(maxrank*maxrank*ftp->dim + maxrank);
+    double * evals = calloc_double(maxrank*maxrank*ftp->dim);
+    size_t r2;
+
+    // Except for the first core
+    // previous core runs form indmem to indmem + ranks[kk]
+    // new core evaluation runs from indmeme+ranks[kk] to indmeme+ranks[kk}+ranks[kk+1]
+    size_t indmem = 0;
+    assert (ranks[0] == 1);
+    for (size_t kk = 0; kk < ftp->dim; kk++){
+        for (size_t col = 0; col < ranks[kk+1]; col++){
+            if (kk > 0){
+                mem[indmem+ranks[kk]+col] = 0.0;
+                for (size_t row = 0; row < ranks[kk]; row++){
+                    evals[onuni] = cblas_ddot(ftp->nparams_per_uni[onuni],
+                                             grad_evals + onparam, 1,
+                                             ftp->params + onparam,1);
+                    mem[indmem+ranks[kk]+col] += mem[indmem+row] * evals[onuni];
+                    onparam += ftp->nparams_per_uni[onuni];
+                    onuni++;
+                }
+
+            }
+            else{
+                mem[col] = cblas_ddot(ftp->nparams_per_uni[onuni],
+                                      grad_evals + onparam, 1,
+                                      ftp->params + onparam,1);
+                evals[col] = mem[col];
+                onparam += ftp->nparams_per_uni[onuni];
+                onuni++;
+            }
+        }
+        if (kk > 0){
+            indmem += ranks[kk];
+        }
+        /* printf("evals = "); */
+        /* dprint2d_col(ranks[kk],ranks[kk+1],evals); */
+    }
+
+    /* printf("done with first half indmem = %zu\n",indmem); */
+    /* dprint(maxrank*maxrank*ftp->dim,mem); */
+    double out = mem[indmem];
+    /* printf("out = %G\n",out); */
+    size_t backind=0,r1;
+
+    // mem[indmem] is the product of all the cores
+    // mem[indmem-r1] is the product of all but the last core
+    /* for (size_t zz = 0; zz < ftp->dim-1; zz++) */
+    for (size_t zz = 0; zz < ftp->dim-1; zz++)
+    {
+        backind = ftp->dim-1-zz;
+        r1 = ranks[backind];
+        r2 = ranks[backind+1];
+
+        /* printf("backind = %zu\n",backind); */
+        
+        // current core will run from indmem to indmem + r2;
+        // might be wrong here
+        /* indmem -= r2; */
+        indmem -= r1;
+
+        onuni = onuni - r1*r2;
+        onparam = onparam - ftp->nparams_per_core[backind];
+
+        /* printf("onparam start = %zu\n",onparam); */
+        if (backind < ftp->dim-1){
+            for (size_t ii = 0; ii < r2; ii++){
+                double right_mult = mem[indmem + r1 + ii];
+                for (size_t kk = 0; kk < r1; kk++){
+                    double left_mult = mem[indmem + kk];
+                    for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni];ll++){
+                        grad[onparam] =  left_mult*grad_evals[onparam]*right_mult;
+                        onparam++;
+                    }
+                    onuni++;
+                }
+            }
+            onparam -= ftp->nparams_per_core[backind];
+            onuni -= r1*r2;
+            cblas_dgemv(CblasColMajor, CblasNoTrans,
+                        r1,r2,1.0,
+                        evals + onuni, r1,
+                        mem + indmem + r1, 1,
+                        0.0,mem + indmem, 1);
+                            
+        }
+        else{
+            /* printf("LETS GO indmem=%zu!\n",indmem); */
+            for (size_t kk = 0; kk < r1; kk++){
+                double left_mult = mem[indmem + kk];
+                for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+                    /* printf("ll = %zu, onparam = %zu, left_mult=%G\n",ll,onparam,left_mult); */
+                    /* printf("grad eval = %G\n",grad_evals[onparam]); */
+
+                    grad[onparam] = left_mult*grad_evals[onparam];
+                    /* printf("grad[%zu]=%G, kk = %zu \n",onparam,grad[onparam],kk); */
+                    onparam++;
+                }
+                /* printf("word?\n"); */
+                mem[indmem + kk] = evals[onuni];
+                /* onparam++; */
+                onuni++;
+            }
+            /* printf("word!\n"); */
+            onparam -= ftp->nparams_per_core[backind];
+            onuni -= r1*r2;
+        }
+    }
+
+    backind = 0;
+    /* printf("done with all but first, backind = %zu\n",backind); */
+    // handle first core;
+    r1 = ranks[backind];
+    r2 = ranks[backind+1];
+
+    /* // current core will run from indmem to indmem + r2; */
+    indmem -= r1;
+
+    onuni = onuni - r1*r2;
+    onparam = onparam - ftp->nparams_per_core[backind];
+
+    for (size_t ii = 0; ii < r2; ii++){
+        double right_mult = mem[indmem + r1 + ii];
+        for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+            grad[onparam] =  grad_evals[onparam]*right_mult;
+            onparam++;
+        }
+        onuni++;
+    }
+
+
+    
+    free(mem); mem = NULL;
+    free(evals); evals = NULL;
+    /* printf("got it\n"); */
     return out;
 }
