@@ -1,5 +1,5 @@
 #C3HOME=~/Documents/c3
-C3HOME=~/Software/c3
+# C3HOME=~/Software/c3
 
 ######################################
 # Function Information
@@ -50,7 +50,7 @@ then
    $REGRESS $CVPARAM
 else
     echo $REGRESS
-    $REGRESS # Just generate regression
+    time $REGRESS # Just generate regression
 
     # Do profiling
     #valgrind --tool=callgrind $REGRESS
