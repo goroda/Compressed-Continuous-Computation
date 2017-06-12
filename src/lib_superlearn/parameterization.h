@@ -101,12 +101,12 @@ void ft_param_update_inside_restricted_ranks(struct FTparam *,const double *, co
 void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 enum FTPARAM_ST ft_param_extract_structure(const struct FTparam *);
 
-double ft_param_eval_lin(struct FTparam *, const double *);
-double ft_param_gradeval_lin(struct FTparam *, const double *,double *);
+// AIO HELPERS
+double ft_param_gradeval(struct FTparam *, const double *,double*, double *, double*,double*);
+double ft_param_eval_lin(struct FTparam *, const double *,double*);
+double ft_param_gradeval_lin(struct FTparam *, const double *,double *,double *,double *);
 
-
-
-
-
+// ALS HELPERS
+double ft_param_core_eval_lin(struct FTparam *,size_t,double *,double *,const double *);
 
 #endif

@@ -331,6 +331,8 @@ generic_function_update_params(struct GenericFunction *, size_t,const double *);
 
 int generic_function_param_grad_eval(const struct GenericFunction *, size_t,
                                      const double *, double *);
+double generic_function_param_grad_eval2(const struct GenericFunction *,
+                                         double, double *);
 int
 generic_function_squared_norm_param_grad(const struct GenericFunction *,
                                          double, double *);

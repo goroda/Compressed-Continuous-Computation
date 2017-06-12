@@ -2409,6 +2409,49 @@ int orth_poly_expansion_param_grad_eval(
     return 0;    
 }
 
+
+/********************************************************//*
+*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   with respect to the parameters
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return evaluation
+*************************************************************/
+double orth_poly_expansion_param_grad_eval2(
+    const struct OrthPolyExpansion * poly, double x, double * grad)
+{
+    double out = 0.0;
+
+    double p[2];
+    double pnew;
+
+    double x_norm = space_mapping_map(poly->space_transform,x);
+    
+    size_t iter = 0;
+    p[0] = poly->p->const_term;
+    grad[0] = p[0];
+    out += p[0]*poly->coeff[0];
+    iter++;
+    if (poly->num_poly > 1){
+        p[1] = poly->p->lin_const + poly->p->lin_coeff * x_norm;
+        grad[iter] = p[1];
+        out += p[1]*poly->coeff[1];
+        iter++;
+
+        for (iter = 2; iter < poly->num_poly; iter++){
+            pnew = (poly->p->an(iter)*x_norm + poly->p->bn(iter)) * p[1] + poly->p->cn(iter) * p[0];
+            grad[iter] = pnew;
+            out += pnew*poly->coeff[iter];
+            p[0] = p[1];
+            p[1] = pnew;
+        }
+    }
+    return out;    
+}
+
 /********************************************************//**
     Take a gradient of the squared norm 
     with respect to its parameters, and add a scaled version

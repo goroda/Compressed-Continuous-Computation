@@ -3131,6 +3131,40 @@ int generic_function_param_grad_eval(const struct GenericFunction * gf,
     return res;
 }
 
+
+/********************************************************//**
+    Take a gradient with respect to function parameters
+
+    \param[in]     gf   - generic function
+    \param[in]     x    - x values
+    \param[in,out] grad - gradient (N)
+
+    \return  evaluation
+************************************************************/
+double generic_function_param_grad_eval2(const struct GenericFunction * gf,
+                                         double x,double * grad)
+                                        
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    double ret = 0.1234;
+    switch (fc){
+    case CONSTANT: assert(1 == 0); break;
+    case PIECEWISE: assert(1 == 0); break;
+    case POLYNOMIAL:
+        ret  = orth_poly_expansion_param_grad_eval2(gf->f,x,grad);
+        break;
+    case LINELM:
+        ret = lin_elem_exp_param_grad_eval2(gf->f,x,grad);
+        break;
+    case RATIONAL: assert(1 == 0); break;
+    case KERNEL:
+        ret = kernel_expansion_param_grad_eval2(gf->f,x,grad);
+        break;
+    }
+    return ret;
+}
+
 /********************************************************//**
     Take a gradient of the squared norm of a generic function
     with respect to its parameters, and add a scaled version

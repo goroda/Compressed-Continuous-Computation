@@ -806,9 +806,9 @@ void Test_function_train_param_grad_eval_simple(CuTest * tc)
     free(y);                y   = NULL;
 }
 
-void Test_ft_param_eval(CuTest * tc)
+void Test_ft_param_gradeval(CuTest * tc)
 {
-    printf("\nTesting Function: ft_param_eval \n");
+    printf("\nTesting Function: ft_param_gradeval \n");
     printf("\t  Dimensions: 4\n");
     printf("\t  Ranks:      [1 2 3 8 1]\n");
     printf("\t  LPOLY order: 10\n");
@@ -836,30 +836,43 @@ void Test_ft_param_eval(CuTest * tc)
 
     double pt[4] = {0.2,-1.2,2.1,0.9};
     struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
-    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,ftp->nparams_per_core,
-                                                     ranks,
-                                                     maxorder+1,LINEAR_ST);
-
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
     sl_mem_manager_check_structure(slm,ftp,pt);
 
+    double * grad = calloc_double(nparam);
     double eval_true = function_train_eval(ftp->ft,pt);
-    double eval_lin = ft_param_eval_lin(ftp,slm->lin_structure_vals);
+    double eval = ft_param_gradeval(ftp,pt,grad,slm->lin_structure_vals,
+                                    slm->running_grad,slm->running_eval);
 
-    CuAssertDblEquals(tc,eval_true,eval_lin,1e-14);
+    CuAssertDblEquals(tc,eval_true,eval,1e-11);
+    /* dprint(nparam,grad); */
+    double h = 1e-7;
+    for (size_t zz = 0; zz < nparam; zz++){
+        size_t ii = nparam-zz-1;
+        /* if (ii <= 351){ */
+        /*     printf("ii = %zu\n",ii); */
+        /* } */
+        param[ii] += h;
+        ft_param_update_params(ftp,param);
+        double ehere = function_train_eval(ftp->ft,pt);
+        double fd  = (ehere-eval_true)/h;
+
+        CuAssertDblEquals(tc,fd,grad[ii],1e-5);
+        param[ii] -=h;
+        ft_param_update_params(ftp,param);
+    }
     
-
+    free(grad);
     multi_approx_opts_free(fapp);
     one_approx_opts_free_deep(&qmopts);
     free(param);
     ft_param_free(ftp);
     sl_mem_manager_free(slm);
-    
-
 }
 
-void Test_ft_param_gradeval(CuTest * tc)
+void Test_ft_param_eval_lin(CuTest * tc)
 {
-    printf("\nTesting Function: ft_param_grad_eval \n");
+    printf("\nTesting Function: ft_param_eval_lin \n");
     printf("\t  Dimensions: 4\n");
     printf("\t  Ranks:      [1 2 3 8 1]\n");
     printf("\t  LPOLY order: 10\n");
@@ -887,9 +900,53 @@ void Test_ft_param_gradeval(CuTest * tc)
 
     double pt[4] = {0.2,-1.2,2.1,0.9};
     struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
-    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,ftp->nparams_per_core,
-                                                     ranks,
-                                                     maxorder+1,LINEAR_ST);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
+
+    sl_mem_manager_check_structure(slm,ftp,pt);
+
+    double eval_true = function_train_eval(ftp->ft,pt);
+    double eval_lin = ft_param_eval_lin(ftp,slm->lin_structure_vals,slm->running_eval);
+
+    CuAssertDblEquals(tc,eval_true,eval_lin,1e-14);
+    
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    sl_mem_manager_free(slm);
+}
+
+void Test_ft_param_gradeval_lin(CuTest * tc)
+{
+    printf("\n Testing Function: ft_param_gradeval_lin \n");
+    printf("\t  Dimensions: 4\n");
+    printf("\t  Ranks:      [1 2 3 8 1]\n");
+    printf("\t  LPOLY order: 10\n");
+
+    srand(seed);
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,3,8,1};
+    size_t maxorder = 10; 
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
+
+    double pt[4] = {0.2,-1.2,2.1,0.9};
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
     sl_mem_manager_check_structure(slm,ftp,pt);
 
     double eval_true = function_train_eval(ftp->ft,pt);
@@ -897,7 +954,10 @@ void Test_ft_param_gradeval(CuTest * tc)
     /* printf("nparam = %zu\n",nparam); */
     /* printf("eval_true = %G\n",eval_true); */
     double * grad = calloc_double(nparam);
-    ft_param_gradeval_lin(ftp,slm->lin_structure_vals,grad);
+    double eval_should = ft_param_gradeval_lin(ftp,slm->lin_structure_vals,
+                                               grad,slm->running_eval,
+                                               slm->running_grad);
+    CuAssertDblEquals(tc,eval_true,eval_should,1e-10);
     /* dprint(nparam,grad); */
     double h = 1e-7;
     for (size_t zz = 0; zz < nparam; zz++){
@@ -2964,10 +3024,6 @@ void Test_LS_AIO_rankadapt_kernel(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
-
-
-
-
 void Test_LS_AIO_kernel2(CuTest * tc)
 {
     srand(seed);
@@ -2984,7 +3040,7 @@ void Test_LS_AIO_kernel2(CuTest * tc)
     /*                     5,4,3,4,3,1}; */
     
     // create data
-    size_t ndata = 100;
+    size_t ndata = 150;
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -3501,20 +3557,21 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
 
-    /* /\* next 5 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1); */
-    SUITE_ADD_TEST(suite, Test_ft_param_eval);
+    /* next 5 are good */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple);
+    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
     SUITE_ADD_TEST(suite, Test_ft_param_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_eval_lin);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin);
     SUITE_ADD_TEST(suite, Test_LS_AIO);
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
-    /* /\* next 4 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
+    /* next 4 are good */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     
     /* /\* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks); *\/ */
@@ -3523,24 +3580,24 @@ CuSuite * CLinalgRegressGetSuite()
 
     /* /\* Next 2 are good *\/ */
     /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
     /* /\* next 2 are good *\/ */
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
     /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
 
     /* /\* Next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
     
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rounding); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
 
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
         
     return suite;
 }

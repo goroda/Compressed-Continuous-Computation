@@ -56,69 +56,59 @@ struct PP
     struct RegressOpts * opts;
 };
 
-
-static int ft_param_eval_grad(size_t N, const double * x, double ** evals,
-                       double ** grads,  struct SLMemManager * mem, void * arg)
+static int ft_param_eval_grad(size_t N,const double * x, double ** evals,
+                              double ** grads,  struct SLMemManager * mem, void * arg)
 {
-
     struct PP * mem_opts = arg;
     struct RegressOpts * ropts = mem_opts->opts;
     struct FTparam     * ftp   = mem_opts->ftp;
 
-    if (ropts->type == AIO){
-        if (grads != NULL){
-            /* printf("grad is not null\n"); */
-            function_train_param_grad_eval(
-                ftp->ft,
-                N, x,
-                mem->running_evals_lr, mem->running_evals_rl, mem->running_grad,
-                ftp->nparams_per_core, mem->evals->vals, mem->grad->vals,
-                mem->grad_space->vals,
-                dbl_mem_array_get_data_inc(mem->grad_space),
-                mem->fparam_space->vals
-                );
-            *evals = mem->evals->vals;
-            *grads = mem->grad->vals;
-            /* dprint(N*ftp->nparams,*grads); */
+    if (grads == NULL)
+    {
+        for (size_t ii = 0; ii < N; ii++){
+            mem->evals->vals[ii] = function_train_eval(ftp->ft,x + ii * ftp->dim);
         }
-        else{
-            /* printf("grad is null\n"); */
-            function_train_param_grad_eval(
-                ftp->ft,
-                N, x,
-                mem->running_evals_lr,NULL,NULL,
-                ftp->nparams_per_core,
-                mem->evals->vals, NULL,NULL,0,NULL);
-            *evals = mem->evals->vals;
-
+        *evals = mem->evals->vals;
+    }
+    else if (ropts->type == AIO){
+        for (size_t ii = 0; ii < N; ii++){
+            mem->evals->vals[ii] =
+                ft_param_gradeval(ftp, x + ii * ftp->dim,
+                                  mem->grad->vals + ii*ftp->nparams,
+                                  mem->lin_structure_vals,
+                                  mem->running_eval,
+                                  mem->running_grad);
         }
+        *evals = mem->evals->vals;
+        *grads = mem->grad->vals;
     }
     else if (ropts->type == ALS){
-        size_t active_core = ropts->als_active_core;
-        if (grads != NULL){
-            function_train_core_param_grad_eval(
-                ftp->ft, active_core, N, x, mem->running_evals_lr, mem->running_evals_rl,
-                mem->running_grad[active_core],
-                ftp->nparams_per_core[active_core],
-                mem->evals->vals, mem->grad->vals,
-                mem->grad_space->vals,
-                dbl_mem_array_get_data_inc(mem->grad_space),
-                mem->fparam_space->vals
-                );
-            *evals = mem->evals->vals;
-            *grads = mem->grad->vals; 
-        }
-        else{
-            function_train_core_param_grad_eval(
-                ftp->ft, active_core,N,
-                x,
-                mem->running_evals_lr,
-                mem->running_evals_rl,NULL,
-                ftp->nparams_per_core[active_core],
-                mem->evals->vals, NULL,NULL,0,NULL);
+        assert (1 == 0);
+        /* size_t active_core = ropts->als_active_core; */
+        /* if (grads != NULL){ */
+        /*     function_train_core_param_grad_eval( */
+        /*         ftp->ft, active_core, N, x, mem->running_evals_lr, mem->running_evals_rl, */
+        /*         mem->running_grad[active_core], */
+        /*         ftp->nparams_per_core[active_core], */
+        /*         mem->evals->vals, mem->grad->vals, */
+        /*         mem->grad_space->vals, */
+        /*         dbl_mem_array_get_data_inc(mem->grad_space), */
+        /*         mem->fparam_space->vals */
+        /*         ); */
+        /*     *evals = mem->evals->vals; */
+        /*     *grads = mem->grad->vals; */
+        /* } */
+        /* else{ */
+        /*     function_train_core_param_grad_eval( */
+        /*         ftp->ft, active_core,N, */
+        /*         x, */
+        /*         mem->running_evals_lr, */
+        /*         mem->running_evals_rl,NULL, */
+        /*         ftp->nparams_per_core[active_core], */
+        /*         mem->evals->vals, NULL,NULL,0,NULL); */
 
-            *evals = mem->evals->vals;
-        }
+        /*     *evals = mem->evals->vals; */
+        /* } */
     }
     return 0;
 }
@@ -138,7 +128,9 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
                     mem->evals->vals[ii] =
                         ft_param_gradeval_lin(ftp,
                                               mem->lin_structure_vals + ii * ftp->nparams,
-                                              mem->grad->vals + ii*ftp->nparams);
+                                              mem->grad->vals + ii*ftp->nparams,
+                                              mem->running_eval,
+                                              mem->running_grad);
                 }
             }
             else{
@@ -146,8 +138,9 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
                     mem->evals->vals[ii] =
                         ft_param_gradeval_lin(ftp,
                                               mem->lin_structure_vals+ind[ii]*ftp->nparams,
-                                              mem->grad->vals + ii*ftp->nparams);
-
+                                              mem->grad->vals + ii*ftp->nparams,
+                                              mem->running_eval,
+                                              mem->running_grad);
                 }
             }
             *evals = mem->evals->vals;
@@ -157,14 +150,17 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
             if (ind == NULL){
                 for (size_t ii = 0; ii < N; ii++){
                     mem->evals->vals[ii] =
-                        ft_param_eval_lin(ftp, mem->lin_structure_vals + ii * ftp->nparams);
+                        ft_param_eval_lin(ftp, mem->lin_structure_vals + ii * ftp->nparams,
+                                          mem->running_eval);
+                            
                 }
             }
             else{
                 for (size_t ii = 0; ii < N; ii++){
                     mem->evals->vals[ii] =
                         ft_param_eval_lin(ftp,
-                                          mem->lin_structure_vals + ind[ii] * ftp->nparams);
+                                          mem->lin_structure_vals + ind[ii] * ftp->nparams,
+                                          mem->running_eval);
 
                 }
             }
@@ -172,7 +168,27 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
         }
     }
     else if (ropts->type == ALS){
-        assert (1 == 0);
+        if (grads == NULL){
+            size_t start_lin = 0;
+            for (size_t core = 0; core < ropts->active_core; core++){
+                start_lin += ftp->nparams_per_core[core];
+            }
+            if (ind == NULL){
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_core_eval_lin(ftp,ropts->active_core,
+                                               mem->running_lr + ii * ftp->nparams,
+                                               mem->running_rl + ii * ftp->nparams,
+                                               mem->lin_structure_vals + ii * ftp->nparams + start_lin,
+                                               mem->running_eval);
+
+                }
+            }
+        }
+        else{
+            assert (1 == 0)
+        }
+    }
         /* size_t active_core = ropts->als_active_core; */
         /* if (grads != NULL){ */
         /*     function_train_core_linparam_grad_eval( */
@@ -186,17 +202,6 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
         /*     *evals = mem->evals->vals; */
         /*     *grads = mem->grad->vals;  */
         /* } */
-        /* else{ */
-        /*     function_train_core_linparam_grad_eval( */
-        /*         ftp->ft, active_core, N, x, mem->running_evals_lr, mem->running_evals_rl, */
-        /*         NULL, */
-        /*         ftp->nparams_per_core[active_core], */
-        /*         mem->evals->vals, NULL, */
-        /*         mem->lin_structure_vals[active_core], */
-        /*         mem->lin_structure_inc[active_core]); */
-        /*     *evals = mem->evals->vals; */
-        /* } */
-    }
     return 0;
 }
 /***********************************************************//**
@@ -213,9 +218,10 @@ static inline void prepare_als_core(struct FTparam * ftp,size_t core,
                                     struct SLMemManager * mem, size_t N,
                                     const double * x)
 {
-    function_train_core_pre_post_run(ft_param_get_ft(ftp),core,N,x,
-                                     mem->running_evals_lr,
-                                     mem->running_evals_rl);
+    /* assert (1 == 0); */
+    /* function_train_core_pre_post_run(ft_param_get_ft(ftp),core,N,x, */
+    /*                                  mem->running_evals_lr, */
+    /*                                  mem->running_evals_rl); */
 }
 
 /***********************************************************//**
@@ -356,10 +362,10 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
 
     
     // Deal with memory
-    if (ropts->type == AIO){
-        sl_mem_manager_reset_running(mem);
-    }
-    else if (ropts->type == ALS){
+    /* if (ropts->type == AIO){ */
+    /*     sl_mem_manager_reset_running(mem); */
+    /* } */
+    if (ropts->type == ALS){
         sl_mem_manager_reset_core_grad(mem,ropts->als_active_core);
     }
 
@@ -379,7 +385,7 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
     // Evaluate function train
     const double * x = data_get_subset_ref(data,N,ind);
     if (sl_mem_manager_gradient_precomputedp(mem)){
-        ft_linparam_eval_grad(N,ind,evals,grads,mem,args);        
+        ft_linparam_eval_grad(N,ind,evals,grads,mem,args);
     }
     else{
         ft_param_eval_grad(N,x,evals,grads,mem,args);        
@@ -388,20 +394,18 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
     return 0;
 }
 
-static double ft_param_grad_sqnorm_learning_interface(size_t nparam, const double * param, double * grad,
+static double ft_param_grad_sqnorm_learning_interface(size_t nparam, const double * param,
+                                                      double * grad,
                                                       size_t Ndata, size_t * data_index,
                                                       struct Data * data,
                                                       struct SLMemManager * mem, void * arg)
 {
-
 
     (void)param;
     (void)data;
     (void)Ndata;
     (void)data_index;
     (void)mem;
-
-
 
     struct PP * mem_opts = arg;
     struct RegressOpts          * ropts = mem_opts->opts;
@@ -418,7 +422,8 @@ static double ft_param_grad_sqnorm_learning_interface(size_t nparam, const doubl
             regval = function_train_param_grad_sqnorm(ftp->ft,weights,grad);
         }
         else if (ropts->type == ALS){
-            regval = qmarray_param_grad_sqnorm(ftp->ft->cores[ropts->als_active_core],weights[0],grad);
+            regval = qmarray_param_grad_sqnorm(ftp->ft->cores[ropts->als_active_core],
+                                               weights[0],grad);
         }
         else{
             fprintf(stderr, "Unrecognized optimization framework. Needs to be either AIO or ALS\n");
@@ -480,15 +485,9 @@ struct ObjectiveFunction * build_objective(struct PP * pp, void ** mem)
     return obj;
 }
 
-
-
-
 ///////////////////////////////////////////////////////////////////////////
 // Parameterized FT
 ///////////////////////////////////////////////////////////////////////////
-
-
-
 
 /***********************************************************//**
     Run all-at-once regression and return the result
@@ -508,16 +507,9 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
                       size_t N, const double * x, const double * y)
 {
 
-    size_t * ranks = function_train_get_ranks(ftp->ft);
 
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
-
-    /* if (ropts->stoch_obj == 1){ */
-    /*     structure = NONE_ST; // don't take advante of structure in this case */
-    /* } */
-    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,
-                                                     ftp->nparams_per_core,ranks,
-                                                     ftp->max_param_uni,structure);
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,structure);
     sl_mem_manager_check_structure(mem,ftp,x);
     struct Data * data = data_alloc(N,ftp->dim);
     data_set_xy(data,x,y);
@@ -531,7 +523,7 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     size_t nparams = create_initial_guess(ropts,ftp,&guess);
 
 
-    printf("built aobjective function\n");
+    /* printf("built aobjective function\n"); */
     struct SLP slp;
     slp.objective_function = obj;
     slp.optimizer = optimizer;
@@ -577,13 +569,9 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 {
 
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
-    size_t * ranks = function_train_get_ranks(ftp->ft);
-    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,
-                                                     ftp->nparams_per_core,ranks,
-                                                     ftp->max_param_uni,structure);
-
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,structure);
     sl_mem_manager_check_structure(mem,ftp,x);
-
+    
     struct Data * data = data_alloc(N,ftp->dim);
     data_set_xy(data,x,y);
 
@@ -608,7 +596,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             if (ropts->verbose > 1){
                 printf("\tDim %zu: ",ii);
             }
-            sl_mem_manager_reset_running(mem);
+            /* sl_mem_manager_reset_running(mem); */
             ropts->als_active_core = ii;
             prepare_als_core(ftp,ii,mem,N,x);
 
@@ -636,7 +624,7 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
                 printf("\tDim %zu: ",ii);
             }
             
-            sl_mem_manager_reset_running(mem);
+            /* sl_mem_manager_reset_running(mem); */
             ropts->als_active_core = ii;
             prepare_als_core(ftp,ii,mem,N,x);
 

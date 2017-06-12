@@ -274,6 +274,8 @@ void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,
                                const double *, size_t, double *, size_t);
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion *, size_t, const double *, double *);
+double orth_poly_expansion_param_grad_eval2(const struct OrthPolyExpansion *, double, double *);
+
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);

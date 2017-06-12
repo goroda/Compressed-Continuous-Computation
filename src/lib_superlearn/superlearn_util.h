@@ -97,21 +97,27 @@ struct SLMemManager
 
     size_t dim;
     size_t N;
-    struct RunningCoreTotal *  running_evals_lr;
-    struct RunningCoreTotal *  running_evals_rl;
-    struct RunningCoreTotal ** running_grad;
+    double * running_eval;
+    double * running_grad;
+    
+    double * running_lr;
+    double * running_rl;
+    /* struct RunningCoreTotal *  running_evals_lr; */
+    /* struct RunningCoreTotal *  running_evals_rl; */
+    /* struct RunningCoreTotal ** running_grad; */
     struct DblMemArray *       evals;
     struct DblMemArray *       grad;
-    struct DblMemArray *       grad_space;
-    struct DblMemArray **      all_grads;
-    struct DblMemArray *       fparam_space;
+    /* struct DblMemArray *       grad_space; */
+    /* struct DblMemArray **      all_grads; */
+    /* struct DblMemArray *       fparam_space; */
 
     enum FTPARAM_ST structure;
     int once_eval_structure;
 
     double * lin_structure_vals;
 };
-void sl_mem_manager_reset_running(struct SLMemManager *);
+
+
 void sl_mem_manager_reset_core_grad(struct SLMemManager *, size_t);
 void sl_mem_manager_check_structure(struct SLMemManager *,
                                     const struct FTparam *,
@@ -127,9 +133,8 @@ inline int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem)
 void sl_mem_manager_init_gradient_subset(struct SLMemManager *, size_t, const size_t *);
 
 void sl_mem_manager_free(struct SLMemManager *);
-struct SLMemManager * sl_mem_manager_alloc(size_t, size_t, size_t *,size_t *,size_t,enum FTPARAM_ST);
+struct SLMemManager * sl_mem_manager_alloc(size_t, size_t, size_t,enum FTPARAM_ST);
 
-    
 struct Data;
 struct Data * data_alloc(size_t, size_t);
 size_t data_get_N(const struct Data *);

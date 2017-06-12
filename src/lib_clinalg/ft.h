@@ -142,15 +142,6 @@ void function_train_param_grad_eval_simple(struct FunctionTrain *, size_t,
                                            const double *,
                                            double *, double *);
 
-void function_train_linparam_grad_eval(struct FunctionTrain *, size_t,
-                                       const double *,
-                                       struct RunningCoreTotal *,
-                                       struct RunningCoreTotal *,
-                                       struct RunningCoreTotal **, size_t *,
-                                       double *, double *,
-                                       double **,
-                                       size_t *);
-
 void function_train_core_pre_post_run(struct FunctionTrain *, size_t,
                                       size_t, const double *,
                                       struct RunningCoreTotal *,

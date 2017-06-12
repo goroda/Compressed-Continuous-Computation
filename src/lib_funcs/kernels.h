@@ -101,6 +101,8 @@ void kernel_expansion_orth_basis(size_t, struct KernelExpansion **, struct Kerne
     
 int kernel_expansion_param_grad_eval(
     struct KernelExpansion *, size_t, const double *, double *);
+double kernel_expansion_param_grad_eval2(struct KernelExpansion *, double, double *);
+
 int
 kernel_expansion_squared_norm_param_grad(const struct KernelExpansion *,
                                          double, double *);

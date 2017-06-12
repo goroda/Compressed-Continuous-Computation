@@ -597,16 +597,13 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     free(weights); weights = NULL;
 }
 
-double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals)
+double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals, double * mem)
 {
 
     /* printf("ft_param_eval_lin\n"); */
     size_t onuni = 0;
     size_t onparam = 0;
     size_t * ranks = function_train_get_ranks(ftp->ft);
-
-    size_t maxrank = function_train_get_maxrank(ftp->ft);
-    double * mem = calloc_double(maxrank*maxrank*ftp->dim);
 
     // Except for the first core
     // previous core runs form indmem to indmem + ranks[kk]
@@ -638,30 +635,27 @@ double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals)
     }
 
     double out = mem[indmem];
-    free(mem); mem = NULL;
+    /* free(mem); mem = NULL; */
     /* printf("got it\n"); */
     return out;
 }
 
 double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
-                             double * grad)
+                             double * grad, double * mem, double * evals)
 {
 
-    /* printf("ft_param_gradeval_lin\n"); */
+
     size_t onuni = 0;
     size_t onparam = 0;
     size_t * ranks = function_train_get_ranks(ftp->ft);
-
-    size_t maxrank = function_train_get_maxrank(ftp->ft);
-    double * mem = calloc_double(maxrank*maxrank*ftp->dim + maxrank);
-    double * evals = calloc_double(maxrank*maxrank*ftp->dim);
-    size_t r2;
 
     // Except for the first core
     // previous core runs form indmem to indmem + ranks[kk]
     // new core evaluation runs from indmeme+ranks[kk] to indmeme+ranks[kk}+ranks[kk+1]
     size_t indmem = 0;
     assert (ranks[0] == 1);
+
+    // Forward sweep
     for (size_t kk = 0; kk < ftp->dim; kk++){
         for (size_t col = 0; col < ranks[kk+1]; col++){
             if (kk > 0){
@@ -688,30 +682,21 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
         if (kk > 0){
             indmem += ranks[kk];
         }
-        /* printf("evals = "); */
-        /* dprint2d_col(ranks[kk],ranks[kk+1],evals); */
     }
 
-    /* printf("done with first half indmem = %zu\n",indmem); */
-    /* dprint(maxrank*maxrank*ftp->dim,mem); */
-    double out = mem[indmem];
-    /* printf("out = %G\n",out); */
-    size_t backind=0,r1;
 
+    double out = mem[indmem];
+    size_t backind=0,r1,r2;
+
+    // backward sweep
     // mem[indmem] is the product of all the cores
     // mem[indmem-r1] is the product of all but the last core
-    /* for (size_t zz = 0; zz < ftp->dim-1; zz++) */
     for (size_t zz = 0; zz < ftp->dim-1; zz++)
     {
         backind = ftp->dim-1-zz;
         r1 = ranks[backind];
         r2 = ranks[backind+1];
 
-        /* printf("backind = %zu\n",backind); */
-        
-        // current core will run from indmem to indmem + r2;
-        // might be wrong here
-        /* indmem -= r2; */
         indmem -= r1;
 
         onuni = onuni - r1*r2;
@@ -744,19 +729,12 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
             for (size_t kk = 0; kk < r1; kk++){
                 double left_mult = mem[indmem + kk];
                 for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
-                    /* printf("ll = %zu, onparam = %zu, left_mult=%G\n",ll,onparam,left_mult); */
-                    /* printf("grad eval = %G\n",grad_evals[onparam]); */
-
                     grad[onparam] = left_mult*grad_evals[onparam];
-                    /* printf("grad[%zu]=%G, kk = %zu \n",onparam,grad[onparam],kk); */
                     onparam++;
                 }
-                /* printf("word?\n"); */
                 mem[indmem + kk] = evals[onuni];
-                /* onparam++; */
                 onuni++;
             }
-            /* printf("word!\n"); */
             onparam -= ftp->nparams_per_core[backind];
             onuni -= r1*r2;
         }
@@ -783,10 +761,182 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
         onuni++;
     }
 
+    return out;
+}
 
+
+double ft_param_gradeval(struct FTparam * ftp, const double * x,
+                         double * grad,
+                         double * grad_evals,
+                         double * mem, double * evals)
+{
+
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    struct FunctionTrain * ft = ftp->ft;
+    // Except for the first core
+    // previous core runs form indmem to indmem + ranks[kk]
+    // new core evaluation runs from indmeme+ranks[kk] to indmeme+ranks[kk}+ranks[kk+1]
+    size_t indmem = 0;
+    assert (ranks[0] == 1);
+
+    // Forward sweep
+    for (size_t kk = 0; kk < ftp->dim; kk++){
+        for (size_t col = 0; col < ranks[kk+1]; col++){
+            if (kk > 0){
+                mem[indmem+ranks[kk]+col] = 0.0;
+                for (size_t row = 0; row < ranks[kk]; row++){
+                    evals[onuni] = generic_function_param_grad_eval2(
+                        ft->cores[kk]->funcs[row + col * ranks[kk]],x[kk],grad_evals + onparam);
+                        
+                    mem[indmem+ranks[kk]+col] += mem[indmem+row] * evals[onuni];
+                    onparam += ftp->nparams_per_uni[onuni];
+                    onuni++;
+                }
+            }
+            else{
+                mem[col] =
+                    generic_function_param_grad_eval2(ft->cores[kk]->funcs[col],x[kk],grad_evals + onparam);
+
+                evals[col] = mem[col];
+                onparam += ftp->nparams_per_uni[onuni];
+                onuni++;
+            }
+        }
+        if (kk > 0){
+            indmem += ranks[kk];
+        }
+    }
+
+
+    double out = mem[indmem];
+    size_t backind=0,r1,r2;
+
+    // backward sweep
+    // mem[indmem] is the product of all the cores
+    // mem[indmem-r1] is the product of all but the last core
+    for (size_t zz = 0; zz < ftp->dim-1; zz++)
+    {
+        backind = ftp->dim-1-zz;
+        r1 = ranks[backind];
+        r2 = ranks[backind+1];
+
+        indmem -= r1;
+
+        onuni = onuni - r1*r2;
+        onparam = onparam - ftp->nparams_per_core[backind];
+
+        /* printf("onparam start = %zu\n",onparam); */
+        if (backind < ftp->dim-1){
+            for (size_t ii = 0; ii < r2; ii++){
+                double right_mult = mem[indmem + r1 + ii];
+                for (size_t kk = 0; kk < r1; kk++){
+                    double left_mult = mem[indmem + kk];
+                    for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni];ll++){
+                        grad[onparam] =  left_mult*grad_evals[onparam]*right_mult;
+                        onparam++;
+                    }
+                    onuni++;
+                }
+            }
+            onparam -= ftp->nparams_per_core[backind];
+            onuni -= r1*r2;
+            cblas_dgemv(CblasColMajor, CblasNoTrans,
+                        r1,r2,1.0,
+                        evals + onuni, r1,
+                        mem + indmem + r1, 1,
+                        0.0,mem + indmem, 1);
+                            
+        }
+        else{
+            /* printf("LETS GO indmem=%zu!\n",indmem); */
+            for (size_t kk = 0; kk < r1; kk++){
+                double left_mult = mem[indmem + kk];
+                for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+                    grad[onparam] = left_mult*grad_evals[onparam];
+                    onparam++;
+                }
+                mem[indmem + kk] = evals[onuni];
+                onuni++;
+            }
+            onparam -= ftp->nparams_per_core[backind];
+            onuni -= r1*r2;
+        }
+    }
+
+    backind = 0;
+    /* printf("done with all but first, backind = %zu\n",backind); */
+    // handle first core;
+    r1 = ranks[backind];
+    r2 = ranks[backind+1];
+
+    /* // current core will run from indmem to indmem + r2; */
+    indmem -= r1;
+
+    onuni = onuni - r1*r2;
+    onparam = onparam - ftp->nparams_per_core[backind];
+
+    for (size_t ii = 0; ii < r2; ii++){
+        double right_mult = mem[indmem + r1 + ii];
+        for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+            grad[onparam] =  grad_evals[onparam]*right_mult;
+            onparam++;
+        }
+        onuni++;
+    }
+
+    return out;
+}
+
+
+double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
+                              double * running_lr, double * running_rl,
+                              const double * grad_evals)
+                              
+{
+
+    /* printf("ft_param_eval_lin\n"); */
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+
+    double out = 0.0;
+    for (size_t kk = 0; kk < core; kk++){
+        for (size_t ii = 0; ii < ranks[kk] * ranks[kk+1]; ii++){
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
     
-    free(mem); mem = NULL;
-    free(evals); evals = NULL;
-    /* printf("got it\n"); */
+    if ((core > 0) && (core < ftp->dim-1)){
+        double t;
+        for (size_t col = 0; col < ranks[core+1]; col++){
+            for (size_t row = 0; row < ranks[core]; row++){
+                t = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1);
+                t *= running_lr[row] * running_rl[col];
+                out += t;
+                onparam += ftp->nparams_per_uni[onuni];
+                onuni++;
+            }
+        }
+    }
+    else if (core == ftp->dim-1){
+        for (size_t row = 0; row < ranks[ftp->dim-1]; row++){
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1) *
+                running_lr[row];
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
+    else{ // core == 0
+        for (size_t col = 0; col < ranks[1]; col++){
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1) *
+                running_rl[col];
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
+
     return out;
 }

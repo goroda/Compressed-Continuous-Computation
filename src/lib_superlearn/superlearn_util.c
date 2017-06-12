@@ -161,25 +161,15 @@ void sl_mem_manager_free(struct SLMemManager * mem)
 {
     if (mem != NULL){
     
-        dbl_mem_array_free(mem->grad_space);
-        mem->grad_space = NULL;
-        
-        dbl_mem_array_free(mem->fparam_space);
-        mem->fparam_space = NULL;
-        
         dbl_mem_array_free(mem->evals);
         mem->evals = NULL;
         
         dbl_mem_array_free(mem->grad);
         mem->grad = NULL;
 
-        dbl_mem_array_arr_free(mem->dim,mem->all_grads);
-        mem->all_grads = NULL;
-
-        running_core_total_free(mem->running_evals_lr);
-        running_core_total_free(mem->running_evals_rl);
-        running_core_total_arr_free(mem->dim,mem->running_grad);
-
+        free(mem->running_eval); mem->running_eval = NULL;
+        free(mem->running_grad); mem->running_grad = NULL;
+        
         free(mem->lin_structure_vals); mem->lin_structure_vals = NULL;
         free(mem); mem = NULL;
     }
@@ -189,19 +179,16 @@ void sl_mem_manager_free(struct SLMemManager * mem)
 /***********************************************************//**
     Allocate memory for supervised learning
     
-    \param[in] d                    - size of feature space
-    \param[in] n                    - number of data points to make room for
-    \param[in] num_params_per_core  - number of parameters in each core
-    \param[in] max_param_within_uni - upper bound on number of parameters in a univariate funciton
-    \param[in] structure            - either (LINEAR_ST or NONE)
+    \param[in] d         - size of feature space
+    \param[in] n         - number of data points to make room for
+    \param[in] nparam    - number of total parameters
+    \param[in] structure - either (LINEAR_ST or NONE)
 
     \returns Supervised learning memory manager
 ***************************************************************/
 struct SLMemManager *
 sl_mem_manager_alloc(size_t d, size_t n,
-                     size_t * num_params_per_core,
-                     size_t * ranks,
-                     size_t max_param_within_uni,
+                     size_t nparam,
                      enum FTPARAM_ST structure)
 {
 
@@ -214,44 +201,23 @@ sl_mem_manager_alloc(size_t d, size_t n,
     mem->dim = d;
     mem->N = n;
 
-    mem->fparam_space = dbl_mem_array_alloc(1,max_param_within_uni);
+    mem->running_lr = calloc_double(nparam);
+    mem->running_rl = calloc_double(nparam);
 
-    mem->all_grads = malloc(d * sizeof(struct DblMemArray * ));
-    assert (mem->all_grads != NULL);
-    size_t mr2_max = 0;
-    size_t mr2;
-    size_t num_tot_params = 0;
-    size_t max_param_within_core = 0;
-    for (size_t ii = 0; ii < d; ii++){
-        mr2 = ranks[ii]*ranks[ii+1];
-        mem->all_grads[ii] = dbl_mem_array_alloc(n,num_params_per_core[ii] * mr2 );
-        num_tot_params += num_params_per_core[ii];
-        if (mr2 > mr2_max){
-            mr2_max = mr2;
-        }
-        if (num_params_per_core[ii] > max_param_within_core){
-            max_param_within_core = num_params_per_core[ii];
-        }
-    }
-    mem->running_evals_lr = running_core_total_alloc(mr2_max);
-    mem->running_evals_rl = running_core_total_alloc(mr2_max);
-    mem->running_grad     = running_core_total_arr_alloc(d,mr2_max);
+    mem->running_eval = calloc_double(2*nparam);
+    mem->running_grad = calloc_double(2*nparam);
     
-    mem->grad       = dbl_mem_array_alloc(n,num_tot_params);
+    mem->grad       = dbl_mem_array_alloc(n,nparam);
     mem->evals      = dbl_mem_array_alloc(n,1);
 
-
-    mem->grad_space = dbl_mem_array_alloc(n, max_param_within_core * mr2_max);
-    if ( structure != LINEAR_ST){
-        if (structure != NONE_ST){
-            fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
-            exit(1);
-        }
+    if ((structure != LINEAR_ST) && (structure != NONE_ST)){
+        fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
+        exit(1);
     }
+
     mem->structure = structure;
     mem->once_eval_structure = 0;
-    
-    mem->lin_structure_vals = malloc(mem->N * num_tot_params * sizeof(double));
+    mem->lin_structure_vals = malloc(mem->N * nparam * sizeof(double));
 
     return mem;
     
@@ -275,27 +241,14 @@ int sl_mem_manager_enough(struct SLMemManager * mem, size_t N)
 }
 
 /***********************************************************//**
-    Reset left,right, and gradient running evaluations
-    
-    \param[in,out] mem - memory structure
-***************************************************************/
-void sl_mem_manager_reset_running(struct SLMemManager * mem)
-{
-    running_core_total_restart(mem->running_evals_lr);
-    running_core_total_restart(mem->running_evals_rl);
-    running_core_total_arr_restart(mem->dim, mem->running_grad);
-
-    /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
-}
-
-/***********************************************************//**
     Reset the running gradient of a particular core
     
     \param[in,out] mem - memory structure
 ***************************************************************/
 void sl_mem_manager_reset_core_grad(struct SLMemManager * mem, size_t ii)
 {
-    running_core_total_restart(mem->running_grad[ii]);
+    assert (1 == 0);
+    /* running_core_total_restart(mem->running_grad[ii]); */
     /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
 }
 
