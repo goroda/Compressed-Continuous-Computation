@@ -201,9 +201,6 @@ sl_mem_manager_alloc(size_t d, size_t n,
     mem->dim = d;
     mem->N = n;
 
-    mem->running_lr = dbl_mem_array_alloc(n,nparam);
-    mem->running_rl = dbl_mem_arary_alloc(n,nparam);
-
     mem->running_eval = calloc_double(2*nparam);
     mem->running_grad = calloc_double(2*nparam);
     
@@ -241,19 +238,6 @@ int sl_mem_manager_enough(struct SLMemManager * mem, size_t N)
 }
 
 /***********************************************************//**
-    Reset the running gradient of a particular core
-    
-    \param[in,out] mem - memory structure
-***************************************************************/
-void sl_mem_manager_reset_core_grad(struct SLMemManager * mem, size_t ii)
-{
-    assert (1 == 0);
-    /* running_core_total_restart(mem->running_grad[ii]); */
-    /* printf("r2 in first core is %zu\n",mem->running_grad[0]->r2); */
-}
-
-
-/***********************************************************//**
     Check if special structure exists and if so, precompute
     
     \param[in,out] mem - memory structure
@@ -269,9 +253,9 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
                                     const double * x)
 {
 
+    struct FunctionTrain * ft = ft_param_get_ft(ftp);
     if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
 
-        struct FunctionTrain * ft = ft_param_get_ft(ftp);
         for (size_t ii = 0; ii < mem->N; ii++){
             size_t onparam = 0;
             size_t onuni = 0;
@@ -287,7 +271,11 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
         }
         mem->once_eval_structure = 1;
     }
+
+    
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Data management

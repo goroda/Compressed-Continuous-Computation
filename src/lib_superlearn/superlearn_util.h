@@ -100,8 +100,9 @@ struct SLMemManager
     double * running_eval;
     double * running_grad;
     
-    double * running_lr;
-    double * running_rl;
+    double *** running_lr;
+    double *** running_rl;
+    
     /* struct RunningCoreTotal *  running_evals_lr; */
     /* struct RunningCoreTotal *  running_evals_rl; */
     /* struct RunningCoreTotal ** running_grad; */
@@ -117,8 +118,6 @@ struct SLMemManager
     double * lin_structure_vals;
 };
 
-
-void sl_mem_manager_reset_core_grad(struct SLMemManager *, size_t);
 void sl_mem_manager_check_structure(struct SLMemManager *,
                                     const struct FTparam *,
                                     const double *);

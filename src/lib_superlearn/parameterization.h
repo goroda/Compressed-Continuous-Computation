@@ -106,7 +106,12 @@ double ft_param_gradeval(struct FTparam *, const double *,double*, double *, dou
 double ft_param_eval_lin(struct FTparam *, const double *,double*);
 double ft_param_gradeval_lin(struct FTparam *, const double *,double *,double *,double *);
 
+
 // ALS HELPERS
+void process_sweep_left_right(struct FTparam * ftp, size_t current_core, const double * x, double * evals,
+                              double * running_lr, double * running_lr_up);
+void process_sweep_right_left(struct FTparam * ftp, size_t current_core, const double * x, double * evals,
+                              double * running_rl, double * running_rl_up);
 double ft_param_core_eval_lin(struct FTparam *,size_t,double *,double *,const double *);
 
 #endif
