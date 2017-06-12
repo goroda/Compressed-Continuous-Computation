@@ -37,3 +37,6 @@ eight.svg : new interface, initialized from linear regression
 
 ninth.svg : another new interface
           : times = 3.825s, 3.682s, 3.107s
+
+tenth.svg : yet another new interface 6/12/2017
+          : time = 2.120s, 1.532s, 1.536s

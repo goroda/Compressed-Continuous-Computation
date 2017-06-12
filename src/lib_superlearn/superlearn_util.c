@@ -201,8 +201,8 @@ sl_mem_manager_alloc(size_t d, size_t n,
     mem->dim = d;
     mem->N = n;
 
-    mem->running_lr = calloc_double(nparam);
-    mem->running_rl = calloc_double(nparam);
+    mem->running_lr = dbl_mem_array_alloc(n,nparam);
+    mem->running_rl = dbl_mem_arary_alloc(n,nparam);
 
     mem->running_eval = calloc_double(2*nparam);
     mem->running_grad = calloc_double(2*nparam);
@@ -269,8 +269,6 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
                                     const double * x)
 {
 
-
-    
     if ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 0)){
 
         struct FunctionTrain * ft = ft_param_get_ft(ftp);

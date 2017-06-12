@@ -889,6 +889,59 @@ double ft_param_gradeval(struct FTparam * ftp, const double * x,
     return out;
 }
 
+static void update_running_lr(struct FTparam * ftp, size_t core, double * running_lr, double * running_lr_up, double * evals)
+{
+
+    if (core > 0){
+        size_t * ranks = function_train_get_ranks(ftp->ft);
+        cblas_dgemv(CblasColMajor,CblasTrans,ranks[core],ranks[core+1],1.0,evals,ranks[core],running_lr,1,
+                    0.0,running_lr_up,1);
+                    
+    }
+    else{
+        memmove(running_lr_new,evals,ranks[1]*sizeof(double));
+    }
+}
+
+static void update_running_rl(struct FTparam * ftp, size_t core, double * running_rl, double * running_rl_up, double * evals)
+{
+
+    if (core < ftp->dim-1){
+        cblas_dgemv(CblasColMajor,CblasNoTrans,
+                    ranks[core],ranks[core+1], 1.0, evals, ranks[core], running_rl, 1,
+                    0.0, running_rl_up,1);
+    }
+    else{
+        memmove(running_rl_up,evals,ranks[ftp->dim-1] * sizeof(double));
+    }
+}
+
+
+void process_sweep_left_right(struct FTparam * ftp, size_t current_core, double * x, double * evals,
+                              double * running_lr, double * running_lr_up)
+{
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    size_t r1 = ranks[current_core];
+    size_t r2 = ranks[current_core+1];
+    qmarray_eval(ftp->ft->cores[current_core],1,x+ftp->dim,1,evals,r1*r2,NULL,0,NULL);
+
+    update_running_lr(ftp,current_core,running_lr,running_lr_up, evals);
+ 
+}
+
+void process_sweep_right_left(struct FTparam * ftp, size_t current_core, double * x, double * evals,
+                              double * running_rl, double * running_rl_up)
+{
+
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    size_t r1 = ranks[current_core];
+    size_t r2 = ranks[current_core+1];
+    qmarray_eval(ftp->ft->cores[current_core],1,x+ftp->dim,1,evals,r1*r2,NULL,0,NULL);
+    update_running_lr(ftp,current_core,running_rl,running_rl_up, evals);
+}
+
+
+
 
 double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
                               double * running_lr, double * running_rl,
@@ -913,7 +966,9 @@ double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
         double t;
         for (size_t col = 0; col < ranks[core+1]; col++){
             for (size_t row = 0; row < ranks[core]; row++){
-                t = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1);
+                t = cblas_ddot(ftp->nparams_per_uni[onuni],
+                               grad_evals+onparam,1,
+                               ftp->params + onparam,1);
                 t *= running_lr[row] * running_rl[col];
                 out += t;
                 onparam += ftp->nparams_per_uni[onuni];
@@ -923,15 +978,19 @@ double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
     }
     else if (core == ftp->dim-1){
         for (size_t row = 0; row < ranks[ftp->dim-1]; row++){
-            out += cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1) *
-                running_lr[row];
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],
+                              grad_evals+onparam,1,
+                              ftp->params + onparam,1) * running_lr[row];
+
             onparam += ftp->nparams_per_uni[onuni];
             onuni++;
         }
     }
     else{ // core == 0
         for (size_t col = 0; col < ranks[1]; col++){
-            out += cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1) *
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],
+                              grad_evals+onparam,1,
+                              ftp->params + onparam,1) *
                 running_rl[col];
             onparam += ftp->nparams_per_uni[onuni];
             onuni++;

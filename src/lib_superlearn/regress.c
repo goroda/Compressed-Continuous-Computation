@@ -47,6 +47,43 @@
 #include "regress.h"
 #include "objective_functions.h"
 
+/** \struct FTRegress
+ * \brief Interface to regression
+ * \var FTRegress::type
+ * algorithm for regression (ALS,AIO)
+ * \var FTRegress::obj
+ * objective function (FTLS, FTLS_SPARSEL2)
+ * \var FTRegress::dim
+ * dimension of the feature space
+ * \var FTRegress::approx_opts
+ * approximation options
+ * \var FTRegress::ftp
+ * parameterized function train
+ * \var FTRegress::regopts
+ * regression options
+ */ 
+struct FTRegress
+{
+    size_t type;
+    size_t obj;
+    size_t dim;
+
+    struct MultiApproxOpts* approx_opts;
+    struct FTparam* ftp;
+    struct RegressOpts* regopts;    
+
+
+    int adapt;
+    size_t kickrank;
+    size_t maxrank;
+    double roundtol;
+    size_t kfold;
+    int finalize;
+    int opt_restricted;
+
+};
+
+
 /** \struct PP
  * \brief Store items that will be passed as void to optimizer
  */
@@ -169,24 +206,25 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
     }
     else if (ropts->type == ALS){
         if (grads == NULL){
-            size_t start_lin = 0;
-            for (size_t core = 0; core < ropts->active_core; core++){
-                start_lin += ftp->nparams_per_core[core];
-            }
-            if (ind == NULL){
-                for (size_t ii = 0; ii < N; ii++){
-                    mem->evals->vals[ii] =
-                        ft_param_core_eval_lin(ftp,ropts->active_core,
-                                               mem->running_lr + ii * ftp->nparams,
-                                               mem->running_rl + ii * ftp->nparams,
-                                               mem->lin_structure_vals + ii * ftp->nparams + start_lin,
-                                               mem->running_eval);
+            assert (1 == 0);
+            /* size_t start_lin = 0; */
+            /* for (size_t core = 0; core < ropts->active_core; core++){ */
+            /*     start_lin += ftp->nparams_per_core[core]; */
+            /* } */
+            /* if (ind == NULL){ */
+            /*     for (size_t ii = 0; ii < N; ii++){ */
+            /*         mem->evals->vals[ii] = */
+            /*             ft_param_core_eval_lin(ftp,ropts->active_core, */
+            /*                                    mem->running_lr + ii * ftp->nparams, */
+            /*                                    mem->running_rl + ii * ftp->nparams, */
+            /*                                    mem->lin_structure_vals + ii * ftp->nparams + start_lin, */
+            /*                                    mem->running_eval); */
 
-                }
-            }
+            /*     } */
+            /* } */
         }
         else{
-            assert (1 == 0)
+            assert (1 == 0);
         }
     }
         /* size_t active_core = ropts->als_active_core; */
@@ -592,13 +630,15 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             printf("Sweep %zu\n",sweep);
         }
         struct FunctionTrain * start = function_train_copy(ftp->ft);
+
+        // forward sweep
         for (size_t ii = 0; ii < ftp->dim; ii++){
             if (ropts->verbose > 1){
                 printf("\tDim %zu: ",ii);
             }
             /* sl_mem_manager_reset_running(mem); */
             ropts->als_active_core = ii;
-            prepare_als_core(ftp,ii,mem,N,x);
+
 
             slp.nparams = ftp->nparams_per_core[ii];
             double * guess = calloc_double(ftp->nparams_per_core[ii]);
@@ -613,11 +653,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
                 printf("\t\tObjVal = %3.5G\n",val);
             }
 
-            
-            ft_param_update_core_params(ftp,ii,guess);
+            ft_param_update_core_params(ftp,ii,guess);            
             free(guess); guess = NULL;
         }
 
+        // backward sweep
         for (size_t jj = 1; jj < ftp->dim-1; jj++){
             size_t ii = ftp->dim-1-jj;
             if (ropts->verbose > 1){
@@ -714,41 +754,6 @@ c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3O
 /* //////////////////////////////////// */
 
 
-/** \struct FTRegress
- * \brief Interface to regression
- * \var FTRegress::type
- * algorithm for regression (ALS,AIO)
- * \var FTRegress::obj
- * objective function (FTLS, FTLS_SPARSEL2)
- * \var FTRegress::dim
- * dimension of the feature space
- * \var FTRegress::approx_opts
- * approximation options
- * \var FTRegress::ftp
- * parameterized function train
- * \var FTRegress::regopts
- * regression options
- */ 
-struct FTRegress
-{
-    size_t type;
-    size_t obj;
-    size_t dim;
-
-    struct MultiApproxOpts* approx_opts;
-    struct FTparam* ftp;
-    struct RegressOpts* regopts;    
-
-
-    int adapt;
-    size_t kickrank;
-    size_t maxrank;
-    double roundtol;
-    size_t kfold;
-    int finalize;
-    int opt_restricted;
-
-};
 
 /***********************************************************//**
     Allocate function train regression structure
