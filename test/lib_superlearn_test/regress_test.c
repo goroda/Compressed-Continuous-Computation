@@ -61,8 +61,8 @@ void Test_LS_ALS(CuTest * tc)
 
 
     size_t dim = 5;
-    /* size_t ranks[6] = {1,2,8,3,2,1}; */
-    size_t ranks[6] = {1,2,2,2,2,1};
+    size_t ranks[6] = {1,2,8,3,2,1};
+    /* size_t ranks[6] = {1,2,2,2,2,1}; */
     double lb = -1.0;
     double ub = 1.0;
     size_t maxorder = 3;
@@ -70,8 +70,8 @@ void Test_LS_ALS(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    /* size_t ndata = 600; */
-    size_t ndata = 200;
+    size_t ndata = 600;
+    /* size_t ndata = 200; */
     /* printf("\t ndata = %zu\n",ndata); */
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -500,108 +500,6 @@ void Test_ft_param_core_gradeval(CuTest * tc)
     sl_mem_manager_free(slm); slm  = NULL;
     multi_approx_opts_free(fapp); fapp = NULL;
     one_approx_opts_free_deep(&qmopts); qmopts = NULL;
-}
-
-
-void Test_function_train_param_grad_eval_simple(CuTest * tc)
-{
-    printf("\nTesting Function: function_train_param_grad_eval_simple \n");
-    printf("\t  Dimensions: 4\n");
-    printf("\t  Ranks:      [1 2 3 8 1]\n");
-    printf("\t  LPOLY order: 10\n");
-
-    srand(seed);
-    size_t dim = 4;
-    
-    size_t ranks[5] = {1,2,3,8,1};
-    /* size_t ranks[5] = {1,2,2,2,1}; */
-    double lb = -0.5;
-    double ub = 1.0;
-    size_t maxorder = 10; // 10
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 10; // 10
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    size_t temp_nparam, totparam = 0;
-    size_t nparam[4];
-    for (size_t ii = 0; ii < dim; ii++){
-        nparam[ii] = function_train_core_get_nparams(a,ii,&temp_nparam);
-        totparam += nparam[ii];
-    }
-
-    double * vals = calloc_double(ndata);
-    double * grad = calloc_double(ndata*totparam);
-
-    double * guess = calloc_double(totparam);
-    size_t runtot = 0;
-    size_t running = 0;
-    for (size_t zz = 0; zz < dim; zz++){
-        for (size_t jj = 0; jj < nparam[zz]; jj++){
-            guess[running+jj] = randn();
-            runtot++;
-        }
-        function_train_core_update_params(a,zz,nparam[zz],guess+running);
-        running+=nparam[zz];
-    }
-
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-
-    function_train_param_grad_eval_simple(a,ndata,x,vals,NULL);
-
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-    
-    /* printf("\t Testing Gradient\n"); */
-    function_train_param_grad_eval_simple(a,ndata,x,vals,grad);
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-
-    /* printf("grad = "); dprint(totparam,grad); */
-    for (size_t zz = 0; zz < ndata; zz++){
-        running = 0;
-        double h = 1e-4;
-        for (size_t ii = 0; ii < dim; ii++){
-            /* printf("dim = %zu\n",ii); */
-            for (size_t jj = 0; jj < nparam[ii]; jj++){
-                /* printf("\t jj = %zu\n", jj); */
-                guess[running+jj] += h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            
-                double val2 = function_train_eval(a,x+zz*dim);
-                double fd = (val2-y[zz])/h;
-                /* printf("val2=%G, y[0]=%G\n",val2,y[0]); */
-                /* printf("fd = %3.15G, calc is %3.15G\n",fd,grad[running+jj + zz * totparam]); */
-                /* printf("\t fd[%zu,%zu] = %3.5G\n",jj,zz,fd); */
-                double reldiff = (fd - grad[running+jj + zz * totparam])/fd;
-                CuAssertDblEquals(tc,0.0,reldiff,2e-5);
-                guess[running+jj] -= h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            }
-            running += nparam[ii];
-        }
-    }
-
-    free(guess); guess = NULL;
-    free(vals); vals = NULL;
-    free(grad); grad = NULL;
-    
-    bounding_box_free(bds); bds = NULL;
-    function_train_free(a); a   = NULL;
-    free(x);                x   = NULL;
-    free(y);                y   = NULL;
 }
 
 void Test_ft_param_gradeval(CuTest * tc)
@@ -3356,7 +3254,6 @@ CuSuite * CLinalgRegressGetSuite()
     /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
 
     /* /\* next 5 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple); */
     /* SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval); */
     /* SUITE_ADD_TEST(suite, Test_ft_param_gradeval); */
     /* SUITE_ADD_TEST(suite, Test_ft_param_eval_lin); */
