@@ -124,33 +124,30 @@ static int ft_param_eval_grad(size_t N,const double * x, double ** evals,
         if ((active_core > 0) && ( active_core < (ftp->dim-1))){
             for (size_t ii = 0; ii < N; ii++){
                 mem->evals->vals[ii] =
-                    ft_param_core_gradeval(ftp, x[ii*ftp->dim+active_core],
-                                           mem->grad->vals + ii * ftp->nparams,
+                    ft_param_core_gradeval(ftp, active_core, x[ii*ftp->dim+active_core],
+                                           mem->grad->vals + ii * ftp->nparams_per_core[active_core],
                                            mem->running_lr[active_core-1][ii],
                                            mem->running_rl[active_core+1][ii],
-                                           mem->running_eval,
                                            mem->running_grad);
             }
         }
         else if (active_core == 0){
             for (size_t ii = 0; ii < N; ii++){
                 mem->evals->vals[ii] =
-                    ft_param_core_gradeval(ftp, x[ii*ftp->dim+active_core],
-                                           mem->grad->vals + ii * ftp->nparams,
+                    ft_param_core_gradeval(ftp,active_core, x[ii*ftp->dim+active_core],
+                                           mem->grad->vals + ii * ftp->nparams_per_core[active_core],
                                            NULL,
                                            mem->running_rl[1][ii],
-                                           mem->running_eval,
                                            mem->running_grad);
             }
         }
         else{
             for (size_t ii = 0; ii < N; ii++){
                 mem->evals->vals[ii] =
-                    ft_param_core_gradeval(ftp, x[ii*ftp->dim+active_core],
-                                           mem->grad->vals + ii * ftp->nparams,
+                    ft_param_core_gradeval(ftp,active_core, x[ii*ftp->dim+active_core],
+                                           mem->grad->vals + ii * ftp->nparams_per_core[active_core],
                                            mem->running_lr[active_core-1][ii],
                                            NULL,
-                                           mem->running_eval,
                                            mem->running_grad);
             }
         }
@@ -216,41 +213,62 @@ static int ft_linparam_eval_grad(size_t N, size_t * ind, double ** evals,
         }
     }
     else if (ropts->type == ALS){
-        if (grads == NULL){
-            assert (1 == 0);
-            /* size_t start_lin = 0; */
-            /* for (size_t core = 0; core < ropts->active_core; core++){ */
-            /*     start_lin += ftp->nparams_per_core[core]; */
-            /* } */
-            /* if (ind == NULL){ */
-            /*     for (size_t ii = 0; ii < N; ii++){ */
-            /*         mem->evals->vals[ii] = */
-            /*             ft_param_core_eval_lin(ftp,ropts->active_core, */
-            /*                                    mem->running_lr + ii * ftp->nparams, */
-            /*                                    mem->running_rl + ii * ftp->nparams, */
-            /*                                    mem->lin_structure_vals + ii * ftp->nparams + start_lin, */
-            /*                                    mem->running_eval); */
-
-            /*     } */
-            /* } */
+        size_t active_core = ropts->als_active_core;
+        double ** lr;
+        double ** rl;
+        if ((active_core > 0) && (active_core < ftp->dim-1)){
+            lr = mem->running_lr[active_core-1];
+            rl = mem->running_rl[active_core+1];
+        }
+        else if (active_core == 0){
+            lr = mem->running_lr[active_core]; // wont be used
+            rl = mem->running_rl[active_core+1];
         }
         else{
-            assert (1 == 0);
+            lr = mem->running_lr[active_core-1];
+            rl = mem->running_rl[active_core-1];
+        }
+
+        if (grads == NULL){
+            if (ind == NULL){
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_core_eval_lin(ftp,active_core,lr[ii],rl[ii],
+                                               mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            }
+            else{
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_core_eval_lin(ftp,active_core,lr[ind[ii]],rl[ind[ii]],
+                                               mem->lin_structure_vals + ind[ii] * ftp->nparams);
+                }
+            }
+            *evals = mem->evals->vals;
+        }
+        else{
+            if (ind == NULL){
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_core_gradeval_lin(ftp,active_core,
+                                                   mem->grad->vals + ii * ftp->nparams_per_core[active_core],
+                                                   lr[ii],rl[ii],
+                                                   mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            }
+            else{
+                for (size_t ii = 0; ii < N; ii++){
+                    mem->evals->vals[ii] =
+                        ft_param_core_gradeval_lin(ftp,active_core,
+                                                   mem->grad->vals + ii * ftp->nparams_per_core[active_core],
+                                                   lr[ind[ii]],rl[ind[ii]],
+                                                   mem->lin_structure_vals + ind[ii] * ftp->nparams);
+                }
+            }
+            *evals = mem->evals->vals;
+            *grads = mem->grad->vals;
         }
     }
-        /* size_t active_core = ropts->als_active_core; */
-        /* if (grads != NULL){ */
-        /*     function_train_core_linparam_grad_eval( */
-        /*         ftp->ft, active_core, N, x, mem->running_evals_lr, mem->running_evals_rl, */
-        /*         mem->running_grad[active_core], */
-        /*         ftp->nparams_per_core[active_core], */
-        /*         mem->evals->vals, mem->grad->vals, */
-        /*         mem->lin_structure_vals[active_core], */
-        /*         mem->lin_structure_inc[active_core]); */
-            
-        /*     *evals = mem->evals->vals; */
-        /*     *grads = mem->grad->vals;  */
-        /* } */
     return 0;
 }
 
@@ -331,9 +349,9 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
         ft_linparam_eval_grad(N,ind,evals,grads,mem,args);
     }
     else{
-        ft_param_eval_grad(N,x,evals,grads,mem,args);        
+        ft_param_eval_grad(N,x,evals,grads,mem,args);
     }
-    
+        
     return 0;
 }
 
@@ -518,17 +536,34 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     size_t maxrank = function_train_get_maxrank(ftp->ft);
     double * core_evals = calloc_double(maxrank*maxrank);
     // initialize running_rl
-    for (size_t ii = 0; ii < N; ii++){
-        process_sweep_right_left(ftp,ftp->dim-1,x+ii*ftp->dim,
-                                 NULL,mem->running_rl[ftp->dim-1][ii],core_evals);
+    if (structure == LINEAR_ST){
+        for (size_t ii = 0; ii < N; ii++){
+            process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + ii * ftp->nparams,
+                                         NULL, mem->running_rl[ftp->dim-1][ii]);
+        }
+        
+        for (size_t zz = ftp->dim-2; zz > 0; zz--){
+            for (size_t ii = 0; ii < N; ii++){
+                process_sweep_right_left_lin(ftp,zz,mem->lin_structure_vals + ii * ftp->nparams,
+                                             mem->running_rl[zz+1][ii],mem->running_rl[zz][ii]);
+            }   
+        }        
     }
-    for (size_t zz = ftp->dim-2; zz > 0; zz--){
-         for (size_t ii = 0; ii < N; ii++){
-             process_sweep_right_left(ftp,zz,x + ii * ftp->dim,
-                                      mem->running_rl[zz+1][ii],mem->running_rl[zz][ii],core_evals);
-         }   
+    else{
+        for (size_t ii = 0; ii < N; ii++){
+            process_sweep_right_left(ftp,ftp->dim-1,x[ii * ftp->dim + ftp->dim-1],core_evals,
+                                     NULL,mem->running_rl[ftp->dim-1][ii]);
+        }
+        for (size_t zz = ftp->dim-2; zz > 0; zz--){
+            for (size_t ii = 0; ii < N; ii++){
+                process_sweep_right_left(ftp,zz,x[ii * ftp->dim + zz],core_evals,
+                                         mem->running_rl[zz+1][ii],mem->running_rl[zz][ii]);
+            }   
+        }        
     }
-    
+
+
+
     for (size_t sweep = 1; sweep <= ropts->max_als_sweeps; sweep++){
         if (ropts->verbose > 0){
             printf("Sweep %zu\n",sweep);
@@ -543,7 +578,6 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             /* sl_mem_manager_reset_running(mem); */
             ropts->als_active_core = ii;
 
-
             slp.nparams = ftp->nparams_per_core[ii];
             double * guess = calloc_double(ftp->nparams_per_core[ii]);
             function_train_core_get_params(ftp->ft,ii,guess);
@@ -551,7 +585,6 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             int res = slp_solve(&slp,guess);
             assert (res == 0);
             double val = slp_get_minimum(&slp);
-
             
             if (ropts->verbose > 1){
                 printf("\t\tObjVal = %3.5G\n",val);
@@ -559,24 +592,50 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 
             ft_param_update_core_params(ftp,ii,guess);
 
-            if ((ii > 0) && (ii < ftp->dim-1)){
-                for (size_t zz = 0; zz < N; zz++){
-                    process_sweep_left_right(ftp,ii,x + ii * ftp->dim,
-                                             mem->running_lr[ii-1][zz],mem->running_lr[ii][zz],core_evals);
+
+            if (structure == LINEAR_ST){
+                if ((ii > 0) && (ii < ftp->dim-1)){
+                    for (size_t zz = 0; zz < N; zz++){
+                        process_sweep_left_right_lin(ftp, ii, mem->lin_structure_vals + zz * ftp->nparams,
+                                                     mem->running_lr[ii-1][zz], mem->running_lr[ii][zz]);
+                    }
+                }
+                else if (ii == 0){
+                    for (size_t zz = 0; zz < N; zz++){
+                        process_sweep_left_right_lin(ftp, ii, mem->lin_structure_vals + zz * ftp->nparams,
+                                                     NULL, mem->running_lr[ii][zz]);
+                    }
                 }
             }
-            else if (ii == 0){
-                for (size_t zz = 0; zz < N; zz++){
-                    process_sweep_left_right(ftp,ii,x + zz * ftp->dim,
-                                             NULL,mem->running_rl[ii][zz],core_evals);
+            else{
+                if ((ii > 0) && (ii < ftp->dim-1)){
+                    for (size_t zz = 0; zz < N; zz++){
+                        process_sweep_left_right(ftp,ii,x[zz * ftp->dim + ii],core_evals,
+                                                 mem->running_lr[ii-1][zz],mem->running_lr[ii][zz]);
+                    }
                 }
+                else if (ii == 0){
+                    for (size_t zz = 0; zz < N; zz++){
+                        process_sweep_left_right(ftp,ii,x[zz * ftp->dim + ii],core_evals,
+                                                 NULL,mem->running_lr[ii][zz]);
+                    }
+                }                
             }
+
             free(guess); guess = NULL;
         }
 
-        for (size_t zz = 0; zz < N; zz++){
-           process_sweep_right_left(ftp,ftp->dim-1,x + zz * ftp->dim,
-                                    NULL,mem->running_rl[ftp->dim-1][zz],core_evals);
+        if (structure == LINEAR_ST){
+            for (size_t zz = 0; zz < N; zz++){
+                process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + zz * ftp->nparams,
+                                             NULL, mem->running_rl[ftp->dim-1][zz]);
+            }
+        }
+        else{
+            for (size_t zz = 0; zz < N; zz++){
+                process_sweep_right_left(ftp,ftp->dim-1,x[zz * ftp->dim + ftp->dim-1],core_evals,
+                                         NULL,mem->running_rl[ftp->dim-1][zz]);
+            }
         }
             
         // backward sweep
@@ -603,10 +662,18 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 
             ft_param_update_core_params(ftp,ii,guess);
 
-            for (size_t zz = 0; zz < N; zz++){
-                process_sweep_right_left(ftp,ii,x + zz * ftp->dim,
-                                         mem->running_rl[ii+1][zz],mem->running_rl[ii][zz],core_evals);
-            }   
+            if (structure == LINEAR_ST){
+                for (size_t zz = 0; zz < N; zz++){
+                    process_sweep_right_left_lin(ftp,ii,mem->lin_structure_vals + zz * ftp->nparams,
+                                                 mem->running_rl[ii+1][zz],mem->running_rl[ii][zz]);
+                }   
+            }
+            else{
+                for (size_t zz = 0; zz < N; zz++){
+                    process_sweep_right_left(ftp,ii,x[zz * ftp->dim + ii],core_evals,
+                                             mem->running_rl[ii+1][zz],mem->running_rl[ii][zz]);
+                }
+            }
             free(guess); guess = NULL;
         }
         
@@ -624,10 +691,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 
 
     struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
-    sl_mem_manager_free(mem);
+    sl_mem_manager_free(mem); mem = NULL;
     objective_function_free(&obj); obj = NULL;
     data_free(data); data = NULL;
-    free(mem2);
+    free(mem2); mem2 = NULL;
+    free(core_evals); core_evals = NULL;
     return ft_final;
 }
 

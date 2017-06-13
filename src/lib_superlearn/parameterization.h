@@ -108,10 +108,21 @@ double ft_param_gradeval_lin(struct FTparam *, const double *,double *,double *,
 
 
 // ALS HELPERS
-void process_sweep_left_right(struct FTparam * ftp, size_t current_core, const double * x, double * evals,
+void process_sweep_left_right(struct FTparam * ftp, size_t current_core,double x, double * evals,
                               double * running_lr, double * running_lr_up);
-void process_sweep_right_left(struct FTparam * ftp, size_t current_core, const double * x, double * evals,
+void process_sweep_right_left(struct FTparam * ftp, size_t current_core,double x, double * evals,
                               double * running_rl, double * running_rl_up);
+
+void process_sweep_left_right_lin(struct FTparam * ftp, size_t current_core,double * evals,
+                                  double * running_lr, double * running_lr_up);
+void process_sweep_right_left_lin(struct FTparam * ftp, size_t current_core,double * evals,
+                                  double * running_rl, double * running_rl_up);
+double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
+                              double *,  double *,double * running_rl,
+                              double *);
 double ft_param_core_eval_lin(struct FTparam *,size_t,double *,double *,const double *);
+double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
+                                  double * grad,  double * running_lr,double * running_rl,
+                                  double * grad_evals);
 
 #endif

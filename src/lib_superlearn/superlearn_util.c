@@ -167,6 +167,17 @@ void sl_mem_manager_free(struct SLMemManager * mem)
         dbl_mem_array_free(mem->grad);
         mem->grad = NULL;
 
+        for (size_t ii = 0; ii < mem->dim; ii++){
+            for (size_t jj = 0; jj < mem->N; jj++){
+                free(mem->running_lr[ii][jj]); mem->running_lr[ii][jj] = NULL;
+                free(mem->running_rl[ii][jj]); mem->running_rl[ii][jj] = NULL;
+            }
+            free(mem->running_lr[ii]); mem->running_lr[ii] = NULL;
+            free(mem->running_rl[ii]); mem->running_rl[ii] = NULL;
+        }
+        free(mem->running_lr); mem->running_lr = NULL;
+        free(mem->running_rl); mem->running_rl = NULL;
+        
         free(mem->running_eval); mem->running_eval = NULL;
         free(mem->running_grad); mem->running_grad = NULL;
         
@@ -203,9 +214,30 @@ sl_mem_manager_alloc(size_t d, size_t n,
 
     mem->running_eval = calloc_double(2*nparam);
     mem->running_grad = calloc_double(2*nparam);
-    
-    mem->grad       = dbl_mem_array_alloc(n,nparam);
-    mem->evals      = dbl_mem_array_alloc(n,1);
+
+    mem->running_lr = malloc(d * sizeof(double **));
+    mem->running_rl = malloc(d * sizeof(double **));
+    if ((mem->running_lr == NULL) || (mem->running_rl == NULL)){
+        fprintf(stderr, "Failure to allocate memory for supervised learning memory manager\n");
+        exit(1);
+    }
+    for (size_t ii = 0; ii < d; ii++){
+        mem->running_lr[ii] = malloc(n * sizeof(double *));
+        mem->running_rl[ii] = malloc(n * sizeof(double *));
+        if ((mem->running_lr[ii] == NULL) || (mem->running_rl[ii] == NULL)){
+            fprintf(stderr, "Failure to allocate memory for supervised learning memory manager\n");
+            exit(1);
+        }
+        for (size_t jj = 0; jj < n; jj++){
+            mem->running_lr[ii][jj] = NULL;
+        }
+        for (size_t jj = 0; jj < n; jj++){
+            mem->running_rl[ii][jj] = NULL;
+        }
+    }
+
+    mem->grad  = dbl_mem_array_alloc(n,nparam);
+    mem->evals = dbl_mem_array_alloc(n,1);
 
     if ((structure != LINEAR_ST) && (structure != NONE_ST)){
         fprintf(stderr,"Error: Parameter structure type %d is unknown\n",structure);
@@ -272,6 +304,12 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
         mem->once_eval_structure = 1;
     }
 
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+        for (size_t jj = 0; jj < mem->N; jj++){
+            mem->running_lr[ii][jj] = calloc_double(ftp->ft->ranks[ii+1]);
+            mem->running_rl[ii][jj] = calloc_double(ftp->ft->ranks[ii]);
+        }
+    }
     
 }
 

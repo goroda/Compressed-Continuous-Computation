@@ -915,6 +915,76 @@ static void update_running_rl(struct FTparam * ftp, size_t core, double * runnin
     }
 }
 
+void process_sweep_left_right_lin(struct FTparam * ftp, size_t current_core, double * grad_evals,
+                                  double * running_lr, double * running_lr_up)
+{
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    size_t r1 = ranks[current_core];
+    size_t r2 = ranks[current_core+1];
+    size_t onparam = 0;
+    size_t onuni = 0;
+    for (size_t ii = 0; ii < current_core; ii++){
+        onparam += ftp->nparams_per_core[ii];
+        onuni += ranks[ii]*ranks[ii+1];
+    }
+
+    if (current_core > 0){
+        double eval;
+        for (size_t ii = 0; ii < r2; ii++){
+            running_lr_up[ii] = 0.0;
+            for (size_t jj = 0; jj < r1; jj++){
+                eval = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1);
+                running_lr_up[ii] += eval * running_lr[jj];
+                onparam += ftp->nparams_per_uni[onuni];
+                onuni++;
+            }
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < r2; ii++){
+            running_lr_up[ii] = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals+onparam,1,ftp->params + onparam,1);
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
+}
+
+void process_sweep_right_left_lin(struct FTparam * ftp, size_t current_core, double * grad_evals,
+                                  double * running_rl, double * running_rl_up)
+{
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    size_t r1 = ranks[current_core];
+    size_t r2 = ranks[current_core+1];
+    size_t onparam = 0;
+    size_t onuni = 0;
+    for (size_t ii = 0; ii < current_core; ii++){
+        onparam += ftp->nparams_per_core[ii];
+        onuni += ranks[ii]*ranks[ii+1];
+    }
+    
+    if (current_core < (ftp->dim-1)){
+        double eval;
+        for (size_t jj = 0; jj < r1; jj++){
+            running_rl_up[jj] = 0.0;
+        }
+        for (size_t ii = 0; ii < r2; ii++){
+            for (size_t jj = 0; jj < r1; jj++){
+                eval = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals + onparam,1,ftp->params + onparam,1);
+                running_rl_up[jj] += eval * running_rl[ii];
+                onparam += ftp->nparams_per_uni[onuni];
+                onuni++;
+            }
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < r1; ii++){
+            running_rl_up[ii] = cblas_ddot(ftp->nparams_per_uni[onuni],grad_evals + onparam,1,ftp->params + onparam,1);
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
+}
+
 
 void process_sweep_left_right(struct FTparam * ftp, size_t current_core, double x, double * evals,
                               double * running_lr, double * running_lr_up)
@@ -933,46 +1003,75 @@ void process_sweep_right_left(struct FTparam * ftp, size_t current_core, double 
     size_t * ranks = function_train_get_ranks(ftp->ft);
     size_t r1 = ranks[current_core];
     size_t r2 = ranks[current_core+1];
-    qmarray_param_grad_eval(ftp->ft->cores[current_core],1,x+ftp->dim,1,evals,r1*r2,NULL,0,NULL);
+    qmarray_param_grad_eval(ftp->ft->cores[current_core],1,&x,1,evals,r1*r2,NULL,0,NULL);
     update_running_rl(ftp,current_core,running_rl,running_rl_up, evals);
 }
 
 double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
-                              double * grad,  double * running_lr,double * running_rl,double * evals,
+                              double * grad,  double * running_lr,double * running_rl,
                               double * grad_evals)
 
 {
 
-    // FIX THIS!!
-    
-    size_t onuni = 0;
-    size_t onparam = 0;
+    size_t onparam = 0,nparam;
 
     struct FunctionTrain * ft = ftp->ft;
     size_t * ranks = function_train_get_ranks(ft);
 
     size_t r1 = ranks[core];
     size_t r2 = ranks[core+1];
-
-    double out = 0.0;
-    for (size_t ii = 0; ii < r2; ii++){
-        double right_mult = running_rl[ii]
-        for (size_t kk = 0; kk < r1; kk++){
-            double left_mult = running_lr[kk];
-            
+    double out = 0.0, eval;
+    
+    if ((core > 0) && (core < ftp->dim-1)){
+        for (size_t ii = 0; ii < r2; ii++){
+            double right_mult = running_rl[ii];
+            for (size_t kk = 0; kk < r1; kk++){
+                double left_mult = running_lr[kk];
+                struct Qmarray * qma = ft->cores[core];
+                // compute grad for univariate function
+                eval = generic_function_param_grad_eval2(qma->funcs[kk + ii * r1],x,grad_evals);
+                nparam = generic_function_get_num_params(qma->funcs[kk + ii * r1]);
+                for (size_t ll = 0; ll < nparam ;ll++){
+                    //there are no shared parameters between univariate functions
+                    grad[onparam] =  left_mult*grad_evals[ll]*right_mult; 
+                    onparam++;
+                }
+                out += left_mult* right_mult * eval;
+            }
+        }
+    }
+    else if (core == 0){
+        for (size_t ii = 0; ii < r2; ii++){
+            double right_mult = running_rl[ii];
+            struct Qmarray * qma = ft->cores[core];
             // compute grad for univariate function
-
-            for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni];ll++){
-                grad[onparam] =  left_mult*grad_evals[onparam]*right_mult;
+            eval = generic_function_param_grad_eval2(qma->funcs[ii],x,grad_evals);
+            nparam = generic_function_get_num_params(qma->funcs[ii]);
+            for (size_t ll = 0; ll < nparam ;ll++){
+                //there are no shared parameters between univariate functions
+                grad[onparam] = grad_evals[ll]*right_mult; 
                 onparam++;
             }
-            onuni++;
-            out += left_mult* right_mult * eval;
+            out += right_mult * eval;
+        }
+    }
+    else{/* if (core == (ftp->dim-1)){ */
+        for (size_t kk = 0; kk < r1; kk++){
+            double left_mult = running_lr[kk];
+            struct Qmarray * qma = ft->cores[core];
+            // compute grad for univariate function
+            eval = generic_function_param_grad_eval2(qma->funcs[kk],x,grad_evals);
+            nparam = generic_function_get_num_params(qma->funcs[kk]);
+            for (size_t ll = 0; ll < nparam ;ll++){
+                //there are no shared parameters between univariate functions
+                grad[onparam] =  left_mult*grad_evals[ll]; 
+                onparam++;
+            }
+            out += left_mult* eval;
         }
     }
 
     return out;
-
 }
 
 double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
@@ -1031,3 +1130,78 @@ double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
 
     return out;
 }
+
+double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
+                                  double * grad,  double * running_lr,double * running_rl,
+                                  double * grad_evals)
+
+{
+
+    /* printf("ft_param_eval_lin\n"); */
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t * ranks = function_train_get_ranks(ftp->ft);
+    size_t ongrad = 0;
+    double out = 0.0;
+    for (size_t kk = 0; kk < core; kk++){
+        onparam += ftp->nparams_per_core[kk];
+        onuni += ranks[kk]*ranks[kk+1];
+    }
+    
+    if ((core > 0) && (core < ftp->dim-1)){
+        double t;
+        for (size_t col = 0; col < ranks[core+1]; col++){
+            for (size_t row = 0; row < ranks[core]; row++){
+                t = cblas_ddot(ftp->nparams_per_uni[onuni],
+                               grad_evals+onparam,1,
+                               ftp->params + onparam,1);
+                t *= running_lr[row] * running_rl[col];
+                out += t;
+
+                double t2 = running_lr[row] * running_rl[col];
+                for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+                    //there are no shared parameters between univariate functions
+                    grad[ongrad] =  t2 * grad_evals[onparam];
+                    onparam++;
+                    ongrad++;
+                }
+                
+                onuni++;
+            }
+        }
+    }
+    else if (core == ftp->dim-1){
+        for (size_t row = 0; row < ranks[ftp->dim-1]; row++){
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],
+                              grad_evals+onparam,1,
+                              ftp->params + onparam,1) * running_lr[row];
+
+            for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni];ll++){
+                //there are no shared parameters between univariate functions
+                grad[ongrad] =  running_lr[row] * grad_evals[onparam];
+                onparam++;
+                ongrad++;
+            }
+            onuni++;
+        }
+    }
+    else{ // core == 0
+        for (size_t col = 0; col < ranks[1]; col++){
+            out += cblas_ddot(ftp->nparams_per_uni[onuni],
+                              grad_evals+onparam,1,
+                              ftp->params + onparam,1) * running_rl[col];
+
+
+            for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+                //there are no shared parameters between univariate functions
+                grad[ongrad] =  running_rl[col] * grad_evals[onparam];
+                onparam++;
+                ongrad++;
+            }
+            onuni++;
+        }
+    }
+
+    return out;
+}
+
