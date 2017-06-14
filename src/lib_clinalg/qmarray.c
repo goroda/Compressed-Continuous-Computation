@@ -3361,6 +3361,43 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
 }
 
 /***********************************************************//**
+    Evaluate the gradient of a qmarray with respect to the parameters
+    of the function at a set of evaluation locations
+
+    \param[in]     qma       - quasimatrix array
+    \param[in]     N         - number of locations at which to evaluate
+    \param[in,out] out       - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     incout    - increment of output
+    \param[in]     grad      - computed gradient
+    \param[in]     incg      - incremement of gradient
+
+***************************************************************/
+void qmarray_linparam_eval(struct Qmarray * qma, size_t N,
+                           double * out, size_t incout,
+                           const double * grad, size_t incg)
+
+{
+
+    size_t size = qma->nrows*qma->ncols;
+    size_t nparam,onparam;
+    size_t ii,jj,indout,indgrad;
+    double * param;
+    for (ii = 0; ii < N; ii++){
+        /* printf("ii = %zu\n",ii); */
+        onparam=0;
+        indout = incout*ii;
+        indgrad = ii*incg;
+        for (jj = 0; jj < size; jj++){
+            param = generic_function_get_params_ref(qma->funcs[jj],&nparam);
+            /* dprint(nparam,grad+ii*incg + onparam); */
+            out[jj + indout] = cblas_ddot(nparam,param,1,
+                                          grad + indgrad + onparam, 1);
+            onparam += nparam;
+        }
+    }
+}
+
+/***********************************************************//**
     Sum the L2 norms of each function
 
     \param[in]     qma   - quasimatrix array

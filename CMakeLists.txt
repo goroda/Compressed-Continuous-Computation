@@ -98,4 +98,3 @@ add_subdirectory(utilities)
 
 # install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
 # install(EXPORT c3 DESTINATION ${lib_dest})
-

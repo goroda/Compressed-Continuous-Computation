@@ -1,5 +1,5 @@
 #C3HOME=~/Documents/c3
-C3HOME=~/Software/c3
+# C3HOME=~/Software/c3
 
 ######################################
 # Function Information
@@ -51,10 +51,10 @@ then
 else
     echo $REGRESS
     # valgrind --leak-check=full $REGRESS # Just generate regression
-    $REGRESS # Just generate regression
+    # time $REGRESS # Just generate regression
 
     # Do profiling
-    # valgrind --tool=callgrind $REGRESS
+    valgrind --tool=callgrind $REGRESS
     # python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
     # rm callgrind.out.*
 fi

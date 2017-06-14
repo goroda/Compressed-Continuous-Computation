@@ -61,8 +61,8 @@ void Test_LS_ALS(CuTest * tc)
 
 
     size_t dim = 5;
-    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
     size_t ranks[6] = {1,2,8,3,2,1};
+    /* size_t ranks[6] = {1,2,2,2,2,1}; */
     double lb = -1.0;
     double ub = 1.0;
     size_t maxorder = 3;
@@ -71,6 +71,7 @@ void Test_LS_ALS(CuTest * tc)
 
     // create data
     size_t ndata = 600;
+    /* size_t ndata = 200; */
     /* printf("\t ndata = %zu\n",ndata); */
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -119,7 +120,8 @@ void Test_LS_ALS(CuTest * tc)
     regress_opts_set_als_conv_tol(ropts,1e-5);
     regress_opts_set_max_als_sweep(ropts,70);
     struct c3Opt* optimizer = c3opt_create(BFGS);
-    c3opt_set_relftol(optimizer,1e-9);
+    /* c3opt_set_relftol(optimizer,1e-12); */
+    c3opt_set_verbose(optimizer,0);
     /* c3opt_set_relftol(optimizer,1e-9); */
 
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
@@ -366,444 +368,317 @@ void Test_LS_ALS_SPARSE2(CuTest * tc)
     free(y); y = NULL;
 }
 
-void Test_function_train_core_param_grad_eval1(CuTest * tc)
+void Test_ft_param_core_gradeval(CuTest * tc)
 {
-    printf("\nTesting Function: function_train_param_grad_eval1 \n");
+    printf("\nTesting Function: ft_param_core_gradeval \n");
     printf("\t  Dimensions: 4\n");
     printf("\t  Ranks:      [1 2 3 8 1]\n");
     printf("\t  LPOLY order: 10\n");
 
     srand(seed);
-    size_t dim = 4;    
-    
+
+    size_t dim = 4;
     size_t ranks[5] = {1,2,3,8,1};
-    /* size_t ranks[5] = {1,2,2,2,1}; */
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxorder = 10; // 10
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    size_t maxorder = 10; 
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
+    }
 
-    // create data
-    size_t ndata = 1; // 10
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
 
-    struct RunningCoreTotal * runeval_lr = ftutil_running_tot_space(a);
-    struct RunningCoreTotal * runeval_rl = ftutil_running_tot_space(a);
-    struct RunningCoreTotal * rungrad = ftutil_running_tot_space(a);
+    size_t N = 2;
+    double pt[8] = {0.2,-1.2,2.1,0.9,
+                    0.4, 0.1, 0.3, -1.2};
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,N,nparam,LINEAR_ST);
+    sl_mem_manager_check_structure(slm,ftp,pt);
 
-    /* size_t core = 2; */
-    for (size_t core = 0; core < dim; core++){
-        /* printf("core = %zu\n",core); */
-        running_core_total_restart(runeval_lr);
-        running_core_total_restart(runeval_rl);
-        running_core_total_restart(rungrad);
+    double * grad = calloc_double(nparam);
+    double core_evals[100];
 
-        /* function_train_core_pre_post_run(a,core,ndata,x,runeval_lr,runeval_rl); */
-        
-        size_t max_param_within_func;
-        size_t nparam;
-        nparam = function_train_core_get_nparams(a,core,&max_param_within_func);
-        CuAssertIntEquals(tc,(maxorder+1)*ranks[core]*ranks[core+1],nparam);
-        CuAssertIntEquals(tc,(maxorder+1),max_param_within_func);
 
-        size_t core_space_size = nparam * ranks[core] * ranks[core+1];
-        double * core_grad_space = calloc_double(core_space_size * ndata);
-        double * max_func_param_space = calloc_double(max_param_within_func);
+    for (size_t ii = 0; ii < N; ii++){
+        process_sweep_right_left(ftp,ftp->dim-1,pt[ii*ftp->dim + ftp->dim-1],core_evals,
+                                 NULL,slm->running_rl[ftp->dim-1][ii]);
+    }
+    for (size_t zz = ftp->dim-2; zz > 0; zz--){
+         for (size_t ii = 0; ii < N; ii++){
+             process_sweep_right_left(ftp,zz,pt[ii * ftp->dim + zz],core_evals,
+                                      slm->running_rl[zz+1][ii],slm->running_rl[zz][ii]);
+         }   
+    }
 
-        double * vals = calloc_double(ndata);
-        double * grad = calloc_double(ndata*nparam);
+    size_t core = 0;
+    size_t onparam = 0;
+    double h = 1e-7;
+    for (size_t ii = 0; ii < N; ii++){
+        double eval_true = function_train_eval(ftp->ft,pt + ii * dim);
+        double eval = ft_param_core_gradeval(ftp,core,pt[core + ii * ftp->dim],grad,NULL,
+                                             slm->running_rl[core+1][ii],slm->running_eval);
 
-        double * guess = calloc_double(nparam);
-        for (size_t jj = 0; jj < nparam; jj++){
-            guess[jj] = randn();
+        for (size_t ll = 0; ll < ftp->nparams_per_core[core]; ll++){
+            param[onparam] += h;
+            ft_param_update_params(ftp,param);
+            double eval2 = function_train_eval(ftp->ft,pt + ii * dim);
+            double fd = (eval2 - eval_true)/h;
+            CuAssertDblEquals(tc,fd,grad[ll],1e-5);
+            param[onparam] -= h;
+            ft_param_update_params(ftp,param);
+            onparam++;
         }
-        function_train_core_update_params(a,core,nparam,guess);
+        onparam -= ftp->nparams_per_core[core];
+        
+        CuAssertDblEquals(tc,eval_true,eval,1e-11);
+    }
+    for (size_t ii = 0; ii < N; ii++){
+        process_sweep_left_right(ftp,core,pt[ii*ftp->dim+core],core_evals,NULL,slm->running_lr[core][ii]);
+    }
+    onparam += ftp->nparams_per_core[core];
+    for (core = 1; core < ftp->dim-1; core ++){
+        for (size_t ii = 0; ii < N; ii++){
+            double eval_true = function_train_eval(ftp->ft,pt + ii*dim);
+            double eval = ft_param_core_gradeval(ftp,core,pt[core + ii * ftp->dim],grad,
+                                                 slm->running_lr[core-1][ii], slm->running_rl[core+1][ii],
+                                                 slm->running_eval);
+            CuAssertDblEquals(tc,eval_true,eval,1e-11);
 
-        for (size_t ii = 0 ; ii < ndata; ii++){
-            for (size_t jj = 0; jj < dim; jj++){
-                x[ii*dim+jj] = randu()*(ub-lb) + lb;
+            for (size_t ll = 0; ll < ftp->nparams_per_core[core]; ll++){
+                param[onparam] += h;
+                ft_param_update_params(ftp,param);
+                double eval2 = function_train_eval(ftp->ft,pt + ii * dim);
+                double fd = (eval2 - eval_true)/h;
+                CuAssertDblEquals(tc,fd,grad[ll],1e-5);
+                param[onparam] -= h;
+                ft_param_update_params(ftp,param);
+                onparam++;
             }
-            y[ii] = function_train_eval(a,x+ii*dim);
+            onparam -= ftp->nparams_per_core[core];
         }
-
-        /* printf("x = \n"); */
-        /* dprint2d_col(dim,ndata,x); */
-        /* printf("y = "); */
-        /* dprint(ndata,y); */
-
-    
-        /* printf("\t Testing Evaluation\n"); */
-
-
+        onparam += ftp->nparams_per_core[core];
         
-        function_train_core_pre_post_run(a,core,ndata,x,runeval_lr,runeval_rl);
-        /* printf("\n\n"); */
-        /* for (size_t jj = 0; jj < ndata; jj++){ */
-        /*     double * core1 = calloc_double(ranks[0]*ranks[1]); */
-        /*     double * core2 = calloc_double(ranks[1]*ranks[2]); */
-        /*     double * core3 = calloc_double(ranks[2]*ranks[3]); */
-        /*     double * core4 = calloc_double(ranks[3]*ranks[4]); */
+        for (size_t ii = 0; ii < N; ii++){
+            process_sweep_left_right(ftp,core,pt[ii*ftp->dim+core],core_evals,slm->running_lr[core-1][ii],
+                                     slm->running_lr[core][ii]);
+        }
+    }
 
-        /*     qmarray_eval(a->cores[0],x[jj*dim+0],core1); */
-        /*     qmarray_eval(a->cores[1],x[jj*dim+1],core2); */
-        /*     qmarray_eval(a->cores[2],x[jj*dim+2],core3); */
-        /*     qmarray_eval(a->cores[3],x[jj*dim+3],core4); */
-        /*     double * left_eval = calloc_double(8); // max rank */
-        /*     double * right_eval = calloc_double(8); // max rank; */
-        /*     double * temp = calloc_double(8); */
-        /*     if (core == 0){ */
-        /*         memmove(right_eval,core4,ranks[3]*sizeof(double));                 */
-        /*         cblas_dgemv(CblasColMajor,CblasNoTrans,ranks[2],ranks[3],1.0,core3,ranks[2], */
-        /*                     right_eval,1,0.0,temp,1); */
-        /*         /\* printf("after first right eval\n "); dprint(ranks[2],temp); *\/ */
-                
-        /*         memmove(right_eval,temp,ranks[2]*sizeof(double)); */
+    core = ftp->dim-1;
+    for (size_t ii = 0; ii < N; ii++){
+        double eval_true = function_train_eval(ftp->ft,pt + ii*dim);
+        double eval = ft_param_core_gradeval(ftp,core,pt[core + ii * ftp->dim],grad,
+                                             slm->running_lr[core-1][ii], NULL,
+                                             slm->running_eval);
+        CuAssertDblEquals(tc,eval_true,eval,1e-11);
 
-        /*         cblas_dgemv(CblasColMajor,CblasNoTrans,ranks[1],ranks[2],1.0,core2,ranks[1], */
-        /*                     right_eval,1,0.0,temp,1); */
-        /*         /\* printf("after second right eval\n "); dprint(ranks[1],temp); *\/ */
-        /*         memmove(right_eval,temp,ranks[1]*sizeof(double)); */
+        for (size_t ll = 0; ll < ftp->nparams_per_core[core]; ll++){
+            param[onparam] += h;
+            ft_param_update_params(ftp,param);
+            double eval2 = function_train_eval(ftp->ft,pt + ii * dim);
+            double fd = (eval2 - eval_true)/h;
+            CuAssertDblEquals(tc,fd,grad[ll],1e-5);
+            param[onparam] -= h;
+            ft_param_update_params(ftp,param);
+            onparam++;
+        }
+        onparam -= ftp->nparams_per_core[core];
+    }
 
-        /*         double * rlvals = running_core_total_get_vals(runeval_rl); */
-        /*         for (size_t zz = 0; zz < ranks[1]; zz++){ */
-        /*             CuAssertDblEquals(tc,right_eval[zz],rlvals[zz],1e-15); */
-        /*         } */
+    free(param);              param = NULL;
+    free(grad);               grad = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    sl_mem_manager_free(slm); slm  = NULL;
+    multi_approx_opts_free(fapp); fapp = NULL;
+    one_approx_opts_free_deep(&qmopts); qmopts = NULL;
+}
 
-        /*     } */
+void Test_ft_param_gradeval(CuTest * tc)
+{
+    printf("\nTesting Function: ft_param_gradeval \n");
+    printf("\t  Dimensions: 4\n");
+    printf("\t  Ranks:      [1 2 3 8 1]\n");
+    printf("\t  LPOLY order: 10\n");
 
-        /*     free(core1); core1 = NULL; */
-        /*     free(core2); core2 = NULL; */
-        /*     free(core3); core3 = NULL; */
-        /*     free(core4); core4 = NULL; */
-        /*     free(left_eval); left_eval = NULL; */
-        /*     free(right_eval); right_eval = NULL; */
-        /*     free(temp); temp = NULL; */
-            
+    srand(seed);
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,3,8,1};
+    size_t maxorder = 10; 
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
+
+    double pt[4] = {0.2,-1.2,2.1,0.9};
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
+    sl_mem_manager_check_structure(slm,ftp,pt);
+
+    double * grad = calloc_double(nparam);
+    double eval_true = function_train_eval(ftp->ft,pt);
+    double eval = ft_param_gradeval(ftp,pt,grad,slm->lin_structure_vals,
+                                    slm->running_grad,slm->running_eval);
+
+    CuAssertDblEquals(tc,eval_true,eval,1e-11);
+    /* dprint(nparam,grad); */
+    double h = 1e-7;
+    for (size_t zz = 0; zz < nparam; zz++){
+        size_t ii = nparam-zz-1;
+        /* if (ii <= 351){ */
+        /*     printf("ii = %zu\n",ii); */
         /* } */
-        
-        
-        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,NULL,nparam,vals,NULL,
-                                             NULL,0,NULL);
+        param[ii] += h;
+        ft_param_update_params(ftp,param);
+        double ehere = function_train_eval(ftp->ft,pt);
+        double fd  = (ehere-eval_true)/h;
 
-        for (size_t ii = 0; ii < ndata; ii++){
-            double reldiff = (y[ii]-vals[ii])/(y[ii]);
-            CuAssertDblEquals(tc,0.0,reldiff,1e-14);
-            
-        }
+        CuAssertDblEquals(tc,fd,grad[ii],1e-5);
+        param[ii] -=h;
+        ft_param_update_params(ftp,param);
+    }
     
-        /* printf("\t Testing Gradient\n"); */
-        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                             core_grad_space,core_space_size,max_func_param_space);
-        for (size_t ii = 0; ii < ndata; ii++){
-            double reldiff = (y[ii]-vals[ii])/(y[ii]);
-            CuAssertDblEquals(tc,0.0,reldiff,1e-14);
-            /* CuAssertDblEquals(tc,y[ii],vals[ii],1e-14); */
-        }
-
-        running_core_total_restart(rungrad);
-        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                             core_grad_space,core_space_size,max_func_param_space);
-
-        running_core_total_restart(rungrad);
-        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                             core_grad_space,core_space_size,max_func_param_space);
-
-        running_core_total_restart(rungrad);
-        function_train_core_param_grad_eval(a,core,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                             core_grad_space,core_space_size,max_func_param_space);
-
-        /* printf("grad = "); dprint(totparam,grad); */
-        for (size_t zz = 0; zz < ndata; zz++){
-            double h = 1e-7;
-            for (size_t jj = 0; jj < nparam; jj++){
-                guess[jj] += h;
-                function_train_core_update_params(a,core,nparam,guess);
-            
-                double val2 = function_train_eval(a,x+zz*dim);
-                double fd = (val2-y[zz])/h;
-                CuAssertDblEquals(tc,fd,grad[jj + zz * nparam],1e-5);
-                guess[jj] -= h;
-                function_train_core_update_params(a,core,nparam,guess);
-            }
-        }
-
-        free(guess); guess = NULL;
-        free(vals); vals = NULL;
-        free(grad); grad = NULL;
-    
-        free(core_grad_space);      core_grad_space = NULL;
-        free(max_func_param_space); max_func_param_space = NULL;
-    }        
-    running_core_total_free(runeval_lr); runeval_lr = NULL;
-    running_core_total_free(runeval_rl); runeval_rl = NULL;
-    running_core_total_free(rungrad);    rungrad = NULL;
-    
-    bounding_box_free(bds); bds = NULL;
-    function_train_free(a); a   = NULL;
-    free(x);                x   = NULL;
-    free(y);                y   = NULL;
+    free(grad);
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    sl_mem_manager_free(slm);
 }
 
-void Test_function_train_param_grad_eval(CuTest * tc)
+void Test_ft_param_eval_lin(CuTest * tc)
 {
-    printf("\nTesting Function: function_train_param_grad_eval \n");
+    printf("\nTesting Function: ft_param_eval_lin \n");
     printf("\t  Dimensions: 4\n");
     printf("\t  Ranks:      [1 2 3 8 1]\n");
     printf("\t  LPOLY order: 10\n");
 
     srand(seed);
     size_t dim = 4;
-    
     size_t ranks[5] = {1,2,3,8,1};
-    /* size_t ranks[5] = {1,2,2,2,1}; */
-    double lb = -0.5;
-    double ub = 1.0;
-    size_t maxorder = 10; // 10
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 10; // 10
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    struct RunningCoreTotal * runeval_lr = ftutil_running_tot_space(a);
-    struct RunningCoreTotal * runeval_rl = ftutil_running_tot_space(a);
-    struct RunningCoreTotal ** rungrad = ftutil_running_tot_space_eachdim(a);
-
-    size_t nparam[4];
-    size_t max_param_within_func=0, temp_nparam;
-    size_t totparam = 0;
-    for (size_t ii = 0; ii < dim; ii++){
-        nparam[ii] = function_train_core_get_nparams(a,ii,&temp_nparam);
-        if (temp_nparam > max_param_within_func){
-            max_param_within_func = temp_nparam;
-        }
-        CuAssertIntEquals(tc,(maxorder+1)*ranks[ii]*ranks[ii+1],nparam[ii]);
-        totparam += nparam[ii];
-    }
-    CuAssertIntEquals(tc,(maxorder+1),max_param_within_func);
-
-    size_t core_space_size = 0;
-    for (size_t ii = 0; ii < dim; ii++){
-        if (nparam[ii] * ranks[ii] * ranks[ii+1] > core_space_size){
-            core_space_size = nparam[ii] * ranks[ii] * ranks[ii+1];
-        }
-    }
-    double * core_grad_space = calloc_double(core_space_size * ndata);
-    double * max_func_param_space = calloc_double(max_param_within_func);
-
-    double * vals = calloc_double(ndata);
-    double * grad = calloc_double(ndata*totparam);
-
-    double * guess = calloc_double(totparam);
-    size_t runtot = 0;
-    size_t running = 0;
-    for (size_t zz = 0; zz < dim; zz++){
-        /* printf("nparam[%zu] = %zu\n",zz,nparam[zz]); */
-        for (size_t jj = 0; jj < nparam[zz]; jj++){
-            guess[running+jj] = randn();
-            /* printf("guess[%zu] = %G\n",runtot,guess[runtot]); */
-            runtot++;
-        }
-        function_train_core_update_params(a,zz,nparam[zz],guess+running);
-        running+=nparam[zz];
+    size_t maxorder = 10; 
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
     }
 
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
 
-    /* printf("x = \n"); */
-    /* dprint2d_col(dim,ndata,x); */
-    /* printf("y = "); */
-    /* dprint(ndata,y); */
+    double pt[4] = {0.2,-1.2,2.1,0.9};
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
 
+    sl_mem_manager_check_structure(slm,ftp,pt);
+
+    double eval_true = function_train_eval(ftp->ft,pt);
+    double eval_lin = ft_param_eval_lin(ftp,slm->lin_structure_vals,slm->running_eval);
+
+    CuAssertDblEquals(tc,eval_true,eval_lin,1e-14);
     
-    /* printf("\t Testing Evaluation\n"); */
-    function_train_param_grad_eval(a,ndata,x,runeval_lr,NULL,NULL,nparam,vals,NULL,
-                                   core_grad_space,core_space_size,max_func_param_space);
-
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-    
-    /* printf("\t Testing Gradient\n"); */
-    //purposely doing so many evaluations to test restart!!
-    running_core_total_restart(runeval_lr);
-    running_core_total_restart(runeval_rl);
-    function_train_param_grad_eval(a,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                   core_grad_space,core_space_size,max_func_param_space);
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-    running_core_total_restart(runeval_lr);
-    running_core_total_restart(runeval_rl);
-    running_core_total_arr_restart(a->dim,rungrad);
-    function_train_param_grad_eval(a,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                   core_grad_space,core_space_size,max_func_param_space);
-    
-    running_core_total_restart(runeval_lr);
-    running_core_total_restart(runeval_rl);
-    running_core_total_arr_restart(a->dim,rungrad);
-    function_train_param_grad_eval(a,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                   core_grad_space,core_space_size,max_func_param_space);
-
-    running_core_total_restart(runeval_lr);
-    running_core_total_restart(runeval_rl);
-    running_core_total_arr_restart(a->dim,rungrad);
-    function_train_param_grad_eval(a,ndata,x,runeval_lr,runeval_rl,rungrad,nparam,vals,grad,
-                                   core_grad_space,core_space_size,max_func_param_space);
-
-    /* printf("grad = "); dprint(totparam,grad); */
-    for (size_t zz = 0; zz < ndata; zz++){
-        running = 0;
-        double h = 1e-4;
-        for (size_t ii = 0; ii < dim; ii++){
-            /* printf("dim = %zu\n",ii); */
-            for (size_t jj = 0; jj < nparam[ii]; jj++){
-                /* printf("\t jj = %zu\n", jj); */
-                guess[running+jj] += h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            
-                double val2 = function_train_eval(a,x+zz*dim);
-                double fd = (val2-y[zz])/h;
-                /* printf("val2=%G, y[0]=%G\n",val2,y[0]); */
-                /* printf("fd = %3.15G, calc is %3.15G\n",fd,grad[running+jj + zz * totparam]); */
-                /* printf("\t fd[%zu,%zu] = %3.5G\n",jj,zz,fd); */
-                double reldiff = (fd - grad[running+jj + zz * totparam])/fd;
-                CuAssertDblEquals(tc,0.0,fabs(reldiff),2e-5);
-                guess[running+jj] -= h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            }
-            running += nparam[ii];
-        }
-    }
-
-    free(guess); guess = NULL;
-    
-    free(vals); vals = NULL;
-    free(grad); grad = NULL;
-    
-    free(core_grad_space);      core_grad_space = NULL;
-    free(max_func_param_space); max_func_param_space = NULL;
-        
-    running_core_total_free(runeval_lr); runeval_lr = NULL;
-    running_core_total_free(runeval_rl); runeval_rl = NULL;
-    running_core_total_arr_free(dim,rungrad);    rungrad = NULL;
-    
-    bounding_box_free(bds); bds = NULL;
-    function_train_free(a); a   = NULL;
-    free(x);                x   = NULL;
-    free(y);                y   = NULL;
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    sl_mem_manager_free(slm);
 }
 
-void Test_function_train_param_grad_eval_simple(CuTest * tc)
+void Test_ft_param_gradeval_lin(CuTest * tc)
 {
-    printf("\nTesting Function: function_train_param_grad_eval_simple \n");
+    printf("\n Testing Function: ft_param_gradeval_lin \n");
     printf("\t  Dimensions: 4\n");
     printf("\t  Ranks:      [1 2 3 8 1]\n");
     printf("\t  LPOLY order: 10\n");
 
     srand(seed);
     size_t dim = 4;
-    
     size_t ranks[5] = {1,2,3,8,1};
-    /* size_t ranks[5] = {1,2,2,2,1}; */
-    double lb = -0.5;
-    double ub = 1.0;
-    size_t maxorder = 10; // 10
-    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
-    struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
-    // create data
-    size_t ndata = 10; // 10
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    size_t temp_nparam, totparam = 0;
-    size_t nparam[4];
-    for (size_t ii = 0; ii < dim; ii++){
-        nparam[ii] = function_train_core_get_nparams(a,ii,&temp_nparam);
-        totparam += nparam[ii];
+    size_t maxorder = 10; 
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
     }
 
-    double * vals = calloc_double(ndata);
-    double * grad = calloc_double(ndata*totparam);
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
 
-    double * guess = calloc_double(totparam);
-    size_t runtot = 0;
-    size_t running = 0;
-    for (size_t zz = 0; zz < dim; zz++){
-        for (size_t jj = 0; jj < nparam[zz]; jj++){
-            guess[running+jj] = randn();
-            runtot++;
-        }
-        function_train_core_update_params(a,zz,nparam[zz],guess+running);
-        running+=nparam[zz];
+    double pt[4] = {0.2,-1.2,2.1,0.9};
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+    struct SLMemManager * slm = sl_mem_manager_alloc(dim,1,nparam,LINEAR_ST);
+    sl_mem_manager_check_structure(slm,ftp,pt);
+
+    double eval_true = function_train_eval(ftp->ft,pt);
+
+    /* printf("nparam = %zu\n",nparam); */
+    /* printf("eval_true = %G\n",eval_true); */
+    double * grad = calloc_double(nparam);
+    double eval_should = ft_param_gradeval_lin(ftp,slm->lin_structure_vals,
+                                               grad,slm->running_eval,
+                                               slm->running_grad);
+    CuAssertDblEquals(tc,eval_true,eval_should,1e-10);
+    /* dprint(nparam,grad); */
+    double h = 1e-7;
+    for (size_t zz = 0; zz < nparam; zz++){
+        size_t ii = nparam-zz-1;
+        /* if (ii <= 351){ */
+        /*     printf("ii = %zu\n",ii); */
+        /* } */
+        param[ii] += h;
+        ft_param_update_params(ftp,param);
+        double ehere = function_train_eval(ftp->ft,pt);
+        double fd  = (ehere-eval_true)/h;
+
+        CuAssertDblEquals(tc,fd,grad[ii],1e-5);
+        param[ii] -=h;
+        ft_param_update_params(ftp,param);
     }
 
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = function_train_eval(a,x+ii*dim);
-    }
-
-    function_train_param_grad_eval_simple(a,ndata,x,vals,NULL);
-
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-    
-    /* printf("\t Testing Gradient\n"); */
-    function_train_param_grad_eval_simple(a,ndata,x,vals,grad);
-    for (size_t ii = 0; ii < ndata; ii++){
-        CuAssertDblEquals(tc,y[ii],vals[ii],1e-15);
-    }
-
-
-    /* printf("grad = "); dprint(totparam,grad); */
-    for (size_t zz = 0; zz < ndata; zz++){
-        running = 0;
-        double h = 1e-4;
-        for (size_t ii = 0; ii < dim; ii++){
-            /* printf("dim = %zu\n",ii); */
-            for (size_t jj = 0; jj < nparam[ii]; jj++){
-                /* printf("\t jj = %zu\n", jj); */
-                guess[running+jj] += h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            
-                double val2 = function_train_eval(a,x+zz*dim);
-                double fd = (val2-y[zz])/h;
-                /* printf("val2=%G, y[0]=%G\n",val2,y[0]); */
-                /* printf("fd = %3.15G, calc is %3.15G\n",fd,grad[running+jj + zz * totparam]); */
-                /* printf("\t fd[%zu,%zu] = %3.5G\n",jj,zz,fd); */
-                double reldiff = (fd - grad[running+jj + zz * totparam])/fd;
-                CuAssertDblEquals(tc,0.0,reldiff,2e-5);
-                guess[running+jj] -= h;
-                function_train_core_update_params(a,ii,nparam[ii],guess + running);
-            }
-            running += nparam[ii];
-        }
-    }
-
-    free(guess); guess = NULL;
-    free(vals); vals = NULL;
     free(grad); grad = NULL;
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    sl_mem_manager_free(slm);
     
-    bounding_box_free(bds); bds = NULL;
-    function_train_free(a); a   = NULL;
-    free(x);                x   = NULL;
-    free(y);                y   = NULL;
+
 }
 
 void Test_LS_AIO(CuTest * tc)
@@ -816,7 +691,7 @@ void Test_LS_AIO(CuTest * tc)
     printf("\t  Ranks:      [1 2 3 2 3 1]\n");
     printf("\t  LPOLY order: 3\n");
     printf("\t  nunknowns:   92\n");
-    printf("\t  ndata:       300\n");
+    printf("\t  ndata:       350\n");
 
     size_t dim = 5;
 
@@ -829,7 +704,7 @@ void Test_LS_AIO(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 300;
+    size_t ndata = 350;
     /* printf("\t ndata = %zu\n",ndata); */
     /* size_t ndata = 200; */
     double * x = calloc_double(ndata*dim);
@@ -863,12 +738,12 @@ void Test_LS_AIO(CuTest * tc)
     /* printf("\t nunknown = %zu\n",nunknown); */
     /* struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks); */
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-3);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
     struct c3Opt * optimizer = c3opt_create(BFGS);
     /* c3opt_set_verbose(optimizer,1); */
-    /* c3opt_set_relftol(optimizer,1e-5); */
-    /* c3opt_set_relftol(optimizer,1e-12); */
+    /* c3opt_set_absxtol(optimizer,1e-20); */
+    /* c3opt_set_relftol(optimizer,1e-20); */
     /* c3opt_set_gtol(optimizer,1e-12); */
     
     struct FunctionTrain * ft_final = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
@@ -1127,27 +1002,25 @@ void Test_LS_AIO_new(CuTest * tc)
 
     
     /* // Some tests */
-    ft_param_update_params(ftp,true_params);
-    double val = ft_param_eval_objective_aio(ftp,ropts,NULL,ndata,x,y,NULL);
-    double * check_param = calloc_double(nunknowns);
-    running=0;
-    /* printf("\n\n\n"); */
-    for (size_t ii = 0; ii < dim; ii++){
-        /* printf("ii = %zu\n",ii); */
-        incr = function_train_core_get_params(ft_param_get_ft(ftp),ii,
-                                              check_param);
-        for (size_t jj = 0; jj < incr; jj++){
-            /* printf("%zu,%G,%G\n",running+jj,true_params[running+jj],check_param[jj]); */
-            CuAssertDblEquals(tc,true_params[running+jj],check_param[jj],1e-20);
-        }
+    /* ft_param_update_params(ftp,true_params); */
+    /* double val = ft_param_eval_objective_aio(ftp,ropts,NULL,ndata,x,y,NULL); */
+    /* double * check_param = calloc_double(nunknowns); */
+    /* running=0; */
+    /* /\* printf("\n\n\n"); *\/ */
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     /\* printf("ii = %zu\n",ii); *\/ */
+    /*     incr = function_train_core_get_params(ft_param_get_ft(ftp),ii, */
+    /*                                           check_param); */
+    /*     for (size_t jj = 0; jj < incr; jj++){ */
+    /*         /\* printf("%zu,%G,%G\n",running+jj,true_params[running+jj],check_param[jj]); *\/ */
+    /*         CuAssertDblEquals(tc,true_params[running+jj],check_param[jj],1e-20); */
+    /*     } */
         
-        running+= incr;
-    }
-    free(check_param); check_param = NULL;
-    CuAssertDblEquals(tc,0.0,val,1e-20);
-
-
-    ft_param_update_params(ftp,param_space);
+    /*     running+= incr; */
+    /* } */
+    /* free(check_param); check_param = NULL; */
+    /* CuAssertDblEquals(tc,0.0,val,1e-20); */
+    /* ft_param_update_params(ftp,param_space); */
 
     struct FunctionTrain * ft = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
     double diff = function_train_relnorm2diff(ft,a);
@@ -1182,9 +1055,6 @@ void Test_LS_AIO_new(CuTest * tc)
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
 }
-
-
-
 
 static double lin_func(double * x){
     double w[5] = {0.2, -0.2, 0.4, 0.3, -0.1};
@@ -1346,341 +1216,8 @@ void Test_LS_AIO_ftparam_create_from_lin_ls_kernel(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
-void Test_LS_AIO_ftparam_update_restricted_ranks(CuTest * tc)
-{
-    srand(seed);
-    printf("\nTesting Function: ftparam_update_restricted_ranks \n");
-    printf("\t  Dimensions: 5\n");
-    printf("\t  ndata:      500\n");
-    
-    size_t dim = 5;
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t ranks[6] = {1,3,3,3,3,1};
-    
-    // create data
-    size_t ndata = 500;
 
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = lin_func(x+ii*dim);
-    }
-
-    // Initialize Approximation Structure
-    // Initialize Approximation Structure
-    size_t nparams = 10;
-    double * centers = linspace(lb,ub,nparams);
-    double scale = 1.0;
-    double width = pow(nparams,-0.2)*2.0/12.0;
-    width *= 20;
-    /* printf("\t width = %G\n",width); */
-
-    struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
-    struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
-    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
-    size_t nunknowns = 0;
-    for (size_t ii = 0; ii < dim; ii++){
-        multi_approx_opts_set_dim(fapp,ii,qmopts);
-
-        nunknowns += 2*nparams + 2*nparams + nparams; // just updating last rank!
-    }
-    
-    struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    size_t ntotparams = ft_param_get_nparams(ftp);
-    /* printf("\t ntotparams = %zu\n",ntotparams); */
-    double * old_tot_params = calloc_double(ntotparams);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
-
-
-    struct FunctionTrain * ft = ft_param_get_ft(ftp);
-    function_train_get_params(ft,old_tot_params);
-
-    double * new_params = calloc_double(nunknowns);
-    size_t rank_start[5] = {2, 2, 2, 2, 2};
-    /* printf("\t nunknowns = %zu\n",nunknowns); */
-    for (size_t ii = 0; ii < nunknowns; ii++){
-        new_params[ii] = randn();
-    }
-    
-    ft_param_update_restricted_ranks(ftp,new_params,rank_start);
-    ft = ft_param_get_ft(ftp);
-
-    double * new_tot_params = calloc_double(ntotparams);
-    function_train_get_params(ft,new_tot_params);
-    
-    size_t onparam = 0;
-    size_t on_new_param = 0;
-    for (size_t kk = 0; kk < dim; kk++){
-        for (size_t jj = 0; jj < ranks[kk+1]; jj++){
-            for (size_t ii = 0; ii < ranks[kk]; ii++){
-                for (size_t ll = 0; ll < nparams; ll++){
-                    if ( (ii < 2) && (jj < 2)){
-                        CuAssertDblEquals(tc,old_tot_params[onparam],new_tot_params[onparam],1e-15);
-                    }
-                    else{
-                        CuAssertDblEquals(tc,new_params[on_new_param],new_tot_params[onparam],1e-15);
-                        on_new_param+=1;
-                    }
-                    onparam+=1;
-                }
-            }
-        }
-    }
-    
-    free(centers); centers = NULL;
-    free(old_tot_params); old_tot_params = NULL;
-    free(new_tot_params); new_tot_params = NULL;
-    free(new_params);     new_params = NULL;
-
-    ft_param_free(ftp);       ftp  = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    one_approx_opts_free_deep(&qmopts);
-    multi_approx_opts_free(fapp);
-}
-
-//  a little more than a linear function
-static double lin_func_plus(double * x){
-    double w[5] = {0.2, -0.2, 0.4, 0.3, -0.1};
-
-    double out = 0.0;
-    for (size_t ii = 0; ii < 5; ii++){
-        out += w[ii]*x[ii];
-    }
-
-    out += x[0]*x[1];
-    
-    return out;
-}
-
-void Test_LS_AIO_ftparam_restricted_ranks_opt(CuTest * tc)
-{
-    srand(seed);
-    printf("\nTesting Function: ftparam_update_restricted_ranks with optimization \n");
-
-    size_t dim = 5;
-    double lb = -1.0;
-    double ub = 1.0;
-    size_t maxr = 5;
-    size_t ranks[6] = {1,maxr,maxr,maxr,maxr,1};
-    
-    // create data
-    size_t ndata = 100;
-    printf("\t ndata = %zu\n",ndata);
-    double * x = calloc_double(ndata*dim);
-    double * y = calloc_double(ndata);
-
-    for (size_t ii = 0 ; ii < ndata; ii++){
-        for (size_t jj = 0; jj < dim; jj++){
-            x[ii*dim+jj] = randu()*(ub-lb) + lb;
-        }
-        y[ii] = lin_func_plus(x+ii*dim);
-    }
-
-    // Initialize Approximation Structure
-    // Initialize Approximation Structure
-    size_t maxorder = 5;
-    size_t nparams = maxorder+1;
-    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_lb(opts,lb);
-    ope_opts_set_ub(opts,ub);
-    ope_opts_set_nparams(opts,nparams);
-    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
-    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
-    size_t nunknowns = (maxr-2)*nparams + (maxr-2)*nparams;
-    for (size_t ii = 0; ii < dim; ii++){
-        multi_approx_opts_set_dim(fapp,ii,qmopts);
-
-        if ((ii > 1) && (ii < dim)){
-            nunknowns += (maxr-2)*2*nparams + (maxr-2)*2*nparams +
-                        (maxr-2)*(maxr-2)*nparams; // just updating ranks after last ones!
-        }
-    }
-
-    struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    size_t ntotparams = ft_param_get_nparams(ftp);
-    printf("\t ntotparams = %zu\n",ntotparams);
-    double * old_tot_params = calloc_double(ntotparams);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
-
-    struct FunctionTrain * ft = ft_param_get_ft(ftp);
-    function_train_get_params(ft,old_tot_params);
-
-    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    size_t rank_start[5] = {2, 2, 2, 2, 2};
-    for (size_t ii = 0; ii < dim; ii++){
-        regress_opts_set_restrict_rank(ropts,ii,rank_start[ii]);
-    }
-
-    printf("\t nunknowns = %zu\n",nunknowns);
-    double * new_params = calloc_double(nunknowns);
-    for (size_t ii = 0; ii < nunknowns; ii++){
-        new_params[ii] = 1e-3;
-    }
-    ft_param_update_restricted_ranks(ftp,new_params,rank_start);
-
-    struct c3Opt * optimizer = c3opt_create(BFGS);
-    c3opt_set_verbose(optimizer,0);
-
-    struct FunctionTrain * ftfinal = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
-    double * new_tot_params = calloc_double(ntotparams);
-    function_train_get_params(ftfinal,new_tot_params);
-    
-    size_t onparam = 0;
-    for (size_t kk = 0; kk < dim; kk++){
-        for (size_t jj = 0; jj < ranks[kk+1]; jj++){
-            for (size_t ii = 0; ii < ranks[kk]; ii++){
-                for (size_t ll = 0; ll < nparams; ll++){
-                    if ( (ii < 2) && (jj < 2)){
-                        CuAssertDblEquals(tc,old_tot_params[onparam],new_tot_params[onparam],1e-15);
-                    }
-                    /* else{ */
-                    /*     CuAssertDblEquals(tc,new_params[on_new_param],new_tot_params[onparam],1e-15); */
-                    /*     on_new_param+=1; */
-                    /* } */
-                    onparam+=1;
-                }
-            }
-        }
-    }
-
-    printf("\t start ranks: "); iprint_sz(dim+1,function_train_get_ranks(ftfinal));
-    struct FunctionTrain * ftr1 = function_train_round(ftfinal,1e-8,fapp);
-    printf("\t rounded ranks 1e-8: "); iprint_sz(dim+1,function_train_get_ranks(ftr1));
-    struct FunctionTrain * ftr2 = function_train_round(ftfinal,5e-5,fapp);
-    printf("\t rounded ranks 1e-5: "); iprint_sz(dim+1,function_train_get_ranks(ftr2));
-
-    
-    size_t nparam = function_train_get_nparams(ftr2);
-    double * newnew = calloc_double(nparam);
-    function_train_get_params(ftr2,newnew);
-    struct FTparam * ftp2 =  ft_param_alloc(dim,fapp,newnew,function_train_get_ranks(ftr2));
-    struct RegressOpts * ropts2 = regress_opts_create(dim,AIO,FTLS);
-    struct FunctionTrain * ftf2 = c3_regression_run(ftp2,ropts2,optimizer,ndata,x,y);
-    
-    double diff = 0.0;
-    double diff2 = 0.0;
-    double diffr1 = 0.0;
-    double diffr2 = 0.0;
-    double norm = 0.0;
-    for (size_t ii = 0; ii < 10000; ii++){
-        double pt[5];
-        for (size_t jj = 0; jj < dim; jj++){
-            pt[jj] = randu()*(ub-lb) + lb;
-        }
-        double v1 = lin_func_plus(pt);
-        double v2 = function_train_eval(ftfinal,pt);
-        double v3 = function_train_eval(ftr1,pt);
-        double v4 = function_train_eval(ftr2,pt);
-        double v5 = function_train_eval(ftf2,pt);
-        
-        diff += pow(v1-v2,2);
-        diffr1 += pow(v1-v3,2);
-        diffr2 += pow(v1-v4,2);
-        diff2 += pow(v1-v5,2);
-        norm += pow(v1,2);
-    }
-    printf("\t Original error  = %G, norm  = %G, rat = %G\n",diff,norm,diff/norm);
-    printf("\t Rounded  error  = %G, norm  = %G, rat = %G\n",diffr1,norm,diffr1/norm);
-    printf("\t Rounded looser  = %G, norm  = %G, rat = %G\n",diffr2,norm,diffr2/norm);
-    printf("\t Optimize from rounded error = %G, norm = %G, rat = %G\n",diff2,norm,diff2/norm);
-    CuAssertDblEquals(tc,0.0,diff2/norm,1e-6);
-
-    free(new_params); new_params = NULL;
-    free(newnew); newnew = NULL;
-    regress_opts_free(ropts2); ropts2 = NULL;
-    ft_param_free(ftp2); ftp2 = NULL;
-    function_train_free(ftf2); ftf2 = NULL;
-    function_train_free(ftr2); ftr2 = NULL;    
-    function_train_free(ftr1); ftr1 = NULL;
-    function_train_free(ftfinal); ftfinal = NULL;
-    
-    free(old_tot_params); old_tot_params = NULL;
-    free(new_tot_params); new_tot_params = NULL;
-
-    c3opt_free(optimizer); optimizer = NULL;
-    regress_opts_free(ropts); ropts = NULL;
-
-    ft_param_free(ftp);       ftp  = NULL;
-
-    free(x); x = NULL;
-    free(y); y = NULL;
-    one_approx_opts_free_deep(&qmopts);
-    multi_approx_opts_free(fapp);
-}
-
-/* void Test_LS_c3approx_interface(CuTest * tc) */
-/* { */
-/*     printf("Testing Function: c3approx_interface\n"); */
-/*     /\* srand(seed); *\/ */
-    
-/*     size_t dim = 5; */
-/*     size_t ranks[6] = {1,2,2,2,2,1}; */
-/*     size_t maxrank = 3; */
-/*     double lb = -1.0; */
-/*     double ub = 1.0; */
-/*     size_t maxorder = 3; */
-
-/*     struct BoundingBox * bds = bounding_box_init(dim,lb,ub); */
-/*     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder); */
-    
-/*     // create data */
-/*     size_t ndata = 1000;//dim * 8 * 8 * (maxorder+1); */
-/*     double * x = calloc_double(ndata*dim); */
-/*     double * y = calloc_double(ndata); */
-
-/*     for (size_t ii = 0 ; ii < ndata; ii++){ */
-/*         for (size_t jj = 0; jj < dim; jj++){ */
-/*             x[ii*dim+jj] = randu()*(ub-lb) + lb; */
-/*         } */
-/*         // no noise! */
-/*         y[ii] = function_train_eval(a,x+ii*dim); */
-/*     } */
-
-
-/*     // Initialize Approximation Structure */
-/*     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE); */
-/*     ope_opts_set_lb(opts,lb); */
-/*     ope_opts_set_ub(opts,ub); */
-/*     struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts); */
-/*     struct C3Approx * c3a = c3approx_create(REGRESS,dim); */
-/*     for (size_t ii = 0; ii < dim; ii++){ */
-/*         c3approx_set_approx_opts_dim(c3a,ii,qmopts); */
-/*     } */
-
-/*     // Set regression parameters */
-/*     c3approx_set_regress_type(c3a,AIO); */
-/*     c3approx_set_regress_start_ranks(c3a,maxrank); */
-/*     c3approx_set_regress_num_param_per_func(c3a,maxorder+1); */
-/*     c3approx_init_regress(c3a); */
-
-/*     // Perform regression */
-/*     struct FunctionTrain * ft_final = c3approx_do_regress(c3a,ndata,x,1,y,1,FTLS); */
-    
-/*     /\* printf("done!\n"); *\/ */
-    
-/*     double diff = function_train_relnorm2diff(ft_final,a); */
-/*     printf("\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff); */
-/*     CuAssertDblEquals(tc,0.0,diff,1e-3); */
-
-/*     function_train_free(ft_final); ft_final = NULL; */
-/*     bounding_box_free(bds); bds       = NULL; */
-/*     function_train_free(a); a         = NULL; */
-/*     free(x); x = NULL; */
-/*     free(y); y = NULL; */
-
-/*     c3approx_destroy(c3a); */
-/*     one_approx_opts_free_deep(&qmopts); */
-/* } */
-
-
-double funccv(double * x)
+static double funccv(double * x)
 {
     double ret = 0.0;
     for (size_t ii = 0; ii < 5; ii++){
@@ -2017,7 +1554,7 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
 
     // create data
-    size_t ndata = 200;
+    size_t ndata = 300;
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -2057,7 +1594,7 @@ void Test_SPARSELS_AIOCV(CuTest * tc)
     c3opt_set_maxiter(optimizer,1000);
     /* // set options for parameters */
     size_t kfold = 5;
-    int cvverbose = 0;
+    int cvverbose = 2;
     struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
     
     size_t nweight = 9;
@@ -2284,14 +1821,15 @@ void Test_LS_AIO_kernel(CuTest * tc)
 
     struct c3Opt * optimizer = c3opt_create(SGD);
     c3opt_set_sgd_nsamples(optimizer,ndata);
-    regress_opts_set_stoch_obj(ropts,1);
+    /* regress_opts_set_stoch_obj(ropts,1); */
+    c3opt_set_maxiter(optimizer,500);
+
     
     /* struct c3Opt * optimizer = c3opt_create(BFGS); */
+    /* c3opt_set_maxiter(optimizer,50); */
+
     c3opt_set_verbose(optimizer,0);
     c3opt_set_gtol(optimizer,1e-5);
-    /* c3opt_ls_set_maxiter(optimizer,50); */
-    c3opt_set_maxiter(optimizer,500);
-    
 
     double resid = 0.0;
     struct FunctionTrain * ft = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
@@ -2415,8 +1953,7 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
 
     struct c3Opt * optimizer = c3opt_create(SGD);
     c3opt_set_sgd_nsamples(optimizer,ndata);
-    regress_opts_set_stoch_obj(ropts,1);
-
+    c3opt_set_maxiter(optimizer,500);
     
     /* struct c3Opt * optimizer = c3opt_create(BFGS); */
     /* c3opt_ls_set_maxiter(optimizer,50); */
@@ -2425,7 +1962,7 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     c3opt_set_gtol(optimizer,1e-5);
     c3opt_set_relftol(optimizer,1e-20);
     c3opt_set_absxtol(optimizer,0);
-    c3opt_set_maxiter(optimizer,500);
+
     
 
     double resid = 0.0;
@@ -2847,10 +2384,6 @@ void Test_LS_AIO_rankadapt_kernel(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
-
-
-
-
 void Test_LS_AIO_kernel2(CuTest * tc)
 {
     srand(seed);
@@ -2867,7 +2400,7 @@ void Test_LS_AIO_kernel2(CuTest * tc)
     /*                     5,4,3,4,3,1}; */
     
     // create data
-    size_t ndata = 100;
+    size_t ndata = 150;
     printf("\t ndata = %zu\n",ndata);
     double * x = calloc_double(ndata*dim);
     double * y = calloc_double(ndata);
@@ -3358,7 +2891,7 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
     test_error /= (double) N;
     printf("\t  rmse = %G\n",sqrt(test_error));
     printf("\t  mse = %G\n",test_error);
-    CuAssertDblEquals(tc,0.0,test_error,1e-7);
+    CuAssertDblEquals(tc,0.0,test_error,1e-6);
     
     ft_regress_free(reg);     reg = NULL;
     function_train_free(ft2); ft2 = NULL;
@@ -3385,9 +2918,10 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
     /* next 5 are good */
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval);
-    SUITE_ADD_TEST(suite, Test_function_train_param_grad_eval_simple);
-    SUITE_ADD_TEST(suite, Test_function_train_core_param_grad_eval1);
+    SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_eval_lin);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin);
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
     SUITE_ADD_TEST(suite, Test_LS_AIO3);
@@ -3396,11 +2930,8 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO_new);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_update_restricted_ranks);
-    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_restricted_ranks_opt);
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation);
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
     
-    /* SUITE_ADD_TEST(suite, Test_LS_c3approx_interface); */
 
     /* Next 2 are good */
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
@@ -3413,7 +2944,6 @@ CuSuite * CLinalgRegressGetSuite()
     /* Next 3 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
-
     
     SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
     SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);

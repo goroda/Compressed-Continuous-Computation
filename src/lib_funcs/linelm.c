@@ -467,6 +467,21 @@ size_t lin_elem_exp_get_params(const struct LinElemExp * lexp, double * param)
 }
 
 /********************************************************//**
+    Get a reference to parameters of a linear element expansion
+
+    \param[in]     lexp   - expansion
+    \param[in,out] nparam - parameters
+
+    \returns reference to parameters
+*************************************************************/
+double * lin_elem_exp_get_params_ref(const struct LinElemExp * lexp, size_t * nparam)
+{
+    assert (lexp != NULL);
+    *nparam = lexp->num_nodes;
+    return lexp->coeff;
+}
+
+/********************************************************//**
     Update the parameters (coefficients) for a linear element expansion
 
     \param[in] lexp  - expansion
@@ -742,7 +757,7 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 }
 
 /********************************************************//*
-*   Evaluate the gradient of an orthonormal polynomial expansion 
+*   Evaluate the gradient of a linear element expansion 
 *   with respect to the coefficients of each basis
 *
 *   \param[in]     f    - polynomial expansion
@@ -750,25 +765,11 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 *   \param[in]     x    - location at which to evaluate
 *   \param[in,out] grad - gradient values (N,nx)
 *
-*   \return out - polynomial value
+*   \return out - value
 *************************************************************/
 int lin_elem_exp_param_grad_eval(
     struct LinElemExp * f, size_t nx, const double * x, double * grad)
 {
-
-
-    /* if (grad != NULL){ */
-        /* size_t nparam = lin_elem_exp_get_num_params(f); */
-        /* printf ("nparam = %zu\n",nparam); */
-        /* dprint(nparam,f->nodes); */
-        /* printf(" x = "); */
-        /* /\* if (x[0] < 0){ *\/ */
-        /* /\*     fprintf(stderr, "x should not be negative %G \n",x[0]); *\/ */
-        /* /\*     assert (x[0] > 0.0); *\/ */
-        /* /\* } *\/ */
-        /* dprint(nx,x); */
-    /* } */
-
 
     size_t nparam = f->num_nodes;
     /* assert (nparam == lexp->nnodes); */
@@ -802,6 +803,44 @@ int lin_elem_exp_param_grad_eval(
         /* exit(1); */
     }
     return 0;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an linear element expansion
+*   with respect to the coefficients of each basis
+*
+*   \param[in]     f    - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N)
+*
+*   \return out - value
+*************************************************************/
+double lin_elem_exp_param_grad_eval2(
+    struct LinElemExp * f, double x, double * grad)
+{
+    assert (grad != NULL);
+
+    size_t nparam = lin_elem_exp_get_num_params(f);
+    size_t indmin = lin_elem_exp_find_interval(f,x);
+    for (size_t jj = 0; jj < indmin; jj++)
+    {
+        grad[jj] = 0.0;
+    }
+
+    for (size_t jj = indmin+2; jj < nparam; jj++)
+    {
+        grad[jj] = 0.0;
+    }
+
+    double den = f->nodes[indmin+1]-f->nodes[indmin];
+    double t = (f->nodes[indmin+1]-x)/den;
+        
+    grad[indmin] = t;
+    grad[indmin+1] = 1.0-t;
+   
+    double value = f->coeff[indmin] * t + f->coeff[indmin+1]*(1.0-t);
+
+    return value;
 }
 
 /********************************************************//**

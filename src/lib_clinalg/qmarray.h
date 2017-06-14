@@ -199,6 +199,10 @@ void qmarray_param_grad_eval(struct Qmarray *, size_t,
                              double *, size_t,
                              double *, size_t,
                              double *);
+void qmarray_linparam_eval(struct Qmarray *, size_t,
+                           double *, size_t,
+                           const double *, size_t);
+
 void qmarray_param_grad_eval_sparse_mult(struct Qmarray *, size_t,
                                          const double *, size_t,
                                          double *, size_t,
