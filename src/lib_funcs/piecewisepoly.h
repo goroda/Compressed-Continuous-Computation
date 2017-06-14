@@ -190,8 +190,8 @@ int minmod_disc_exists(double, double *, double *, size_t,size_t, size_t);
 
 void locate_jumps(struct Fwrap *,
                   double, double, size_t, double, double **, size_t *);
-struct PiecewisePoly *
-piecewise_poly_approx2(struct Fwrap *, struct PwPolyOpts *);
+// struct PiecewisePoly *
+// piecewise_poly_approx2(struct Fwrap *, struct PwPolyOpts *);
                        
 
 
