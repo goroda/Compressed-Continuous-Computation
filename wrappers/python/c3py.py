@@ -112,10 +112,12 @@ class FunctionTrain:
         optimizer = None
         if opt_type == "BFGS":
             optimizer = c3.c3opt_create(c3.BFGS)
+            c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         elif opt_type == "SGD":
             optimizer = c3.c3opt_create(c3.SGD)
             c3.c3opt_set_sgd_nsamples(optimizer,xdata.shape[0])
             c3.c3opt_set_sgd_learn_rate(optimizer,1e-3)
+            c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         else:
             raise AttributeError('Optimizer:  ' + opt_type + " is unknown")
         
@@ -125,7 +127,6 @@ class FunctionTrain:
         # Set optimization options
         c3.c3opt_set_gtol(optimizer,opt_gtol)
         c3.c3opt_set_relftol(optimizer,opt_relftol)
-        c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         c3.c3opt_set_maxiter(optimizer,opt_maxiter)
 
         self._build_multiopts()
@@ -153,10 +154,7 @@ class FunctionTrain:
 
         if kristoffel is True:
             c3.ft_regress_set_kristoffel(reg,1)
-                
-        if opt_type == "SGD":
-            c3.ft_regress_set_stoch_obj(reg,1)
-        
+                        
         if self.ft is not None:
             c3.function_train_free(self.ft)
 
