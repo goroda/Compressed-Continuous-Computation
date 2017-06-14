@@ -3711,13 +3711,99 @@ void function_train_gradient_eval(const struct FunctionTrain * ft,
                                   const double * x,
                                   double * out)
 {
-    (void)ft;
-    (void)x;
-    (void)out;
-    assert (1 == 0);
-    /* size_t dim  = ft->dim; */
-    /* size_t maxrank = function_train_get_maxrank(ft); */
-    /* size_t mr2 = maxrank*maxrank; */
+    /* (void)ft; */
+    /* (void)x; */
+    /* (void)out; */
+    /* assert (1 == 0); */
+    
+    size_t dim  = ft->dim;
+    size_t maxrank = function_train_get_maxrank(ft);
+    size_t * ranks = ft->ranks;
+    
+    size_t mr2 = maxrank*maxrank;
+    double * evals_lr = calloc_double(maxrank * dim + maxrank);
+    double * evals_rl = calloc_double(maxrank * dim + maxrank);
+    double * grads_lr = calloc_double(maxrank * dim + maxrank);
+    double * evals = calloc_double(mr2 * dim);
+    double * grads  = calloc_double(mr2 * dim);
+    size_t onuni = 0;
+    size_t indmem = 0;
+
+    size_t kk = 0;
+    for (size_t col = 0; col < ranks[kk+1]; col++){
+        evals_lr[col] = generic_function_eval(ft->cores[kk]->funcs[col],x[kk]);
+        grads_lr[col] = generic_function_deriv_eval(ft->cores[kk]->funcs[col],x[kk]);
+        onuni++;
+    }
+    
+    for (kk = 1; kk < dim; kk++){
+        for (size_t col = 0; col < ranks[kk+1]; col++){
+            evals_lr[indmem+ranks[kk]+col] = 0.0;
+            grads_lr[indmem+ranks[kk]+col] = 0.0;
+            for (size_t row = 0; row < ranks[kk]; row++){
+                evals[onuni] = generic_function_eval(ft->cores[kk]->funcs[row + col * ranks[kk]],x[kk]);
+                grads[onuni] = generic_function_deriv_eval(ft->cores[kk]->funcs[row + col * ranks[kk]],x[kk]);
+                evals_lr[indmem+ranks[kk]+col] += mem[indmem+row] * evals[onuni];
+                grads_lr[indmem+ranks[kk]+col] += mem[indmem+row] * grads[onuni];
+                onuni++;
+            }
+        }
+        indmem += ranks[kk];
+    }
+
+    out[dim] = grads_lr[indmem];
+    for (size_t zz = 1; zz < ftp->dim-1; zz++)
+    {
+        backind = ftp->dim-1-zz;
+        r1 = ranks[backind];
+        r2 = ranks[backind+1];
+
+        indmem -= r1;
+        onuni = onuni - r1*r2;
+
+        evals_rl = ??;
+
+        out[backind] = cblas_ddot(r2,grads_lr + indmem,1,evals_rl + ??, 1);
+
+        I AM HERE
+        for (size_t ii = 0; ii < r2; ii++){
+            double right_mult = mem[indmem + r1 + ii];
+            for (size_t kk = 0; kk < r1; kk++){
+                double left_mult = mem[indmem + kk];
+                for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni];ll++){
+                    grad[onparam] =  left_mult*grad_evals[onparam]*right_mult;
+                    onparam++;
+                }
+                onuni++;
+            }
+        }
+        onparam -= ftp->nparams_per_core[backind];
+        onuni -= r1*r2;
+        cblas_dgemv(CblasColMajor, CblasNoTrans,
+                    r1,r2,1.0,
+                    evals + onuni, r1,
+                    mem + indmem + r1, 1,
+                    0.0,mem + indmem, 1);
+                            
+        }
+        else{
+            /* printf("LETS GO indmem=%zu!\n",indmem); */
+            for (size_t kk = 0; kk < r1; kk++){
+                double left_mult = mem[indmem + kk];
+                for (size_t ll = 0; ll < ftp->nparams_per_uni[onuni]; ll++){
+                    grad[onparam] = left_mult*grad_evals[onparam];
+                    onparam++;
+                }
+                mem[indmem + kk] = evals[onuni];
+                onuni++;
+            }
+            onparam -= ftp->nparams_per_core[backind];
+            onuni -= r1*r2;
+        }
+    }
+    // backward sweep
+
+
     /* struct RunningCoreTotal *  evals_lr = running_core_total_alloc(mr2); */
     /* struct RunningCoreTotal *  evals_rl = running_core_total_alloc(mr2); */
     /* struct RunningCoreTotal ** grads    = running_core_total_arr_alloc(ft->dim,mr2); */

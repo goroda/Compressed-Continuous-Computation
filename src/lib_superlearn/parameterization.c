@@ -809,7 +809,6 @@ double ft_param_gradeval(struct FTparam * ftp, const double * x,
         }
     }
 
-
     double out = mem[indmem];
     size_t backind=0,r1,r2;
 
