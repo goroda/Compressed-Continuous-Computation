@@ -36,7 +36,7 @@ class FunctionTrain:
         if filename == None:
             self.ft = None
 
-    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4):
+    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4,kernel_adapt_center=0):
 
         if self.opts[dim] is not None:
             raise AttributeError('cannot call set_dim_opts because was already called')
@@ -56,6 +56,7 @@ class FunctionTrain:
             x = list(np.linspace(lb,ub))
             width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
             self.opts.insert(dim,["kernel",c3.kernel_approx_opts_gauss(nparam,x,kernel_height_scale,kernel_width_scale)])
+            c3.kernel_approx_opts_set_center_adapt(self.opts[dim][1],kernel_adapt_center)
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
             
