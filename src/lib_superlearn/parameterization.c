@@ -597,6 +597,16 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     free(weights); weights = NULL;
 }
 
+
+/***********************************************************//**
+    Evaluate an ft that has each univariate core parameterized with linear parameters
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     grad_evals - gradient of each univariate function wrt the parameter
+    \param[in,out] mem        - workspace (number of univariate functions, 1)
+
+    \return evaluation
+***************************************************************/
 double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals, double * mem)
 {
 
@@ -640,6 +650,17 @@ double ft_param_eval_lin(struct FTparam * ftp, const double * grad_evals, double
     return out;
 }
 
+/***********************************************************//**
+    Evaluate an ft that has each univariate core parameterized with linear parameters
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     grad_evals - gradient of each univariate function wrt the parameter
+    \param[in,out] grad       - gradient wrt each parameter in each univariate function
+    \param[in,out] mem        - workspace (number of univariate functions, 1)
+    \param[in,out] evals      - workspace (number of univariate functions)
+
+    \return evaluation
+***************************************************************/
 double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
                              double * grad, double * mem, double * evals)
 {
@@ -764,7 +785,18 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
     return out;
 }
 
+/***********************************************************//**
+    Evaluate the gradient of the ft with respect to each parameter
 
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     x          - location at which to evaluate
+    \param[in,out] grad       - gradient wrt each parameter in each univariate function
+    \param[in,out] grad_evals - workspace (number of univariate functions)
+    \param[in,out] mem        - workspace (number of univariate functions)
+    \param[in,out] evals      - workspace (number of univariate functions)
+
+    \return evaluation
+***************************************************************/
 double ft_param_gradeval(struct FTparam * ftp, const double * x,
                          double * grad,
                          double * grad_evals,
@@ -914,6 +946,10 @@ static void update_running_rl(struct FTparam * ftp, size_t core, double * runnin
     }
 }
 
+
+/***********************************************************//**
+    Helper function for ALS optimization
+***************************************************************/
 void process_sweep_left_right_lin(struct FTparam * ftp, size_t current_core, double * grad_evals,
                                   double * running_lr, double * running_lr_up)
 {
@@ -948,6 +984,9 @@ void process_sweep_left_right_lin(struct FTparam * ftp, size_t current_core, dou
     }
 }
 
+/***********************************************************//**
+    Helper function for ALS optimization
+***************************************************************/
 void process_sweep_right_left_lin(struct FTparam * ftp, size_t current_core, double * grad_evals,
                                   double * running_rl, double * running_rl_up)
 {
@@ -985,6 +1024,9 @@ void process_sweep_right_left_lin(struct FTparam * ftp, size_t current_core, dou
 }
 
 
+/***********************************************************//**
+    Helper function for ALS optimization
+***************************************************************/
 void process_sweep_left_right(struct FTparam * ftp, size_t current_core, double x, double * evals,
                               double * running_lr, double * running_lr_up)
 {
@@ -995,6 +1037,9 @@ void process_sweep_left_right(struct FTparam * ftp, size_t current_core, double 
     update_running_lr(ftp,current_core,running_lr,running_lr_up, evals);
 }
 
+/***********************************************************//**
+    Helper function for ALS optimization
+***************************************************************/
 void process_sweep_right_left(struct FTparam * ftp, size_t current_core, double x, double * evals,
                               double * running_rl, double * running_rl_up)
 {
@@ -1006,6 +1051,20 @@ void process_sweep_right_left(struct FTparam * ftp, size_t current_core, double 
     update_running_rl(ftp,current_core,running_rl,running_rl_up, evals);
 }
 
+
+/***********************************************************//**
+    Evaluate the gradient of the ft with respect to each parameter in a core
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     core       - core under consideration   
+    \param[in]     x          - location at which to evaluate
+    \param[in,out] grad       - gradient wrt each parameter in each univariate function
+    \param[in,out] running_lr - evaluation of cores from the left
+    \param[in,out] running_rl - evaluation of the cores from the right
+    \param[in,out] evals      - workspace (number of univariate functions)
+
+    \return evaluation
+***************************************************************/
 double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
                               double * grad,  double * running_lr,double * running_rl,
                               double * grad_evals)
@@ -1073,6 +1132,19 @@ double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
     return out;
 }
 
+/***********************************************************//**
+    Evaluate the ft 
+    for a function with unviariate functions that are parameterized linearly
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     core       - core under consideration   
+    \param[in,out] grad       - gradient wrt each parameter in the core
+    \param[in,out] running_lr - evaluation of cores from the left
+    \param[in,out] running_rl - evaluation of the cores from the right
+    \param[in]     grad_evals - gradient wrt each parameter of each univariate function in the ft
+
+    \return evaluation
+***************************************************************/
 double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
                               double * running_lr, double * running_rl,
                               const double * grad_evals)
@@ -1130,6 +1202,20 @@ double ft_param_core_eval_lin(struct FTparam * ftp, size_t core,
     return out;
 }
 
+
+/***********************************************************//**
+    Evaluate the gradient of a function with respect to the parameters
+    of a particular core for a function with unviariate functions that are parameterized linearly
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     core       - core under consideration   
+    \param[in,out] grad       - gradient wrt each parameter in the core
+    \param[in,out] running_lr - evaluation of cores from the left
+    \param[in,out] running_rl - evaluation of the cores from the right
+    \param[in]     grad_evals - gradient wrt each parameter of each univariate function in the ft
+
+    \return evaluation
+***************************************************************/
 double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
                                   double * grad,  double * running_lr,double * running_rl,
                                   double * grad_evals)

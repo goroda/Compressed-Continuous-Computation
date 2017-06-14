@@ -71,6 +71,14 @@ int objective_minimize(struct SLP * slp, struct c3Opt * optimizer,
 }
 
 
+/***********************************************************//**
+    Solve a supervised learning problem                                                            
+
+    \param[in,out] slp   - supervised learning problem
+    \param[in,out] guess - initial/final parameters
+
+    \return evaluation
+***************************************************************/
 int slp_solve(struct SLP * slp, double * guess)
 {
 

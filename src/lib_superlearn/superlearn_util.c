@@ -401,6 +401,15 @@ void data_set_xy(struct Data * data, const double * x, const double * y)
     data->y = y;
 }
 
+/***********************************************************//**
+    Get a reference to a subset of the data specified by indsub
+
+    \param[in] data   - data structure
+    \param[in] Nsub   - number of data points
+    \param[in] indsub - index of subsets (Nsub,)
+
+    \return pointer to training samples
+***************************************************************/
 const double * data_get_subset_ref(struct Data * data, size_t Nsub, size_t * indsub)
 {
     assert (data != NULL);
@@ -418,6 +427,15 @@ const double * data_get_subset_ref(struct Data * data, size_t Nsub, size_t * ind
     return data->xpointer;    
 }
 
+/***********************************************************//**
+    Subtract a particular data label from a reference label
+
+    \param[in] data  - data structure
+    \param[in] index - index to subtract
+    \param[in] val   - value to subtract
+
+    \return difference
+***************************************************************/
 double data_subtract_from_y(const struct Data * data, size_t ind, double val)
 {
     return data->y[ind]-val;
