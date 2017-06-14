@@ -323,10 +323,10 @@ static size_t create_initial_guess(struct RegressOpts * ropts,struct FTparam * f
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int ft_param_learning_interface(size_t nparam, const double * param,
-                                size_t N, size_t * ind,
-                                struct SLMemManager * mem,
-                                struct Data * data,
-                                double ** evals, double ** grads, void * args)
+                                       size_t N, size_t * ind,
+                                       struct SLMemManager * mem,
+                                       struct Data * data,
+                                       double ** evals, double ** grads, void * args)
 {
     /* printf("ft_param_learning_interface\n"); */
     (void) nparam;
@@ -1542,7 +1542,6 @@ double cross_validate_run(struct CrossValidate * cv,
 
     return err;
 }
-
 
 // Set up optimization of cross validation error
 
