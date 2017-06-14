@@ -149,7 +149,7 @@ void regress_opts_set_max_als_sweep(struct RegressOpts * opts, size_t maxsweeps)
     \param[in,out] opts   - regression options
     \param[in]     active - 0 to not use, 1 to use
 ***************************************************************/
-void regress_opts_set_kristoffel(struct RegressOpts * opts, size_t active)
+void regress_opts_set_kristoffel(struct RegressOpts * opts, int active)
 {
     assert (opts != NULL);
     opts->kristoffel_active = active;

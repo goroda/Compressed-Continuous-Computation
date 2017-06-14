@@ -711,13 +711,14 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     \param[in,out] optimizer - optimization arguments
     \param[in]     N         - number of data points
     \param[in]     x         - training samples
-    \param[in]     y         - training labels
+    \param[in]     yin       - training labels
 
     \returns function train
 
 ***************************************************************/
 struct FunctionTrain *
-c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts, struct c3Opt * optimizer,
+c3_regression_run(struct FTparam * ftp, struct RegressOpts * regopts,
+                  struct c3Opt * optimizer,
                   size_t N, const double * x, const double * yin)
 {
     // check if special structure exists / initialized

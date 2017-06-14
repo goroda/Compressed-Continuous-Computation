@@ -826,7 +826,7 @@ struct OpeOpts{
 
 
     // kristoffel weighting for least squares
-    double kristoffel_eval;
+    int kristoffel_eval;
     enum quad_rule qrule;
 
 };

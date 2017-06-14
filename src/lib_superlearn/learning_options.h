@@ -91,7 +91,7 @@ struct RegressOpts * regress_opts_alloc(size_t);
 void regress_opts_free(struct RegressOpts *);
 struct RegressOpts * regress_opts_create(size_t, enum REGTYPE, enum REGOBJ);
 void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
-void regress_opts_set_kristoffel(struct RegressOpts *, size_t);
+void regress_opts_set_kristoffel(struct RegressOpts *, int);
 void regress_opts_set_als_conv_tol(struct RegressOpts *, double);
 void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);

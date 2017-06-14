@@ -369,7 +369,7 @@ struct Data * data_alloc(size_t N, size_t dim)
 /***********************************************************//**
     Free data
 
-    \param[in,out] data
+    \param[in,out] data - data structure to free
 ***************************************************************/
 void data_free(struct Data * data)
 {
@@ -430,9 +430,9 @@ const double * data_get_subset_ref(struct Data * data, size_t Nsub, size_t * ind
 /***********************************************************//**
     Subtract a particular data label from a reference label
 
-    \param[in] data  - data structure
-    \param[in] index - index to subtract
-    \param[in] val   - value to subtract
+    \param[in] data - data structure
+    \param[in] ind  - index to subtract
+    \param[in] val  - value to subtract
 
     \return difference
 ***************************************************************/

@@ -1061,9 +1061,9 @@ void process_sweep_right_left(struct FTparam * ftp, size_t current_core, double 
     \param[in,out] grad       - gradient wrt each parameter in each univariate function
     \param[in,out] running_lr - evaluation of cores from the left
     \param[in,out] running_rl - evaluation of the cores from the right
-    \param[in,out] evals      - workspace (number of univariate functions)
+    \param[in,out] grad_evals - workspace (number of univariate functions)
 
-    \return evaluation
+    \return evaluation (also grad is the key item here)
 ***************************************************************/
 double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
                               double * grad,  double * running_lr,double * running_rl,
@@ -1138,10 +1138,10 @@ double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
 
     \param[in,out] ftp        - parameterized FTP
     \param[in]     core       - core under consideration   
-    \param[in,out] grad       - gradient wrt each parameter in the core
     \param[in,out] running_lr - evaluation of cores from the left
     \param[in,out] running_rl - evaluation of the cores from the right
-    \param[in]     grad_evals - gradient wrt each parameter of each univariate function in the ft
+    \param[in]     grad_evals - gradient wrt each parameter of each 
+                                univariate function in the ft
 
     \return evaluation
 ***************************************************************/
