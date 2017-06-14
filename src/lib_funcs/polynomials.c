@@ -280,7 +280,7 @@ inline static double two_seq(size_t n) { (void)n; return (2.0); }
 /* inline static double legc_seq (size_t n) { return ( -((double)n - 1.0)/ (double) n );} */
 
 
-static const long double legaseqnorm[201] = {
+static const double legaseqnorm[201] = {
 0.0000000000000000000000000,
 1.7320508075688772935737253,
 1.9364916731037084426068906,
@@ -484,7 +484,7 @@ static const long double legaseqnorm[201] = {
 1.9999937499902343445226660,
 };
 
-static const long double legcseqnorm[201] = {
+static const double legcseqnorm[201] = {
 0.0000000000000000000000000,
 0.0000000000000000000000000,
 -1.1180339887498948482072100,
@@ -3254,9 +3254,9 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
     /* } */
     else{
 //        printf("OrthPolyExpansion product greater than order 100 is slow\n");
-        struct OrthPolyExpansion * comb[2];
-        comb[0] = (struct OrthPolyExpansion *) a;
-        comb[1] = (struct OrthPolyExpansion *)b;
+        const struct OrthPolyExpansion * comb[2];
+        comb[0] = a;
+        comb[1] = b;
         
         double norma = 0.0, normb = 0.0;
         size_t ii;
@@ -3583,19 +3583,13 @@ orth_poly_expansion_inner(const struct OrthPolyExpansion * a,
         return out;
     }
     else{
-        int c1 = 0;
-        int c2 = 0;
         if (a->p->ptype == CHEBYSHEV){
             t1 = orth_poly_expansion_init(LEGENDRE, a->num_poly,
                                           a->lower_bound, a->upper_bound);
             orth_poly_expansion_approx(&orth_poly_expansion_eval2, (void*)a, t1);
             orth_poly_expansion_round(&t1);
-            c1 = 1;
         }
-        else if (a->p->ptype == LEGENDRE){
-            t1 = (struct OrthPolyExpansion *)a;
-        }
-        else{
+        else if (a->p->ptype != LEGENDRE){
             fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
             fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
             exit(1);
@@ -3606,29 +3600,29 @@ orth_poly_expansion_inner(const struct OrthPolyExpansion * a,
                                           b->lower_bound, b->upper_bound);
             orth_poly_expansion_approx(&orth_poly_expansion_eval2, (void*)b, t2);
             orth_poly_expansion_round(&t2);
-            c2 = 1;
         }
-        else if (b->p->ptype == LEGENDRE){
-            t2 = (struct OrthPolyExpansion *)b;
-        }
-        else{
+        else if (b->p->ptype != LEGENDRE){
             fprintf(stderr, "Don't know how to take inner product using polynomial type. \n");
             fprintf(stderr, "type1 = %d, and type2= %d\n",a->p->ptype,b->p->ptype);
             exit(1);
         }
-    
-        /*
-          printf("first poly=\n");
-          print_orth_poly_expansion(t1,0,NULL);
-          printf("second poly=\n");
-          print_orth_poly_expansion(t2,0,NULL);
-        */
-        double out = orth_poly_expansion_inner_w(t1,t2) * (t1->upper_bound - t1->lower_bound); /* 2.0; */
-        if (c1 == 1){
-            orth_poly_expansion_free(t1);
+
+        double out;
+        if ((t1 == NULL) && (t2 == NULL)){
+            out = orth_poly_expansion_inner_w(a,b) * (a->upper_bound - a->lower_bound);
         }
-        if (c2 == 1){
-            orth_poly_expansion_free(t2);
+        else if ((t1 == NULL) && (t2 != NULL)){
+            out = orth_poly_expansion_inner_w(a,t2) * (a->upper_bound - a->lower_bound);
+            orth_poly_expansion_free(t2); t2 = NULL;
+        }
+        else if ((t2 == NULL) && (t1 != NULL)){
+            out = orth_poly_expansion_inner_w(t1,b) * (b->upper_bound - b->lower_bound);
+            orth_poly_expansion_free(t1); t1 = NULL;
+        }
+        else{
+            out = orth_poly_expansion_inner_w(t1,t2) * (t1->upper_bound - t1->lower_bound);
+            orth_poly_expansion_free(t1); t1 = NULL;
+            orth_poly_expansion_free(t2); t2 = NULL;
         }
         return out;
     }

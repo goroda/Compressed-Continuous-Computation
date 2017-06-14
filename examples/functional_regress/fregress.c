@@ -294,9 +294,9 @@ int main(int argc, char * argv[])
         dx = 6;
     }
     else if (function == 3){
+        dx = 12;
         fprintf(stderr, "Function 3 does not work yet\n");
         exit(1);
-        dx = 12;
     }
     prob_t prob;
     prob.ninput = dx;
