@@ -12,10 +12,7 @@ file(GLOB SRC_FILES
 add_executable(optimization_test ${SRC_FILES})
 target_link_libraries(optimization_test 
     -g 
-    opt
-    linalg 
-    array 
-    stringmanip
+    c3
     cutest 
     ${blas_lapack} 
     -lm)

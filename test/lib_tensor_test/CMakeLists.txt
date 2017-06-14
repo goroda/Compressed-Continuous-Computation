@@ -6,19 +6,13 @@ add_executable(tensor_test ${SRC_FILES})
 if (APPLE)
     target_link_libraries(tensor_test 
         -g 
-        tensor 
-        linalg 
-        array 
-        stringmanip
+        c3
         cutest 
         ${macblas}/Accelerate)
 else ()
     target_link_libraries(tensor_test 
         -g 
-        tensor 
-        linalg 
-        array 
-        stringmanip
+        c3
         cutest 
         blas 
         lapack 

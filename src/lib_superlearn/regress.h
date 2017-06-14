@@ -75,7 +75,6 @@ void ft_regress_reset_param(struct FTRegress*, struct MultiApproxOpts *, size_t 
 void ft_regress_set_type(struct FTRegress *, enum REGTYPE);
 void ft_regress_set_obj(struct FTRegress *, enum REGOBJ);
 void ft_regress_set_alg_and_obj(struct FTRegress *, enum REGTYPE, enum REGOBJ);
-void ft_regress_set_stoch_obj(struct FTRegress *, int);
 
 /* void ft_regress_set_parameter(struct FTRegress *, char *, void *); */
 /* void ft_regress_process_parameters(struct FTRegress *); */

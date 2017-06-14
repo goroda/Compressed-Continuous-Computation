@@ -63,7 +63,9 @@ void RunAllTests(void) {
     CuSuite * dmrg = CLinalgDMRGGetSuite();
     CuSuite * diff = CLinalgDiffusionGetSuite();
 
-    /* CuSuiteAddSuite(suite, clin); */
+    
+    /* CuSuiteAddSuite(suite, clin); */ // nothing here is used
+    
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);
     CuSuiteAddSuite(suite, cind);

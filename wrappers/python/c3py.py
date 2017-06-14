@@ -96,7 +96,7 @@ class FunctionTrain:
 
 
     def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",verbose=0,\
-                         opt_type="BFGS",opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-30,opt_maxiter=2000, opt_sgd_learn_rate=1e-3,\
+                         opt_type="BFGS",opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-30,opt_maxiter=2000,opt_sgd_learn_rate=1e-3,\
                          adaptrank=0,roundtol=1e-5,maxrank=10,kickrank=2,\
                          kristoffel=False,regweight=1e-7,cvnparam=None,cvregweight=None,kfold=5,cvverbose=0):
         """

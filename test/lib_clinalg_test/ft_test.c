@@ -1723,6 +1723,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     function_train_deserialize(text, &ftd);
 
     double diff = function_train_relnorm2diff(ft,ftd);
+    printf("diff = %E\n",diff);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
     
     function_train_free(ftd); ftd = NULL;

@@ -67,6 +67,11 @@ Default: `OFF'
 
 Using this option can toggle whether or not static or shared libraries should be built
 
+#### BUILD_SUB_LIBS
+Default: `OFF'
+
+Using this option can toggle whether or not to build each sub-library into its own library
+
 
 
 ## Systems I have tested on

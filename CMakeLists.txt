@@ -50,6 +50,7 @@ else ()
 endif()
 
 
+option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 
