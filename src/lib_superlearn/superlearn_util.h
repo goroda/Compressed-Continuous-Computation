@@ -63,28 +63,24 @@ struct DblMemArray
 
 size_t dbl_mem_array_get_data_inc(const struct DblMemArray *);
 
-/** \struct Regression Memory Manager
+/** \struct Supervised Learning Memory Manager
  * \brief Manages all memory for supervised learning
  * \var SLMemManager::dim
  * size of feature space
  * \var SLMemManager::N
  * number of data points for which to store objects
- * \var SLMemManager::running_evals_lr
+ * \var SLMemManager::running_eval
  * space for storing the evaluations of cores from left to right
- * \var SLMemManager::running_evals_rl
- * space for storing the evaluations of cores from right to left
  * \var SLMemManager::running_grad
- * Running evaluations of gradient from left to right
+ * space for storing the evaluations of gradients
+ * \var SLMemManager::running_lr
+ * space for storing the evaluations of cores from left to right
+ * \var SLMemManager::running_rl
+ * space for storing the evaluations of cores from right to left
  * \var SLMemManager::evals
  * space for storing the evaluations of an FT at all the data apoints
  * \var SLMemManager::grad
  * space for storing the gradient of the FT at all the data points
- * \var SLMemManager::grad_space
- * space for gradient computations
- * \var SLMemManager::all_grads
- * space for storing the gradients of univariate functions in particular cores
- * \var SLMemManager::fparam_space
- * space for storing the gradients of any single univariate function
  * \var SLMemManager::structure
  * flag for whether or not the parameters are linearly mapped to outputs
  * \var SLMemManager::once_eval_structure

@@ -319,6 +319,19 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
 // Data management
 ////////////////////////////////////////////////////////////////////////////
 
+/** \struct Data structure
+ * \brief Stores data
+ * \var Data::N
+ * number of data points for which to store objects
+ * \var Data::dim
+ * size of feature space
+ * \var Data::x
+ * training samples
+ * \var Data::y
+ * training labels
+ * \var Data::xpointer
+ * auxilary variable 
+ */ 
 struct Data
 {
     size_t N;
@@ -329,6 +342,15 @@ struct Data
     double * xpointer;
 };
 
+
+/***********************************************************//**
+    Allocate a structure for data
+
+    \param[in] N   - number of data points
+    \param[in] dim - number of features
+
+    \returns Space for storing a reference to the data
+***************************************************************/
 struct Data * data_alloc(size_t N, size_t dim)
 {
     struct Data * data = malloc(sizeof(struct Data));
@@ -344,6 +366,11 @@ struct Data * data_alloc(size_t N, size_t dim)
     return data;
 }
 
+/***********************************************************//**
+    Free data
+
+    \param[in,out] data
+***************************************************************/
 void data_free(struct Data * data)
 {
     if (data != NULL){
@@ -353,11 +380,21 @@ void data_free(struct Data * data)
     }
 }
 
+/***********************************************************//**
+    Get the number of data points
+***************************************************************/
 size_t data_get_N(const struct Data * data)
 {
     return data->N;
 }
 
+/***********************************************************//**
+    Set the data
+
+    \param[in,out] data - data structure
+    \param[in]     x    - training samples (N * dim), flattened with dim changing fastests
+    \param[in]     y    - training labels (N)
+***************************************************************/
 void data_set_xy(struct Data * data, const double * x, const double * y)
 {
     data->x = x;
