@@ -33,6 +33,8 @@ benchmarks/scalardiffusion/dat/*
 benchmarks/scalardiffusion/bin/*
 benchmarks/linelmconv/bin/*
 
+*.desktop
+profiling/regress/all_in_one/cache_performance.txt
 *.c3
 
 fileheaders.txt
@@ -41,6 +43,7 @@ add_license_split.py
 
 profiling/regress/*/*.c3
 profiling/regress/bin/*
+profiling/regress/*/*.txt
 
 wrappers/python/build*
 wrappers/python/c3.py

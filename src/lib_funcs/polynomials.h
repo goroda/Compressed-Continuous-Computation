@@ -212,6 +212,8 @@ orth_poly_expansion_init_from_opts(const struct OpeOpts *, size_t);
 struct OrthPolyExpansion * 
 orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
+double * orth_poly_expansion_get_params_ref(const struct OrthPolyExpansion *, size_t *);
+
 void
 orth_poly_expansion_update_params(struct OrthPolyExpansion *,
                                   size_t, const double *);
@@ -278,6 +280,8 @@ void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,
                                const double *, size_t, double *, size_t);
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion *, size_t, const double *, double *);
+double orth_poly_expansion_param_grad_eval2(const struct OrthPolyExpansion *, double, double *);
+
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);

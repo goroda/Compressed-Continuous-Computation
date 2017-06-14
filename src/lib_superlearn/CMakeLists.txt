@@ -1,6 +1,11 @@
 cmake_minimum_required (VERSION 2.6)
 
-file(GLOB SRC_FILES 
+file(GLOB SRC_FILES
+  superlearn.c
+  superlearn_util.c
+  learning_options.c
+  parameterization.c
+  objective_functions.c
   regress.c
   )
 
