@@ -81,6 +81,8 @@ enum poly_type ope_opts_get_ptype(const struct OpeOpts *);
 void ope_opts_set_qrule(struct OpeOpts *, enum quad_rule);
 size_t ope_opts_get_nparams(const struct OpeOpts *);
 void ope_opts_set_nparams(struct OpeOpts *, size_t);
+void ope_opts_set_kristoffel_weight(struct OpeOpts *, int);
+
 
 /** \struct StandardPoly
  * \brief structure to represent standard polynomials in the monomial basis
@@ -195,6 +197,7 @@ struct OrthPolyExpansion{
     size_t nalloc; // number of coefficients allocated for efficiency
 
     struct SpaceMapping * space_transform;
+    int kristoffel_eval;
 
 };
 
@@ -209,6 +212,8 @@ orth_poly_expansion_init_from_opts(const struct OpeOpts *, size_t);
 struct OrthPolyExpansion * 
 orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
+double * orth_poly_expansion_get_params_ref(const struct OrthPolyExpansion *, size_t *);
+
 void
 orth_poly_expansion_update_params(struct OrthPolyExpansion *,
                                   size_t, const double *);
@@ -268,10 +273,15 @@ int orth_poly_expansion_arr_evalN(size_t,
 double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion *, double);
 
 double orth_poly_expansion_eval(const struct OrthPolyExpansion *, double);
+double orth_poly_expansion_get_kristoffel_weight(const struct OrthPolyExpansion *, double);
+
+
 void orth_poly_expansion_evalN(const struct OrthPolyExpansion *, size_t,
                                const double *, size_t, double *, size_t);
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion *, size_t, const double *, double *);
+double orth_poly_expansion_param_grad_eval2(const struct OrthPolyExpansion *, double, double *);
+
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);

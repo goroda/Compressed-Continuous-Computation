@@ -1168,16 +1168,14 @@ kernel_expansion_inner(struct KernelExpansion * a,
 *************************************************************/
 void kernel_expansion_scale(double a, struct KernelExpansion * x)
 {
-    
     size_t ii;
     for (ii = 0; ii < x->nkernels; ii++){
         x->coeff[ii] *= a;
     }
 }
 
-
 /********************************************************//*
-*   Evaluate the gradient of an orthonormal kernel expansion 
+*   Evaluate the gradient of a kernel expansion 
 *   with respect to the parameters
 *
 *   \param[in]     ke   - kernel expansion
@@ -1208,6 +1206,40 @@ int kernel_expansion_param_grad_eval(
         }
     }
     return res;
+}
+
+/********************************************************//*
+*   Evaluate the gradient of an kernel expansion 
+*   with respect to the parameters
+*
+*   \param[in]     ke   - kernel expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N)
+*
+*   \return value
+
+*************************************************************/
+double kernel_expansion_param_grad_eval2(
+    struct KernelExpansion * ke, double x, double * grad)
+{
+
+    size_t nparams = ke->nkernels;
+    if (ke->include_kernel_param == 1){
+        nparams *= 2;
+    }
+
+    double eval = 0.0;
+    for (size_t jj = 0; jj < ke->nkernels; jj++){
+        grad[jj] = kernel_eval(ke->kernels[jj],x);
+        eval += grad[jj] * ke->coeff[jj];
+    }
+    if (ke->include_kernel_param == 1){
+        for (size_t jj = 0; jj < ke->nkernels; jj++){
+            grad[jj+ke->nkernels] = ke->coeff[jj]*kernel_grad_center(ke->kernels[jj],x);
+        }
+    }
+
+    return eval;
 }
 
 /********************************************************//**
@@ -1275,6 +1307,17 @@ size_t kernel_expansion_get_params(const struct KernelExpansion * ke, double * p
         }
         return 2 * ke->nkernels;
     }
+}
+
+/********************************************************//**
+*   Get parameters defining kernel (for now just coefficients)
+*************************************************************/
+double * kernel_expansion_get_params_ref(const struct KernelExpansion * ke, size_t * nparam)
+{
+    assert (ke != NULL);
+    assert (ke->include_kernel_param == 0);
+    *nparam = ke->nkernels;
+    return ke->coeff;
 }
 
 
@@ -1373,25 +1416,23 @@ void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct K
                 //check inner
                 proj = kernel_expansion_inner(f[ii],f[jj]);
                 /* proj = numint(f[ii],f[jj],60000); */
-                if (fabs(proj) > 1e-14){
-                    fprintf(stderr,"projection too large, going again: = %G\n",proj);
-                    /* assert (proj < 1e-14);                     */
-                }
-                else{
+                if (fabs(proj) <= 1e-14){
                     break;
                 }
+                /* else{ */
+                /*     fprintf(stderr,"projection too large, going again: = %G\n",proj); */
+                /*     /\* assert (proj < 1e-14);                     *\/ */
+                /* } */
                 iter++;
-                if (iter > 0){
-                    fprintf(stderr,"\t on iter %d\n",iter);
-                }
+                /* if (iter > 0){ */
+                /*     fprintf(stderr,"\t on iter %d\n",iter); */
+                /* } */
                 if (iter > 0){
                     /* exit(1); */
                     break;
                 }
-
             }
         }
-        
     }
 }
 

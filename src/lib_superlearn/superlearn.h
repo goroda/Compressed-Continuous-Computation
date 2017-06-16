@@ -34,62 +34,34 @@
 
 //Code
 
+/** \file superlearn.h
+ * Prototypes for superlearn.c
+ */
 
+#ifndef C3_SUPERLEARN_H
+#define C3_SUPERLEARN_H
 
+#include "superlearn_util.h"
+#include "objective_functions.h"
+#include "lib_optimization.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
+struct SLP
+{
+    struct ObjectiveFunction * objective_function;
+    struct c3Opt * optimizer;
+    struct Data * data;
+    struct SLMemManager * mem;
+    size_t nparams;
+    double obj_min;
+};
 
-#include "CuTest.h"
-#include "clinalgtest.h"
-#include "testfunctions.h"
+int slp_solve(struct SLP *, double *);
 
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_clinalg\n");
-    srand(time(NULL));
-
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * clin = QuasimatrixGetSuite();
-    CuSuite * qma = CLinalgQmarrayGetSuite();
-    CuSuite * ftr = CLinalgFuncTrainGetSuite();
-    CuSuite * cind = CLinalgCrossIndGetSuite();
-    CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
-    CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuite * diff = CLinalgDiffusionGetSuite();
-
-    
-    /* CuSuiteAddSuite(suite, clin); */ // nothing here is used
-    
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(clin);
-    CuSuiteDelete(qma);
-    CuSuiteDelete(ftr);
-    CuSuiteDelete(cind);
-    CuSuiteDelete(fta);
-    CuSuiteDelete(dmrg);
-    CuSuiteDelete(diff);
-    
-    CuStringDelete(output);
-    free(suite);
+inline double slp_get_minimum(struct SLP * slp)
+{
+    return slp->obj_min;
 }
 
-int main(void) {
-    RunAllTests();
-}
+
+
+#endif

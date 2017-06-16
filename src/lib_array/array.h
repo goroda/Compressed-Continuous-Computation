@@ -86,6 +86,11 @@ double   deserialize_double_from_text(char *);
 char   * serialize_darray_to_text(size_t, const double *);
 double * deserialize_darray_from_text(char *, size_t *);
 
+char * serialize_double_packed(double);
+double deserialize_double_packed(char *);
+char * serialize_double_arr_packed(size_t, const double *);
+    
+
 int      darray_save(size_t, size_t, double *, char *, int);
 double * darray_load(char *, int);
 

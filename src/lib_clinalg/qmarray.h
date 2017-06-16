@@ -199,6 +199,10 @@ void qmarray_param_grad_eval(struct Qmarray *, size_t,
                              double *, size_t,
                              double *, size_t,
                              double *);
+void qmarray_linparam_eval(struct Qmarray *, size_t,
+                           double *, size_t,
+                           const double *, size_t);
+
 void qmarray_param_grad_eval_sparse_mult(struct Qmarray *, size_t,
                                          const double *, size_t,
                                          double *, size_t,
@@ -207,6 +211,10 @@ void qmarray_param_grad_eval_sparse_mult(struct Qmarray *, size_t,
 double qmarray_param_grad_sqnorm(struct Qmarray *, double, double *);
 struct Qmarray * qmarray_create_nodal(struct Qmarray *, size_t, double *);
 
+int qmarray_is_kristoffel_active(const struct Qmarray *);
+void qmarray_activate_kristoffel(struct Qmarray *);
+void qmarray_deactivate_kristoffel(struct Qmarray *);
+double qmarray_get_kristoffel_weight(const struct Qmarray *,double);
 
 int qmarray_qr(struct Qmarray *, struct Qmarray **, double **, struct OneApproxOpts *);
 int qmarray_lq(struct Qmarray *, struct Qmarray **, double **, struct OneApproxOpts *);

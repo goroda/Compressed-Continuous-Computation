@@ -92,88 +92,6 @@ void function_monitor_free( struct FunctionMonitor * fm)
     }
 }
 
-#define FRAC_MAX 9223372036854775807LL // 2**63-1 
-
-struct dbl_packed
-{
-    int exp;
-    long long frac;
-};
-
-void pack(double x, struct dbl_packed * r)
-{
-    double xf = fabs(frexp(x,&r->exp))-0.5;
-    if (xf < 0.0){
-        r->frac = 0;
-        return;
-    }
-    r->frac = 1 + (long long)(xf * 2.0  * (FRAC_MAX-1));
-    if (x < 0.0){
-        r->frac = -r->frac;
-    }
-}
-
-double unpack(const struct dbl_packed * p)
-{
-    double xf, x;
-    if (p->frac == 0){
-        return 0.0;
-    }
-    xf = ((double)(llabs(p->frac)-1) / (FRAC_MAX-1)) /2.0;
-    x = ldexp(xf + 0.5,p->exp);
-    if (p->frac < 0){
-        x = -x;
-    }
-    return x;
-}
-
-char * serialize_double_here(double x)
-{
-    struct dbl_packed dbl;
-    pack(x,&dbl);
-
-    size_t nBytes = sizeof(int) + sizeof(long long);
-    char * mem = malloc(nBytes);
-    memcpy(mem,&(dbl.exp),sizeof(int));
-    memcpy(mem+sizeof(int),&(dbl.frac),sizeof(long long));
-    return mem;
-}
-
-double deserialize_double_here(char * ser)
-{
-    struct dbl_packed dbl;
-    memcpy(&(dbl.exp),ser,sizeof(int));
-    /* ser = ser + sizeof(int); */
-    memcpy(&(dbl.frac),ser+sizeof(int),sizeof(long long));
-
-    double x = unpack(&dbl);
-    return x;
-}
-
-char * serialize_double_arr(size_t n, const double * x)
-{
-    size_t size_of_one_double = sizeof(int) + sizeof(long long);
-    /* char * mem = malloc(n * (size_of_one_double)+sizeof(char)); */
-    char * mem = malloc(n * 20 * sizeof(char));
-    for (size_t ii = 0; ii < n*10; ii++){
-        mem[ii] = '\0';
-    }
-    printf("n = %zu\n",n);
-    size_t onbyte = 0;
-    for (size_t ii = 0; ii < n; ii++){
-        char * temp = serialize_double_here(x[ii]);
-        memcpy(mem+onbyte,temp,size_of_one_double);
-        free(temp); temp = NULL;
-        onbyte += size_of_one_double;
-        printf("onbyte = %zu\n",ii);
-    }
-
-    /* mem[onbyte] = '\0'; */
-    /* char t = '\0'; */
-    /* memcpy(mem+onbyte,&t,sizeof(char)); */
-    /* printf("%s\n",mem); */
-    return mem;
-}
 
 
 
@@ -199,7 +117,7 @@ double function_monitor_eval(const double * x, void * args)
     double val;
     if (sval != NULL){
         /* val = deserialize_double_from_text(sval); */
-        val = deserialize_double_here(sval);
+        val = deserialize_double_packed(sval);
 
         /* double valcheck = fm->f.fnd(x,fm->args); */
         /* double diff = fabs(valcheck-val); */
@@ -213,9 +131,9 @@ double function_monitor_eval(const double * x, void * args)
         val = fm->f.fnd(x,fm->args);
         
         /* sval = serialize_double_to_text(val); */
-        sval = serialize_double_here(val);
+        sval = serialize_double_packed(val);
 
-        /* double val_should = deserialize_double_here(sval); */
+        /* double val_should = deserialize_double_packed(sval); */
         /* double diff = fabs(val_should-val); */
         /* if (diff > 1e-20){ */
         /*     printf("diff ser = %3.15E\n",diff); */
@@ -264,7 +182,7 @@ void function_monitor_print_to_file(struct FunctionMonitor * fm, FILE * fp)
             serx = cur->data->a;
             sery = cur->data->b;
             /* val = deserialize_double_from_text(sery); */
-            val = deserialize_double_here(sery);
+            val = deserialize_double_packed(sery);
             x = deserialize_darray_from_text(serx,&dim);
             for (jj = 0; jj < dim; jj++){
                 fprintf(fp,"%3.15f ",x[jj]);
@@ -412,8 +330,8 @@ int cpair_isequal(struct Cpair * a, struct Cpair * b){
         /*     out = 1; */
         /* } */
         
-        double v1 = deserialize_double_here(a->b);
-        double v2 = deserialize_double_here(b->b);
+        double v1 = deserialize_double_packed(a->b);
+        double v2 = deserialize_double_packed(b->b);
         if (fabs(v1 - v2) < 1e-20){
             out = 1;
         }

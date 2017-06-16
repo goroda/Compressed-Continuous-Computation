@@ -10,7 +10,7 @@ option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 
 if (APPLE)
     option(USE_CLANG "build application with clang" ON)
-    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn")
+    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual")
     set(CMAKE_C_COMPILER "clang")
 
     include_directories(/opt/local/include)
@@ -50,6 +50,7 @@ else ()
 endif()
 
 
+option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 
@@ -98,4 +99,3 @@ add_subdirectory(utilities)
 
 # install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
 # install(EXPORT c3 DESTINATION ${lib_dest})
-

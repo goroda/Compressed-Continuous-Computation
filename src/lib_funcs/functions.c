@@ -1351,6 +1351,8 @@ enum function_class generic_function_get_fc(const struct GenericFunction * f)
  double generic_function_1d_eval(const struct GenericFunction * f, double x){
      assert (f != NULL);
      double out = 0.1234567890;
+
+
      /* printf("f->fc = %d\n",f->fc); */
      switch (f->fc){
      case CONSTANT:   assert(1 == 0);                         break;
@@ -1863,7 +1865,11 @@ generic_function_1darray_eval2N(size_t n,
         parr[ii] = f[ii]->f;
     }
     if ((allpoly == 1) && (n <= 1000)){
+        /* printf("generic function, kristoffel_active = %d\n",generic_function_is_kristoffel_active(f[0])); */
         int res = orth_poly_expansion_arr_evalN(n,parr,N,x,incx,y,incy);
+        /* for (size_t ii = 0; ii < N*n; ii++){ */
+        /*     printf("y[%zu] = %G\n",ii,y[ii]); */
+        /* } */
         if (res == 1){ //something when wrong
             size_t ii;
             for (ii = 0; ii < n; ii++){
@@ -2789,6 +2795,7 @@ struct Regress1DOpts
     double * eval;
     double * grad;
     double * resid;
+    
 };
 
 /********************************************************//**
@@ -2905,6 +2912,31 @@ size_t generic_function_get_params(const struct GenericFunction * gf, double * p
     }   
 
     return nparam;
+}
+
+/********************************************************//**
+    Get the parameters of generic function
+
+    \param[in] gf         - generic function
+    \param[in,out] nparam - location to write parameters
+
+    \returns reference to parameters
+************************************************************/
+double * generic_function_get_params_ref(const struct GenericFunction * gf, size_t * nparam)
+{
+
+    assert (gf != NULL);
+    double * params = NULL;
+    switch (gf->fc){
+    case CONSTANT:                                                               break;
+    case PIECEWISE:  assert (1 == 0);                                            break;
+    case POLYNOMIAL: params = orth_poly_expansion_get_params_ref(gf->f,nparam);  break;
+    case LINELM:     params = lin_elem_exp_get_params_ref(gf->f,nparam);         break;
+    case RATIONAL:                                                               break;
+    case KERNEL:     params = kernel_expansion_get_params_ref(gf->f,nparam);     break;
+    }   
+
+    return params;
 }
 
 /********************************************************//**
@@ -3106,6 +3138,40 @@ int generic_function_param_grad_eval(const struct GenericFunction * gf,
     return res;
 }
 
+
+/********************************************************//**
+    Take a gradient with respect to function parameters
+
+    \param[in]     gf   - generic function
+    \param[in]     x    - x values
+    \param[in,out] grad - gradient (N)
+
+    \return  evaluation
+************************************************************/
+double generic_function_param_grad_eval2(const struct GenericFunction * gf,
+                                         double x,double * grad)
+                                        
+{
+
+    enum function_class fc = generic_function_get_fc(gf);
+    double ret = 0.1234;
+    switch (fc){
+    case CONSTANT: assert(1 == 0); break;
+    case PIECEWISE: assert(1 == 0); break;
+    case POLYNOMIAL:
+        ret  = orth_poly_expansion_param_grad_eval2(gf->f,x,grad);
+        break;
+    case LINELM:
+        ret = lin_elem_exp_param_grad_eval2(gf->f,x,grad);
+        break;
+    case RATIONAL: assert(1 == 0); break;
+    case KERNEL:
+        ret = kernel_expansion_param_grad_eval2(gf->f,x,grad);
+        break;
+    }
+    return ret;
+}
+
 /********************************************************//**
     Take a gradient of the squared norm of a generic function
     with respect to its parameters, and add a scaled version
@@ -3211,6 +3277,67 @@ generic_function_rkhs_squared_norm_param_grad(const struct GenericFunction * gf,
     }
 
     return res;
+}
+
+
+/***********************************************************//**
+    Determine whether kristoffel weighting is active
+
+    \param[in] gf - generic function
+
+    \return 1 if active, 0 otherwise
+***************************************************************/
+int generic_function_is_kristoffel_active(const struct GenericFunction * gf)
+{
+    if (gf->fc != POLYNOMIAL){
+        return 0;
+    }
+    else{
+        struct OrthPolyExpansion * ope = gf->f;
+        return ope->kristoffel_eval;
+    }
+}
+
+void generic_function_activate_kristoffel(struct GenericFunction * gf)
+{
+    if (gf->fc != POLYNOMIAL){
+        fprintf(stderr,"Cannot activate kristoffel for non polynomial basis\n");
+        exit(1);
+    }
+    else{
+        struct OrthPolyExpansion * ope = gf->f;
+        ope->kristoffel_eval = 1;
+    }
+}
+
+void generic_function_deactivate_kristoffel(struct GenericFunction * gf)
+{
+    if (gf->fc == POLYNOMIAL){
+        struct OrthPolyExpansion * ope = gf->f;
+        ope->kristoffel_eval = 0;
+    }
+}
+
+
+/***********************************************************//**
+    Get the kristoffel normalization factor                                                            
+
+    \param[in] gf - generic function
+    \param[in] x  - location at which to obtain normalization
+
+    \return normalization factor
+***************************************************************/
+double generic_function_get_kristoffel_weight(const struct GenericFunction * gf,
+                                              double x)
+{
+    if (gf->fc != POLYNOMIAL){
+        fprintf(stderr, "Cannot get the kristoffel weight of a function that is not a polynomial\n");
+        exit(1);
+    }
+    else{
+        double weight = orth_poly_expansion_get_kristoffel_weight(gf->f,x);
+        return weight;
+    }
 }
 
 

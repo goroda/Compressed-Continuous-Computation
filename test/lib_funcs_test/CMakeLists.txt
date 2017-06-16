@@ -6,11 +6,7 @@ file(GLOB SRC_FILES kernel_test.c other_test.c piecewise_test.c linelm_test.c po
 add_executable(funcs_test ${SRC_FILES})
 target_link_libraries(funcs_test 
     -g 
-    funcs
-    opt 
-    quadrature 
-    array 
-    stringmanip
+    c3
     cutest 
     ${blas_lapack} 
     -lm)

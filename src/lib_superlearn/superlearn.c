@@ -34,62 +34,60 @@
 
 //Code
 
+/** \file superlearn.c
+ * Provides routines for supervised learning
+ */
 
+#include "superlearn.h"
+#include "objective_functions.h"
 
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
-
-#include "CuTest.h"
-#include "clinalgtest.h"
-#include "testfunctions.h"
-
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_clinalg\n");
-    srand(time(NULL));
-
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * clin = QuasimatrixGetSuite();
-    CuSuite * qma = CLinalgQmarrayGetSuite();
-    CuSuite * ftr = CLinalgFuncTrainGetSuite();
-    CuSuite * cind = CLinalgCrossIndGetSuite();
-    CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
-    CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuite * diff = CLinalgDiffusionGetSuite();
-
-    
-    /* CuSuiteAddSuite(suite, clin); */ // nothing here is used
-    
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(clin);
-    CuSuiteDelete(qma);
-    CuSuiteDelete(ftr);
-    CuSuiteDelete(cind);
-    CuSuiteDelete(fta);
-    CuSuiteDelete(dmrg);
-    CuSuiteDelete(diff);
-    
-    CuStringDelete(output);
-    free(suite);
+double objective_batch(size_t nparam, const double * param, double * grad, void * arg)
+{
+    struct SLP * slp = arg;
+    size_t N = data_get_N(slp->data);
+    return objective_eval(nparam,param,grad,N,NULL,arg);
 }
 
-int main(void) {
-    RunAllTests();
+double objective_stoch(size_t nparam, size_t ind, const double * param, double * grad, void * arg)
+{
+    return objective_eval(nparam,param,grad,1,&ind,arg);
 }
+
+
+
+int objective_minimize(struct SLP * slp, struct c3Opt * optimizer,
+                       size_t nparam, double * guess, double *val)
+
+{
+    c3opt_set_nvars(optimizer,nparam);
+    if (c3opt_is_sgd(optimizer)){
+        c3opt_add_objective_stoch(optimizer,objective_stoch,slp);
+    }
+    else{
+        c3opt_add_objective(optimizer,objective_batch,slp);
+    }
+    int res = c3opt_minimize(optimizer,guess,val);
+    return res;
+}
+
+
+/***********************************************************//**
+    Solve a supervised learning problem                                                            
+
+    \param[in,out] slp   - supervised learning problem
+    \param[in,out] guess - initial/final parameters
+
+    \return evaluation
+***************************************************************/
+int slp_solve(struct SLP * slp, double * guess)
+{
+
+    int res = objective_minimize(slp,slp->optimizer,slp->nparams,guess,&(slp->obj_min));
+    if (res < -1){
+        fprintf(stderr,"Warning: optimizer exited with code %d\n",res);
+    }
+    return 0;
+}
+
+
+

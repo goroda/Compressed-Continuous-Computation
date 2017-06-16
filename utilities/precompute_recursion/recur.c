@@ -33,15 +33,15 @@ int main()
         long double n = (long double) ii;
 
         // computation of c
-        long double twon = 2.0 * n;
+        long double twon = (long double)2.0 * n;
         long double t1 = sqrtl((twon+1)/(twon-3));
-        long double t2 = (n-1.0)/n;
+        long double t2 = (n-(long double)1.0)/n;
         if (ii > 1){
             fprintf(fp,"%3.25Lf,\n",  -t1*t2);
         }
 
         
-        long double a = sqrtl(4 *n * n - 1.0)/n;
+        long double a = sqrtl(4 *n * n - (long double)1.0)/n;
 
         if (ii > 0){
             fprintf(fp2,"%3.25Lf,\n",  a);

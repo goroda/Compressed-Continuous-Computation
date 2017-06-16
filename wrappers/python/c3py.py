@@ -36,7 +36,7 @@ class FunctionTrain:
         if filename == None:
             self.ft = None
 
-    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4):
+    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4,kernel_adapt_center=0):
 
         if self.opts[dim] is not None:
             raise AttributeError('cannot call set_dim_opts because was already called')
@@ -56,6 +56,7 @@ class FunctionTrain:
             x = list(np.linspace(lb,ub))
             width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
             self.opts.insert(dim,["kernel",c3.kernel_approx_opts_gauss(nparam,x,kernel_height_scale,kernel_width_scale)])
+            c3.kernel_approx_opts_set_center_adapt(self.opts[dim][1],kernel_adapt_center)
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
             
@@ -96,7 +97,7 @@ class FunctionTrain:
 
 
     def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",verbose=0,\
-                         opt_type="BFGS",opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-30,opt_maxiter=2000, opt_sgd_learn_rate=1e-3,\
+                         opt_type="BFGS",opt_gtol=1e-10,opt_relftol=1e-10,opt_absxtol=1e-30,opt_maxiter=2000,opt_sgd_learn_rate=1e-3,\
                          adaptrank=0,roundtol=1e-5,maxrank=10,kickrank=2,\
                          kristoffel=False,regweight=1e-7,cvnparam=None,cvregweight=None,kfold=5,cvverbose=0):
         """
@@ -112,10 +113,12 @@ class FunctionTrain:
         optimizer = None
         if opt_type == "BFGS":
             optimizer = c3.c3opt_create(c3.BFGS)
+            c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         elif opt_type == "SGD":
             optimizer = c3.c3opt_create(c3.SGD)
             c3.c3opt_set_sgd_nsamples(optimizer,xdata.shape[0])
             c3.c3opt_set_sgd_learn_rate(optimizer,1e-3)
+            c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         else:
             raise AttributeError('Optimizer:  ' + opt_type + " is unknown")
         
@@ -125,7 +128,6 @@ class FunctionTrain:
         # Set optimization options
         c3.c3opt_set_gtol(optimizer,opt_gtol)
         c3.c3opt_set_relftol(optimizer,opt_relftol)
-        c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         c3.c3opt_set_maxiter(optimizer,opt_maxiter)
 
         self._build_multiopts()
@@ -151,9 +153,9 @@ class FunctionTrain:
             
         c3.ft_regress_set_verbose(reg,verbose)
 
-        if opt_type == "SGD":
-            c3.ft_regress_set_stoch_obj(reg,1)
-        
+        if kristoffel is True:
+            c3.ft_regress_set_kristoffel(reg,1)
+                        
         if self.ft is not None:
             c3.function_train_free(self.ft)
 

@@ -6,9 +6,7 @@ file(GLOB SRC_FILES fft_test.c main.c)
 add_executable(fft_test ${SRC_FILES})
 target_link_libraries(fft_test
     -g 
-    fft
-    array
-    stringmanip
+    c3
     cutest 
     ${blas_lapack} 
     -lm)

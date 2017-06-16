@@ -5,14 +5,7 @@ file(GLOB SRC_FILES *.c)
 add_executable(probability_test ${SRC_FILES})
 target_link_libraries(probability_test 
   -g
-  approx_interface
-  prob
-  clinalg
-  funcs
-  quadrature
-  linalg 
-  array 
-  stringmanip
+  c3
   cutest 
   ${blas_lapack} 
   -lm)

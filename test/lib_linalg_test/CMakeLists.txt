@@ -5,9 +5,7 @@ file(GLOB SRC_FILES *.c)
 add_executable(linalg_test ${SRC_FILES})
 target_link_libraries(linalg_test 
     -g 
-    linalg 
-    array 
-    stringmanip
+    c3
     cutest 
     ${blas_lapack} 
     -lm)

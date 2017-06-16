@@ -1,4 +1,4 @@
-#C3HOME=~/Documents/c3
+# C3HOME=~/Documents/c3
 # C3HOME=~/Software/c3
 
 ######################################
@@ -49,13 +49,17 @@ then
    echo $REGRESS $CVPARAM
    $REGRESS $CVPARAM
 else
+
     echo $REGRESS
     time $REGRESS # Just generate regression
 
     # Do profiling
-    #valgrind --tool=callgrind $REGRESS
-    #python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
-    #rm callgrind.out.*
+    # valgrind --tool=callgrind $REGRESS
+    # python $C3HOME/profiling/gprof2dot.py -f callgrind callgrind.out.* | dot -Tsvg -o output.svg
+    # rm callgrind.out.*
+
+    #Do profiling
+    # valgrind --tool=callgrind --simulate-cache=yes $REGRESS
 fi
 
 

@@ -103,6 +103,7 @@ void Test_function_train_grad_eval(CuTest * tc)
     double eval_should = pt[0]*pt[1] + pt[2]*pt[3];
     CuAssertDblEquals(tc, eval_should, eval,1e-12);
 
+    
     CuAssertDblEquals(tc, pt[1], grad_eval[0],1e-12);
     CuAssertDblEquals(tc, pt[0], grad_eval[1],1e-12);
     CuAssertDblEquals(tc, pt[3], grad_eval[2],1e-12);
@@ -1722,6 +1723,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     function_train_deserialize(text, &ftd);
 
     double diff = function_train_relnorm2diff(ft,ftd);
+    printf("diff = %E\n",diff);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
     
     function_train_free(ftd); ftd = NULL;

@@ -34,62 +34,41 @@
 
 //Code
 
+/** \file objective_functions.h
+ * Provides prototypes for objective_functions.c
+ */
+
+#ifndef C3_OBJECTIVE_FUNCS
+#define C3_OBJECTIVE_FUNCS
+
+#include <stddef.h>
+
+#include "lib_optimization.h"
+#include "superlearn_util.h"
+
+struct ObjectiveFunction;
+void objective_function_add(struct ObjectiveFunction ** obj, double weight,
+                            double (*func)(size_t nparam, const double * param, double * grad,
+                                           size_t N, size_t * ind,
+                                           struct Data * data, struct SLMemManager * ,void * arg),
+                            void * arg);
+void objective_function_free(struct ObjectiveFunction ** obj);
+double objective_eval(size_t, const double *, double *,
+                      size_t, size_t *, void *);
 
 
+//////////////////////////////////////////
+// Objective functions
+//////////////////////////////////////////
+struct LeastSquaresArgs
+{
+    int (*mapping)(size_t nparam, const double * param, size_t N,size_t * ind,
+                   struct SLMemManager * mem, struct Data * data,
+                   double ** evals, double ** grads, void * args);
+    void * args;
+};
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
-
-#include "CuTest.h"
-#include "clinalgtest.h"
-#include "testfunctions.h"
-
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_clinalg\n");
-    srand(time(NULL));
-
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * clin = QuasimatrixGetSuite();
-    CuSuite * qma = CLinalgQmarrayGetSuite();
-    CuSuite * ftr = CLinalgFuncTrainGetSuite();
-    CuSuite * cind = CLinalgCrossIndGetSuite();
-    CuSuite * fta = CLinalgFuncTrainArrayGetSuite();
-    CuSuite * dmrg = CLinalgDMRGGetSuite();
-    CuSuite * diff = CLinalgDiffusionGetSuite();
-
-    
-    /* CuSuiteAddSuite(suite, clin); */ // nothing here is used
-    
-    CuSuiteAddSuite(suite, qma);
-    CuSuiteAddSuite(suite, ftr);
-    CuSuiteAddSuite(suite, cind);
-    CuSuiteAddSuite(suite, fta);
-    CuSuiteAddSuite(suite, dmrg);
-    CuSuiteAddSuite(suite, diff);
-
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
-    
-    CuSuiteDelete(clin);
-    CuSuiteDelete(qma);
-    CuSuiteDelete(ftr);
-    CuSuiteDelete(cind);
-    CuSuiteDelete(fta);
-    CuSuiteDelete(dmrg);
-    CuSuiteDelete(diff);
-    
-    CuStringDelete(output);
-    free(suite);
-}
-
-int main(void) {
-    RunAllTests();
-}
+double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
+                                           size_t Ndata, size_t * data_index, struct Data * data,
+                                           struct SLMemManager * mem, void * args);
+#endif

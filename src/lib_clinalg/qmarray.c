@@ -3315,7 +3315,9 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
     size_t size = qma->nrows*qma->ncols;
     /* printf("\t evaluate! size=%zu\n",size); */
     if (out != NULL){
+        /* printf("1darray_eval2N\n"); */
         generic_function_1darray_eval2N(size,qma->funcs,N,x,incx,out,incout);
+        /* printf("got 1darray_eval2N incout = %zu\n",incout); */
         for (ii = 0; ii < size; ii++){
             if (isnan(out[ii])){
                 fprintf(stderr,"Warning, evaluation in qmarray_param_grad_eval is nan\n");
@@ -3328,6 +3330,9 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
                 exit(1);
             }
         }
+        /* printf("finished checking!\n"); */
+        
+        /* printf("out = "); dprint(size,out); */
     }
 
     if (grad != NULL){
@@ -3358,6 +3363,43 @@ void qmarray_param_grad_eval(struct Qmarray * qma, size_t N,
         }
     }
     /* printf("done there\n"); */
+}
+
+/***********************************************************//**
+    Evaluate the gradient of a qmarray with respect to the parameters
+    of the function at a set of evaluation locations
+
+    \param[in]     qma       - quasimatrix array
+    \param[in]     N         - number of locations at which to evaluate
+    \param[in,out] out       - allocated array to store output (qma->nrows * qma->ncols)
+    \param[in]     incout    - increment of output
+    \param[in]     grad      - computed gradient
+    \param[in]     incg      - incremement of gradient
+
+***************************************************************/
+void qmarray_linparam_eval(struct Qmarray * qma, size_t N,
+                           double * out, size_t incout,
+                           const double * grad, size_t incg)
+
+{
+
+    size_t size = qma->nrows*qma->ncols;
+    size_t nparam,onparam;
+    size_t ii,jj,indout,indgrad;
+    double * param;
+    for (ii = 0; ii < N; ii++){
+        /* printf("ii = %zu\n",ii); */
+        onparam=0;
+        indout = incout*ii;
+        indgrad = ii*incg;
+        for (jj = 0; jj < size; jj++){
+            param = generic_function_get_params_ref(qma->funcs[jj],&nparam);
+            /* dprint(nparam,grad+ii*incg + onparam); */
+            out[jj + indout] = cblas_ddot(nparam,param,1,
+                                          grad + indgrad + onparam, 1);
+            onparam += nparam;
+        }
+    }
 }
 
 /***********************************************************//**
@@ -3498,6 +3540,67 @@ struct Qmarray * qmarray_create_nodal(struct Qmarray * qma, size_t N, double * x
     }
     return qmaout;
 }
+
+
+/***********************************************************//**
+    Determine whether kristoffel weighting is active
+
+    \param[in] qma - qmarray
+
+    \return 1 if active, 0 otherwise
+
+    \note It is assumed that if kristoffel is active on one function
+    it is active on all
+***************************************************************/
+int qmarray_is_kristoffel_active(const struct Qmarray * qma)
+{
+
+    int active = generic_function_is_kristoffel_active(qma->funcs[0]);
+    for (size_t ii = 1; ii < qma->nrows * qma->ncols; ii++){
+        if (generic_function_is_kristoffel_active(qma->funcs[ii]) != active){
+            fprintf(stderr, "Kristoffel weighting cannot be active on some univariate functions\n");
+            fprintf(stderr, "and inactive on other ones\n");
+            exit(1);
+        }
+    }
+    return active;
+}
+
+void qmarray_activate_kristoffel(struct Qmarray * qma)
+{
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_activate_kristoffel(qma->funcs[ii]);
+    }
+}
+
+void qmarray_deactivate_kristoffel(struct Qmarray * qma)
+{
+    for (size_t ii = 0; ii < qma->nrows * qma->ncols; ii++){
+        generic_function_deactivate_kristoffel(qma->funcs[ii]);
+    }
+}
+
+
+/***********************************************************//**
+    Get the kristoffel normalization factor                                                            
+
+    \param[in] qma - quasimatrix array
+    \param[in] x   - location at which to obtain normalization
+
+    \return normalization factor
+
+    \note Assumes that each univariate function has the same weight
+***************************************************************/
+double qmarray_get_kristoffel_weight(const struct Qmarray * qma,
+                                     double x)
+{
+    double weight = generic_function_get_kristoffel_weight(qma->funcs[0],x);
+    /* printf("qmarray kri weight = %G\n",weight); */
+    return weight;
+}
+
+
+
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////

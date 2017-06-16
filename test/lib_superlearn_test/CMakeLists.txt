@@ -7,14 +7,7 @@ file(GLOB SRC_FILES
           
 add_executable(superlearn_test ${SRC_FILES})
 target_link_libraries(superlearn_test
-    suplearn
-    clinalg 
-    funcs
-    opt 
-    quadrature 
-    linalg 
-    array 
-    stringmanip
+  c3
     cutest 
     ${blas_lapack} 
     -lm)

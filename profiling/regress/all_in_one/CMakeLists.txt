@@ -3,14 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 
 add_executable(aioregress aioregress.c)
 target_link_libraries(aioregress -g
-    suplearn
-    clinalg 
-    funcs 
-    opt
-    quadrature 
-    linalg 
-    array 
-    stringmanip
+    c3
     ${blas_lapack}
     -lm)
 

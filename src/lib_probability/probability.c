@@ -173,46 +173,43 @@ double function_train_sobol_interact_var(
     size_t ninteract,
     const size_t * interacting_vars)
 {
-    int alloc = 0;
-    struct FunctionTrain * ft_1 = NULL;
-    if (ft->dim == ninteract){
-        ft_1 = (struct FunctionTrain * )ft;
-    }
-    else{
-        alloc = 1;
-        size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
-    
-        size_t on_contract = 0;
-        for (size_t ii = 0; ii < ft->dim; ii++){
-            size_t non_interacting = 1;
-            for (size_t jj = 0; jj < ninteract; jj++){
-                if (ii == interacting_vars[jj]){
-                    non_interacting = 0;
-                    break;
-                }
-            }
 
-            if (non_interacting)
-            {
-                ind_contract[on_contract] = ii;
-                on_contract++;
+    if (ft->dim == ninteract){
+        double fm = function_train_integrate_weighted(ft);
+        double sm = function_train_inner_weighted(ft,ft);
+        double vari = sm - fm*fm;
+        return vari;
+    }
+
+    struct FunctionTrain * ft_1 = NULL;
+    size_t * ind_contract = calloc_size_t(ft->dim-ninteract);
+    
+    size_t on_contract = 0;
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        size_t non_interacting = 1;
+        for (size_t jj = 0; jj < ninteract; jj++){
+            if (ii == interacting_vars[jj]){
+                non_interacting = 0;
+                break;
             }
         }
 
-
-        ft_1 =
-            function_train_integrate_weighted_subset(ft,
-                                                     ft->dim-ninteract,
-                                                     ind_contract);
-        free(ind_contract); ind_contract = NULL;
+        if (non_interacting)
+        {
+            ind_contract[on_contract] = ii;
+            on_contract++;
+        }
     }
+
+
+    ft_1 = function_train_integrate_weighted_subset(ft,
+                                                    ft->dim-ninteract,
+                                                    ind_contract);
+    free(ind_contract); ind_contract = NULL;
     double fm = function_train_integrate_weighted(ft_1);
     double sm = function_train_inner_weighted(ft_1,ft_1);
     double vari = sm - fm*fm;
-
-    if (alloc == 1){
-        function_train_free(ft_1); ft_1 = NULL;
-    }
+    function_train_free(ft_1); ft_1 = NULL;
 
     return vari;
 }

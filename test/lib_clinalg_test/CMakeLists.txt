@@ -13,14 +13,7 @@ file(GLOB SRC_FILES
           
 add_executable(clinalg_test ${SRC_FILES})
 target_link_libraries(clinalg_test
-  approx_interface
-  clinalg
-  funcs
-  opt 
-  quadrature 
-  linalg 
-  array 
-  stringmanip
+  c3
   cutest 
   ${blas_lapack} 
   -lm)
