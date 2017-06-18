@@ -85,6 +85,14 @@ ft_param_alloc(size_t dim,
                struct MultiApproxOpts * aopts,
                double * params, size_t * ranks)
 {
+    if (ranks == NULL){
+        fprintf(stderr, "ranks for parameterized ft are not specified in allocation\n");
+        exit(1);
+    }
+    if (aopts == NULL){
+        fprintf(stderr, "approximation options for parameterized ft are not specified in allocation\n");
+        exit(1);
+    }
     struct FTparam * ftr = malloc(sizeof(struct FTparam));
     if (ftr == NULL){
         fprintf(stderr, "Cannot allocate FTparam structure\n");

@@ -109,6 +109,7 @@ class FunctionTrain:
 
         
         assert isinstance(xdata, np.ndarray)
+        assert ydata.ndim == 1
 
         optimizer = None
         if opt_type == "BFGS":
