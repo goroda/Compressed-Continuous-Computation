@@ -48,18 +48,16 @@ for ii in range(dim):
     ft2.set_dim_opts(ii,"legendre",lb,ub,nparam)
 ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",verbose=0)
 
-
-
-## Select number of parameters through cross validation
-# ftcv = c3py.FunctionTrain(dim)
-# ranks = [4]*(dim+1)
-# ranks[0] = 1
-# ranks[dim] = 1
-# ftcv.set_ranks(ranks)
-# for ii in range(dim):
-#     ftcv.set_dim_opts(ii,"legendre",lb,ub,nparam)
-# ftcv.build_data_model(ndata,x,y2,alg="AIO",obj="LS_SPARSECORE",\
-#                       cvregweight=[1e-10,1e-8,1e-6,1e-4],kfold=3,verbose=0,cvverbose=2)
+# ## Select number of parameters through cross validation
+# # ftcv = c3py.FunctionTrain(dim)
+# # ranks = [4]*(dim+1)
+# # ranks[0] = 1
+# # ranks[dim] = 1
+# # ftcv.set_ranks(ranks)
+# # for ii in range(dim):
+# #     ftcv.set_dim_opts(ii,"legendre",lb,ub,nparam)
+# # ftcv.build_data_model(ndata,x,y2,alg="AIO",obj="LS_SPARSECORE",\
+# #                       cvregweight=[1e-10,1e-8,1e-6,1e-4],kfold=3,verbose=0,cvverbose=2)
 
 
 ft3 = ft + ft2  # add two function-trains
@@ -88,9 +86,9 @@ print("Fteval =",ft4eval, "Should be =",eval4s)
 
 
 # clean up memory for each function train
-ft.close()
-ft2.close()
-ft_sgd.close()
+# ft.close()
+# ft2.close()
+# ft_sgd.close()
 # ft3.close()
 # ft4.close()
 

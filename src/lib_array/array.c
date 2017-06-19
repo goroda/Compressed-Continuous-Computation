@@ -278,6 +278,11 @@ double * linspace(const double min, const double max, const size_t N){
     return arrp;
 }
 
+void dd_row_linspace(double ** dd, size_t ii, double lb, double ub, size_t N)
+{
+    dd[ii] = linspace(lb,ub,N);
+}
+
 /*************************************************************//**
     Create a double array of *N* log spaced
     pointers between 10^min and 10^ max

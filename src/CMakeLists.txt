@@ -120,7 +120,8 @@ if (${static_libs} )
 else ()
     add_library(c3 SHARED ${SRC_FILES})
     target_link_libraries(c3
-        ${blas_lapack}
+      ${blas_lapack}
+      ${python_lib}
         -lm
         )
  endif()

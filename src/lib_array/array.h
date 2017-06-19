@@ -75,6 +75,7 @@ void iprint_sz(const size_t, const size_t *);
 
 
 double * linspace(const double,const double,const size_t);
+void dd_row_linspace(double **, size_t, double, double, size_t);
 double * logspace(int, int, const size_t);
 double * arange(const double,const double,const double, size_t *);
 double * diag(const size_t, double *);

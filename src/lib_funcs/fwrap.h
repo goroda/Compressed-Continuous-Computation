@@ -77,4 +77,14 @@ void fwrap_clean_fiber_approx(struct Fwrap *);
 /* int fwrap_eval_fiber(size_t, const double *, double *, void *); */
 int fwrap_eval_fiber(size_t, const void *, double *, void *);
 
+
+// Interface stuff
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <Python.h>
+#include "numpy/arrayobject.h"
+#include "numpy/ndarraytypes.h"
+
+int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
+void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
+
 #endif

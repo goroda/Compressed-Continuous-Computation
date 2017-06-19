@@ -50,6 +50,78 @@
 #include "array.h"
 #include "fwrap.h"
 
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <Python.h>
+#include "numpy/arrayobject.h"
+#include "numpy/ndarraytypes.h"
+
+struct Obj
+{
+    size_t dim;
+    void * f;
+    void * params;
+};
+
+static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObject* pyFunction, PyObject* pyParams ) {
+
+    long int dims[2];
+    dims[0] = N;
+    dims[1] = dim;
+
+    /* printf("creating pyX\n"); */
+    PyObject* pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(void*)x);
+
+    /* printf("Got PyX\n"); */
+    PyObject* pyResult = PyObject_CallFunctionObjArgs(pyFunction,pyX,pyParams,NULL);
+
+    /* printf("Got Result\n"); */
+    PyArrayObject * arr = (PyArrayObject*)PyArray_FROM_OTF(pyResult,NPY_DOUBLE,NPY_ARRAY_C_CONTIGUOUS);
+
+    /* printf("Converted to array\n"); */
+    size_t ndims = PyArray_NDIM(arr);
+    if (ndims > 1){
+        fprintf(stderr, "Wrapped python function must return a flattened (1d) array\n");
+        exit(1);
+    }
+    npy_intp * dimss  = PyArray_DIMS(arr);
+
+    if ((size_t)dimss[0] != N){
+        fprintf(stderr, "Wrapped function must return an array with the same number of rows as input\n");
+        exit(1);
+    }
+    
+    /* printf("num dim = %zu\n",ndims ); */
+    /* printf("nelem = %ld\n", dimss[0]); */
+
+    double * vals = (double*)PyArray_DATA(arr);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = vals[ii];
+    }
+
+    Py_XDECREF(pyX);
+    Py_XDECREF(pyResult);
+    Py_XDECREF(arr);
+
+    return 0;
+
+}
+
+int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args)
+{
+
+    /* PyObject * pyObj = args; */
+    
+    /* struct Obj * obj = PyCapsule_GetPointer(pyObj,NULL);*/
+
+    struct Obj * obj = args;
+    int res = eval_arr(N,obj->dim,x,out,obj->f,obj->params);
+
+    
+    return res;
+}
+
+
+
 typedef enum {ND=0, INTND, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
 
 /** 
@@ -71,6 +143,8 @@ function type
 vectorized multi output
 \var Fwrap::evalfunc 
 indicator for which multioutput function to evaluate
+\var Fwrap::interface
+flag as to whether special interface used (1 for python)
 */
 struct Fwrap
 {
@@ -102,6 +176,10 @@ struct Fwrap
     /* double ** fiber_vals; */
     void ** fiber_vals;
     size_t onfiber;
+
+
+    //Interface
+    int interface;
 };
 
 /**********************************************************//**
@@ -115,6 +193,7 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
         exit(1);
     }
 
+    fw->interface = 0;
     fw->d = dim;
     if ( (strcmp(type,"general") == 0) || (type == NULL)){
         fw->ftype = ND;
@@ -125,6 +204,10 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     else if ( (strcmp(type,"general-vec") == 0)){
         fw->ftype = VEC;
     }
+    else if ( (strcmp(type,"python") == 0)){
+        fw->ftype = VEC;
+        fw->interface = 1;
+    }
     else if ( (strcmp(type,"mo-vec") == 0)){
         fw->ftype = MOVEC;
     }
@@ -132,7 +215,7 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
         fw->ftype = ARRVEC;
     }
     else{
-        fprintf(stderr,"Unrecognized function type type %s\n",type);
+        fprintf(stderr,"Wrapped function: unrecognized function type %s\n",type);
         exit(1);
     }
 
@@ -195,6 +278,17 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
     }
     fwrap->fvec = f;
     fwrap->fargs =arg;
+}
+
+/***********************************************************//**
+    Set a python function
+***************************************************************/
+void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject * args)
+{
+
+    struct Obj * obj = PyCapsule_GetPointer(args,NULL);
+    fwrap->fvec = c3py_wrapped_eval;
+    fwrap->fargs = obj;
 }
 
 /***********************************************************//**
@@ -525,3 +619,7 @@ int fwrap_eval_fiber(size_t nevals, const void * x, double * out, void * fwin)
     }
     return ret;
 }
+
+
+
+

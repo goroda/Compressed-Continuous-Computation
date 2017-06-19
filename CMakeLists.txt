@@ -27,14 +27,20 @@ if (APPLE)
 
 else ()
 
+    include_directories(/usr/include)
+  
     set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -fno-omit-frame-pointer")
     set(CMAKE_C_COMPILER "cc")
 
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
     include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
-    include_directories(/usr/include)
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+
+
+    find_package(PythonLibs)
+    include_directories(${PYTHON_INCLUDE_DIRS})
+    set(python_lib ${PYTHON_LIBRARIES})
 
 endif()
 
