@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 
+if (MAKE_PYTHON_WRAPPERS)
+  add_definitions(-DCOMPILE_WITH_PYTHON)
+endif()
+
 if (BUILD_SUB_LIBS)
   add_subdirectory(lib_stringmanip)
   add_subdirectory(lib_array)
@@ -113,17 +117,27 @@ set(src lib_array/array.c
         lib_probability/probability.c
         )
 
+
+
 #create a libray containing everything!
 file(GLOB SRC_FILES */*.c)
 if (${static_libs} )
     add_library(c3 ${SRC_FILES})
-else ()
-    add_library(c3 SHARED ${SRC_FILES})
-    target_link_libraries(c3
-      ${blas_lapack}
-      ${python_lib}
+  else ()
+    if (MAKE_PYTHON_WRAPPERS)
+      add_library(c3 SHARED ${SRC_FILES})
+      target_link_libraries(c3
+        ${blas_lapack}
+        ${python_lib}
         -lm
         )
+    else()
+      add_library(c3 SHARED ${SRC_FILES})
+      target_link_libraries(c3
+        ${blas_lapack}
+        -lm
+        )
+    endif()
  endif()
 
 

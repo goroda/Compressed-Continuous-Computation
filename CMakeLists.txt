@@ -7,6 +7,8 @@ set(C3_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
 set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" FORCE)
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
+option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
+
 
 if (APPLE)
     option(USE_CLANG "build application with clang" ON)
@@ -37,15 +39,15 @@ else ()
     include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
-
-    find_package(PythonLibs)
-    include_directories(${PYTHON_INCLUDE_DIRS})
-    set(python_lib ${PYTHON_LIBRARIES})
-
 endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
+if (MAKE_PYTHON_WRAPPERS)
+    find_package(PythonLibs)
+    include_directories(${PYTHON_INCLUDE_DIRS})
+    set(python_lib ${PYTHON_LIBRARIES})
+endif()
 
 option(BUILD_STATIC_LIB "Build a static library" OFF)
 if (BUILD_STATIC_LIB)
@@ -102,6 +104,6 @@ add_subdirectory(benchmarks)
 add_subdirectory(profiling)
 add_subdirectory(utilities)
 
+# SWIGGING-BASED Wrappers
 
-# install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
-# install(EXPORT c3 DESTINATION ${lib_dest})
+

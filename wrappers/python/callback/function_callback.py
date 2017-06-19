@@ -38,20 +38,6 @@ if __name__ == '__main__':
 
     params = {"c":3}
     
-    # a = obj()
-    # a.set_function(eval,1)
-    # x = a.eval(1,2)
- 
-    # b = obj()
-    # b.set_function(eval,1,params)
-    # y = b.eval(1,2)
-    # print(x)
-    # print(y)
-
-    # c = obj()
-    # c.set_function(eval_arra,1,params)
-    # call_obj_test_arr(c.Cobj)
-
     d = obj()
     d.set_function(eval_arrb,2,None)
     
