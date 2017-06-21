@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0)
 project (C3)
 
 #create my librray
@@ -11,6 +11,8 @@ option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
 
 
 if (APPLE)
+    set(CMAKE_MACOSX_RPATH 1)
+
     option(USE_CLANG "build application with clang" ON)
     set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual")
     set(CMAKE_C_COMPILER "clang")
@@ -44,9 +46,39 @@ endif()
 set(CMAKE_CXX_COMPILER "gcc")
 
 if (MAKE_PYTHON_WRAPPERS)
-  find_package(PythonInterp)
-  find_package(PythonLibs)
+  find_package(PythonInterp REQUIRED)
+  set(__numpy_out 1)
+
+  if (PYTHON_EXECUTABLE)
+    # Find out the include path
+    execute_process(
+       COMMAND "${PYTHON_EXECUTABLE}" -c
+      "from __future__ import print_function\ntry: import numpy; print(numpy.get_include(), end='')\nexcept:pass\n"
+       OUTPUT_VARIABLE __numpy_path)
+    # And the version
+    execute_process(
+       COMMAND "${PYTHON_EXECUTABLE}" -c
+       "from __future__ import print_function\ntry: import numpy; print(numpy.__version__, end='')\nexcept:pass\n"
+       OUTPUT_VARIABLE __numpy_version)
+  elseif(__numpy_out)
+    message(STATUS "Python executable not found.")
+  endif(PYTHON_EXECUTABLE)
+
+  find_path(PYTHON_NUMPY_INCLUDE_DIR numpy/arrayobject.h
+    HINTS "${__numpy_path}" "${PYTHON_INCLUDE_PATH}" NO_DEFAULT_PATH)
+
+  if(PYTHON_NUMPY_INCLUDE_DIR)
+    set(PYTHON_NUMPY_FOUND 1 CACHE INTERNAL "Python numpy found")
+  endif(PYTHON_NUMPY_INCLUDE_DIR)
+
+  include_directories(${PYTHON_NUMPY_INCLUDE_DIR})
+
+  # Rest of Python
+  find_package(PythonLibs REQUIRED)
   set(python_lib ${PYTHON_LIBRARIES})
+
+  # Add some more compiler flags
+  set(compiler_flags "${compiler_flags} -Wunused-function -Wno-reserved-id-macro -Wno-unused-function -Wno-duplicate-enum")
 endif()
 
 option(BUILD_STATIC_LIB "Build a static library" OFF)

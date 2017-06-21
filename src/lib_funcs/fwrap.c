@@ -62,8 +62,8 @@ struct Obj
 static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObject* pyFunction, PyObject* pyParams ) {
 
     long int dims[2];
-    dims[0] = N;
-    dims[1] = dim;
+    dims[0] = (long int)N;
+    dims[1] = (long int)dim;
 
     /* printf("creating pyX\n"); */
     PyObject* pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(void*)x);
@@ -75,12 +75,12 @@ static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObje
     PyArrayObject * arr = (PyArrayObject*)PyArray_FROM_OTF(pyResult,NPY_DOUBLE,NPY_ARRAY_C_CONTIGUOUS);
 
     /* printf("Converted to array\n"); */
-    size_t ndims = PyArray_NDIM(arr);
+    size_t ndims = (size_t)PyArray_NDIM(arr);
     if (ndims > 1){
         fprintf(stderr, "Wrapped python function must return a flattened (1d) array\n");
         exit(1);
     }
-    npy_intp * dimss  = PyArray_DIMS(arr);
+    npy_intp * dimss  = (npy_intp*)PyArray_DIMS(arr);
 
     if ((size_t)dimss[0] != N){
         fprintf(stderr, "Wrapped function must return an array with the same number of rows as input\n");

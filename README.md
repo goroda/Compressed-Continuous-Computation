@@ -52,6 +52,23 @@ I have created a simple python interface to the library. It has an interface to 
 
 The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
 
+To run an example in python first make sure that the c3 library is on your path. For example, do
+```
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:<path_to_c3_lib>
+```
+on a Linux system, or 
+```
+export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:<path_to_c3_lib>
+```
+on Mac OS X. For example, if the library is installed in a default location the path would be  <path_to_c3/lib>.
+
+Then, one can run the examples by
+```
+cd wrappers/python
+python pytest.py
+
+```
+
 ## Configuration Options
 
 #### BUILD_STATIC_LIB
