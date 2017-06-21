@@ -44,19 +44,30 @@ class FunctionTrain:
             c3.ope_opts_set_lb(self.opts[dim][1],lb)
             c3.ope_opts_set_ub(self.opts[dim][1],ub)
             c3.ope_opts_set_nparams(self.opts[dim][1],nparam)
+            c3.ope_opts_set_tol(self.opts[dim][1],1e-10)
         elif ftype == "hermite":
             self.opts.insert(dim,["poly",c3.ope_opts_alloc(c3.HERMITE)])
             c3.ope_opts_set_nparams(self.opts[dim][1],nparam)
             self.lb[dim] = -np.inf
             self.ub[dim] =  np.inf
         elif ftype == "linelm":
-            x = list(np.linspace(lb,ub))
+            x = list(np.linspace(lb,ub,nparam))
+            print(x)
             self.opts.insert(dim,["linelm",c3.lin_elem_exp_aopts_alloc(nparam,x)])
         elif ftype == "kernel":
             x = list(np.linspace(lb,ub))
             width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
             self.opts.insert(dim,["kernel",c3.kernel_approx_opts_gauss(nparam,x,kernel_height_scale,kernel_width_scale)])
             c3.kernel_approx_opts_set_center_adapt(self.opts[dim][1],kernel_adapt_center)
+        elif ftype == "piecewise":
+            nregions=20
+            self.opts.insert(dim,["piecewise",c3.pw_poly_opts_alloc(c3.LEGENDRE,lb,ub)])
+            c3.pw_poly_opts_set_maxorder(self.opts[dim][1],nparam)
+            c3.pw_poly_opts_set_coeffs_check(self.opts[dim][1],0)
+            c3.pw_poly_opts_set_tol(self.opts[dim][1],1e-6)
+            c3.pw_poly_opts_set_minsize(self.opts[dim][1],(ub-lb)/nregions)
+            c3.pw_poly_opts_set_nregions(self.opts[dim][1],nregions)
+
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
 
@@ -73,6 +84,8 @@ class FunctionTrain:
                 self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.LINELM,self.opts[ii][1]))
             elif self.opts[ii][0] == "kernel":
                 self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.KERNEL,self.opts[ii][1]))
+            elif self.opts[ii][0] == "piecewise":
+                self.onedopts.insert(ii,c3.one_approx_opts_alloc(c3.PIECEWISE,self.opts[ii][1]))
             else:
                 raise AttributeError("Don't know what to do here")
 
@@ -91,8 +104,8 @@ class FunctionTrain:
 
         c3.c3approx_init_cross(c3a,init_rank,verbose,start_fibers);
         c3.c3approx_set_verbose(c3a,verbose);
-        c3.c3approx_set_cross_tol(c3a,1e-3);
-        c3.c3approx_set_cross_maxiter(c3a,4); 
+        c3.c3approx_set_cross_tol(c3a,1e-8);
+        c3.c3approx_set_cross_maxiter(c3a,5); 
         c3.c3approx_set_round_tol(c3a,1e-5);
 
         c3.free_dd(self.dim,start_fibers)
