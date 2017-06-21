@@ -4,6 +4,7 @@ import c3
 import numpy as np
 import copy
 
+import pycback as pcb
 
 class FunctionTrain:
 
@@ -119,10 +120,17 @@ class FunctionTrain:
             self.ranks[self.dim] = 1
 
 
-    def build_approximation(self,f,init_rank,verbose,adapt):
+    def build_approximation(self,f,fargs,init_rank,verbose,adapt):
 
+        fobj = pcb.alloc_cobj()
+        pcb.assign(fobj,self.dim,f,fargs)
+        fw = c3.fwrap_create(self.dim,"python")
+        c3.fwrap_set_pyfunc(fw,fobj)
+        
         c3a = self._assemble_cross_args(verbose,init_rank)
-        self.ft = c3.c3approx_do_cross(c3a,f,adapt)
+        self.ft = c3.c3approx_do_cross(c3a,fw,adapt)
+
+        c3.fwrap_destroy(fw)
     
 
     def build_data_model(self,ndata,xdata,ydata,alg="AIO",obj="LS",verbose=0,\

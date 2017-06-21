@@ -80,7 +80,7 @@ int fwrap_eval_fiber(size_t, const void *, double *, void *);
 
 // Interface stuff
 
-#IFDEF COMPILE_WITH_PYTHON
+#ifdef COMPILE_WITH_PYTHON
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>
 #include "numpy/arrayobject.h"
@@ -88,6 +88,8 @@ int fwrap_eval_fiber(size_t, const void *, double *, void *);
 
 int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
 void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
-#ENDIF
+
+#endif
+
 
 #endif

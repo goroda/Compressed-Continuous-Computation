@@ -25,7 +25,7 @@ c3 = Extension('_c3',
                     '../../src/lib_superlearn',
                     '../../src/lib_interface',
                 ],
-                define_macros =[],
+                define_macros =[('COMPILE_WITH_PYTHON',None)],
                 undef_macros = [],
                 language='c',
                 library_dirs = ['../../lib'],
@@ -33,9 +33,19 @@ c3 = Extension('_c3',
                 extra_compile_args = ['-std=c99'],
                 )
 
+pcback = Extension('pycback',
+                   sources = ['python_caller.c'],
+                   include_dirs = [
+                       numpy_include,
+                   ],
+                   language='c',
+                   extra_compile_args=['-std=c99'])
+
+
 setup(
       name = "c3",
       version = "1.0",
-      ext_modules=[c3]
+      ext_modules=[c3,pcback]
 )
+
 # ~/Software/c3_installed/lib/c3/

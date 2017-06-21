@@ -44,9 +44,9 @@ endif()
 set(CMAKE_CXX_COMPILER "gcc")
 
 if (MAKE_PYTHON_WRAPPERS)
-    find_package(PythonLibs)
-    include_directories(${PYTHON_INCLUDE_DIRS})
-    set(python_lib ${PYTHON_LIBRARIES})
+  find_package(PythonInterp)
+  find_package(PythonLibs)
+  set(python_lib ${PYTHON_LIBRARIES})
 endif()
 
 option(BUILD_STATIC_LIB "Build a static library" OFF)
@@ -104,6 +104,9 @@ add_subdirectory(benchmarks)
 add_subdirectory(profiling)
 add_subdirectory(utilities)
 
-# SWIGGING-BASED Wrappers
 
+# SWIGGING-BASED Wrappers
+if (MAKE_PYTHON_WRAPPERS)
+  add_subdirectory(wrappers/python)
+endif()
 

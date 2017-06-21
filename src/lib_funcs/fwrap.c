@@ -51,7 +51,7 @@
 #include "fwrap.h"
 
 
-#IFDEF COMPILE_WITH_PYTHON
+#ifdef COMPILE_WITH_PYTHON
 struct Obj
 {
     size_t dim;
@@ -106,17 +106,12 @@ static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObje
 int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args)
 {
 
-    /* PyObject * pyObj = args; */
-    
-    /* struct Obj * obj = PyCapsule_GetPointer(pyObj,NULL);*/
-
     struct Obj * obj = args;
     int res = eval_arr(N,obj->dim,x,out,obj->f,obj->params);
-
     
     return res;
 }
-#ENDIF COMPILE_WITH_PYTHON
+#endif /* COMPILE_WITH_PYTHON */
 
 
 typedef enum {ND=0, INTND, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
@@ -201,12 +196,13 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     else if ( (strcmp(type,"general-vec") == 0)){
         fw->ftype = VEC;
     }
-    #IFDEF COMPILE_WITH_PYTHON
+    #ifdef COMPILE_WITH_PYTHON
     else if ( (strcmp(type,"python") == 0)){
+        import_array();
         fw->ftype = VEC;
         fw->interface = 1;
     }
-    #ENDIF
+    #endif
     else if ( (strcmp(type,"mo-vec") == 0)){
         fw->ftype = MOVEC;
     }
@@ -279,7 +275,7 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
     fwrap->fargs =arg;
 }
 
-#IFDEF COMPILE_WITH_PYTHON
+#ifdef COMPILE_WITH_PYTHON
 /***********************************************************//**
     Set a python function
 ***************************************************************/
@@ -290,7 +286,7 @@ void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject * args)
     fwrap->fvec = c3py_wrapped_eval;
     fwrap->fargs = obj;
 }
-#ENDIF
+#endif
 
 /***********************************************************//**
     Set the multi output vectorized function

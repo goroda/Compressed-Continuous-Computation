@@ -19,6 +19,7 @@ if ( ${static_libs} )
 else ()
   add_library(funcs SHARED ${SRC_FILES} )
   if (MAKE_PYTHON_WRAPPERS)
+      include_directories(${PYTHON_INCLUDE_DIRS})
       add_library(c3 SHARED ${SRC_FILES})
       target_link_libraries(c3
         -fPIC

@@ -2,10 +2,10 @@ import c3py # import the python interface to the c3 library
 import numpy as np
 
 ## Define two functions
-def func1(x):
+def func1(x,param=None):
     return np.sum(x,axis=1)
 
-def func2(x):
+def func2(x,param=None):
     return np.sin(np.sum(x,axis=1))
 
 
@@ -64,6 +64,16 @@ ft3 = ft + ft2  # add two function-trains
 ft4 = ft * ft2  # multiply to function-trains
 
 
+## Run adaptive sampling scheme
+ft_adapt = c3py.FunctionTrain(dim)
+for ii in range(dim):
+    ft_adapt.set_dim_opts(ii,"legendre",lb,ub,nparam)
+verbose=0
+init_rank=2
+adapt=1
+ft_adapt.build_approximation(func2,None,init_rank,verbose,adapt)
+
+
 ## Generate test point
 test_pt = np.random.rand(dim)*2.0-1.0
 ft1eval = ft.eval(test_pt) # evaluate the function train
@@ -72,6 +82,7 @@ ft_sgd_eval = ft_sgd.eval(test_pt)
 # ftcveval = ftcv.eval(test_pt) 
 ft3eval = ft3.eval(test_pt)
 ft4eval = ft4.eval(test_pt)
+ft_adapt_eval = ft_adapt.eval(test_pt)
 eval1s = func1(test_pt.reshape((1,dim)))
 eval2s = func2(test_pt.reshape((1,dim)))
 eval3s = eval1s + eval2s
@@ -80,6 +91,7 @@ eval4s = eval1s * eval2s
 print("Fteval =",ft1eval, "Should be =",eval1s)
 print("Second function with BFGS: Fteval =",ft2eval, "Should be =",eval2s)
 print("Second function with SGD:  Fteval =",ft_sgd_eval, "Should be =",eval2s)
+print("Second function with CrossApproximation:  Fteval =",ft_adapt_eval, "Should be =",eval2s)
 # print("Second function with CV:   Fteval =",ftcveval, "Should be =",eval2s)
 print("Fteval =",ft3eval, "Should be =",eval3s)
 print("Fteval =",ft4eval, "Should be =",eval4s)
