@@ -67,7 +67,7 @@ Using this option can toggle whether or not to build each sub-library into its o
 #### MAKE_PYTHON_WRAPPERS
 Default: `OFF'
 
-Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html)
+Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html).
 
 After specifying this option one can build the python modules using
 
