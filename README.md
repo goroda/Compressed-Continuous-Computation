@@ -60,7 +60,7 @@ on a Linux system, or
 ```
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:<path_to_c3_lib>
 ```
-on Mac OS X. For example, if the library is installed in a default location the path would be  <path_to_c3/lib>.
+on Mac OS X. For example, if the library is installed in a default location the path would be  /path_to_c3/lib.
 
 Then, one can run the examples by
 ```
