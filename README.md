@@ -48,17 +48,26 @@ make install
 
 ### Python interface
 
-I have created a simple python interface to the library. It has an interface to some simple operations. This library requires SWIG and the following commands 
+I have created a simple python interface to the library. It has an interface to some simple operations. This library requires SWIG. To compile and install the python wrappers see the CMake option MAKE_PYTHON_WRAPPERS below.
+
+The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
+
+To run an example in python first make sure that the c3 library is on your path. For example, do
+```
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:<path_to_c3_lib>
+```
+on a Linux system, or 
+```
+export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:<path_to_c3_lib>
+```
+on Mac OS X. For example, if the library is installed in a default location the path would be  /path_to_c3/lib.
+
+Then, one can run the examples by
+```
+cd wrappers/python
+python pytest.py
 
 ```
-cd wrappers/python     # changes directory to the swig interface file
-./run.sh               # uses SWIG to create a python interface 
-python pytest.py       # run exmaple simple script that performs some operations
-```
-
-I have created a FunctionTrain class in the wrappers/python/c3py.py.
-
-Note: run.sh uses Python 3. If you need 2.7 then remove the -py3 flag in the script.
 
 ## Configuration Options
 
@@ -72,6 +81,17 @@ Default: `OFF'
 
 Using this option can toggle whether or not to build each sub-library into its own library
 
+#### MAKE_PYTHON_WRAPPERS
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html).
+
+After specifying this option one can build the python modules using
+
+```
+make
+make PyWrapper
+```
 
 
 ## Systems I have tested on

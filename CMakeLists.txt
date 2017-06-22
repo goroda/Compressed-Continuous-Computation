@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0)
 project (C3)
 
 #create my librray
@@ -7,8 +7,12 @@ set(C3_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
 set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" FORCE)
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
+option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
+
 
 if (APPLE)
+    set(CMAKE_MACOSX_RPATH 1)
+
     option(USE_CLANG "build application with clang" ON)
     set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual")
     set(CMAKE_C_COMPILER "clang")
@@ -27,19 +31,55 @@ if (APPLE)
 
 else ()
 
+    include_directories(/usr/include)
+  
     set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -fno-omit-frame-pointer")
     set(CMAKE_C_COMPILER "cc")
 
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
     include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
-    include_directories(/usr/include)
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 endif()
 
 set(CMAKE_CXX_COMPILER "gcc")
 
+if (MAKE_PYTHON_WRAPPERS)
+  find_package(PythonInterp REQUIRED)
+  set(__numpy_out 1)
+
+  if (PYTHON_EXECUTABLE)
+    # Find out the include path
+    execute_process(
+       COMMAND "${PYTHON_EXECUTABLE}" -c
+      "from __future__ import print_function\ntry: import numpy; print(numpy.get_include(), end='')\nexcept:pass\n"
+       OUTPUT_VARIABLE __numpy_path)
+    # And the version
+    execute_process(
+       COMMAND "${PYTHON_EXECUTABLE}" -c
+       "from __future__ import print_function\ntry: import numpy; print(numpy.__version__, end='')\nexcept:pass\n"
+       OUTPUT_VARIABLE __numpy_version)
+  elseif(__numpy_out)
+    message(STATUS "Python executable not found.")
+  endif(PYTHON_EXECUTABLE)
+
+  find_path(PYTHON_NUMPY_INCLUDE_DIR numpy/arrayobject.h
+    HINTS "${__numpy_path}" "${PYTHON_INCLUDE_PATH}" NO_DEFAULT_PATH)
+
+  if(PYTHON_NUMPY_INCLUDE_DIR)
+    set(PYTHON_NUMPY_FOUND 1 CACHE INTERNAL "Python numpy found")
+  endif(PYTHON_NUMPY_INCLUDE_DIR)
+
+  include_directories(${PYTHON_NUMPY_INCLUDE_DIR})
+
+  # Rest of Python
+  find_package(PythonLibs REQUIRED)
+  set(python_lib ${PYTHON_LIBRARIES})
+
+  # Add some more compiler flags
+  set(compiler_flags "${compiler_flags} -Wunused-function -Wno-reserved-id-macro -Wno-unused-function -Wno-duplicate-enum")
+endif()
 
 option(BUILD_STATIC_LIB "Build a static library" OFF)
 if (BUILD_STATIC_LIB)
@@ -97,5 +137,8 @@ add_subdirectory(profiling)
 add_subdirectory(utilities)
 
 
-# install(FILES cmake/c3-config.cmake DESTINATION ${main_lib_dest})
-# install(EXPORT c3 DESTINATION ${lib_dest})
+# SWIGGING-BASED Wrappers
+if (MAKE_PYTHON_WRAPPERS)
+  add_subdirectory(wrappers/python)
+endif()
+

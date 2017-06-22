@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 
+if (MAKE_PYTHON_WRAPPERS)
+  add_definitions(-DCOMPILE_WITH_PYTHON)
+endif()
+
 if (BUILD_SUB_LIBS)
   add_subdirectory(lib_stringmanip)
   add_subdirectory(lib_array)
@@ -26,7 +30,12 @@ endif()
 #set headers
 set(header lib_stringmanip/stringmanip.h
            lib_array/array.h
+           lib_superlearn/learning_options.h
+           lib_superlearn/objective_functions.h
+           lib_superlearn/parameterization.h
            lib_superlearn/regress.h
+           lib_superlearn/superlearn.h
+           lib_superlearn/superlearn_util.h
            lib_interface/c3_interface.h
            lib_interface/approximate.h
            lib_clinalg/diffusion.h
@@ -113,16 +122,28 @@ set(src lib_array/array.c
         lib_probability/probability.c
         )
 
+
+
 #create a libray containing everything!
 file(GLOB SRC_FILES */*.c)
 if (${static_libs} )
     add_library(c3 ${SRC_FILES})
-else ()
-    add_library(c3 SHARED ${SRC_FILES})
-    target_link_libraries(c3
+  else ()
+    if (MAKE_PYTHON_WRAPPERS)
+      include_directories(${PYTHON_INCLUDE_DIRS})
+      add_library(c3 SHARED ${SRC_FILES})
+      target_link_libraries(c3
+        ${blas_lapack}
+        ${python_lib}
+        -lm
+        )
+    else()
+      add_library(c3 SHARED ${SRC_FILES})
+      target_link_libraries(c3
         ${blas_lapack}
         -lm
         )
+    endif()
  endif()
 
 
