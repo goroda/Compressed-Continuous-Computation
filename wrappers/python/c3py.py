@@ -168,7 +168,7 @@ class FunctionTrain:
         elif opt_type == "SGD":
             optimizer = c3.c3opt_create(c3.SGD)
             c3.c3opt_set_sgd_nsamples(optimizer,xdata.shape[0])
-            c3.c3opt_set_sgd_learn_rate(optimizer,1e-3)
+            c3.c3opt_set_sgd_learn_rate(optimizer,opt_sgd_learn_rate)
             c3.c3opt_set_absxtol(optimizer,opt_absxtol)
         else:
             raise AttributeError('Optimizer:  ' + opt_type + " is unknown")
