@@ -137,9 +137,11 @@ class FunctionTrain:
 
         fobj = pcb.alloc_cobj()
         pcb.assign(fobj,self.dim,f,fargs)
+        # print("created object")
         fw = c3.fwrap_create(self.dim,"python")
+        # print("created wrapper")
         c3.fwrap_set_pyfunc(fw,fobj)
-        
+        # print("wrapped function")
         c3a = self._assemble_cross_args(verbose,init_rank)
         self.ft = c3.c3approx_do_cross(c3a,fw,adapt)
 

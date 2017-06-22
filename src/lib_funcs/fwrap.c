@@ -52,6 +52,15 @@
 
 
 #ifdef COMPILE_WITH_PYTHON
+
+int initiate_numpy()
+{
+    /* printf("initiate numpy\n"); */
+    import_array();
+    /* printf("done numpy\n"); */
+    return 0;
+}
+
 struct Obj
 {
     size_t dim;
@@ -198,7 +207,7 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     }
     #ifdef COMPILE_WITH_PYTHON
     else if ( (strcmp(type,"python") == 0)){
-        import_array();
+        initiate_numpy();
         fw->ftype = VEC;
         fw->interface = 1;
     }
@@ -282,7 +291,9 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
 void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject * args)
 {
 
+    
     struct Obj * obj = PyCapsule_GetPointer(args,NULL);
+    /* printf("Got obj\n"); */
     fwrap->fvec = c3py_wrapped_eval;
     fwrap->fargs = obj;
 }

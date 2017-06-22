@@ -82,7 +82,12 @@ set(header lib_stringmanip/stringmanip.h
 
 
 set(src lib_array/array.c
+        lib_superlearn/learning_options.c
+        lib_superlearn/objective_functions.c
+        lib_superlearn/parameterization.c
         lib_superlearn/regress.c
+        lib_superlearn/superlearn.c
+        lib_superlearn/superlearn_util.c
         lib_interface/approximate.c
         lib_clinalg/diffusion.c
         lib_clinalg/dmrg.c

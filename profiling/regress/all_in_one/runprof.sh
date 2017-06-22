@@ -49,7 +49,8 @@ then
    echo $REGRESS $CVPARAM
    $REGRESS $CVPARAM
 else
-    # echo $REGRESS
+
+    echo $REGRESS
     time $REGRESS # Just generate regression
 
     # Do profiling
