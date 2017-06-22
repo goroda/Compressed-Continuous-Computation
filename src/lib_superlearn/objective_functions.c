@@ -129,7 +129,6 @@ double objective_eval(size_t nparam, const double * param, double * grad,
     return out;
 }
 
-
 double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
                                            size_t Ndata, size_t * data_index, struct Data * data,
                                            struct SLMemManager * mem, void * args)

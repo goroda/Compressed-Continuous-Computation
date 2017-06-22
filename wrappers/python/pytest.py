@@ -8,7 +8,6 @@ def func1(x,param=None):
 def func2(x,param=None):
     return np.sin(np.sum(x,axis=1))
 
-
 dim = 5                                # number of features
 ndata = 100                            # number of data points
 x = np.random.rand(ndata,dim)*2.0-1.0  # training samples
@@ -37,7 +36,6 @@ for ii in range(dim):
     ft_sgd.set_dim_opts(ii,"legendre",lb,ub,nparam)
 ft_sgd.build_data_model(ndata,x,y2,alg="AIO",obj="LS",opt_type="SGD",verbose=0)
 
-
 ## Run a fixed-rank regression routine to approximate the second function
 ft2 = c3py.FunctionTrain(dim)
 ranks = [2]*(dim+1)
@@ -63,16 +61,14 @@ ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",verbose=0)
 ft3 = ft + ft2  # add two function-trains
 ft4 = ft * ft2  # multiply to function-trains
 
-
 ## Run adaptive sampling scheme
 ft_adapt = c3py.FunctionTrain(dim)
 for ii in range(dim):
     ft_adapt.set_dim_opts(ii,"legendre",lb,ub,nparam)
-verbose=0
+verbose=1
 init_rank=2
 adapt=1
 ft_adapt.build_approximation(func2,None,init_rank,verbose,adapt)
-
 
 ## Generate test point
 test_pt = np.random.rand(dim)*2.0-1.0
