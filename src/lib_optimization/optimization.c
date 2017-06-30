@@ -1302,11 +1302,13 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     }
     
     if (dg > 1e-15){
-        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
-        fprintf(stderr,"gradient norm is %G\n", cblas_ddot(d,grad,1,grad,1));
-
+        if (verbose > 4){
+            fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
+            fprintf(stderr,"gradient norm is %G\n", cblas_ddot(d,grad,1,grad,1));
+        }
+        
         memmove(newx,x,d*sizeof(double));
-        *newf = fx;        
+        *newf = fx;
         /* exit(1); */
         *info = -4;
         return 0.0;
@@ -1323,7 +1325,7 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
         if (verbose > 1){
-            printf("Iter=%zu,t=%G,fx=%G,reguired=%G,fval=%G\n",iter,t,fx,checkval,fval);
+            printf("Iter=%zu,t=%G,fx=%G,required=%3.10G,fval=%3.10GG\n",iter,t,fx,checkval,fval);
         }
         
         if (fval > checkval){
@@ -1490,7 +1492,9 @@ double c3opt_ls_strong_wolfe(struct c3Opt * opt, double * x, double fx,
     double t = 1.0;
     double dg = cblas_ddot(d,grad,1,dir,1);
     if (dg > 1e-15){
-        fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
+        if (verbose > 4){
+            fprintf(stderr,"line search initial direction is not a descent direction, dg=%G\n",dg);
+        }
         *info = -4;
         memmove(newx,x,d*sizeof(double));
         *newf = fx;
@@ -1976,9 +1980,11 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
                                       workspace+d,
                                       x,fval,&res);
                 if (res == -4){
-                    fprintf(stderr,"Round %d\n",round);
-                    fprintf(stderr,"\t Warning line search did not move because lack of\n");
-                    fprintf(stderr,"\t descent direction. Changing direction to -gradient\n");
+                    if (verbose > 4){
+                        fprintf(stderr,"Round %d\n",round);
+                        fprintf(stderr,"\t Warning line search did not move because lack of\n");
+                        fprintf(stderr,"\t descent direction. Changing direction to -gradient\n");
+                    }
                     memmove(workspace+d,grad,d*sizeof(double));
                     for (size_t ii = 0; ii < d; ii++){
                         workspace[d+ii] *= -1;
