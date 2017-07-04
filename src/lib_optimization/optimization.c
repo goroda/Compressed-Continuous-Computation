@@ -1317,7 +1317,8 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     double checkval, dg2;
     size_t iter = 1;
     double fval;
-    tmin = 0.0, tmax = 0.0;
+    tmin = 0.0;
+    tmax = 0.0;
     while(iter < maxiter){
 
 
