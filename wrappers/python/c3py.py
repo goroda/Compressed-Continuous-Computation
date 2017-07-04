@@ -282,7 +282,7 @@ class FunctionTrain:
     def variance(self):
         mean_val = self.expectation()
         second_moment = c3.function_train_inner_weighted(self.ft,self.ft)
-        return second_moment - mean*mean
+        return second_moment - mean_val*mean_val
         
     # def close(self):
 
