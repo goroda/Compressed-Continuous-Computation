@@ -1267,7 +1267,7 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     double * ub = c3opt_get_ub(opt);
     size_t d = c3opt_get_d(opt);
     size_t maxiter = c3opt_ls_get_maxiter(opt);
-    double absxtol = c3opt_get_absxtol(opt);
+    /* double absxtol = c3opt_get_absxtol(opt); */
     int verbose = c3opt_get_verbose(opt);
 
 
@@ -1275,7 +1275,7 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     double tmax = 0.0;
     double tmin = 0.0;
     double dg = cblas_ddot(d,grad,1,dir,1);
-    double normdir = cblas_ddot(d,dir,1,dir,1);
+    /* double normdir = cblas_ddot(d,dir,1,dir,1); */
     
     *info = 0;
     if ((alpha <= 0.0) || (alpha >= 0.5)){
@@ -1321,17 +1321,19 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     tmax = 0.0;
     while(iter < maxiter){
 
-
         checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
         if (verbose > 1){
-            printf("Iter=%zu,t=%G,fx=%G,required=%3.10G,fval=%3.10GG\n",iter,t,fx,checkval,fval);
+            printf("Iter=%zu/%zu,t=%G,fx=%G,required=%3.10G,fval=%3.10G\n",iter,maxiter,t,fx,checkval,fval);
         }
         
         if (fval > checkval){
             tmax = t;
             t = 0.5 * (tmin + tmax);
+            if (verbose > 1){
+                printf("\t Sufficient descent not satisfied, (t,tmax) = (%G,%G)\n",t,tmax);
+            }
         }
         else{
             c3opt_eval(opt,newx,grad);
@@ -1354,10 +1356,10 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
             }
         }
 
-        if (t*normdir < absxtol){
-            *newf = c3opt_eval(opt,newx,grad);
-            break;
-        }
+        /* if (t*normdir < absxtol){ */
+        /*     *newf = c3opt_eval(opt,newx,grad); */
+        /*     break; */
+        /* } */
         
         iter += 1;
     }
