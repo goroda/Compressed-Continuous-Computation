@@ -221,6 +221,7 @@ double function_train_get_kristoffel_weight(const struct FunctionTrain *,
 
 struct FtCrossArgs;
 struct FtCrossArgs * ft_cross_args_alloc(size_t, size_t);
+void ft_cross_args_set_rank(struct FtCrossArgs *, size_t, size_t);
 void ft_cross_args_set_round_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_kickrank(struct FtCrossArgs *, size_t);
 void ft_cross_args_set_maxiter(struct FtCrossArgs *, size_t);

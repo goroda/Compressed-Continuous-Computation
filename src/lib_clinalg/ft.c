@@ -2706,6 +2706,14 @@ struct FtCrossArgs * ft_cross_args_alloc(size_t dim, size_t start_rank)
     return ftc;
 }
 
+/***********************************************************//**
+    Set the rank for a particular index;
+***************************************************************/
+void ft_cross_args_set_rank(struct FtCrossArgs * fca, size_t ind, size_t rank)
+{
+    fca->ranks[ind] = rank;
+}
+
 
 /***********************************************************//**
     Set the rounding tolerance
@@ -2714,6 +2722,7 @@ void ft_cross_args_set_round_tol(struct FtCrossArgs * fca, double epsround)
 {
     fca->epsround = epsround;
 }
+
 /***********************************************************//**
     Set the kickrank
 ***************************************************************/

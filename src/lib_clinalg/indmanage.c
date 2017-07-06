@@ -217,6 +217,16 @@ struct CrossNode * cross_index_get_node(struct CrossIndex * c, size_t ind)
     return cross_node_get(c->nodes,ind);
 }
 
+struct CrossIndex * cross_index_copy(struct CrossIndex * ci)
+{
+    struct CrossIndex * ci_new = cross_index_alloc(ci->d);
+    for (size_t ii = 0; ii < ci->n; ii++){
+        struct CrossNode * node = cross_index_get_node(ci,ii);
+        cross_index_add_index(ci_new,node->n,node->x,node->size_elem);
+    }
+    return ci_new;
+}
+
 void * cross_index_get_node_value(struct CrossIndex * c, size_t ind, size_t *n)
 {
     if (c == NULL){
@@ -482,6 +492,8 @@ void cross_index_array_initialize(size_t dim, struct CrossIndex ** ci,
     }
     
 }
+
+
 
 
 void cross_index_copylast(struct CrossIndex * ci, size_t ntimes)

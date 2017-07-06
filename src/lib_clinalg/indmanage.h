@@ -49,6 +49,7 @@ struct CrossIndex
 
 struct CrossIndex * cross_index_alloc(size_t);
 void cross_index_free(struct CrossIndex *);
+struct CrossIndex * cross_index_copy(struct CrossIndex *);
 void cross_index_add_index(struct CrossIndex *, size_t, void *, size_t);
 void cross_index_add_nested(struct CrossIndex *, int, 
                             size_t, void *, size_t, void *, size_t);
