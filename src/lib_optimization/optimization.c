@@ -1321,7 +1321,6 @@ double c3opt_ls_wolfe_bisect(struct c3Opt * opt, double * x, double fx,
     tmax = 0.0;
     while(iter < maxiter){
 
-
         checkval = fx + alpha*t*dg; // phi(0) + alpha * t * phi'(0)
         c3opt_ls_x_move(d,t,dir,x,newx,lb,ub);
         fval = c3opt_eval(opt,newx,NULL);
