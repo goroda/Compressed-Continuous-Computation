@@ -3111,10 +3111,12 @@ ftapprox_cross(struct Fwrap * fw,
         /* } */
 
 
-        if (diff < cargs->epsilon){
-            done = 1;
-            break;
-        }
+        // Can't do this because rank-adaptation doesn't care about
+        // left_ind so need to end on a right-left sweep
+        /* if (diff < cargs->epsilon){ */
+        /*     done = 1; */
+        /*     break; */
+        /* } */
 
         
         /* function_train_free(fti); fti=NULL; */
@@ -3372,7 +3374,10 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
                 // this is not efficient but I don't have a better
                 // idea. Could do it using random locations but
                 // I don't want to.
+                // I don't need to modify isl because it is rewritten on the 
+                // first left-right sweep anyways
                 cross_index_copylast(isr[ii-1],kicksize);
+
             
                 ranks_found[ii] = cargs->ranks[ii];
             }

@@ -1102,7 +1102,7 @@ void Test_ftapprox_cross3(CuTest * tc)
     size_t start_ranks = 2;
     struct FiberOptArgs * opt = fiber_opt_args_init(dim);
     struct FtCrossArgs * fca = ft_cross_args_alloc(dim,start_ranks);
-    ft_cross_args_set_cross_tol(fca,1e-6);
+    ft_cross_args_set_cross_tol(fca,1e-8);
     ft_cross_args_set_maxiter(fca,5);
     ft_cross_args_set_verbose(fca,0);
 
@@ -1119,9 +1119,9 @@ void Test_ftapprox_cross3(CuTest * tc)
     cross_index_array_initialize(dim,isr,0,1,ranks,(void**)yr,sizeof(double));
 
     struct PwPolyOpts * aopts = pw_poly_opts_alloc(LEGENDRE,0.0,1.0);
-    pw_poly_opts_set_maxorder(aopts,7);
+    pw_poly_opts_set_maxorder(aopts,8);
     pw_poly_opts_set_coeffs_check(aopts,2);
-    pw_poly_opts_set_tol(aopts,1e-6);
+    pw_poly_opts_set_tol(aopts,1e-10);
     pw_poly_opts_set_minsize(aopts,1e-8);
     pw_poly_opts_set_nregions(aopts,5);
 
@@ -1140,8 +1140,8 @@ void Test_ftapprox_cross3(CuTest * tc)
             
     double v1, v2;
     size_t ii,jj;
-    size_t N1 = 40;
-    size_t N2 = 40;
+    size_t N1 = 80;
+    size_t N2 = 80;
     double * xtest = linspace(0.0,1.0,N1);
     double * ytest = linspace(0.0,1.0,N2);
 
@@ -1723,7 +1723,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     function_train_deserialize(text, &ftd);
 
     double diff = function_train_relnorm2diff(ft,ftd);
-    printf("diff = %E\n",diff);
+    /* printf("diff = %E\n",diff); */
     CuAssertDblEquals(tc,0.0,diff,1e-10);
     
     function_train_free(ftd); ftd = NULL;
