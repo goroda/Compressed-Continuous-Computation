@@ -1,6 +1,7 @@
 *.DS_Store
 *.pyc
 build/*
+build_no_py/*
 lib/*
 *.dat
 *.swp
