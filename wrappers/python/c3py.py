@@ -284,33 +284,29 @@ class FunctionTrain:
         second_moment = c3.function_train_inner_weighted(self.ft,self.ft)
         return second_moment - mean_val*mean_val
         
-    # def close(self):
+    def close(self,opts_too=False):
 
-        # if self.ft is not None:
-        #     c3.function_train_free(self.ft)
-        #     self.ft = None
-            
-        # for ii in range(self.dim):
-        #     if self.opts[ii] is not None:
-        #         if (self.opts[ii][0] == "poly"):
-        #             c3.ope_opts_free(self.opts[ii][1])
-        #         elif (self.opts[ii][0] == "kernel"):
-        #             c3.kernel_approx_opts_free(self.opts[ii][1])
-        #         elif (self.opts[ii][0] == "linelm"):
-        #             c3.lin_elem_exp_aopts_free(self.opts[ii][1])
-        #         elif (self.opts[ii][0] == "piecewise"):
-        #             c3.piecewise_poly_opts_free(self.opts[ii][1])
+        if self.ft is not None:
+            c3.function_train_free(self.ft)
+            self.ft = None
 
-        #         self.opts[ii] = None
+        if opts_too:
+            for ii in range(self.dim):
+                if self.opts[ii] is not None:
+                    if (self.opts[ii][0] == "poly"):
+                        c3.ope_opts_free(self.opts[ii][1])
+                    elif (self.opts[ii][0] == "kernel"):
+                        c3.kernel_approx_opts_free(self.opts[ii][1])
+                    elif (self.opts[ii][0] == "linelm"):
+                        c3.lin_elem_exp_aopts_free(self.opts[ii][1])
+                    elif (self.opts[ii][0] == "piecewise"):
+                        c3.piecewise_poly_opts_free(self.opts[ii][1])
 
-        #     if self.onedopts[ii] is not None:
-        #         c3.one_approx_opts_free(self.onedopts[ii])
-        #         self.onedopts[ii] = None
+                    self.opts[ii] = None
 
-        # print ("free multiopts")
-        # if self.multiopts is not None:
-        #     c3.multi_approx_opts_free(self.multiopts)
-        #     self.multiopts = None
+                    if self.onedopts[ii] is not None:
+                        c3.one_approx_opts_free(self.onedopts[ii])
+                        self.onedopts[ii] = None
 
-        # print ("done closing")
+
         
