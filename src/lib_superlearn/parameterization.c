@@ -65,7 +65,6 @@ enum FTPARAM_ST ft_param_extract_structure(const struct FTparam * ftp)
             break;
         }
     }
-
     return structure;
 }
 
@@ -941,7 +940,9 @@ static void update_running_lr(struct FTparam * ftp, size_t core, double * runnin
     }
 }
 
-static void update_running_rl(struct FTparam * ftp, size_t core, double * running_rl, double * running_rl_up, double * evals)
+static void update_running_rl(struct FTparam * ftp, size_t core,
+                              double * running_rl, double * running_rl_up,
+                              double * evals)
 {
     size_t * ranks = function_train_get_ranks(ftp->ft);
     if (core < ftp->dim-1){
