@@ -2893,6 +2893,54 @@ prepCore(size_t ii, size_t nrows, size_t ncols,
     return temp;
 }
 
+
+
+/***********************************************************//**
+    Initialize an FT from left and right indices
+    *UNTESTED* USE AT YOUR OWN RISK
+    *UNTESTED* USE AT YOUR OWN RISK
+    \param[in] fw        - wrapped function
+    \param[in] ranks     - ranks to use
+    \param[in] left_ind  - left indices
+    \param[in] right_ind - right indices
+    \param[in] apargs    - approximation arguments
+    *UNTESTED* USE AT YOUR OWN RISK
+    \return function train decomposition of \f$ f \f$
+    *UNTESTED* USE AT YOUR OWN RISK
+***************************************************************/
+struct FunctionTrain *
+function_train_init_from_fibers(struct Fwrap * fw,
+                                size_t * ranks,
+                                struct CrossIndex ** left_ind,
+                                struct CrossIndex ** right_ind,
+                                struct MultiApproxOpts * apargs)
+{
+    assert (fw != NULL);
+    assert (left_ind != NULL);
+    assert (right_ind != NULL);
+    assert (apargs != NULL);
+
+    size_t d = multi_approx_opts_get_dim(apargs);
+    struct FunctionTrain * ft = function_train_alloc(d);
+    memmove(ft->ranks, ranks, (d+1)*sizeof(size_t));
+
+
+    struct OneApproxOpts * o = NULL;
+    for (size_t ii = 0; ii < d; ii++){
+        o = multi_approx_opts_get_aopts(apargs,ii);
+        ft->cores[ii] = prepCore(ii,ranks[ii],ranks[ii+1],fw,o,
+                                 left_ind,right_ind);
+
+    }
+    struct FunctionTrain * ft2 = function_train_round(ft,1e-13,apargs);
+    function_train_free(ft); ft = NULL;
+
+    return ft2;
+}
+
+
+
+
 /***********************************************************//**
     Cross approximation of a of a dim-dimensional function
     (with adaptation)
@@ -3254,7 +3302,7 @@ ftapprox_cross(struct Fwrap * fw,
                 print_cross_index(right_ind[ii]);
             }
             printf("\n\n\n");
-        }
+n        }
 
         diff = function_train_relnorm2diff(ft,fti);
         if (fti2 != NULL){
