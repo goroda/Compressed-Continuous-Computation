@@ -3302,7 +3302,7 @@ ftapprox_cross(struct Fwrap * fw,
                 print_cross_index(right_ind[ii]);
             }
             printf("\n\n\n");
-n        }
+        }
 
         diff = function_train_relnorm2diff(ft,fti);
         if (fti2 != NULL){
