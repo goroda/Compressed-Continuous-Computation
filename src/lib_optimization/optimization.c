@@ -553,8 +553,9 @@ struct c3Opt * c3opt_copy(struct c3Opt * old)
     }
     else if (opt->alg == BRUTEFORCE)
     {
+        c3opt_set_brute_force_vals(opt,old->nlocs,old->workspace);
         /* opt->workspace = calloc_double(opt->nlocs * opt->d); */
-        memmove(opt->workspace,old->workspace,opt->nlocs*opt->d*sizeof(double));
+        /* memmove(opt->workspace,old->workspace,opt->nlocs*opt->d*sizeof(double)); */
     }
 
     opt->nevals = old->nevals;
