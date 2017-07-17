@@ -217,10 +217,17 @@ struct CrossNode * cross_index_get_node(struct CrossIndex * c, size_t ind)
     return cross_node_get(c->nodes,ind);
 }
 
+
 struct CrossIndex * cross_index_copy(struct CrossIndex * ci)
 {
+    /* printf("cross_index_copy\n"); */
+    if (ci == NULL){
+        return NULL;
+    }
+    /* printf("in cross_index_copy\n"); */
     struct CrossIndex * ci_new = cross_index_alloc(ci->d);
     for (size_t ii = 0; ii < ci->n; ii++){
+        /* printf("ii=%zu/%zu\n",ii,ci->n); */
         struct CrossNode * node = cross_index_get_node(ci,ii);
         cross_index_add_index(ci_new,node->n,node->x,node->size_elem);
     }
