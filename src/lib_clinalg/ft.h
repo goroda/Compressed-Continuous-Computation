@@ -236,6 +236,13 @@ struct FtCrossArgs * ft_cross_args_copy(const struct FtCrossArgs *);
 void ft_cross_args_free(struct FtCrossArgs *);
 
 struct FunctionTrain *
+function_train_init_from_fibers(struct Fwrap *,
+                                size_t *,
+                                struct CrossIndex **,
+                                struct CrossIndex **,
+                                struct MultiApproxOpts *);
+
+struct FunctionTrain *
 ftapprox_cross(struct Fwrap *,
                struct FtCrossArgs *,
                struct CrossIndex **,
