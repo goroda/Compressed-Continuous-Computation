@@ -125,4 +125,9 @@ double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
                                   double * grad,  double * running_lr,double * running_rl,
                                   double * grad_evals);
 
+// HESSIAN
+double ft_param_hessvec(struct FTparam * ftp, const double * x,
+                        const double * vec,
+                        double * hess_vec);
+
 #endif
