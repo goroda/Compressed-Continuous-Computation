@@ -1299,3 +1299,206 @@ double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
     return out;
 }
 
+static void vec_mat(size_t N, size_t M, const double * vec, const double * mat, double * out)
+{
+    // vec is 1 x N
+    // mat is N x M
+
+    for (size_t jj = 0; jj < M; jj++){
+        out[jj] = 0.0;
+        for (size_t ii = 0; ii < N; ii++){
+            out[jj] += vec[ii]*mat[ii + jj*N];
+        }
+    }
+    
+}
+
+static double hess_ij(size_t dim,
+                      size_t core_ii,size_t core_jj,
+                      size_t row_ii, size_t col_ii, size_t row_jj, size_t col_jj,
+                      double * evals, double grad_ii, double grad_jj,
+                      size_t maxrank, size_t * ranks)
+{
+    assert (core_jj > core_ii);
+    double * left_eval = calloc_double(maxrank);
+    double * space = calloc_double(maxrank);
+    size_t num_vals = 0;
+    size_t on_eval = 0;
+    if (core_ii > 0){
+        for (size_t ii = 0; ii < ranks[1]; ii++){
+            left_eval[ii] = evals[ii];
+        }
+        num_vals = ranks[1];
+        on_eval+= ranks[1];
+        for (size_t core = 1; core < core_ii; core++){
+            vec_mat(ranks[core],ranks[core+1],left_eval,evals+on_eval,space);
+            num_vals = ranks[core+1];
+            memmove(left_eval,space,num_vals * sizeof(double));
+            on_eval += ranks[core]*ranks[core+1];
+        }
+
+        double val = left_eval[row_ii];
+        for (size_t ii = 0; ii < ranks[core_ii+1]; ii++){
+            if (ii != col_ii){
+                left_eval[ii] = 0.0;
+            }
+            else{
+                left_eval[ii] = val * grad_ii;/* evals[on_eval + row_ii + col_ii*ranks[core_ii]]; */
+            }
+        }
+        on_eval += ranks[core_ii]*ranks[core_ii+1];
+        num_vals = ranks[core_ii+1];
+    }
+    else{
+        left_eval[col_ii] = evals[col_ii];
+        on_eval  = ranks[1];
+        num_vals = ranks[1];
+    }
+
+    // Now middle cores
+    // should really do core immediately after to take advantage of sparsity
+    for (size_t core = core_ii+1; core < core_jj; core++){
+        vec_mat(ranks[core],ranks[core+1],left_eval,evals+on_eval,space);
+        num_vals = ranks[core+1];
+        memmove(left_eval,space,num_vals * sizeof(double));
+        on_eval += ranks[core]*ranks[core+1];        
+    }
+
+
+    // now multiply by core with gradient
+    double val = left_eval[row_jj] * grad_jj; /* evals[on_eval + row_jj + col_jj*ranks[core_jj]]; */
+    for (size_t ii = 0; ii < ranks[core_jj+1]; ii++)
+    {
+        if (ii != col_jj){
+            left_eval[ii] = 0.0;
+        }
+        else{
+            left_eval[ii] = val;
+        }
+    }
+    num_vals = ranks[core_jj+1];
+    on_eval += ranks[core_jj]*ranks[core_jj+1];
+
+    // Now do the last cores
+    for (size_t core = core_jj+1; core < dim; core++){
+        vec_mat(ranks[core],ranks[core+1],left_eval,evals+on_eval,space);
+        num_vals = ranks[core+1];
+        memmove(left_eval,space,num_vals * sizeof(double));
+        on_eval += ranks[core]*ranks[core+1];        
+    }
+
+
+    double ret = left_eval[0];
+    free(left_eval); left_eval = NULL;
+    free(space); space = NULL;
+    return ret;
+}
+
+/***********************************************************//**
+    Evaluate the gradient of the ft with respect to each parameter
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     x          - location at which to evaluate
+    \param[in,out] grad       - gradient wrt each parameter in each univariate function
+    \param[in,out] grad_evals - workspace (number of univariate functions)
+    \param[in,out] mem        - workspace (number of univariate functions)
+    \param[in,out] evals      - workspace (number of univariate functions)
+
+    \return evaluation
+***************************************************************/
+double ft_param_hessvec(struct FTparam * ftp, const double * x,
+                        const double * vec,
+                        double * hess_vec)
+{
+
+
+    struct FunctionTrain * ft = ftp->ft;
+    size_t * ranks = function_train_get_ranks(ft);
+    size_t maxrank = ranks[0];
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        if (ranks[ii] > maxrank){
+            maxrank = ranks[ii];
+        }
+    }
+
+
+    size_t r1,r2;
+    size_t onuni = 0;
+    size_t onparam = 0;
+    size_t onparam_hess = 0;
+    double * evals = calloc_double(ftp->nparams);
+    double * d1_evals = calloc_double(ftp->nparams);
+    /* double * d2_evals = calloc_double(maxrank*maxrank*ftp->nparams); */
+
+
+    double eval = 0.0;
+
+    // Precompute all relavent info
+    for (size_t ii = 0; ii < ftp->dim; ii++){
+        r1 = ranks[ii];
+        r2 = ranks[ii+1];
+        for (size_t jj = 0; jj < r1*r2; jj++){
+            evals[onuni] = generic_function_param_grad_eval2(ft->cores[ii]->funcs[jj],x[ii],d1_evals + onparam);
+            /* generic_function_param_hess(ft->cores[ii]->funcs[jj],x[ii],d2_evals + onparam_hess); */
+
+            onparam_hess += (ftp->nparams_per_uni[onuni] * ftp->nparams_per_uni[onuni]);
+            onparam += ftp->nparams_per_uni[onuni];
+            onuni++;
+        }
+    }
+
+    // Assemble
+    for (size_t ii = 0; ii < ftp->nparams; ii++){
+        hess_vec[ii] = 0.0;
+    }
+    
+
+    double h;
+    size_t param_ii = 0;
+    size_t onuni_ii = 0;
+    size_t start_params_col = 0;
+    size_t start_onuni_jj = 0;
+    for (size_t core_ii = 0; core_ii < ftp->dim; core_ii++){
+        start_params_col += ftp->nparams_per_core[core_ii];
+        start_onuni_jj += ranks[core_ii]*ranks[core_ii+1];
+        for (size_t col_ii = 0; col_ii < ranks[core_ii+1]; col_ii++){
+            for (size_t row_ii = 0; row_ii < ranks[core_ii]; row_ii++){ // end of indices describing row of hessian
+                for (size_t param = 0; param < ftp->nparams_per_uni[onuni_ii]; param++){
+
+                    // handle diagonal *element* rest of core/core derivatives are zero
+                    // TODO
+
+
+                    // handle the rest
+                    size_t param_jj = start_params_col;
+                    size_t onuni_jj = start_onuni_jj;
+                    for (size_t core_jj = core_ii+1; core_jj < ftp->dim; core_jj++){
+                        for (size_t col_jj = 0; col_jj < ranks[core_jj+1]; col_jj++){
+                            for (size_t row_jj = 0; row_jj < ranks[core_jj]; row_jj++){
+
+                                for (size_t param_col = 0; param_col < ftp->nparams_per_uni[onuni_jj];param_col++){
+                                    h = hess_ij(ftp->dim,
+                                            core_ii, core_jj, row_ii, col_ii, row_jj,col_jj,
+                                            evals,d1_evals[param_ii],d1_evals[param_jj],maxrank,ranks);
+
+                                    
+                                    hess_vec[param_ii] += h * vec[param_jj];
+                                    hess_vec[param_jj] += h * vec[param_ii];
+                                    param_jj++;
+                                }
+                                onuni_jj += ranks[core_jj]*ranks[core_jj+1];
+                            }
+                        }
+                    }
+
+                    
+                    param_ii++;
+                }
+                onuni_ii += ranks[core_ii]*ranks[core_ii+1];
+            }
+        }
+
+    }
+
+    return eval;
+}
