@@ -3278,8 +3278,9 @@ void Test_ft_param_hess_vec2(CuTest * tc)
 
             double should = hess_fd_ij(ftp,param,x,h,ii,jj);
             /* printf("%3.5G ",vec_out[jj]); */
-            /* printf("%3.5G %3.5G\n",vec_out[jj],should); */
+
             double err = (should - vec_out[jj]);
+            /* printf("%3.5G %3.5G %3.5G\n",vec_out[jj],should,err); */
             CuAssertDblEquals(tc,0.0,err,1e-3);
         }
         /* printf("\n"); */

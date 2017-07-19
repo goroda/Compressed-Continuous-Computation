@@ -1482,7 +1482,7 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
                                 /* printf("\t\t row_jj = %zu, on_uni_jj = %zu, params = %zu\n",row_jj,onuni_jj,ftp->nparams_per_uni[onuni_jj]); */
 
                                 // TODO - Leverage Block structure
-                                /* if (row_ii == row_jj){ */
+                                /* if (col_ii == row_jj){ */
                                     for (size_t param_col = 0; param_col < ftp->nparams_per_uni[onuni_jj]; param_col++){
                                         h = hess_ij(ftp->dim,
                                                     core_ii, core_jj, row_ii, col_ii, row_jj,col_jj,
@@ -1511,5 +1511,7 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
         }
     }
 
+    free(evals); evals = NULL;
+    free(d1_evals); d1_evals = NULL;
     return eval;
 }
