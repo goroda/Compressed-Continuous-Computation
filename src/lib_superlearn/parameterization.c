@@ -1350,7 +1350,7 @@ static double hess_ij(size_t dim,
         num_vals = ranks[core_ii+1];
     }
     else{
-        left_eval[col_ii] = evals[col_ii];
+        left_eval[col_ii] = grad_ii;
         on_eval  = ranks[1];
         num_vals = ranks[1];
     }
@@ -1364,7 +1364,9 @@ static double hess_ij(size_t dim,
         on_eval += ranks[core]*ranks[core+1];        
     }
 
-
+    /* printf("core_ii = %zu, row_ii = %zu, col_ii = %zu ",core_ii,row_ii,col_ii); */
+    /* dprint(num_vals,left_eval); */
+    
     // now multiply by core with gradient
     double val = left_eval[row_jj] * grad_jj; /* evals[on_eval + row_jj + col_jj*ranks[core_jj]]; */
     for (size_t ii = 0; ii < ranks[core_jj+1]; ii++)
@@ -1399,10 +1401,6 @@ static double hess_ij(size_t dim,
 
     \param[in,out] ftp        - parameterized FTP
     \param[in]     x          - location at which to evaluate
-    \param[in,out] grad       - gradient wrt each parameter in each univariate function
-    \param[in,out] grad_evals - workspace (number of univariate functions)
-    \param[in,out] mem        - workspace (number of univariate functions)
-    \param[in,out] evals      - workspace (number of univariate functions)
 
     \return evaluation
 ***************************************************************/
@@ -1461,43 +1459,56 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
     for (size_t core_ii = 0; core_ii < ftp->dim; core_ii++){
         start_params_col += ftp->nparams_per_core[core_ii];
         start_onuni_jj += ranks[core_ii]*ranks[core_ii+1];
+        /* printf("core_ii = %zu\n",core_ii); */
         for (size_t col_ii = 0; col_ii < ranks[core_ii+1]; col_ii++){
+            /* printf("\t col_ii = %zu\n",col_ii); */
             for (size_t row_ii = 0; row_ii < ranks[core_ii]; row_ii++){ // end of indices describing row of hessian
+                /* printf("\t\t row_ii = %zu\n",row_ii); */
+                /* printf("\t\t onuni_ii = %zu\n",onuni_ii); */
                 for (size_t param = 0; param < ftp->nparams_per_uni[onuni_ii]; param++){
-
+                    /* printf("\t\t\t param = %zu, d1_evals = %G\n",param,d1_evals[param_ii]); */
                     // handle diagonal *element* rest of core/core derivatives are zero
-                    // TODO
-
+                    // TODO -- compute diagonal components
 
                     // handle the rest
                     size_t param_jj = start_params_col;
                     size_t onuni_jj = start_onuni_jj;
+                    /* printf("starting onuni_jj = %zu\n",onuni_jj); */
                     for (size_t core_jj = core_ii+1; core_jj < ftp->dim; core_jj++){
+                        /* printf("core_jj = %zu\n",core_jj); */
                         for (size_t col_jj = 0; col_jj < ranks[core_jj+1]; col_jj++){
+                            /* printf("\t col_jj = %zu\n",col_jj); */
                             for (size_t row_jj = 0; row_jj < ranks[core_jj]; row_jj++){
+                                /* printf("\t\t row_jj = %zu, on_uni_jj = %zu, params = %zu\n",row_jj,onuni_jj,ftp->nparams_per_uni[onuni_jj]); */
 
-                                for (size_t param_col = 0; param_col < ftp->nparams_per_uni[onuni_jj];param_col++){
-                                    h = hess_ij(ftp->dim,
-                                            core_ii, core_jj, row_ii, col_ii, row_jj,col_jj,
-                                            evals,d1_evals[param_ii],d1_evals[param_jj],maxrank,ranks);
+                                // TODO - Leverage Block structure
+                                /* if (row_ii == row_jj){ */
+                                    for (size_t param_col = 0; param_col < ftp->nparams_per_uni[onuni_jj]; param_col++){
+                                        h = hess_ij(ftp->dim,
+                                                    core_ii, core_jj, row_ii, col_ii, row_jj,col_jj,
+                                                    evals,d1_evals[param_ii],d1_evals[param_jj],maxrank,ranks);
 
                                     
-                                    hess_vec[param_ii] += h * vec[param_jj];
-                                    hess_vec[param_jj] += h * vec[param_ii];
-                                    param_jj++;
-                                }
-                                onuni_jj += ranks[core_jj]*ranks[core_jj+1];
+                                        hess_vec[param_ii] += h * vec[param_jj];
+                                        /* printf("param_jj = %zu\n",param_jj); */
+                                        hess_vec[param_jj] += h * vec[param_ii];
+                                        param_jj++;
+                                    }
+                                /* } */
+                                /* else{ */
+                                /*     param_jj += ftp->nparams_per_uni[onuni_jj]; */
+                                /* } */
+                                
+                                onuni_jj++;
                             }
                         }
                     }
 
-                    
                     param_ii++;
                 }
-                onuni_ii += ranks[core_ii]*ranks[core_ii+1];
+                onuni_ii++;
             }
         }
-
     }
 
     return eval;
