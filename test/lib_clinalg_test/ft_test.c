@@ -1465,6 +1465,143 @@ void Test_ftapprox_cross_hermite2(CuTest * tc)
     fwrap_destroy(fw);
 }
 
+void Test_ftapprox_cross_constelm1(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for constelm (1) \n");
+    size_t dim = 4;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcnd2,NULL);
+    // set function monitor
+
+    size_t N = 20;
+    double * x = linspace(-1.0,1.0,N);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(N,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
+
+    N = 30;
+    double * xtest = linspace(-1.0,1.0,N);
+    double err = 0.0;
+    double den = 0.0;
+    double val;
+    double pt[4];
+    
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            for (size_t kk = 0; kk < N; kk++){
+                for (size_t ll = 0; ll < N; ll++){
+                    pt[0] = xtest[ii]; pt[1] = xtest[jj];
+                    pt[2] = xtest[kk]; pt[3] = xtest[ll];
+                    funcnd2(1,pt,&val,NULL);
+                    den += pow(val,2.0);
+                    double eval = function_train_eval(ft,pt);
+                    /* printf("eval = %G val = %G\n",eval,val); */
+                    err += pow(val-eval,2.0);
+                }
+            }
+        }
+    }
+    /* printf("err = %G den = %G\n",err,den); */
+    err = err/den;
+    CuAssertDblEquals(tc,0.0,err,1e-2);
+    free(xtest);
+
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+
+    function_train_free(ft);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts); 
+    free_dd(dim, start);
+    free(x);
+    fwrap_destroy(fw);
+}
+
+void Test_ftapprox_cross_constelm2(CuTest * tc)
+{
+    printf("Testing Function: ftapprox_cross for constelm (2) \n");
+    size_t dim = 6;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,func_not_all,NULL);
+    // set function monitor
+
+    size_t Nx = 10000;
+    double * x = linspace(-1.0,1.0,Nx);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(Nx,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);        
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+
+    int verbose = 0;
+    size_t init_rank = 5;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(-1.0,1.0,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+
+
+    //printf("finished !\n");
+    double pt[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double eval = function_train_eval(ft,pt);
+    CuAssertDblEquals(tc,0.0,eval,1e-3);
+    
+    // make sure serialization works
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
+
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
+
+    double diff = function_train_relnorm2diff(ft,ftd);
+    /* printf("diff = %E\n",diff); */
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
+
+    function_train_free(ft);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim, start);
+    free(x);
+    fwrap_destroy(fw);
+
+}
+
+
+
 void Test_ftapprox_cross_linelm1(CuTest * tc)
 {
     printf("Testing Function: ftapprox_cross for linelm (1) \n");
@@ -1538,6 +1675,7 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     free(x);
     fwrap_destroy(fw);
 }
+
 
 void Test_ftapprox_cross_linelm1_eval_fiber(CuTest * tc)
 {
@@ -1944,6 +2082,8 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm2);    
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
