@@ -138,6 +138,7 @@ generic_function_copy(const struct GenericFunction * gf)
     case PIECEWISE:  out->f = piecewise_poly_copy(gf->f);      break;
     case POLYNOMIAL: out->f = orth_poly_expansion_copy(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_copy(gf->f);        break;
+    case CONSTELM:   out->f = const_elem_exp_copy(gf->f);      break;
     case RATIONAL:                                             break;
     case KERNEL:     out->f = kernel_expansion_copy(gf->f);    break;
     }
@@ -161,8 +162,9 @@ void generic_function_copy_pa(const struct GenericFunction * gf,
     case PIECEWISE:  gfpa->f = piecewise_poly_copy(gf->f);      break;
     case POLYNOMIAL: gfpa->f = orth_poly_expansion_copy(gf->f); break;
     case LINELM:     gfpa->f = lin_elem_exp_copy(gf->f);        break;
+    case CONSTELM:   gfpa->f = const_elem_exp_copy(gf->f);      break;
     case RATIONAL:                                              break;
-    case KERNEL:     gfpa->f = kernel_expansion_copy(gf->f);     break;
+    case KERNEL:     gfpa->f = kernel_expansion_copy(gf->f);    break;
     }
 }
 
@@ -179,6 +181,7 @@ void generic_function_free(struct GenericFunction * gf){
             case PIECEWISE:  piecewise_poly_free(gf->f);      break;
             case POLYNOMIAL: orth_poly_expansion_free(gf->f); break;
             case LINELM:     lin_elem_exp_free(gf->f);        break;
+            case CONSTELM:   const_elem_exp_free(gf->f);      break;
             case RATIONAL:                                    break;
             case KERNEL:     kernel_expansion_free(gf->f);    break;
             }
@@ -233,6 +236,7 @@ serialize_generic_function(unsigned char * ser,
         case PIECEWISE:  serialize_piecewise_poly(NULL,gf->f, &sizef);      break;
         case POLYNOMIAL: serialize_orth_poly_expansion(NULL,gf->f, &sizef); break;
         case LINELM:     serialize_lin_elem_exp(NULL,gf->f, &sizef);        break;
+        case CONSTELM:   serialize_const_elem_exp(NULL,gf->f, &sizef);      break;
         case RATIONAL:                                                      break;
         case KERNEL:     serialize_kernel_expansion(NULL,gf->f, &sizef);    break;
         }
@@ -248,6 +252,7 @@ serialize_generic_function(unsigned char * ser,
         case PIECEWISE:  ptr = serialize_piecewise_poly(ptr,gf->f, NULL);      break;
         case POLYNOMIAL: ptr = serialize_orth_poly_expansion(ptr,gf->f, NULL); break;
         case LINELM:     ptr = serialize_lin_elem_exp(ptr,gf->f, NULL);        break;
+        case CONSTELM:   ptr = serialize_const_elem_exp(ptr,gf->f, NULL);      break;
         case RATIONAL:                                                         break;
         case KERNEL:     ptr = serialize_kernel_expansion(ptr,gf->f, NULL);    break;
         }
@@ -282,12 +287,14 @@ deserialize_generic_function(unsigned char * ser,
     struct PiecewisePoly * pw = NULL;
     struct OrthPolyExpansion * ope = NULL;
     struct LinElemExp * le = NULL;
+    struct ConstElemExp * ce = NULL;
     struct KernelExpansion * ke = NULL;
     switch (fc){
     case CONSTANT:   printf("not ser const correct\n");                               break;
     case PIECEWISE:  ptr = deserialize_piecewise_poly(ptr,&pw);       (*gf)->f = pw;  break;
     case POLYNOMIAL: ptr = deserialize_orth_poly_expansion(ptr,&ope); (*gf)->f = ope; break;
     case LINELM:     ptr = deserialize_lin_elem_exp(ptr,&le);         (*gf)->f = le;  break;
+    case CONSTELM:   ptr = deserialize_const_elem_exp(ptr,&ce);       (*gf)->f = ce;  break;
     case RATIONAL:                                                                    break;
     case KERNEL:     ptr = deserialize_kernel_expansion(ptr,&ke);     (*gf)->f = ke;  break;
     }
@@ -319,6 +326,7 @@ generic_function_zero(enum function_class fc, void * aopts, int force_nparam)
         case PIECEWISE:  gf->f = piecewise_poly_constant(0,aopts);      break;
         case POLYNOMIAL: gf->f = orth_poly_expansion_constant(0,aopts); break;
         case LINELM:     gf->f = lin_elem_exp_constant(0,aopts);        break;
+        case CONSTELM:   gf->f = const_elem_exp_constant(0,aopts);      break;
         case RATIONAL:                                                  break;
         case KERNEL:     assert (1==0);                                break;
         }
@@ -329,6 +337,7 @@ generic_function_zero(enum function_class fc, void * aopts, int force_nparam)
         case PIECEWISE:  assert(1 == 0);                            break;
         case POLYNOMIAL: gf->f = orth_poly_expansion_zero(aopts,1); break;
         case LINELM:     gf->f = lin_elem_exp_zero(aopts,1);        break;
+        case CONSTELM:   gf->f = const_elem_exp_zero(aopts,1);      break;
         case RATIONAL:                                              break;
         case KERNEL:     gf->f = kernel_expansion_zero(aopts,1);    break;
         }
@@ -356,6 +365,7 @@ generic_function_constant(double a, enum function_class fc, void * aopts)
     case PIECEWISE:  gf->f = piecewise_poly_constant(a,aopts);      break;
     case POLYNOMIAL: gf->f = orth_poly_expansion_constant(a,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_constant(a,aopts);        break;
+    case CONSTELM:   gf->f = const_elem_exp_constant(a,aopts);      break;        
     case RATIONAL:                                                  break;
     case KERNEL:     gf->f = kernel_expansion_linear(0.0,a,aopts);  break;
     }
@@ -386,6 +396,7 @@ generic_function_linear(double a, double offset,
     case PIECEWISE:  gf->f = piecewise_poly_linear(a,offset,aopts);      break;
     case POLYNOMIAL: gf->f = orth_poly_expansion_linear(a,offset,aopts); break;
     case LINELM:     gf->f = lin_elem_exp_linear(a,offset,aopts);        break;
+    case CONSTELM:   gf->f = const_elem_exp_linear(a,offset,aopts);        break;
     case RATIONAL:                                                       break;
     case KERNEL:     gf->f = kernel_expansion_linear(a,offset,aopts);    break;
     }
@@ -411,7 +422,8 @@ generic_function_quadratic(double a, double offset,
     case CONSTANT:                                                                            break;
     case PIECEWISE:  gf->f = piecewise_poly_quadratic(a,a*(-2)*offset,a*offset*offset,aopts); break;
     case POLYNOMIAL: gf->f = orth_poly_expansion_quadratic(a,offset,aopts);                   break;
-    case LINELM:     fprintf(stderr,"Cannot make quadratic out of LINELM\n");                 exit(1);        
+    case LINELM:     fprintf(stderr,"Cannot make quadratic out of LINELM\n");                 exit(1);
+    case CONSTELM:   fprintf(stderr,"Cannot make quadratic out of CONSTELM\n");               exit(1);        
     case RATIONAL:                                                                            break;
     case KERNEL:     assert (1 == 0);                                                         break;        
     }
@@ -456,6 +468,7 @@ generic_function_deriv(const struct GenericFunction * gf)
     case PIECEWISE:  out->f = piecewise_poly_deriv(gf->f);      break;
     case POLYNOMIAL: out->f = orth_poly_expansion_deriv(gf->f); break;
     case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
+    case CONSTELM:   out->f = const_elem_exp_deriv(gf->f);      break;
     case RATIONAL:                                              break;
     case KERNEL: assert(1==0);                                  break;
     }
@@ -478,6 +491,7 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
     case PIECEWISE:  out = piecewise_poly_deriv_eval(gf->f,x);      break;
     case POLYNOMIAL: out = orth_poly_expansion_deriv_eval(x,gf->f); break;
     case LINELM:     out = lin_elem_exp_deriv_eval(gf->f,x);        break;
+    case CONSTELM:   out = const_elem_exp_deriv_eval(gf->f,x);      break;
     case RATIONAL:   assert (1 == 0);                               break;
     case KERNEL:     out = kernel_expansion_deriv_eval(x,gf->f);    break;
     }
@@ -518,6 +532,7 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
          case PIECEWISE: out->f = piecewise_poly_daxpby(a, NULL, b, y->f);                    break;
          case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, NULL, b, y->f);              break;
          case LINELM: out->f = lin_elem_exp_copy(y->f); lin_elem_exp_scale(b,out->f);         break;
+         case CONSTELM: out->f = const_elem_exp_copy(y->f); const_elem_exp_scale(b,out->f);   break;
          case RATIONAL:                                                                       break;
          case KERNEL: out->f = kernel_expansion_copy(y->f); kernel_expansion_scale(b,out->f); break;
          }
@@ -530,6 +545,7 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
          case PIECEWISE: out->f = piecewise_poly_daxpby(a, x->f, b, NULL);                    break;
          case POLYNOMIAL: out->f = orth_poly_expansion_daxpby(a, x->f, b, NULL);              break;
          case LINELM: out->f = lin_elem_exp_copy(x->f); lin_elem_exp_scale(a,out->f);         break;
+         case CONSTELM: out->f = const_elem_exp_copy(x->f); const_elem_exp_scale(a,out->f);   break;
          case RATIONAL:                                                                       break;
          case KERNEL: out->f = kernel_expansion_copy(x->f); kernel_expansion_scale(a,out->f); break;
          }
@@ -547,6 +563,11 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
                 lin_elem_exp_scale(a,out->f);
                 lin_elem_exp_axpy(b,y->f,out->f);
                 break;
+            case CONSTELM:
+                out->f = const_elem_exp_copy(x->f);
+                const_elem_exp_scale(a,out->f);
+                constn_elem_exp_axpy(b,y->f,out->f);
+                break;
             case RATIONAL:                                                                 break;
             case KERNEL:
                 out->f = kernel_expansion_copy(x->f);
@@ -559,6 +580,11 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
             if ((x->fc == LINELM) || (y->fc == LINELM)){
                 fprintf(stderr,
                         "Can't add linear elements with other stuff\n");
+                exit(1);
+            }
+            if ((x->fc == CONSTELM) || (y->fc == CONSTELM)){
+                fprintf(stderr,
+                        "Can't add piecewise constant elements with other stuff\n");
                 exit(1);
             }
             else if ((x->fc == KERNEL) || (y->fc == KERNEL)){
@@ -637,6 +663,8 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
      if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
          assert (a->fc != LINELM);
          assert (b->fc != LINELM);
+         assert (a->fc != CONSTELM);
+         assert (b->fc != CONSTELM);
          assert (a->fc != KERNEL);
          assert (b->fc != KERNEL);
          // everything to PIECEWISE!
@@ -685,6 +713,9 @@ double generic_function_deriv_eval(const struct GenericFunction * gf, double x)
      case LINELM:
          out = lin_elem_exp_inner(a->f,b->f);
          break;
+     case CONSTELM:
+         out = const_elem_exp_inner(a->f,b->f);
+         break;
      case RATIONAL:
          break;
      case KERNEL: 
@@ -731,6 +762,9 @@ double generic_function_inner_weighted(const struct GenericFunction * a,
     case LINELM:
         assert (1 == 0);
         break;
+    case CONSTELM:
+        assert (1 == 0);
+        break;        
     case RATIONAL:
         break;
     case KERNEL: 
@@ -867,6 +901,7 @@ double generic_function_norm(const struct GenericFunction * f){
      case PIECEWISE:  out = piecewise_poly_integrate(f->f);      break;
      case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
      case LINELM:     out = lin_elem_exp_integrate(f->f);        break;
+     case CONSTELM:   out = const_elem_exp_integrate(f->f);      break;         
      case RATIONAL:                                              break;
      case KERNEL:     out = kernel_expansion_integrate(f->f);    break;
      }
@@ -906,6 +941,9 @@ double generic_function_norm(const struct GenericFunction * f){
      case LINELM:
          assert(1==0);
          break;
+     case CONSTELM:
+         assert(1==0);
+         break;         
      case RATIONAL:
          break;
      case KERNEL:
@@ -1210,9 +1248,12 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
          out = generic_function_alloc(a->dim,a->fc);
          out->fargs = a->fargs;
          out->f = lin_elem_exp_prod(a->f,b->f,NULL);
-         /* fprintf(stderr,"lin_elem_exp_prod not yet implemeted\n"); */
-         /* exit(1); */
          break;
+     case CONSTELM:
+         out = generic_function_alloc(a->dim,a->fc);
+         out->fargs = a->fargs;
+         out->f = const_elem_exp_prod(a->f,b->f,NULL);
+         break;         
      case RATIONAL:
          break;
      case KERNEL:

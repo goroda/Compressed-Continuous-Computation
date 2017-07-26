@@ -56,12 +56,8 @@
 
 #include "lib_optimization.h"
 
-/** \enum function_class
- * contains PIECEWISE, POLYNOMIAL, RATIONAL, KERNEL:
- * only POLYNOMIAL is implemented!!!
- */
 enum function_class {CONSTANT,PIECEWISE, POLYNOMIAL,
-                     LINELM, RATIONAL, KERNEL};
+                     CONSTELM, LINELM, RATIONAL, KERNEL};
 
 /** \struct Interval
  * \brief A pair of lower and upper bounds

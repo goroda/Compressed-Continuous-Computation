@@ -54,6 +54,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_funcs/legtens.h
            lib_funcs/lib_funcs.h
            lib_funcs/linelm.h
+           lib_funcs/constelm.h
            lib_funcs/kernels.h
            lib_funcs/monitoring.h
            lib_funcs/piecewisepoly.h
@@ -102,7 +103,7 @@ set(src lib_array/array.c
         lib_funcs/functions.c
         lib_funcs/fwrap.c
         lib_funcs/hpoly.c
-        lib_funcs/linelm.c
+        lib_funcs/constelm.c
         lib_funcs/kernels.c
         lib_funcs/monitoring.c
         lib_funcs/piecewisepoly.c

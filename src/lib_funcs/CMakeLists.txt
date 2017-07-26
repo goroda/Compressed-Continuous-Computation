@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 
-file(GLOB SRC_FILES 
+file(GLOB SRC_FILES
+    constelm.c
     polynomials.c
     piecewisepoly.c
     hpoly.c
