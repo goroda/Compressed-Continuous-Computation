@@ -44,6 +44,7 @@ CuSuite * ChebGetSuite();
 CuSuite * LegGetSuite();
 CuSuite * HermGetSuite();
 CuSuite * LelmGetSuite();
+CuSuite * CelmGetSuite();
 CuSuite * StandardPolyGetSuite();
 CuSuite * PolyAlgorithmsGetSuite();
 CuSuite * PolySerializationGetSuite();

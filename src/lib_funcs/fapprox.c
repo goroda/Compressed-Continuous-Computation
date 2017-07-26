@@ -114,6 +114,11 @@ void one_approx_opts_free_deep(struct OneApproxOpts ** oa)
             lin_elem_exp_aopts_free(opts);
             (*oa)->aopts = NULL;
         }
+        else if ((*oa)->fc == CONSTELM){
+            struct ConstElemExpAopts * opts = (*oa)->aopts;
+            const_elem_exp_aopts_free(opts);
+            (*oa)->aopts = NULL;
+        }        
         else if ((*oa)->fc == KERNEL){
             struct KernelApproxOpts * opts = (*oa)->aopts;
             kernel_approx_opts_free(opts);
@@ -145,6 +150,9 @@ size_t one_approx_opts_get_nparams(const struct OneApproxOpts * oa)
     else if (oa->fc == LINELM){
         nparams = lin_elem_exp_aopts_get_nparams(oa->aopts);
     }
+    else if (oa->fc == CONSTELM){
+        nparams = const_elem_exp_aopts_get_nparams(oa->aopts);
+    }    
     else if (oa->fc == KERNEL){
         nparams = kernel_approx_opts_get_nparams(oa->aopts);
     }
@@ -172,6 +180,9 @@ void one_approx_opts_set_nparams(struct OneApproxOpts * oa, size_t num)
     else if (oa->fc == LINELM){
         lin_elem_exp_aopts_set_nparams(oa->aopts,num);
     }
+    else if (oa->fc == CONSTELM){
+        const_elem_exp_aopts_set_nparams(oa->aopts,num);
+    }    
     else if (oa->fc == KERNEL){
         kernel_approx_opts_set_nparams(oa->aopts,num);
     }
@@ -200,6 +211,9 @@ int one_approx_opts_linear_p(const struct OneApproxOpts * oa)
     else if (oa->fc == LINELM){
         lin = 1;
     }
+    else if (oa->fc == CONSTELM){
+        lin = 1;
+    }    
     else if (oa->fc == KERNEL){
         lin = kernel_approx_opts_linear_p(oa->aopts);
     }

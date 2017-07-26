@@ -50,6 +50,7 @@
 #include "piecewisepoly.h"
 #include "hpoly.h"
 #include "linelm.h"
+#include "constelm.h"
 #include "kernels.h"
 #include "fwrap.h"
 #include "pivoting.h"
