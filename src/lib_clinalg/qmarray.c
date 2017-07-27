@@ -319,13 +319,13 @@ qmarray_approx1d(size_t nrows, size_t ncols, struct OneApproxOpts * fapp,
     \note
         - Not super efficient because of copies
 ***************************************************************/
-struct Qmarray *
-qmarray_orth1d_linelm_grid(size_t nrows,size_t ncols, struct c3Vector * grid)
-{
-    struct Qmarray * qm = qmarray_alloc(nrows,ncols);
-    generic_function_array_orth1d_linelm_columns(qm->funcs,nrows,ncols,grid);
-    return qm;
-}
+/* struct Qmarray * */
+/* qmarray_orth1d_linelm_grid(size_t nrows,size_t ncols, struct c3Vector * grid) */
+/* { */
+/*     struct Qmarray * qm = qmarray_alloc(nrows,ncols); */
+/*     generic_function_array_orth1d_linelm_columns(qm->funcs,nrows,ncols,grid); */
+/*     return qm; */
+/* } */
 
 /***********************************************************//**
     Generate a qmarray with orthonormal rows
@@ -1695,89 +1695,92 @@ void create_any_L(struct GenericFunction ** L, size_t nrows,
 
 }
 
-void create_any_L_linelm(struct GenericFunction ** L, size_t nrows, 
-                         size_t upto,size_t * piv, double * px,
-                         struct OneApproxOpts * approxargs, void * optargs)
-{
+/* static void create_any_L_nodal(struct GenericFunction ** L, */
+/*                                enum function_class fc, */
+/*                                size_t nrows,  */
+/*                                size_t upto,size_t * piv, double * px, */
+/*                                struct OneApproxOpts * approxargs, void * optargs) */
+/* { */
     
-    //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1]
-    // and one at piv[upto],piv[upto] less than one every else
-//    printf("creating any L!\n");
+/*     //create an arbitrary quasimatrix array that has zeros at piv[:upto-1],px[:upto-1] */
+/*     // and one at piv[upto],piv[upto] less than one every else */
+/* //    printf("creating any L!\n"); */
 
-    assert (1 == 0);
-    double lb,ub;
+/*     assert (1 == 0); */
+/*     double lb,ub; */
         
-    struct c3Vector * optnodes = NULL;
-    piv[upto] = 0;
-    if (optargs != NULL){
-        /* printf("Warning: optargs is not null in create_any_L_linelm so\n"); */
-        /* printf("         might not be able to guarantee that the new px\n"); */
-        /* printf("         is going to lie on a desired node\n"); */
-        optnodes = optargs;
-        assert (optnodes->size > 3);
-        px[upto] = optnodes->elem[1];
-    }
-    else{
-        assert (1 == 0);
-        /* px[upto] = lb + ub/(ub-lb) * randu(); */
-    }
+/*     struct c3Vector * optnodes = NULL; */
+/*     piv[upto] = 0; */
+/*     if (optargs != NULL){ */
+/*         /\* printf("Warning: optargs is not null in create_any_L_linelm so\n"); *\/ */
+/*         /\* printf("         might not be able to guarantee that the new px\n"); *\/ */
+/*         /\* printf("         is going to lie on a desired node\n"); *\/ */
+/*         optnodes = optargs; */
+/*         assert (optnodes->size > 3); */
+/*         px[upto] = optnodes->elem[1]; */
+/*     } */
+/*     else{ */
+/*         assert (1 == 0); */
+/*         /\* px[upto] = lb + ub/(ub-lb) * randu(); *\/ */
+/*     } */
 
     
-    double * zeros = calloc_double(upto);
-    size_t iz = 0;
-    for (size_t ii = 0; ii < upto; ii++){
-        if (piv[ii] == 0){
-            if ( (fabs(px[ii] - lb) > 1e-15) && (fabs(px[ii]-ub) > 1e-15)){
-                zeros[iz] = px[ii];
-                iz++;
-            }
-        }
-    }
+/*     double * zeros = calloc_double(upto); */
+/*     size_t iz = 0; */
+/*     for (size_t ii = 0; ii < upto; ii++){ */
+/*         if (piv[ii] == 0){ */
+/*             if ( (fabs(px[ii] - lb) > 1e-15) && (fabs(px[ii]-ub) > 1e-15)){ */
+/*                 zeros[iz] = px[ii]; */
+/*                 iz++; */
+/*             } */
+/*         } */
+/*     } */
 
-    int exists = 0;
-    size_t count = 2;
-    do {
-        exists = 0;
-        if (optargs != NULL){
-            assert (count < optnodes->size);
-        }
-        for (size_t ii = 0; ii < iz; ii++){
-            if (fabs(px[ii] - px[upto]) < 1e-15){
-                exists = 1;
-                if (optargs != NULL){
-                    px[upto] = optnodes->elem[count];
-                }
-                else{
-                    px[upto] = lb + ub/(ub-lb) * randu();
-                }
-                count++;
-                break;
-            }
-        }
-    }while (exists == 1);
+/*     int exists = 0; */
+/*     size_t count = 2; */
+/*     do { */
+/*         exists = 0; */
+/*         if (optargs != NULL){ */
+/*             assert (count < optnodes->size); */
+/*         } */
+/*         for (size_t ii = 0; ii < iz; ii++){ */
+/*             if (fabs(px[ii] - px[upto]) < 1e-15){ */
+/*                 exists = 1; */
+/*                 if (optargs != NULL){ */
+/*                     px[upto] = optnodes->elem[count]; */
+/*                 } */
+/*                 else{ */
+/*                     px[upto] = lb + ub/(ub-lb) * randu(); */
+/*                 } */
+/*                 count++; */
+/*                 break; */
+/*             } */
+/*         } */
+/*     }while (exists == 1); */
         
-    /* printf("before\n"); */
-    /* dprint(upto,px); */
-    /* iprint_sz(upto,piv); */
-    /* printf("%G\n",px[upto]); */
-    /* dprint(iz,zeros); */
-    L[0] = generic_function_onezero(LINELM,px[upto],iz,zeros,lb,ub);
+/*     /\* printf("before\n"); *\/ */
+/*     /\* dprint(upto,px); *\/ */
+/*     /\* iprint_sz(upto,piv); *\/ */
+/*     /\* printf("%G\n",px[upto]); *\/ */
+/*     /\* dprint(iz,zeros); *\/ */
+/*     /\* L[0] = generic_function_onezero(LINELM,px[upto],iz,zeros,lb,ub); *\/ */
+/*     L[0] = generic_function_onezero(fc,px[upto],iz,zeros,lb,ub);     */
 
-    for (size_t ii = 1; ii < nrows;ii++){
-        L[ii] = generic_function_constant(0.0,LINELM,approxargs);
-    }
+/*     for (size_t ii = 1; ii < nrows;ii++){ */
+/*         L[ii] = generic_function_constant(0.0,fc,approxargs); */
+/*     } */
 
-//    for (size_t ii = 0; ii < upto; ii++){
-//        double eval = generic_function_1d_eval(
-//            L[piv[ii]],px[ii]);
-        //      printf("eval should be 0 = %G\n",eval);
-//    }
-//    double eval = generic_function_1d_eval(L[piv[upto]],px[upto]);
-//    printf("eval should be 1 = %G\n", eval);
-//    printf("after\n");
+/* //    for (size_t ii = 0; ii < upto; ii++){ */
+/* //        double eval = generic_function_1d_eval( */
+/* //            L[piv[ii]],px[ii]); */
+/*         //      printf("eval should be 0 = %G\n",eval); */
+/* //    } */
+/* //    double eval = generic_function_1d_eval(L[piv[upto]],px[upto]); */
+/* //    printf("eval should be 1 = %G\n", eval); */
+/* //    printf("after\n"); */
     
-    free(zeros); zeros = NULL;
-}
+/*     free(zeros); zeros = NULL; */
+/* } */
 
 /***********************************************************//**
     Compute the LU decomposition of a quasimatrix array of 1d functioins
@@ -1833,7 +1836,8 @@ int qmarray_lu1d(struct Qmarray * A, struct Qmarray * L, double * u,
                 printf("creating any L\n");
             }
 
-            if (A->funcs[kk*A->nrows]->fc == LINELM){
+            if ((A->funcs[kk*A->nrows]->fc == LINELM) ||
+                (A->funcs[kk*A->nrows]->fc == CONSTELM)){
                 //printf("lets go!\n");
                 /* create_any_L_linelm(L->funcs+kk*L->nrows, */
                 /*                     L->nrows,kk,piv,px,app,optargs); */

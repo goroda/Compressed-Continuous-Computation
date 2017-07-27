@@ -987,13 +987,23 @@ struct GenericFunction *
 generic_function_create_nodal(struct GenericFunction * f,size_t N, double * x)
 {
     struct GenericFunction * out = NULL;
-    out = generic_function_alloc(f->dim,LINELM);
+    /* out = generic_function_alloc(f->dim,LINELM); */
+    out = generic_function_alloc(f->dim,f->fc);    
     out->fargs = NULL;
     double * fvals = calloc_double(N);
     for (size_t ii = 0; ii < N; ii++){
         fvals[ii] = generic_function_1d_eval(f,x[ii]);
     }
-    out->f = lin_elem_exp_init(N,x,fvals);
+    if (f->fc == LINELM){
+        out->f = lin_elem_exp_init(N,x,fvals);
+    }
+    else if (f->fc == CONSTELM){
+        out->f = const_elem_exp_init(N,x,fvals);        
+    }
+    else{
+        fprintf(stderr,"Cannot create nodal function of this type\n");
+        exit(1);
+    }
     free(fvals); fvals = NULL;
 
     return out;
@@ -1007,9 +1017,18 @@ generic_function_onezero2(
     void * opts
     )
 {
-    assert (fc == LINELM);
+
     struct GenericFunction * gf = generic_function_alloc(1,fc);
-    gf->f = lin_elem_exp_onezero(nzeros, zero_locations, opts);
+    if (fc == LINELM){
+        gf->f = lin_elem_exp_onezero(nzeros, zero_locations, opts);
+    }
+    else if (fc == CONSTELM){
+        gf->f = const_elem_exp_onezero(nzeros, zero_locations, opts);        
+    }
+    else{
+        fprintf(stderr,"Cannot create a onezero generic function for non-nodal basis\n");
+        exit(1);
+    }
     return gf;
 }
 

@@ -2348,8 +2348,11 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
     delta = delta * epsilon / sqrt(a->dim-1);
     //double delta = epsilon;
 
+    /* printf("Rounding Starting norm = %G\n",function_train_norm2(a)); */
 //    printf("begin orho\n");
     struct FunctionTrain * ftrl = function_train_orthor(a,aopts);
+
+    /* printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl)); */
 //    printf("ortho gonalized\n");
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);
@@ -3501,6 +3504,13 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         //adapt = 0;
 
     }
+
+    if (cargs->verbose > 0){
+        printf("Final norm = %G\n",function_train_norm2(ftr));
+        printf("Final ranks: ");
+        iprint_sz(ftr->dim+1,ftr->ranks);
+    }
+    
     function_train_free(ft); ft = NULL;
     function_train_free(ftc); ftc = NULL;
     free(ranks_found);
