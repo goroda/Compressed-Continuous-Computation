@@ -3410,7 +3410,9 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
     
     struct FunctionTrain * ftc = function_train_copy(ft);
     struct FunctionTrain * ftr = function_train_round(ft,eps,apargs);
-    /* printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks); */
+    if (cargs->verbose > 0){
+        printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks);
+    }
     //struct FunctionTrain * ftr = function_train_copy(ft);
     //return ftr; 
     //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
@@ -3453,7 +3455,7 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         adapt = 0;
         if (cargs->verbose > 0){
             printf("adapting \n");
-            printf("Increasing rank\n");
+            printf("Increasing rank to \n");
             iprint_sz(ft->dim+1,cargs->ranks);
         }
         
@@ -3471,6 +3473,9 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         function_train_free(ftr); ftr = NULL;
         //ftr = function_train_copy(ft);//, eps);
         ftr = function_train_round(ft,eps,apargs);
+        if (cargs->verbose > 0){
+            printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks);
+        }
         //printf("done rounding\n");
         for (ii = 1; ii < dim; ii++){
             if (ranks_found[ii] == ftr->ranks[ii]){
