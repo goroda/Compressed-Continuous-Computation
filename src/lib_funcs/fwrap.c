@@ -60,10 +60,13 @@ struct Obj
     void * params;
 };
 
-PyMODINIT_FUNC initiate_numpy()
+PyMODINIT_FUNC initiate_numpy(void)
 {
     Py_Initialize();
     import_array();
+    #if PY_MAJOR_VERSION >= 3
+    return 0;
+    #endif
 }
 
 

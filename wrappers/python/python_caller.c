@@ -65,10 +65,17 @@ static PyObject* assign( PyObject* self, PyObject* args ) {
     void* objPtr = PyCapsule_GetPointer(pyObj,NULL);
     struct Obj* obj = (struct Obj*)objPtr;
 
-    
     #if PY_MAJOR_VERSION >= 3
-    size_t d = PyLong_AsSize_t(pyDim);
-    assign_pointer(obj,d,pyF,pyParams);
+    size_t d;
+    printf("%d\n",PyLong_Check(pyDim));
+    if (PyLong_Check(pyDim)){
+        d = PyLong_AsSsize_t(pyDim);
+        assign_pointer(obj,d,pyF,pyParams);
+    }
+    else{
+        PyErr_SetString(PyExc_TypeError, "Second parameter must be an int");
+        return NULL;
+    }
     #else
     size_t d;
     if (PyInt_Check(pyDim)){
