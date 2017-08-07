@@ -36,7 +36,7 @@ if __name__ == "__main__":
     verbose=1
     init_rank=2
     adapt=1
-    ft.build_approximation(func2,None,init_rank,verbose,adapt)
+    ft.build_approximation(func2,"hi",init_rank,verbose,adapt)
 
     ## Generate test point
     test_pt = np.random.rand(dim)*2.0-1.0

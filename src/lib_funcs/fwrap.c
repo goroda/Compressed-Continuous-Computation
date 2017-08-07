@@ -78,12 +78,13 @@ static int eval_py_obj(size_t N, const double * x, double * out, void * obj_void
 
     // Setup inputs
     PyObject * pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(double*)x);
-    PyObject * arglist = PyTuple_New(1);
+    PyObject * arglist = PyTuple_New(2);
     PyTuple_SetItem(arglist,0,pyX);
-    /* PyTuple_SetItem(arglist,1,obj->params); */
+    PyTuple_SetItem(arglist,1,obj->params);
 
     // Call function
-    PyObject * pyResult = PyObject_CallObject(obj->f,arglist);
+    /* PyObject * pyResult = PyObject_CallObject(obj->f,arglist); */
+    PyObject * pyResult = PyObject_CallFunctionObjArgs(obj->f,pyX,obj->params,NULL);
     PyArrayObject * arr = (PyArrayObject*)PyArray_ContiguousFromAny(pyResult,NPY_DOUBLE,1,1);
 
     // Ensure outputs
@@ -107,7 +108,7 @@ static int eval_py_obj(size_t N, const double * x, double * out, void * obj_void
     }
 
     Py_XDECREF(arr);
-    Py_XDECREF(arglist);
+    Py_XDECREF(pyX);
     Py_XDECREF(pyResult);
     
     return 0;
