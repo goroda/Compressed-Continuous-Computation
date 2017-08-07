@@ -1681,7 +1681,7 @@ void Test_ftapprox_cross_constelm3(CuTest * tc)
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
-    int verbose = 1;
+    int verbose = 0;
     size_t init_rank = 4;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
@@ -1708,13 +1708,13 @@ void Test_ftapprox_cross_constelm3(CuTest * tc)
             err += pow(val-eval,2.0);
         }
     }
-    printf("err = %G den = %G\n",err,den);
-    printf("norm = %G\n",function_train_norm2(ft));
+    /* printf("err = %G den = %G\n",err,den); */
+    /* printf("norm = %G\n",function_train_norm2(ft)); */
     pt[0] = 0.5;
     pt[1] = -0.3;
     err = err/den;
-    printf("eval = %G\n",function_train_eval(ft,pt));
-    printf("\t Eval true = %3.15G\n",pt[0]*pt[0] + pt[1]*pt[1]);
+    /* printf("eval = %G\n",function_train_eval(ft,pt)); */
+    /* printf("\t Eval true = %3.15G\n",pt[0]*pt[0] + pt[1]*pt[1]); */
     CuAssertDblEquals(tc,0.0,err,1e-2);
     free(xtest);
 
