@@ -143,6 +143,7 @@ class FunctionTrain:
         c3.fwrap_set_pyfunc(fw,fobj)
         # print("wrapped function")
         c3a = self._assemble_cross_args(verbose,init_rank)
+        # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a,fw,adapt)
 
         c3.fwrap_destroy(fw)

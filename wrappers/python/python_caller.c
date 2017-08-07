@@ -67,7 +67,7 @@ static PyObject* assign( PyObject* self, PyObject* args ) {
 
     #if PY_MAJOR_VERSION >= 3
     size_t d;
-    printf("%d\n",PyLong_Check(pyDim));
+    /* printf("%d\n",PyLong_Check(pyDim)); */
     if (PyLong_Check(pyDim)){
         d = PyLong_AsSsize_t(pyDim);
         assign_pointer(obj,d,pyF,pyParams);
