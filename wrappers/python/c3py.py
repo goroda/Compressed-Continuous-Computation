@@ -283,17 +283,21 @@ class FunctionTrain:
     def integrate(self):
         return c3.function_train_integrate(self.ft)
 
-    def scale(self,a,shift=None,eps=1e-14):
-        """ f <- af + shift"""
+    def scale(self,a,eps=1e-14):
+        """ f <- a*f"""
         c3.function_train_scale(self.ft,a)
-        if shift is not None:
-            c3a = self._build_approx_params()
-            multiopts = c3.c3approx_get_approx_args(c3a)
-            const_ft = c3.function_train_constant(shift,multiopts)
-            temp_ft = c3.function_train_sum(self.ft,const_ft)
-            self.ft = temp_ft
-            c3.function_train_round(self.ft,eps,multiopts)
-            
+
+    def scale_and_shift(self,scale,shift,eps=1e-14):
+        out1 = FunctionTrain(self.dim)
+        out1.scale(scale)
+        out2 = FunctionTrain(self.dim)
+        c3a = self._build_approx_params()
+        multiopts = c3.c3approx_get_approx_args(c3a)
+        out2.ft = c3.function_train_constant(shift)
+        
+        out3 = out1+out2
+        return out3
+        
     def norm2(self):
         return c3.function_train_norm2(self.ft)
 
