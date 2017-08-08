@@ -3,7 +3,6 @@ from __future__ import print_function
 import c3
 import numpy as np
 import copy
-
 import pycback as pcb
 
 class FunctionTrain:
@@ -32,6 +31,19 @@ class FunctionTrain:
         if filename == None:
             self.ft = None
 
+    def copy(self):
+        ft = FunctionTrain(self.dim)
+        ft.ft = c3.function_train_copy(self.ft)
+        return ft
+
+    def save(self,filename):
+        c3.function_train_save(self.ft,filename)
+
+    def load(self,filename):
+        ft = c3.function_train_load(filename)
+        self.dim = c3.function_train_get_dim(ft)
+        self.ft = ft
+    
     def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4,kernel_adapt_center=0):
 
         if self.opts[dim] is not None:
