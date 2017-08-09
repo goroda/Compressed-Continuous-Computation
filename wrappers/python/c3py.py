@@ -289,12 +289,17 @@ class FunctionTrain:
 
     def scale_and_shift(self,scale,shift,eps=1e-14):
         out1 = FunctionTrain(self.dim)
+        out1.opts = self.opts
+        out1.ft = c3.function_train_copy(self.ft)
         out1.scale(scale)
+
+        
         out2 = FunctionTrain(self.dim)
+        out2.opts = self.opts
         c3a = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
-        out2.ft = c3.function_train_constant(shift)
-        
+        out2.ft = c3.function_train_constant(shift,multiopts)
+
         out3 = out1+out2
         return out3
         
