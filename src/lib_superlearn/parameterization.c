@@ -153,6 +153,31 @@ void ft_param_free(struct FTparam * ftr)
 
 
 /***********************************************************//**
+    Get a parameter
+
+    \param[in] ftp   - parameterized function train
+    \param[in] index - index of parameter
+
+    \return value of the parameters
+***************************************************************/
+double ft_param_get_param(const struct FTparam * ftp, size_t index)
+{
+    if (ftp->nparams > 0){
+        if (index < ftp->nparams){
+            return ftp->params[index];
+        }
+        else{
+            fprintf(stderr,"Index of parameter to retrieve exceeds number of parameters\n");
+            exit(1);
+        }
+    }
+    else{
+        fprintf(stderr,"No parameters have yet been specified\n");
+        exit(1);
+    }
+}
+
+/***********************************************************//**
     Get number of parameters 
 
     \param[in] ftp - parameterized FTP
