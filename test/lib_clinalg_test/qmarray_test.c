@@ -809,6 +809,89 @@ void Test_qmarray_householder_rows_hermite(CuTest * tc){
     one_approx_opts_free(qmopts);
 }
 
+void Test_qmarray_householder_constelm(CuTest * tc){
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("Testing function: qmarray_householder for constelm\n");
+
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    double * x = linspace(-1.0,1.0,5);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(5,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);
+
+    struct Qmarray * T = qmarray_orth1d_columns(2,2,qmopts);
+    qmarray_test_col_orth(tc,T,1e-14);
+    
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    size_t nc = 2;
+    double * R = calloc_double(nc*nc);
+    struct Qmarray * Q = qmarray_householder_simple("QR",Acopy,R,qmopts);
+    qmarray_test_col_orth(tc,Q,1e-14);
+
+    struct Qmarray * Anew = qmam(Q,R,nc);
+    qmarray_test_equality2(tc,A,Anew,1e-15);
+
+    qmarray_free(T);
+    free(x); x = NULL;
+    const_elem_exp_aopts_free(opts);
+    one_approx_opts_free(qmopts);
+    fwrap_destroy(fw);
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
+}
+
+void Test_qmarray_householder_rowsconstelm(CuTest * tc){
+    
+    // printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("Testing function: qmarray_householder LQ for constelm\n");
+
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    double *x = linspace(-1.0,1.0,5);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(5,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);
+
+    struct Qmarray * T = qmarray_orth1d_rows(2,2,qmopts);
+    qmarray_test_row_orth(tc,T,1e-14);
+    
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    size_t nr = 2;
+    double * R = calloc_double(nr*nr);
+    struct Qmarray * Q = qmarray_householder_simple("LQ",Acopy,R,qmopts);
+    qmarray_test_row_orth(tc,Q,1e-14);
+
+    struct Qmarray * Anew = mqma(R,Q,nr);
+    qmarray_test_equality2(tc,A,Anew,1e-15);
+
+    free(x); x = NULL;
+    qmarray_free(T);
+    const_elem_exp_aopts_free(opts);
+    one_approx_opts_free(qmopts);
+    fwrap_destroy(fw);
+    qmarray_free(Anew); Anew = NULL;
+    free(R); R = NULL;
+    qmarray_free(Q); Q = NULL;
+    qmarray_free(A);
+    qmarray_free(Acopy);
+}
 
 void Test_qmarray_householder_linelm(CuTest * tc){
     
@@ -1117,6 +1200,65 @@ void Test_qmarray_lu1d_hermite(CuTest * tc){
     free(pivi);
 }
 
+void Test_qmarray_lu1d_constelm(CuTest * tc){
+
+    printf("Testing function: qmarray_lu1d with constelm \n");
+
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func4,NULL);
+    fwrap_set_func_array(fw,2,func,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
+
+    double * x = linspace(-1.0,1.0,10);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(10,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);
+    
+    struct Qmarray * A = qmarray_approx1d(2,3,qmopts,fw);
+    struct Qmarray * L = qmarray_alloc(2,3);
+    struct Qmarray * Acopy = qmarray_copy(A);
+
+    double * U = calloc_double(3*3);
+    size_t * pivi = calloc_size_t(3);
+    double * pivx = calloc_double(3);
+    qmarray_lu1d(A,L,U,pivi,pivx,qmopts,NULL);
+    
+    // check pivots
+    size_t ii,jj;
+    double eval;
+    struct GenericFunction * lf;
+    for (ii = 0; ii < 3; ii++){
+        for (jj = 0; jj < ii; jj++){
+            lf = qmarray_get_func(L,pivi[jj],ii);
+            eval = generic_function_1d_eval(lf,pivx[jj]);
+            CuAssertDblEquals(tc,0.0,eval,1e-14);
+        }
+
+        lf = qmarray_get_func(L,pivi[ii],ii);
+        eval = generic_function_1d_eval(lf,pivx[ii]);
+        CuAssertDblEquals(tc,1.0,eval,1e-14);
+    }
+
+    struct Qmarray * Comb = qmam(L,U,3);
+    double difff = qmarray_norm2diff(Comb,Acopy);
+    CuAssertDblEquals(tc,difff,0,1e-13);
+
+    fwrap_destroy(fw);
+    free(x);
+    one_approx_opts_free(qmopts);
+    const_elem_exp_aopts_free(opts);
+    qmarray_free(Acopy);
+    qmarray_free(A);
+    qmarray_free(Comb);
+    qmarray_free(L);
+    free(U);
+    free(pivx);
+    free(pivi);
+}
+
 void Test_qmarray_lu1d_linelm(CuTest * tc){
 
     printf("Testing function: qmarray_lu1d with linelm \n");
@@ -1295,6 +1437,68 @@ void Test_qmarray_maxvol1d_hermite1(CuTest * tc){
     one_approx_opts_free(qmopts);
     free(xopt); xopt = NULL;
     c3vector_free(c3v); c3v = NULL;
+    qmarray_free(B);
+    qmarray_free(A);
+    free(Asinv);
+    free(pivx);
+    free(pivi);
+}
+
+void Test_qmarray_maxvol1d_constelm(CuTest * tc){
+
+    printf("Testing function: qmarray_maxvol1d constelm (1)\n");
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,6);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func4,NULL);
+    fwrap_set_func_array(fw,2,func,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+    fwrap_set_func_array(fw,4,func5,NULL);
+    fwrap_set_func_array(fw,5,func6,NULL);
+
+    double * x = linspace(-1.0,1.0,10);
+    struct ConstElemExpAopts * opts = const_elem_exp_aopts_alloc(10,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(CONSTELM,opts);
+    struct Qmarray * A = qmarray_approx1d(3,2,qmopts,fw);
+
+    unsigned char * text = NULL;
+    size_t size;
+    qmarray_serialize(NULL,A,&size);
+    text = malloc(size * sizeof(unsigned char));
+    qmarray_serialize(text,A,NULL);
+    
+    struct Qmarray * C = NULL;
+    qmarray_deserialize(text,&C);
+    free(text); text = NULL;
+
+    double diff = qmarray_norm2diff(A,C);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
+    qmarray_free(C); C = NULL;
+
+    
+    double * Asinv = calloc_double(2*2);
+    size_t * pivi = calloc_size_t(2);
+    double * pivx= calloc_double(2);
+    qmarray_maxvol1d(A,Asinv,pivi,pivx,qmopts,NULL);
+     
+    /*
+    printf("pivots at = \n");
+    iprint_sz(3,pivi);
+    dprint(3,pivx);
+    */
+
+    struct Qmarray * B = qmam(A,Asinv,2);
+    double maxval, maxloc;
+    size_t maxrow, maxcol;
+    qmarray_absmax1d(B,&maxloc,&maxrow, &maxcol, &maxval,NULL);
+    //printf("Less = %d", 1.0+1e-2 > maxval);
+    CuAssertIntEquals(tc, 1, (1.0+1e-2) > maxval);
+
+
+    fwrap_destroy(fw);
+    one_approx_opts_free(qmopts);
+    const_elem_exp_aopts_free(opts);
+    free(x); x= NULL;
     qmarray_free(B);
     qmarray_free(A);
     free(Asinv);
@@ -1867,6 +2071,8 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_lq);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_constelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowsconstelm);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm);
     SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm);
     SUITE_ADD_TEST(suite, Test_qmarray_svd);
@@ -1874,11 +2080,13 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_constelm);
     SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm);    
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
 
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);

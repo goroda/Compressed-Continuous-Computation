@@ -57,6 +57,7 @@ void RunAllTests(void) {
     CuSuite * alg  = PolyAlgorithmsGetSuite();
     CuSuite * ser  = PolySerializationGetSuite();
     CuSuite * lelm = LelmGetSuite();
+    CuSuite * celm = CelmGetSuite();    
     CuSuite * ll   = LinkedListGetSuite();
     CuSuite * pp   = PiecewisePolyGetSuite();
     CuSuite * pap  = PolyApproxSuite();
@@ -70,17 +71,18 @@ void RunAllTests(void) {
     CuSuiteAddSuite(suite, sp);
     CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
-    /* // linear elements */
+    // linear elements
     CuSuiteAddSuite(suite, lelm);
+    CuSuiteAddSuite(suite, celm);    
     /* // other stuff */
     CuSuiteAddSuite(suite, ll);
     CuSuiteAddSuite(suite, pp);
     CuSuiteAddSuite(suite, pap);
 
-    /* // Regression */
+    // Regression
     CuSuiteAddSuite(suite, preg);
 
-    /* // Kernels */
+    // Kernels
     CuSuiteAddSuite(suite, kern);
 
     CuSuiteRun(suite);
@@ -95,6 +97,7 @@ void RunAllTests(void) {
     CuSuiteDelete(alg);
     CuSuiteDelete(ser);
     CuSuiteDelete(lelm);
+    CuSuiteDelete(celm);    
     CuSuiteDelete(ll);
     CuSuiteDelete(pp);
     CuSuiteDelete(pap);

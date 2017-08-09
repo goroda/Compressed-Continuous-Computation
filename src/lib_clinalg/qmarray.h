@@ -91,8 +91,8 @@ struct Qmarray *
 qmarray_zeros(size_t, size_t,struct OneApproxOpts *);
 
 
-struct Qmarray *
-qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *);
+/* struct Qmarray * */
+/* qmarray_orth1d_linelm_grid(size_t,size_t, struct c3Vector *); */
 struct Qmarray * 
 qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
 

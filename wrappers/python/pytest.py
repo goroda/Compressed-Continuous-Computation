@@ -65,14 +65,19 @@ ft4 = ft * ft2  # multiply to function-trains
 ft_adapt = c3py.FunctionTrain(dim)
 for ii in range(dim):
     ft_adapt.set_dim_opts(ii,"legendre",lb,ub,nparam)
-verbose=1
+verbose=0
 init_rank=2
 adapt=1
 ft_adapt.build_approximation(func2,None,init_rank,verbose,adapt)
 
+
+ft.save("saving.c3")
+ft_load = c3py.FunctionTrain(0)
+ft_load.load("saving.c3")
 ## Generate test point
 test_pt = np.random.rand(dim)*2.0-1.0
 ft1eval = ft.eval(test_pt) # evaluate the function train
+floadeval = ft_load.eval(test_pt) # evaluate the function train
 ft2eval = ft2.eval(test_pt)
 ft_sgd_eval = ft_sgd.eval(test_pt)
 # ftcveval = ftcv.eval(test_pt) 
@@ -84,13 +89,20 @@ eval2s = func2(test_pt.reshape((1,dim)))
 eval3s = eval1s + eval2s
 eval4s = eval1s * eval2s
 
+
+
 print("Fteval =",ft1eval, "Should be =",eval1s)
+print("Ft_loadeval =",floadeval, "Should be =",eval1s)
 print("Second function with BFGS: Fteval =",ft2eval, "Should be =",eval2s)
 print("Second function with SGD:  Fteval =",ft_sgd_eval, "Should be =",eval2s)
 print("Second function with CrossApproximation:  Fteval =",ft_adapt_eval, "Should be =",eval2s)
 # print("Second function with CV:   Fteval =",ftcveval, "Should be =",eval2s)
 print("Fteval =",ft3eval, "Should be =",eval3s)
 print("Fteval =",ft4eval, "Should be =",eval4s)
+
+
+
+# Test serialization
 
 
 # clean up memory for each function train

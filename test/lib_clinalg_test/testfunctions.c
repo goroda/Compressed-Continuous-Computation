@@ -304,3 +304,15 @@ int funcCheck2(size_t n, const double * x, double * out, void * args)
     }
     return 0;
 }
+
+
+int quad2d(size_t N, const double * x,double * out, void * arg)
+{
+    (void)(arg);
+    (void)(x);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = x[2*ii+0]*x[2*ii+0] + x[2*ii+1]*x[2*ii+1];
+        /* out[ii] = 0.2; */
+    }
+    return 0;
+}

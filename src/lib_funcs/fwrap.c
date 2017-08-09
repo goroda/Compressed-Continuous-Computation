@@ -53,14 +53,6 @@
 
 #ifdef COMPILE_WITH_PYTHON
 
-int initiate_numpy()
-{
-    /* printf("initiate numpy\n"); */
-    import_array();
-    /* printf("done numpy\n"); */
-    return 0;
-}
-
 struct Obj
 {
     size_t dim;
@@ -68,55 +60,67 @@ struct Obj
     void * params;
 };
 
-static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObject* pyFunction, PyObject* pyParams ) {
+PyMODINIT_FUNC initiate_numpy(void)
+{
+    Py_Initialize();
+    import_array();
+    #if PY_MAJOR_VERSION >= 3
+    return 0;
+    #endif
+}
 
-    long int dims[2];
-    dims[0] = (long int)N;
-    dims[1] = (long int)dim;
 
-    /* printf("creating pyX\n"); */
-    PyObject* pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(void*)x);
+static int eval_py_obj(size_t N, const double * x, double * out, void * obj_void)
+{
+    struct Obj * obj = obj_void;
+    size_t dim = obj->dim;
+    
+    npy_intp dims[2];
+    dims[0] = N;
+    dims[1] = dim;
 
-    /* printf("Got PyX\n"); */
-    PyObject* pyResult = PyObject_CallFunctionObjArgs(pyFunction,pyX,pyParams,NULL);
+    // Setup inputs
+    PyObject * pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(double*)x);
+    
+    // Call function
+    PyObject * pyResult = PyObject_CallFunctionObjArgs(obj->f,pyX,obj->params,NULL);
+    PyArrayObject * arr = (PyArrayObject*)PyArray_ContiguousFromAny(pyResult,NPY_DOUBLE,1,1);
 
-    /* printf("Got Result\n"); */
-    PyArrayObject * arr = (PyArrayObject*)PyArray_FROM_OTF(pyResult,NPY_DOUBLE,NPY_ARRAY_C_CONTIGUOUS);
-
-    /* printf("Converted to array\n"); */
+    // Ensure outputs
     size_t ndims = (size_t)PyArray_NDIM(arr);
     if (ndims > 1){
-        fprintf(stderr, "Wrapped python function must return a flattened (1d) array\n");
-        exit(1);
+        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return a flattened (1d) array\n");
+        return 1;
     }
     npy_intp * dimss  = (npy_intp*)PyArray_DIMS(arr);
 
     if ((size_t)dimss[0] != N){
-        fprintf(stderr, "Wrapped function must return an array with the same number of rows as input\n");
-        exit(1);
+        PyErr_SetString(PyExc_TypeError,
+                        "Wrapped python function must return an array with the same number of rows as input\n");
+        return 1;
     }
-    
-    /* printf("num dim = %zu\n",ndims ); */
-    /* printf("nelem = %ld\n", dimss[0]); */
 
+    // copy data to output
     double * vals = (double*)PyArray_DATA(arr);
     for (size_t ii = 0; ii < N; ii++){
         out[ii] = vals[ii];
     }
 
+    Py_XDECREF(arr);
     Py_XDECREF(pyX);
     Py_XDECREF(pyResult);
-    Py_XDECREF(arr);
-
+    
     return 0;
-
 }
 
 int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args)
 {
 
+    /* PyObject * py_obj = args; */
+    /* printf("c3py_wrapped_eval\n"); */
     struct Obj * obj = args;
-    int res = eval_arr(N,obj->dim,x,out,obj->f,obj->params);
+    
+    int res = eval_py_obj(N,x,out,obj);
     
     return res;
 }

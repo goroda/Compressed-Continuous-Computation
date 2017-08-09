@@ -3,7 +3,6 @@ from __future__ import print_function
 import c3
 import numpy as np
 import copy
-
 import pycback as pcb
 
 class FunctionTrain:
@@ -32,6 +31,19 @@ class FunctionTrain:
         if filename == None:
             self.ft = None
 
+    def copy(self):
+        ft = FunctionTrain(self.dim)
+        ft.ft = c3.function_train_copy(self.ft)
+        return ft
+
+    def save(self,filename):
+        c3.function_train_save(self.ft,filename)
+
+    def load(self,filename):
+        ft = c3.function_train_load(filename)
+        self.dim = c3.function_train_get_dim(ft)
+        self.ft = ft
+    
     def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4,kernel_adapt_center=0):
 
         if self.opts[dim] is not None:
@@ -143,6 +155,7 @@ class FunctionTrain:
         c3.fwrap_set_pyfunc(fw,fobj)
         # print("wrapped function")
         c3a = self._assemble_cross_args(verbose,init_rank)
+        # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a,fw,adapt)
 
         c3.fwrap_destroy(fw)
@@ -270,9 +283,26 @@ class FunctionTrain:
     def integrate(self):
         return c3.function_train_integrate(self.ft)
 
-    def scale(self,a):
+    def scale(self,a,eps=1e-14):
+        """ f <- a*f"""
         c3.function_train_scale(self.ft,a)
 
+    def scale_and_shift(self,scale,shift,eps=1e-14):
+        out1 = FunctionTrain(self.dim)
+        out1.opts = self.opts
+        out1.ft = c3.function_train_copy(self.ft)
+        out1.scale(scale)
+
+        
+        out2 = FunctionTrain(self.dim)
+        out2.opts = self.opts
+        c3a = out2._build_approx_params()
+        multiopts = c3.c3approx_get_approx_args(c3a)
+        out2.ft = c3.function_train_constant(shift,multiopts)
+
+        out3 = out1+out2
+        return out3
+        
     def norm2(self):
         return c3.function_train_norm2(self.ft)
 

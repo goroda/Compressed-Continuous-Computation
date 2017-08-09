@@ -2348,8 +2348,11 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
     delta = delta * epsilon / sqrt(a->dim-1);
     //double delta = epsilon;
 
+    /* printf("Rounding Starting norm = %G\n",function_train_norm2(a)); */
 //    printf("begin orho\n");
     struct FunctionTrain * ftrl = function_train_orthor(a,aopts);
+
+    /* printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl)); */
 //    printf("ortho gonalized\n");
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);
@@ -3407,7 +3410,9 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
     
     struct FunctionTrain * ftc = function_train_copy(ft);
     struct FunctionTrain * ftr = function_train_round(ft,eps,apargs);
-    /* printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks); */
+    if (cargs->verbose > 0){
+        printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks);
+    }
     //struct FunctionTrain * ftr = function_train_copy(ft);
     //return ftr; 
     //printf("DOOONNTT FORGET MEEE HEERREEEE \n");
@@ -3450,7 +3455,7 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         adapt = 0;
         if (cargs->verbose > 0){
             printf("adapting \n");
-            printf("Increasing rank\n");
+            printf("Increasing rank to \n");
             iprint_sz(ft->dim+1,cargs->ranks);
         }
         
@@ -3468,6 +3473,9 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         function_train_free(ftr); ftr = NULL;
         //ftr = function_train_copy(ft);//, eps);
         ftr = function_train_round(ft,eps,apargs);
+        if (cargs->verbose > 0){
+            printf("rounded ranks = "); iprint_sz(dim+1,ftr->ranks);
+        }
         //printf("done rounding\n");
         for (ii = 1; ii < dim; ii++){
             if (ranks_found[ii] == ftr->ranks[ii]){
@@ -3501,6 +3509,13 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
         //adapt = 0;
 
     }
+
+    if (cargs->verbose > 0){
+        printf("Final norm = %G\n",function_train_norm2(ftr));
+        printf("Final ranks: ");
+        iprint_sz(ftr->dim+1,ftr->ranks);
+    }
+    
     function_train_free(ft); ft = NULL;
     function_train_free(ftc); ftc = NULL;
     free(ranks_found);

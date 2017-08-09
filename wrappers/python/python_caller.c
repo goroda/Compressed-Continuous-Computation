@@ -55,157 +55,104 @@ static PyObject* assign( PyObject* self, PyObject* args ) {
 
     if(!PyArg_ParseTuple(args,"OOOO",&pyObj,&pyDim,&pyF,&pyParams,NULL)) return NULL;
 
+    if (!PyCallable_Check(pyF)){
+        PyErr_SetString(PyExc_TypeError, "Third parameter must be callable");
+        return NULL;
+    }
+    /* Py_XINCREF(pyF); */
+
+        
     void* objPtr = PyCapsule_GetPointer(pyObj,NULL);
     struct Obj* obj = (struct Obj*)objPtr;
 
-    size_t d = PyLong_AsSsize_t(pyDim);
+    #if PY_MAJOR_VERSION >= 3
+    size_t d;
+    /* printf("%d\n",PyLong_Check(pyDim)); */
+    if (PyLong_Check(pyDim)){
+        d = PyLong_AsSsize_t(pyDim);
+        assign_pointer(obj,d,pyF,pyParams);
+    }
+    else{
+        PyErr_SetString(PyExc_TypeError, "Second parameter must be an int");
+        return NULL;
+    }
+    #else
+    size_t d;
+    if (PyInt_Check(pyDim)){
+        d = PyInt_AsSsize_t(pyDim);
+        assign_pointer(obj,d,pyF,pyParams);
+    }
+    else{
+        PyErr_SetString(PyExc_TypeError, "Second parameter must be an int");
+        return NULL;
+    }
+    #endif
+
+    return Py_None;
+}
+
+int eval_py_obj(size_t N, const double * x, double * out, void * obj_void)
+{
+    struct Obj * obj = obj_void;
+    size_t dim = obj->dim;
     
-    assign_pointer(obj,d,pyF,pyParams);
+    npy_intp dims[2];
+    dims[0] = N;
+    dims[1] = dim;
+    
+    PyObject * pyX = PyArray_SimpleNewFromData(N,dims,NPY_DOUBLE,(double*)x);
+    PyObject * arglist = PyTuple_Pack(2,pyX,obj->params);
+    PyObject * pyResult = PyObject_CallObject(obj->f,arglist);
+    PyArrayObject * arr = (PyArrayObject*)PyArray_ContiguousFromAny(pyResult,NPY_DOUBLE,1,1);
+    
+    size_t ndims = (size_t)PyArray_NDIM(arr);
+    if (ndims > 1){
+        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return a flattened (1d) array\n");
+        return 1;
+    }
+    npy_intp * dimss  = (npy_intp*)PyArray_DIMS(arr);
+
+    if ((size_t)dimss[0] != N){
+        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return an array with the same number of rows as input\n");
+        return 1;        
+    }
+    
+    double * vals = (double*)PyArray_DATA(arr);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = vals[ii];
+    }
+
+    Py_XDECREF(arr);
+    Py_XDECREF(arglist);
+    Py_XDECREF(pyResult);
+    return 0;
+}
+
+static PyObject * eval_test_5d(PyObject * self, PyObject * args)
+{
+    PyObject* pyObj;
+
+    if(!PyArg_ParseTuple(args,"O",&pyObj, NULL)) return NULL;
+    
+    size_t N = 2;
+    void* objPtr = PyCapsule_GetPointer(pyObj,NULL);
+    struct Obj * obj = objPtr;
+        
+    double pt[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
+    double out[5];
+
+    int res = eval_py_obj(N,pt,out,obj);
+    if (res == 1){
+        return NULL;
+    }
     return Py_None;
 }
 
 
-double eval( double a, double b, PyObject* pyFunction, PyObject* pyParams ) {
-    PyObject* pyA = PyFloat_FromDouble(a);
-    PyObject* pyB = PyFloat_FromDouble(b);
-
-    PyObject* pyResult = PyObject_CallFunctionObjArgs(pyFunction,pyA,pyB,pyParams,NULL);
-
-    double result = PyFloat_AsDouble(pyResult);
-
-    Py_XDECREF(pyA);
-    Py_XDECREF(pyB);
-    Py_XDECREF(pyResult);
-
-    return result;
-}
-
-
-double call_obj(double a, double b, struct Obj * obj)
-{
-    return eval(a,b,obj->f,obj->params);	
-}
-
-/* static PyObject* pycall_obj(PyObject* self, PyObject* args) { */
-/*     PyObject* pyA; */
-/*     PyObject* pyB; */
-/*     PyObject* pyObj; */
-/*     if(!PyArg_ParseTuple(args,"OOO",&pyA, &pyB,&pyObj,NULL)) return NULL; */
-
-/*     double a = PyFloat_AsDouble(pyA); */
-/*     double b = PyFloat_AsDouble(pyB); */
-/*     void* objPtr = PyCapsule_GetPointer(pyObj,NULL); */
-/*     double result = call_obj(a,b,objPtr); */
-/*     PyObject *pyResult = PyFloat_FromDouble(result); */
-
-/*     Py_XDECREF(pyA); */
-/*     Py_XDECREF(pyB); */
-/*     Py_XDECREF(pyObj); */
-   
-/*     return pyResult; */
-/* } */
-
-/* static int eval_arr(size_t N, size_t dim, const double * x, double * out, PyObject* pyFunction, PyObject* pyParams ) { */
-
-/*     long int dims[2]; */
-/*     dims[0] = N; */
-/*     dims[1] = dim; */
-
-/*     /\* printf("creating pyX\n"); *\/ */
-/*     PyObject* pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(void*)x); */
-
-/*     /\* printf("Got PyX\n"); *\/ */
-/*     PyObject* pyResult = PyObject_CallFunctionObjArgs(pyFunction,pyX,pyParams,NULL); */
-
-/*     /\* printf("Got Result\n"); *\/ */
-/*     PyArrayObject * arr = (PyArrayObject*)PyArray_FROM_OTF(pyResult,NPY_DOUBLE,NPY_ARRAY_C_CONTIGUOUS); */
-
-/*     /\* printf("Converted to array\n"); *\/ */
-/*     size_t ndims = PyArray_NDIM(arr); */
-/*     if (ndims > 1){ */
-/*         fprintf(stderr, "Wrapped python function must return a flattened (1d) array\n"); */
-/*         exit(1); */
-/*     } */
-/*     npy_intp * dimss  = PyArray_DIMS(arr); */
-
-/*     if ((size_t)dimss[0] != N){ */
-/*         fprintf(stderr, "Wrapped function must return an array with the same number of rows as input\n"); */
-/*         exit(1); */
-/*     } */
-    
-/*     /\* printf("num dim = %zu\n",ndims ); *\/ */
-/*     /\* printf("nelem = %ld\n", dimss[0]); *\/ */
-
-/*     double * vals = (double*)PyArray_DATA(arr); */
-/*     for (size_t ii = 0; ii < N; ii++){ */
-/*         out[ii] = vals[ii]; */
-/*     } */
-
-/*     Py_XDECREF(pyX); */
-/*     Py_XDECREF(pyResult); */
-/*     Py_XDECREF(arr); */
-
-/*     return 0; */
-
-/* } */
-
-/* static PyObject* call_obj_test_arr(PyObject* self, PyObject* args) { */
-
-/*     PyObject* pyObj; */
-/*     if(!PyArg_ParseTuple(args,"O",&pyObj,NULL)) return NULL; */
-/*     struct Obj * obj = PyCapsule_GetPointer(pyObj,NULL); */
-
-/*     double a[5] = {0.0,2.0,3.0,4.0,5.0}; */
-/*     double y[5]; */
-/*     /\* printf("Calling eval_arr\n"); *\/ */
-/*     eval_arr(5,1,a,y,obj->f,obj->params); */
-/*     /\* printf("done Calling eval_arr\n"); *\/ */
-/*     /\* for (size_t ii = 0; ii < 5; ii++){ *\/ */
-/*     /\*     printf("y[%zu] = %G\n",ii,y[ii]); *\/ */
-/*     /\* } *\/ */
-
-/*     Py_XDECREF(pyObj); */
-
-/*     PyObject *pyResult = Py_BuildValue("i",0); */
-/*     return pyResult; */
-/* } */
-
-
-/* int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args) */
-/* { */
-/*     struct Obj * obj = args; */
-/*     int res = eval_arr(N,obj->dim,x,out,obj->f,obj->params); */
-/*     return res; */
-/* } */
-
-
-/* void destruct_fwrap(PyObject * fwrapin) */
-/* { */
-/*     void* fwrapPtr = PyCapsule_GetPointer(fwrapin,NULL); */
-/*     struct Fwrap* fwrap = (struct Fwrap*)fwrapPtr; */
-/*     fwrap_destroy(fwrap); fwrap = NULL; */
-/* } */
-
-/* static PyObject* pyfunc_to_fwrap( PyObject* self, PyObject* args ) { */
-
-/*     PyObject* pyObj; */
-/*     if(!PyArg_ParseTuple(args,"O",&pyObj,NULL)) return NULL; */
-/*     struct Obj * obj = PyCapsule_GetPointer(pyObj,NULL); */
-
-/*     struct Fwrap * fw = fwrap_create(obj->dim,"general-vec"); */
-/*     fwrap_set_fvec(fw,c3py_wrapped_eval,obj); */
-/*     PyObject* pyFW = PyCapsule_New((void*)fw,NULL,&destruct_fwrap); */
-    
-/*     return pyFW; */
-/* } */
-
-
-static PyMethodDef pycback_methods[] = {
-    {"assign",(PyCFunction)assign,METH_VARARGS,""},
-    {"alloc_cobj",(PyCFunction)alloc_cobj,METH_VARARGS,""},
-    /* {"call_obj",(PyCFunction)pycall_obj,METH_VARARGS,""}, */
-    /* {"call_obj_test_arr",(PyCFunction)call_obj_test_arr,METH_VARARGS,""}, */
-    /* {"pyfunc_to_fwrap",(PyCFunction)pyfunc_to_fwrap,METH_VARARGS,""}, */
+static struct PyMethodDef pycback_methods[] = {
+    {"assign",assign,METH_VARARGS,""},
+    {"alloc_cobj",alloc_cobj,METH_VARARGS,""},
+    {"eval_test_5d",eval_test_5d,METH_VARARGS,""},
     {NULL, NULL, 0, NULL}
 };
 
@@ -228,8 +175,9 @@ PyInit_pycback(void) {
 }
 
 #else
-void initpycback(void) {
-    Py_InitModule3("pycback",pycback_methods,"");
+PyMODINIT_FUNC
+initpycback(void) {
+    (void)Py_InitModule("pycback",pycback_methods);
     import_array();
 }
 #endif
