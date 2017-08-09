@@ -296,7 +296,7 @@ class FunctionTrain:
         
         out2 = FunctionTrain(self.dim)
         out2.opts = self.opts
-        c3a = self._build_approx_params()
+        c3a = out2._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
         out2.ft = c3.function_train_constant(shift,multiopts)
 
