@@ -305,6 +305,17 @@ int funcCheck2(size_t n, const double * x, double * out, void * args)
     return 0;
 }
 
+//5 dimensional
+int funcCheck3(size_t n, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = sin(x[ii*5 + 0] +  x[ii*5 + 1] + x[ii*5 + 2]  +  x[ii*5 + 3] +
+                      x[ii*5 + 4]);
+    }
+    return 0;
+}
+
 
 int quad2d(size_t N, const double * x,double * out, void * arg)
 {

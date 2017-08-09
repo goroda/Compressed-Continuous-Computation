@@ -72,6 +72,10 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
     (size_t len1, const double * evalnd_pt)
 };
 
+%apply (int DIM1, double* INPLACE_ARRAY1) {
+    (size_t len2, double * evalnd_out)
+};
+
 
 %rename (ft_regress_run) my_ft_regress_run;
 %exception my_ft_regress_run{
@@ -129,6 +133,31 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
     }
 %}
 %ignore function_train_eval;
+
+%rename (function_train_gradient_eval) my_function_train_gradient_eval;
+%exception my_function_train_gradient_eval{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_gradient_eval(struct FunctionTrain * ft ,size_t len1, const double* evalnd_pt,
+                                         size_t len2, double * evalnd_out){
+        if (len1 != function_train_get_dim(ft)){
+            PyErr_Format(PyExc_ValueError,
+                         "Evaluation point has incorrect dimensions (%zu) instead of %zu",
+                         len1,function_train_get_dim(ft));
+        }
+        if (len1 != len2){
+            PyErr_Format(PyExc_ValueError,
+                         "Input and outputs must be the same size: currently they are (%zu,%zu)",
+                         len1,len2);
+        }
+        
+        function_train_gradient_eval(ft,evalnd_pt,evalnd_out);
+
+    }
+%}
+%ignore function_train_gradient_eval;
 
 
 %typemap(in) size_t * ranks {

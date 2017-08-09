@@ -3917,6 +3917,7 @@ void function_train_gradient_eval(const struct FunctionTrain * ft,
 
     backind = 0;
     out[backind] = cblas_ddot(ranks[1],grads_lr,1,evals_rl + ind_rl, 1);
+
     free(evals_lr); evals_lr = NULL;
     free(evals_rl); evals_rl = NULL;
     free(grads_lr); grads_lr = NULL;

@@ -260,6 +260,11 @@ class FunctionTrain:
     def eval(self,pt):
         return c3.function_train_eval(self.ft,pt)
 
+    def grad_eval(self,pt):
+        grad_out = np.zeros((self.dim))
+        c3.function_train_gradient_eval(self.ft,pt,grad_out)
+        return grad_out
+    
     def round(self,eps=1e-14):
         c3a = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
