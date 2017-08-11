@@ -76,6 +76,15 @@ init_rank=2
 adapt=1
 ft_adapt.build_approximation(func2,None,init_rank,verbose,adapt)
 
+ft_lin_adapt = c3py.FunctionTrain(dim)
+for ii in range(dim):
+    ft_lin_adapt.set_dim_opts(ii,"linelm",lb,ub,80)
+verbose=0
+init_rank=2
+adapt=1
+ft_lin_adapt.build_approximation(func2,None,init_rank,verbose,adapt)
+
+
 
 ft.save("saving.c3")
 ft_load = c3py.FunctionTrain(0)
@@ -103,6 +112,7 @@ ft_sgd_eval = ft_sgd.eval(test_pt)
 ft3eval = ft3.eval(test_pt)
 ft4eval = ft4.eval(test_pt)
 ft_adapt_eval = ft_adapt.eval(test_pt)
+ft_lin_adapt_eval = ft_lin_adapt.eval(test_pt)
 
 eval1s = func1(test_pt.reshape((1,dim)))
 eval2s = func2(test_pt.reshape((1,dim)))
@@ -115,6 +125,7 @@ print("Ft_loadeval =",floadeval, "Should be =",eval1s)
 print("Second function with BFGS: Fteval =",ft2eval, "Should be =",eval2s)
 print("Second function with SGD:  Fteval =",ft_sgd_eval, "Should be =",eval2s)
 print("Second function with CrossApproximation:  Fteval =",ft_adapt_eval, "Should be =",eval2s)
+print("Second function with CrossApproximation and linear elements:  Fteval =",ft_lin_adapt_eval, "Should be =",eval2s)
 # print("Second function with CV:   Fteval =",ftcveval, "Should be =",eval2s)
 print("Fteval =",ft3eval, "Should be =",eval3s)
 print("Fteval =",ft4eval, "Should be =",eval4s)

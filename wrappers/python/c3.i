@@ -114,6 +114,21 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 %}
 %ignore cross_validate_init;
 
+%rename (lin_elem_exp_aopts_alloc) my_lin_elem_exp_aopts_alloc;
+%exception my_lin_elem_exp_aopts_alloc{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    struct LinElemExpAopts * my_lin_elem_exp_aopts_alloc(size_t len1, const double* evalnd_pt){
+
+      struct LinElemExpAopts * lexp = lin_elem_exp_aopts_alloc(len1,(double*)evalnd_pt);
+      lin_elem_exp_aopts_set_nodes_copy(lexp,len1,evalnd_pt);
+      return lexp;
+    }
+%}
+%ignore lin_elem_exp_aopts_alloc;
+
 
 
 %rename (function_train_eval) my_function_train_eval;
@@ -248,6 +263,12 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
             return NULL;
         }
         $1[i] = PyFloat_AsDouble(s);
+    }
+
+    printf("size = %d\n",size);
+    printf("list_elem = ");
+    for (int ii = 0; ii < size; ii++){
+      printf("$1[%d] = %G\n",ii,$1[ii]);
     }
  }
 

@@ -44,7 +44,7 @@ class FunctionTrain:
         self.dim = c3.function_train_get_dim(ft)
         self.ft = ft
     
-    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,kernel_height_scale=1.0,kernel_width_scale=1.0,nparam=4,kernel_adapt_center=0):
+    def set_dim_opts(self,dim,ftype,lb=-1,ub=1,nparam=4,kernel_height_scale=1.0,kernel_width_scale=1.0,kernel_adapt_center=0):
 
         if self.opts[dim] is not None:
             raise AttributeError('cannot call set_dim_opts because was already called')
@@ -63,9 +63,8 @@ class FunctionTrain:
             self.lb[dim] = -np.inf
             self.ub[dim] =  np.inf
         elif ftype == "linelm":
-            x = list(np.linspace(lb,ub,nparam))
-            print(x)
-            self.opts.insert(dim,["linelm",c3.lin_elem_exp_aopts_alloc(nparam,x)])
+            x = np.linspace(lb,ub,nparam)
+            self.opts.insert(dim,["linelm",c3.lin_elem_exp_aopts_alloc(x)])
         elif ftype == "kernel":
             x = list(np.linspace(lb,ub))
             width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
@@ -79,7 +78,6 @@ class FunctionTrain:
             c3.pw_poly_opts_set_tol(self.opts[dim][1],1e-6)
             c3.pw_poly_opts_set_minsize(self.opts[dim][1],(ub-lb)/nregions)
             c3.pw_poly_opts_set_nregions(self.opts[dim][1],nregions)
-
         else:
             raise AttributeError('No options can be specified for function type ' + ftype)
 
@@ -105,7 +103,7 @@ class FunctionTrain:
             
         return c3a
             
-    def _assemble_cross_args(self,verbose,init_rank):
+    def _assemble_cross_args(self,verbose,init_rank,maxrank=10,cross_tol=1e-8,round_tol=1e-8):
 
         start_fibers = c3.malloc_dd(self.dim)
 
@@ -116,9 +114,10 @@ class FunctionTrain:
 
         c3.c3approx_init_cross(c3a,init_rank,verbose,start_fibers);
         c3.c3approx_set_verbose(c3a,verbose);
-        c3.c3approx_set_cross_tol(c3a,1e-8);
+        c3.c3approx_set_cross_tol(c3a,cross_tol);
         c3.c3approx_set_cross_maxiter(c3a,5); 
-        c3.c3approx_set_round_tol(c3a,1e-5);
+        c3.c3approx_set_round_tol(c3a,round_tol);
+        c3.c3approx_set_adapt_maxrank_all(c3a,maxrank);
 
         c3.free_dd(self.dim,start_fibers)
         return c3a
@@ -145,7 +144,7 @@ class FunctionTrain:
             self.ranks[self.dim] = 1
 
 
-    def build_approximation(self,f,fargs,init_rank,verbose,adapt):
+    def build_approximation(self,f,fargs,init_rank,verbose,adapt,maxrank=10,cross_tol=1e-8,round_tol=1e-8):
 
         fobj = pcb.alloc_cobj()
         pcb.assign(fobj,self.dim,f,fargs)
@@ -154,7 +153,10 @@ class FunctionTrain:
         # print("created wrapper")
         c3.fwrap_set_pyfunc(fw,fobj)
         # print("wrapped function")
-        c3a = self._assemble_cross_args(verbose,init_rank)
+        c3a = self._assemble_cross_args(verbose,init_rank,
+                                        maxrank=maxrank,
+                                        cross_tol=cross_tol,
+                                        round_tol=round_tol)
         # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a,fw,adapt)
 
