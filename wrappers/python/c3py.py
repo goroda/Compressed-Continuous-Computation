@@ -9,6 +9,7 @@ import atexit
 
 class FunctionTrain(object):
 
+    
     def __init__(self,din):
 
         self.dim = din
@@ -25,7 +26,7 @@ class FunctionTrain(object):
     def copy(self):
         ft_out = FunctionTrain(self.dim)
         ft_out.ft = c3.function_train_copy(self.ft)
-        ft_out.opts = copy.deepcopy(self.ft.opts)
+        ft_out.opts = copy.deepcopy(self.opts)
         return ft_out
 
     def save(self,filename):
@@ -376,7 +377,7 @@ class FunctionTrain(object):
         ft2 = c3.function_train_constant(shift, multiopts)
 
         ft_out = FunctionTrain(self.dim)
-        ft_out.opts = copy.deepcopy(ft_out.opts)
+        ft_out.opts = copy.deepcopy(self.opts)
         ft_out.ft = c3.function_train_sum(ft1,ft2)
 
         c3.function_train_free(ft1)
