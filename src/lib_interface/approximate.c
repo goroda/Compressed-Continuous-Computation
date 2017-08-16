@@ -137,8 +137,9 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
         }
     }
     else if (type == REGRESS){
-        assert (1 == 0);
-        /* c3a->reg = ft_regress_alloc(dim,c3a->fapp); */
+        c3a->reg = NULL;
+    /*     /\* assert (1 == 0); *\/ */
+    /*     /\* c3a->reg = ft_regress_alloc(dim,c3a->fapp); *\/ */
     }
     else{
         fprintf(stderr,"Unknown type %d for c3approx\n",type);
@@ -160,6 +161,7 @@ void c3approx_destroy(struct C3Approx * c3a)
         fiber_opt_args_free(c3a->fopt); c3a->fopt = NULL;
 
         if (c3a->type == CROSS){
+            
             ft_cross_args_free(c3a->fca); c3a->fca = NULL;
             if (c3a->isl != NULL){
                 for (size_t ii = 0; ii < c3a->dim; ii++){
@@ -175,8 +177,8 @@ void c3approx_destroy(struct C3Approx * c3a)
             }
         }
         else if (c3a->type == REGRESS){
-            assert (1 == 0);
-            /* ft_regress_free(c3a->reg); c3a->reg = NULL; */
+            /* assert (1 == 0); */
+            ft_regress_free(c3a->reg); c3a->reg = NULL;
         }
         function_train_free(c3a->ftref); c3a->ftref = NULL;
         free(c3a); c3a = NULL;

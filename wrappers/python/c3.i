@@ -77,6 +77,14 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 };
 
 
+// Python Memory Management
+%newobject function_train_alloc;
+struct FunctionTrain * function_train_alloc(size_t);
+%delobject function_train_free;
+void function_train_free(struct FunctionTrain *);
+
+
+// Modified Python Interface
 %rename (ft_regress_run) my_ft_regress_run;
 %exception my_ft_regress_run{
     $action
