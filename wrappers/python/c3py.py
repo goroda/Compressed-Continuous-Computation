@@ -56,8 +56,9 @@ class FunctionTrain(object):
         o['lb'] = lb
         o['ub'] = ub
         o['nparam'] = nparam
-        o['kernel_height_scale'] = 1.0
-        o['kernel_adapt_center'] = 0.0
+        o['kernel_height_scale'] = kernel_height_scale
+        o['kernel_width_scale'] = kernel_width_scale
+        o['kernel_adapt_center'] = kernel_adapt_center
         self.opts.insert(dim, o)
 
     def __convert_opts_to_c3_form__(self):
@@ -69,8 +70,8 @@ class FunctionTrain(object):
             ub = self.opts[ii]['ub']
             nparam = self.opts[ii]['nparam']
             kernel_height_scale = self.opts[ii]['kernel_height_scale']
+            kernel_width_scale = self.opts[ii]['kernel_width_scale']
             kernel_adapt_center = self.opts[ii]['kernel_adapt_center']
-
             if ftype == "legendre":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.LEGENDRE))
                 c3.ope_opts_set_lb(c3_ope_opts[ii], lb)
@@ -92,17 +93,17 @@ class FunctionTrain(object):
                                                 x,
                                                 kernel_height_scale,
                                                 kernel_width_scale))
-                c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[ii][1],
+                c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[-1],
                                                        kernel_adapt_center)
             elif ftype == "piecewise":
                 nregions = 20
                 c3_ope_opts.append(c3.pw_poly_opts_alloc(c3.LEGENDRE, lb, ub))
 
-                c3.pw_poly_opts_set_maxorder(c3_ope_opts[ii][1], nparam)
-                c3.pw_poly_opts_set_coeffs_check(c3_ope_opts[ii][1], 0)
-                c3.pw_poly_opts_set_tol(c3_ope_opts[ii][1], 1e-6)
-                c3.pw_poly_opts_set_minsize(c3_ope_opts[ii][1], (ub-lb)/nregions)
-                c3.pw_poly_opts_set_nregions(c3_ope_opts[ii][1], nregions)
+                c3.pw_poly_opts_set_maxorder(c3_ope_opts[-1], nparam)
+                c3.pw_poly_opts_set_coeffs_check(c3_ope_opts[-1], 0)
+                c3.pw_poly_opts_set_tol(c3_ope_opts[-1], 1e-6)
+                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], (ub-lb)/nregions)
+                c3.pw_poly_opts_set_nregions(c3_ope_opts[-1], nregions)
             else:
                 raise AttributeError('No options can be specified for function type '
                                      + ftype)
@@ -144,9 +145,9 @@ class FunctionTrain(object):
                 c3.ope_opts_free(low_opts[ii])
             elif self.opts[ii]['type'] == "linelm":
                 c3.lin_elem_exp_aopts_free(low_opts[ii])
-            elif self.opts[ii][0] == "kernel":
+            elif self.opts[ii]['type'] == "kernel":
                 c3.kernel_approx_opts_free(low_opts[ii])
-            elif self.opts[ii][0] == "piecewise":
+            elif self.opts[ii]['type'] == "piecewise":
                 c3.pw_poly_opts_free(low_opts[ii])
             else:
                 raise AttributeError("Don't know what to do here")
