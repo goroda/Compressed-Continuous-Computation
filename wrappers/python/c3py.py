@@ -1,4 +1,5 @@
-# Compressed continuous computation in python
+""" Compressed continuous computation in python """
+
 from __future__ import print_function
 import c3
 import numpy as np
@@ -7,13 +8,13 @@ import pycback as pcb
 
 class FunctionTrain:
 
-    """ 
+    """
     Need to clean up memory
     3) multipts
 
     Handling multiopts is not ideal. Need a way to copy multiopts, right now its memory is not freed
     """
-    def __init__(self,din,filename=None):
+    def __init__(self, din, filename=None):
 
         self.dim = din
         self.opts = []
@@ -23,7 +24,7 @@ class FunctionTrain:
             self.opts.append(None)
             self.onedopts.append(None)
             self.ranks.append(1)
-            
+
         self.lb = -1.0*np.ones((din))
         self.ub = 1.0*np.ones((din))
 

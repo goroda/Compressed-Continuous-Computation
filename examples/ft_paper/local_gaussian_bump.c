@@ -23,12 +23,14 @@ void print_code_usage (FILE * stream, int exit_code)
             "                  0: piecewise polynomial  (default)\n"
             "                  1: linear element\n"
             "                  2: orthonormal polynomials\n"
+	    " -d --dim        Dimension\n"
             " -a --adaptrank  Flag whether or not to adapt rank\n"
             "                 0: no adaptation\n"
             "                 1: adaptation (default)\n"
-            " -d --dumprank2  Dump rank 2 approximation data to show univariate fibers"
+            " -r --dumprank2  Dump rank 2 approximation data to show univariate fibers\n"
             "                 0: dont dump (default)\n"
             "                 1: dump\n"
+	    " -t --tolerance  Univariate approximation tolerance\n"
             " -v --verbose    Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
             " \n\n"
             " Outputs four files\n"
@@ -52,7 +54,21 @@ double gauss(const double * x, void * arg)
     
     double center = gauss_center;
     double l = gauss_width;
-    double preexp = 1.0/(l * sqrt(M_PI*2));
+
+    // original
+    /* double preexp = 1.0/(l * sqrt(M_PI*2)); */
+
+    /* double inexp = 0.0; */
+    /* for (size_t jj = 0; jj < d; jj++){ */
+    /*     double dx = x[jj] - center; */
+    /*     inexp += dx*dx; */
+    /* } */
+    /* inexp *= -1; */
+    /* inexp /= (2.0*l*l); */
+
+    // normal
+    double preexp =  pow(2.0*M_PI * l*l,*dim);
+    preexp = 1.0/sqrt(preexp);
 
     double inexp = 0.0;
     for (size_t jj = 0; jj < d; jj++){
@@ -61,6 +77,7 @@ double gauss(const double * x, void * arg)
     }
     inexp *= -1;
     inexp /= (2.0*l*l);
+    
 
     /* printf("inexp = %3.15LE\n",inexp); */
     /* printf("d = %zu\n",d); */
@@ -75,16 +92,18 @@ double gauss(const double * x, void * arg)
 int main(int argc, char * argv[])
 {
     int next_option;
-    const char * const short_options = "hf:p:b:a:d:v:";
+    const char * const short_options = "hf:p:b:a:d:r:t:v:";
     const struct option long_options[] = {
         { "help"      , 0, NULL, 'h' },
         { "function"  , 1, NULL, 'f' },
         { "polyorder" , 1, NULL, 'p' },
         { "basis"     , 1, NULL, 'b' },
+	{ "dim"       , 1, NULL, 'd' },
         { "adaptrank" , 1, NULL, 'a' },
-        { "dumprank2" , 1, NULL, 'd' },
+        { "dumprank2" , 1, NULL, 'r' },
+	{ "tolerance" , 1, NULL, 't' },
         { "verbose"   , 1, NULL, 'v' },
-        { NULL        ,  0, NULL, 0   }
+        { NULL        ,  0, NULL, 0  }
     };
 
     size_t maxorder = 5;
@@ -93,6 +112,9 @@ int main(int argc, char * argv[])
     size_t basis = 0;
     unsigned int adapt = 1;
     unsigned int rank_2_print_funcs = 0;
+    size_t dim = 3;
+    int spec_tol = 0;
+    double tol_user = 0.0;
     program_name = argv[0];
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -109,11 +131,18 @@ int main(int argc, char * argv[])
             case 'b':
                 basis = strtoul(optarg,NULL,10);
                 break;
-             case 'd':
+	    case 'd':
+                dim = strtoul(optarg,NULL,10);
+                break;		
+            case 'r':
                 rank_2_print_funcs = strtoul(optarg,NULL,10);
                 break;
             case 'a':
                 adapt = strtoul(optarg,NULL,10);
+                break;
+	    case 't':
+	        spec_tol = 1;
+                tol_user = atof(optarg);
                 break;
             case 'v':
                 verbose = strtoul(optarg,NULL,10);
@@ -129,7 +158,7 @@ int main(int argc, char * argv[])
     } while (next_option != -1);
 
     (void)function; // silence compiler
-    size_t dim = 3;
+
 
     size_t nregion = 3;
     if (rank_2_print_funcs == 1){
@@ -220,7 +249,6 @@ int main(int argc, char * argv[])
                     
                 }
             }
-
         }
         free(x); x = NULL;
         
@@ -268,8 +296,11 @@ int main(int argc, char * argv[])
         size_t nloop = 7;
         /* double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5}; */
         double tol[7] = {1e1,1e-1,1e-3,1e-5,1e-7,1e-9,1e-11};
-
-    
+	
+	if (spec_tol == 1){
+	    nloop = 1;
+	    tol[0] = tol_user;
+	}
         fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
         for (size_t zz = 0; zz < nloop; zz++){
             if (zz > nloop){
@@ -338,7 +369,7 @@ int main(int argc, char * argv[])
             /* double intexact_ref = 1.253235e-1; */
 
     
-            double intexact;
+            double intexact = 0.0;
             if (dim == 2){
                 intexact = 0.5 * gauss_width * sqrt(M_PI/2.0) *
                     ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
@@ -346,7 +377,7 @@ int main(int argc, char * argv[])
                      (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
                       erf((gauss_center)/(sqrt(2.) * gauss_width))));
             }
-            else{
+            else if (dim == 3){
                 intexact = -0.25 * gauss_width * gauss_width * M_PI *
                     ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
                       erf((gauss_center)/(sqrt(2.) * gauss_width))) *
