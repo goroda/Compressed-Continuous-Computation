@@ -107,8 +107,9 @@ struct LinElemExpAopts * lin_elem_exp_aopts_alloc(size_t N, double * x)
     aopts->node_alloc = 0;
     aopts->nodes = x;
     aopts->lb = x[0];
-    aopts->lb = x[N-1];
-        
+    aopts->ub = x[N-1];
+
+    /* printf("in allocation: lin_elem_exp_aopts nodes = "); dprint(N,x); */
     aopts->adapt = 0;
     aopts->delta = DBL_MAX;
     aopts->hmin = DBL_MAX;
@@ -219,6 +220,33 @@ void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts * aopts,
     if (N > 0){
         aopts->nodes = nodes;
     }
+}
+
+/********************************************************//**
+    Sets new nodes for approximation options.
+    frees old ones if
+    previously allocated
+
+    \param[in,out] aopts - approximation arguments
+    \param[in]     N     - number of nodes
+    \param[in]     nodes - nodes
+*************************************************************/
+void lin_elem_exp_aopts_set_nodes_copy(struct LinElemExpAopts * aopts,
+				       size_t N, const double * nodes)
+{
+
+    if (aopts == NULL){
+        fprintf(stderr,"Must allocate LinElemExpAopts before setting nodes\n");
+        exit(1);
+    }
+    if (aopts->node_alloc == 1){
+        free(aopts->nodes); aopts->nodes = NULL;
+    }
+    aopts->num_nodes = N;
+    aopts->node_alloc = 1;
+    aopts->nodes = calloc_double(N);
+    memmove(aopts->nodes,nodes,N*sizeof(double));
+
 }
 
 /********************************************************//**
@@ -1689,6 +1717,7 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         lexp->nodes = calloc_double(N);
         lexp->coeff = calloc_double(N);
 
+	/* printf("in approx: lin_elem_exp_aopts nodes = "); dprint(N,opts->nodes); */
         // copy nodes from options
         memmove(lexp->nodes,opts->nodes,N*sizeof(double));
 
@@ -1697,7 +1726,14 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         /* dprint(N,lexp->nodes); */
         fwrap_eval(N,lexp->nodes,lexp->coeff,f);
 
-        assert (fabs(lexp->nodes[0]-opts->nodes[0])<1e-15);
+	if (fabs(lexp->nodes[0] - opts->nodes[0]) > 1e-15){
+	    fprintf(stderr, "In lin_elem_exp_approx\n");
+  	    fprintf(stderr,"N nodes %zu\n",N);
+	    fprintf(stderr,"First approx_opt_node is %G\n",opts->nodes[0]);
+	    fprintf(stderr,"First expansion opt_node is %G\n",lexp->nodes[0]);
+	    exit(1);
+	}
+
         /* printf("cannot evaluate them"); */
     }
     else{

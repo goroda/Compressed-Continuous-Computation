@@ -155,6 +155,7 @@ size_t ft_mem_space_get_incr(struct FTMemSpace * ftmem)
 ***************************************************************/
 struct FunctionTrain * function_train_alloc(size_t dim)
 {
+    /* printf("Allocating Function Train\n"); */
     struct FunctionTrain * ft = NULL;
     if ( NULL == (ft = malloc(sizeof(struct FunctionTrain)))){
         fprintf(stderr, "failed to allocate memory for function train.\n");
@@ -178,6 +179,8 @@ struct FunctionTrain * function_train_alloc(size_t dim)
     ft->evaldd2 = NULL;
     ft->evaldd3 = NULL;
     ft->evaldd4 = NULL;
+
+    /* printf("Done Allocating Function Train\n"); */
     return ft;
 }
 
@@ -212,7 +215,9 @@ struct FunctionTrain * function_train_copy(const struct FunctionTrain * a)
 **************************************************************/
 void function_train_free(struct FunctionTrain * ft)
 {
+    /* printf("\t Freeing Function Train\n"); */
     if (ft != NULL){
+        /* printf("\t\t FT is not null\n"); */
         free(ft->ranks);
         ft->ranks = NULL;
         size_t ii;
@@ -233,6 +238,7 @@ void function_train_free(struct FunctionTrain * ft)
         free_dd(ft->dim,ft->evaldd4);     ft->evaldd4 = NULL;
         free(ft); ft = NULL;
     }
+    /* printf("\t\tDone Freeing Function Train\n"); */
 }
 
 /***********************************************************//**
@@ -3917,6 +3923,7 @@ void function_train_gradient_eval(const struct FunctionTrain * ft,
 
     backind = 0;
     out[backind] = cblas_ddot(ranks[1],grads_lr,1,evals_rl + ind_rl, 1);
+
     free(evals_lr); evals_lr = NULL;
     free(evals_rl); evals_rl = NULL;
     free(grads_lr); grads_lr = NULL;
