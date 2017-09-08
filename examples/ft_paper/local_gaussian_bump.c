@@ -23,14 +23,14 @@ void print_code_usage (FILE * stream, int exit_code)
             "                  0: piecewise polynomial  (default)\n"
             "                  1: linear element\n"
             "                  2: orthonormal polynomials\n"
-	    " -d --dim        Dimension\n"
+            " -d --dim        Dimension\n"
             " -a --adaptrank  Flag whether or not to adapt rank\n"
             "                 0: no adaptation\n"
             "                 1: adaptation (default)\n"
             " -r --dumprank2  Dump rank 2 approximation data to show univariate fibers\n"
             "                 0: dont dump (default)\n"
             "                 1: dump\n"
-	    " -t --tolerance  Univariate approximation tolerance\n"
+            " -t --tolerance  Univariate approximation tolerance\n"
             " -v --verbose    Output words (default 0), 1 then show CVs, 2 then show opt progress.\n"
             " \n\n"
             " Outputs four files\n"
@@ -297,10 +297,10 @@ int main(int argc, char * argv[])
         /* double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5}; */
         double tol[7] = {1e1,1e-1,1e-3,1e-5,1e-7,1e-9,1e-11};
 	
-	if (spec_tol == 1){
-	    nloop = 1;
-	    tol[0] = tol_user;
-	}
+        if (spec_tol == 1){
+            nloop = 1;
+            tol[0] = tol_user;
+        }
         fprintf(stdout, "Dim Tol Exact Approx Nvals AbsError \n");
         for (size_t zz = 0; zz < nloop; zz++){
             if (zz > nloop){
@@ -349,11 +349,13 @@ int main(int argc, char * argv[])
     
 
             struct C3Approx * c3a = c3approx_create(CROSS,dim);
-            size_t rank = 2;
+            /* size_t rank = 2; */
+            size_t rank = 1;
             double ** start = malloc_dd(dim);
             for (size_t kk= 0; kk < dim; kk++){
                 c3approx_set_approx_opts_dim(c3a,kk,qmopts);
-                start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank);
+                /* start[kk] = linspace(gauss_lb+0.1,gauss_ub-0.1,rank); */
+                start[kk] = linspace(0.2, 0.2, rank);
             }
             c3approx_init_cross(c3a,rank,verbose,start);
             c3approx_set_adapt_kickrank(c3a,1);
