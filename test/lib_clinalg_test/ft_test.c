@@ -166,10 +166,68 @@ void Test_function_train_grad_eval2(CuTest * tc)
     CuAssertDblEquals(tc, 0.0, (grad_eval[2]-g3_should)/g3_should,1e-6);
     CuAssertDblEquals(tc, 0.0, (grad_eval[3]-g4_should)/g4_should,2e-6);
     
-
     
     /* CuAssertDblEquals(tc, pt[3], grad_eval[2],1e-12); */
     /* CuAssertDblEquals(tc, pt[2], grad_eval[3],1e-12); */
+    
+    function_train_free(ft); ft = NULL; 
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+}
+
+void Test_function_train_grad_eval3(CuTest * tc)
+{
+    printf("Testing Function: function_train_gradient_eval (3)\n");
+    
+    size_t dim = 5;    
+    struct Fwrap * fw = fwrap_create(dim,"general-vec");
+    fwrap_set_fvec(fw,funcCheck3,NULL);
+    // set function monitor
+
+    double lb = -1.0;
+    double ub = 1.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);    
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+        start[ii] = linspace(lb,ub,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a,1e-12);
+    c3approx_set_round_tol(c3a,1e-12);
+    c3approx_set_cross_maxiter(c3a,12);
+    struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
+
+    /* iprint_sz(dim+1,function_train_get_ranks(ft)); */
+    double grad_eval[5];
+    double pt[5] = {-1.39480E-01, -3.89252E-01, -1.31999E-01, -8.02793E-01, 8.31607E-01};
+    function_train_gradient_eval(ft,pt,grad_eval);
+
+    double g_should = cos(pt[0]+pt[1]+pt[2]+pt[3]+pt[4]);
+    for (size_t ii = 0; ii < dim; ii++){
+        CuAssertDblEquals(tc,g_should,grad_eval[ii],1e-4);
+    }
+
+    size_t N = 100;
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double eval_ft = function_train_eval(ft,pt);
+        double eval_true;
+        funcCheck3(1,pt,&eval_true,NULL);
+        CuAssertDblEquals(tc,eval_true,eval_ft,1e-5);
+    }
+    
     
     function_train_free(ft); ft = NULL; 
     fwrap_destroy(fw);
@@ -2209,6 +2267,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_function_train_grad_eval);
     SUITE_ADD_TEST(suite, Test_function_train_grad_eval2);
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval3);
     SUITE_ADD_TEST(suite, Test_function_train_initsum);
     SUITE_ADD_TEST(suite, Test_function_train_linear);
     SUITE_ADD_TEST(suite, Test_function_train_quadratic);
@@ -2230,7 +2289,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1_eval_fiber);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm2);
-    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm3);        
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm3);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);

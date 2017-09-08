@@ -72,7 +72,19 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
     (size_t len1, const double * evalnd_pt)
 };
 
+%apply (int DIM1, double* INPLACE_ARRAY1) {
+    (size_t len2, double * evalnd_out)
+};
 
+
+// Python Memory Management
+%newobject function_train_alloc;
+struct FunctionTrain * function_train_alloc(size_t);
+%delobject function_train_free;
+void function_train_free(struct FunctionTrain *);
+
+
+// Modified Python Interface
 %rename (ft_regress_run) my_ft_regress_run;
 %exception my_ft_regress_run{
     $action
@@ -110,6 +122,21 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 %}
 %ignore cross_validate_init;
 
+%rename (lin_elem_exp_aopts_alloc) my_lin_elem_exp_aopts_alloc;
+%exception my_lin_elem_exp_aopts_alloc{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    struct LinElemExpAopts * my_lin_elem_exp_aopts_alloc(size_t len1, const double* evalnd_pt){
+
+      struct LinElemExpAopts * lexp = lin_elem_exp_aopts_alloc(len1,(double*)evalnd_pt);
+      lin_elem_exp_aopts_set_nodes_copy(lexp,len1,evalnd_pt);
+      return lexp;
+    }
+%}
+%ignore lin_elem_exp_aopts_alloc;
+
 
 
 %rename (function_train_eval) my_function_train_eval;
@@ -129,6 +156,31 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
     }
 %}
 %ignore function_train_eval;
+
+%rename (function_train_gradient_eval) my_function_train_gradient_eval;
+%exception my_function_train_gradient_eval{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_gradient_eval(struct FunctionTrain * ft ,size_t len1, const double* evalnd_pt,
+                                         size_t len2, double * evalnd_out){
+        if (len1 != function_train_get_dim(ft)){
+            PyErr_Format(PyExc_ValueError,
+                         "Evaluation point has incorrect dimensions (%zu) instead of %zu",
+                         len1,function_train_get_dim(ft));
+        }
+        if (len1 != len2){
+            PyErr_Format(PyExc_ValueError,
+                         "Input and outputs must be the same size: currently they are (%zu,%zu)",
+                         len1,len2);
+        }
+        
+        function_train_gradient_eval(ft,evalnd_pt,evalnd_out);
+
+    }
+%}
+%ignore function_train_gradient_eval;
 
 
 %typemap(in) size_t * ranks {
@@ -220,6 +272,12 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
         }
         $1[i] = PyFloat_AsDouble(s);
     }
+
+    /* printf("size = %d\n",size); */
+    /* printf("list_elem = "); */
+    /* for (int ii = 0; ii < size; ii++){ */
+    /*   printf("$1[%d] = %G\n",ii,$1[ii]); */
+    /* } */
  }
 
 %typemap(freearg) (double * onedx){
