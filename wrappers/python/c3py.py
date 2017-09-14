@@ -204,7 +204,8 @@ class FunctionTrain(object):
                          opt_absxtol=1e-30, opt_maxiter=2000, opt_sgd_learn_rate=1e-3,
                          adaptrank=0, roundtol=1e-5, maxrank=10, kickrank=2,
                          kristoffel=False, regweight=1e-7, cvnparam=None,
-                         cvregweight=None, kfold=5, cvverbose=0):
+                         cvregweight=None, kfold=5, cvverbose=0,
+                         norm_ydata=False):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -280,20 +281,33 @@ class FunctionTrain(object):
             c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
             c3.cv_opt_grid_add_param(cvgrid, "reg_weight", len(cvregeight), list(cvnparam))
 
+        yuse = ydata
+        if norm_ydata is True:
+            vmin = np.min(ydata)
+            vmax = np.max(ydata)
+            vdiff = vmax - vmin
+            assert (vmax - vmin) > 1e-14
+            yuse = ydata / vdiff - vmin / vdiff
 
         if cvgrid is not None:
             #print("Cross validation is not working yet!\n")
             c3.cv_opt_grid_set_verbose(cvgrid, cvverbose)
 
-            cv = c3.cross_validate_init(self.dim, xdata.flatten(order='C'), ydata, kfold, 0)
+            cv = c3.cross_validate_init(self.dim, xdata.flatten(order='C'), yuse, kfold, 0)
             c3.cross_validate_grid_opt(cv, cvgrid, reg, optimizer)
             c3.cv_opt_grid_free(cvgrid)
             c3.cross_validate_free(cv)
 
 
         # print("Run regression")
-        self.ft = c3.ft_regress_run(reg, optimizer, xdata.flatten(order='C'), ydata)
+        self.ft = c3.ft_regress_run(reg, optimizer, xdata.flatten(order='C'), yuse)
         # print("Done!")
+
+
+        if norm_ydata is True: # need to unnormalize
+            ft_use = self.scale_and_shift(vdiff, vmin, c3_pointer=True)
+            c3.function_train_free(self.ft)
+            self.ft = ft_use
 
         c3.ft_regress_free(reg)
         c3.c3opt_free(optimizer)
@@ -388,7 +402,7 @@ class FunctionTrain(object):
         """ f <- a*f"""
         c3.function_train_scale(self.ft, a)
 
-    def scale_and_shift(self, scale, shift, eps=1e-14):
+    def scale_and_shift(self, scale, shift, eps=1e-14, c3_pointer=False):
 
         c3a, onedopts, low_opts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
@@ -407,7 +421,12 @@ class FunctionTrain(object):
 
         c3.function_train_round(ft_out.ft, eps, multiopts)
         self._free_approx_params(c3a, onedopts, low_opts)
-        return ft_out
+
+        if c3_pointer is True:
+            ft_ret = c3.function_train_copy(ft_out.ft)
+            return ft_ret
+        else:
+            return ft_out
 
     def norm2(self):
         return c3.function_train_norm2(self.ft)
