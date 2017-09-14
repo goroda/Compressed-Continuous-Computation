@@ -29,6 +29,7 @@ c3 = Extension('_c3',
                 undef_macros = [],
                 language='c',
                 library_dirs = ['../../lib'],
+                # library_dirs = ['/Users/aagorod/Software/c3/lib'],
                 libraries = ['c3'],
                 extra_compile_args = ['-std=c99'],
                 )

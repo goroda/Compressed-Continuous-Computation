@@ -12,23 +12,27 @@ The Compressed Continuous Computation (C3) package is intended to make it easy t
 * Addition
 * Rounding 
 * Computing Jacobians and Hessians
+* UQ
+  1) Expectations and Variances
+  2) Sobol sensitivities
 
 In addition to the above capabilities, which are unique to the C3 package, I also have general optimization routines including
 * BFGS
 * LBFGS
 * Gradient descent
+* Stochastic Gradient with ADAM 
 
 
 For more details see the website at 
 
 http://www.alexgorodetsky.com/c3/html/
 
-
 ## Installation / Getting started
 
 The dependencies for this code are
    1) BLAS
    2) LAPACK
+   3) SWIG (if building non-C interfaces)
 
 ```
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
@@ -48,7 +52,7 @@ make install
 
 ### Python interface
 
-I have created a simple python interface to the library. It has an interface to some simple operations. This library requires SWIG. To compile and install the python wrappers see the CMake option MAKE_PYTHON_WRAPPERS below.
+I have created a partial python interface to the library. This library requires SWIG. To compile and install the python wrappers see the CMake option MAKE_PYTHON_WRAPPERS below. 
 
 The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
 
@@ -74,7 +78,9 @@ python pytest.py
 #### BUILD_STATIC_LIB
 Default: `OFF'
 
-Using this option can toggle whether or not static or shared libraries should be built
+Using this option can toggle whether or not static or shared libraries should be built.
+
+** Note: This option cannot be set to ON if building the python wrapper **
 
 #### BUILD_SUB_LIBS
 Default: `OFF'
@@ -93,11 +99,10 @@ make
 make PyWrapper
 ```
 
-
 ## Systems I have tested on
 
-Mac OS X with clang
-Ubuntu with gcc
+Mac OS X with clang version 8.0
+Ubuntu with gcc version 5.0
 
 ## Coding practices
 
