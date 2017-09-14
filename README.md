@@ -13,7 +13,7 @@ The Compressed Continuous Computation (C3) package is intended to make it easy t
 * Rounding 
 * Computing Jacobians and Hessians
 * UQ
-  1) Expectations and Variances
+  1) Expectation and variance
   2) Sobol sensitivities
 
 In addition to the above capabilities, which are unique to the C3 package, I also have general optimization routines including
@@ -34,7 +34,7 @@ The dependencies for this code are
    2) LAPACK
    3) SWIG (if building non-C interfaces)
 
-```
+``` shell
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
 cd c3
 mkdir build
@@ -45,7 +45,7 @@ make
 
 This will install all shared libraries into c3/lib. The main shared library is libc3, the rest are all submodules. To install to a particular location use
 
-```
+``` shell
 cmake .. -DCMAKE_INSTALL_PREFIX=/your/choice
 make install
 ```
@@ -57,20 +57,19 @@ I have created a partial python interface to the library. This library requires 
 The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
 
 To run an example in python first make sure that the c3 library is on your path. For example, do
-```
+``` shell
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:<path_to_c3_lib>
 ```
 on a Linux system, or 
-```
+``` shell
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:<path_to_c3_lib>
 ```
 on Mac OS X. For example, if the library is installed in a default location the path would be  /path_to_c3/lib.
 
 Then, one can run the examples by
-```
+``` shell
 cd wrappers/python
 python pytest.py
-
 ```
 
 ## Configuration Options
@@ -92,17 +91,16 @@ Default: `OFF'
 
 Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html).
 
-After specifying this option one can build the python modules using
-
-```
+After specifying this option, the commands to compile the library and wrappers are
+``` shell
 make
 make PyWrapper
 ```
 
 ## Systems I have tested on
 
-Mac OS X with clang version 8.0
-Ubuntu with gcc version 5.0
+1) Mac OS X with clang version 8.0  
+2) Ubuntu with gcc version 5.0
 
 ## Coding practices
 
@@ -113,13 +111,9 @@ I aim to document (with Doxygen) every function available to the user and provid
 Please open a Github issue to ask a question, report a bug, or to request features.
 To contribute, fork the repository and setup a branch.
 
-Author: Alex A. Gorodetsky
-
-Contact: goroda@mit.edu
-
-Copyright (c) 2014-2016, Massachusetts Institute of Technology
-
-Copyright (c) 2016-2017, Sandia National Laboratories
-
+Author: Alex A. Gorodetsky  
+Contact: goroda@mit.edu  
+Copyright (c) 2014-2016, Massachusetts Institute of Technology  
+Copyright (c) 2016-2017, Sandia National Laboratories  
 License: BSD
 
