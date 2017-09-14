@@ -273,11 +273,11 @@ void function_train_free(struct FunctionTrain *);
         $1[i] = PyFloat_AsDouble(s);
     }
 
-    printf("size = %d\n",size);
-    printf("list_elem = ");
-    for (int ii = 0; ii < size; ii++){
-      printf("$1[%d] = %G\n",ii,$1[ii]);
-    }
+    /* printf("size = %d\n",size); */
+    /* printf("list_elem = "); */
+    /* for (int ii = 0; ii < size; ii++){ */
+    /*   printf("$1[%d] = %G\n",ii,$1[ii]); */
+    /* } */
  }
 
 %typemap(freearg) (double * onedx){
