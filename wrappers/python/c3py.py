@@ -45,7 +45,8 @@ class FunctionTrain(object):
         self.ft = ft
 
     def set_dim_opts(self, dim, ftype, lb=-1, ub=1, nparam=4,
-                     kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0):
+                     kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0,
+                     lin_elem_nodes=None):
         """ Set approximation options per dimension """
 
         if self.opts[dim] is not None:
@@ -59,6 +60,15 @@ class FunctionTrain(object):
         o['kernel_height_scale'] = kernel_height_scale
         o['kernel_width_scale'] = kernel_width_scale
         o['kernel_adapt_center'] = kernel_adapt_center
+        if lin_elem_nodes is not None:
+            assert lin_elem_nodes.ndim == 1
+            lin_elem_nodes = np.unique(lin_elem_nodes.round(decimals=12))
+            o['nparam'] = len(lin_elem_nodes)
+            o['lb'] = lin_elem_nodes[0]
+            o['ub'] = lin_elem_nodes[-1]
+        else:
+            lin_elem_nodes = np.linspace(lb, ub, nparam)
+        o['lin_elem_nodes'] = lin_elem_nodes
         self.opts.insert(dim, o)
 
     def __convert_opts_to_c3_form__(self):
@@ -72,6 +82,7 @@ class FunctionTrain(object):
             kernel_height_scale = self.opts[ii]['kernel_height_scale']
             kernel_width_scale = self.opts[ii]['kernel_width_scale']
             kernel_adapt_center = self.opts[ii]['kernel_adapt_center']
+            lin_elem_nodes = self.opts[ii]['lin_elem_nodes']
             if ftype == "legendre":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.LEGENDRE))
                 c3.ope_opts_set_lb(c3_ope_opts[ii], lb)
@@ -83,8 +94,7 @@ class FunctionTrain(object):
                 c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
                 c3.ope_opts_set_tol(c3_ope_opts[ii], 1e-10)
             elif ftype == "linelm":
-                x = np.linspace(lb, ub, nparam)
-                c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(x))
+                c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
                 x = list(np.linspace(lb, ub))
                 width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
