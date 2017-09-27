@@ -57,8 +57,8 @@
 
 #include "lib_optimization.h"
 
-enum function_class {CONSTANT,PIECEWISE, POLYNOMIAL,
-                     CONSTELM, LINELM, RATIONAL, KERNEL};
+enum function_class {PIECEWISE, POLYNOMIAL,
+                     CONSTELM, LINELM, KERNEL};
 
 /** \struct Interval
  * \brief A pair of lower and upper bounds
@@ -73,6 +73,8 @@ struct Interval
     double ub;
 };
 
+typedef void* (*copy_t)(void*);
+    
 /** \struct GenericFunction
  * \brief Interface between the world and specific functions such as polynomials, radial
  * basis functions (future), etc (future)
@@ -95,6 +97,9 @@ struct GenericFunction {
     /* } sub_type; */
     void * f;
     void * fargs;
+
+    copy_t copy;
+    /* void (*copy)(void *); */
 };
 
 struct GenericFunction * generic_function_alloc_base(size_t);
