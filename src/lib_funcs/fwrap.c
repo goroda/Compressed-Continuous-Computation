@@ -76,8 +76,8 @@ static int eval_py_obj(size_t N, const double * x, double * out, void * obj_void
     size_t dim = obj->dim;
     
     npy_intp dims[2];
-    dims[0] = N;
-    dims[1] = dim;
+    dims[0] = (npy_intp) N;
+    dims[1] = (npy_intp) dim;
 
     // Setup inputs
     PyObject * pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(double*)x);
