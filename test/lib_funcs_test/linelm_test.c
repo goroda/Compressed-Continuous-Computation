@@ -237,7 +237,7 @@ void Test_lin_elem_exp_prod(CuTest * tc){
 
     le_t f1 = lin_elem_exp_approx(opts,fw);
     le_t f2 = lin_elem_exp_approx(opts,fw1);
-    le_t f3 = lin_elem_exp_prod(f1,f2,NULL);
+    le_t f3 = lin_elem_exp_prod(f1,f2);
     
     size_t N = 100;
     double * pts = linspace(lb,ub,N);

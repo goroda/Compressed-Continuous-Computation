@@ -1433,9 +1433,9 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 /*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
 /*     for (ii = 0; ii < dimft; ii++){ */
 /*         bds->lb[ii] =  */
-/*             generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*             generic_function_get_lb(pdf->pdf->cores[ii]->funcs[0]); */
 /*         bds->ub[ii] =  */
-/*             generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*             generic_function_get_ub(pdf->pdf->cores[ii]->funcs[0]); */
 /*     } */
 /*     if (pdf->transform == 1){ */
 /*         dimpdf = pdf->lt->dimout;    */
@@ -1500,8 +1500,8 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
     
 /*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
 /*     for (ii = 0; ii < dimft; ii++){ */
-/*         bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
-/*         bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->lb[ii] = generic_function_get_lb(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->ub[ii] = generic_function_get_ub(pdf->pdf->cores[ii]->funcs[0]); */
 /*     } */
 
 /*     double * mean = probability_density_mean(pdf); */
@@ -1548,8 +1548,8 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 /*         struct FunctionTrain * ftc = function_train_copy(pdf->pdf); */
 /*         struct FunctionTrain * xvals = function_train_alloc(dimft); */
 /*         for (ii = 0; ii < dimpdf; ii++){ */
-/*             double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]); */
-/*             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]); */
+/*             double lb = generic_function_get_lb(ftc->cores[ii]->funcs[0]); */
+/*             double ub = generic_function_get_ub(ftc->cores[ii]->funcs[0]); */
 /*             xvals->cores[ii] = qmarray_alloc(1,1); */
 /*             xvals->cores[ii]->funcs[0] =  */
 /*                 generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL); */
@@ -1609,8 +1609,8 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 
 /*     struct BoundingBox * bds = bounding_box_init_std(dimft); */
 /*     for (ii = 0; ii < dimft; ii++){ */
-/*         bds->lb[ii] = generic_function_get_lower_bound(pdf->pdf->cores[ii]->funcs[0]); */
-/*         bds->ub[ii] = generic_function_get_upper_bound(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->lb[ii] = generic_function_get_lb(pdf->pdf->cores[ii]->funcs[0]); */
+/*         bds->ub[ii] = generic_function_get_ub(pdf->pdf->cores[ii]->funcs[0]); */
 /*     } */
 
 /*     double * mean = probability_density_mean(pdf); */
@@ -1639,8 +1639,8 @@ probability_density_log_hessian_eval(struct ProbabilityDensity * pdf,
 /*         struct FunctionTrain * ftc = function_train_copy(pdf->pdf); */
 /*         struct FunctionTrain * xvals = function_train_alloc(dimft); */
 /*         for (ii = 0; ii < dimpdf; ii++){ */
-/*             double lb = generic_function_get_lower_bound(ftc->cores[ii]->funcs[0]); */
-/*             double ub = generic_function_get_upper_bound(ftc->cores[ii]->funcs[0]); */
+/*             double lb = generic_function_get_lb(ftc->cores[ii]->funcs[0]); */
+/*             double ub = generic_function_get_ub(ftc->cores[ii]->funcs[0]); */
 /*             xvals->cores[ii] = qmarray_alloc(1,1); */
 /*             xvals->cores[ii]->funcs[0] =  */
 /*                 generic_function_linear(1.0,-mean[ii],LINELM,NULL,lb,ub,NULL); */
@@ -1680,7 +1680,7 @@ double * probability_density_lb_base(struct ProbabilityDensity * pdf)
     double * lb = calloc_double(dim);
     size_t ii;
     for (ii = 0; ii < dim; ii++){
-        lb[ii] = generic_function_get_lower_bound(
+        lb[ii] = generic_function_get_lb(
                     pdf->pdf->cores[ii]->funcs[0]);
     }
     return lb;
@@ -1699,7 +1699,7 @@ double * probability_density_ub_base(struct ProbabilityDensity * pdf)
     double * ub = calloc_double(dim);
     size_t ii;
     for (ii = 0; ii < dim; ii++){
-        ub[ii] = generic_function_get_upper_bound(
+        ub[ii] = generic_function_get_ub(
                     pdf->pdf->cores[ii]->funcs[0]);
     }
     return ub;
@@ -1951,14 +1951,14 @@ double like_transform_helper(double * x, void * args)
     int outofbounds = 0;
     size_t ii;
     for (ii = 0; ii < lc->lt->dimout; ii++){
-        double lb = generic_function_get_lower_bound(lc->like->like->cores[ii]->funcs[0]);
+        double lb = generic_function_get_lb(lc->like->like->cores[ii]->funcs[0]);
         if (xnew[ii] < lb){
             xnew[ii] = lb;
             //out = 0.0;
             //outofbounds = 1;
             //break;
         }
-        double ub = generic_function_get_upper_bound(lc->like->like->cores[ii]->funcs[0]);
+        double ub = generic_function_get_ub(lc->like->like->cores[ii]->funcs[0]);
         if (xnew[ii] > ub){
             xnew[ii] = ub;
             //out = 0.0;

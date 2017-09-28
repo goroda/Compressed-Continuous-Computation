@@ -45,6 +45,7 @@
 #define PIECEWISEPOLY_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 struct PwPolyOpts;
 struct PwPolyOpts;
@@ -106,16 +107,20 @@ piecewise_poly_genorder(size_t, struct PwPolyOpts *);
 struct PiecewisePoly * 
 piecewise_poly_constant(double, struct PwPolyOpts *);
 struct PiecewisePoly * 
-piecewise_poly_linear(double, double, struct PwPolyOpts *);
+piecewise_poly_zero(struct PwPolyOpts *, int);
+
 struct PiecewisePoly * 
-piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *);
+piecewise_poly_linear(double, double, struct PwPolyOpts *);
+/* struct PiecewisePoly *  */
+/* piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *); */
+struct PiecewisePoly * piecewise_poly_quadratic(double, double, struct PwPolyOpts *);
 /* void piecewise_poly_split(struct PiecewisePoly *, double); */
 void piecewise_poly_splitn(struct PiecewisePoly *, size_t, const double *);
 
 //basic functions to extract information
 int piecewise_poly_isflat(const struct PiecewisePoly *);
-double piecewise_poly_lb(const struct PiecewisePoly *);
-double piecewise_poly_ub(const struct PiecewisePoly *);
+double piecewise_poly_get_lb(const struct PiecewisePoly *);
+double piecewise_poly_get_ub(const struct PiecewisePoly *);
 void piecewise_poly_nregions_base(size_t *,const struct PiecewisePoly *);
 size_t piecewise_poly_nregions(const struct PiecewisePoly *);
 void piecewise_poly_boundaries(const struct PiecewisePoly *,size_t *,double**,size_t *);
@@ -213,6 +218,11 @@ struct PiecewisePoly * piecewise_poly_loadtxt(FILE *);
 
 // OTHER STUFF
 size_t piecewise_poly_get_num_params(const struct PiecewisePoly *);
+int piecewise_poly_update_params(struct PiecewisePoly *, size_t, const double *);
+int piecewise_poly_param_grad_eval(const struct PiecewisePoly *, size_t, const double *, double *);
+double piecewise_poly_param_grad_eval2(const struct PiecewisePoly *, double, double *);
+int piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly *, double, double *);
+                                           
 #endif
 
 

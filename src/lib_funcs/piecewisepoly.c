@@ -117,7 +117,7 @@ int pw_eval_sum(size_t N,const double * x, double * out, void * args)
 double pw_eval_neighbor(double x, void * args){
     
     struct PwCouple * c = args;
-    double split = piecewise_poly_ub(c->a);
+    double split = piecewise_poly_get_ub(c->a);
     double out;
     if (x <= split){
         out = piecewise_poly_eval(c->a,x);
@@ -537,6 +537,25 @@ piecewise_poly_constant(double value, struct PwPolyOpts * opts)
 }
 
 /********************************************************//**
+    Return a zero function
+
+    \param[in] opts         - extra arguments depending on function_class, sub_type, etc.
+    \param[in] force_nparam - if == 1 then approximation will have the number of parameters
+                                      defined by *get_nparams, for each approximation type
+                              if == 0 then it may be more compressed
+
+    \return p - zero function
+************************************************************/
+struct PiecewisePoly * 
+piecewise_poly_zero(struct PwPolyOpts * opts, int force_nparam)
+{
+    (void)(opts);
+    (void)(force_nparam);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_zero")
+    return NULL;
+}
+
+/********************************************************//**
 *   Construct a piecewise linear function
 *
 *   \param[in] slope  - value of the slope function
@@ -558,24 +577,46 @@ piecewise_poly_linear(double slope, double offset, struct PwPolyOpts * opts)
     return p;
 }
 
-/********************************************************//**
-*   Construct a piecewise quadratic function \f$ ax^2 + bx + c \f$
-*
-*   \param[in] a    - coefficient of squared term
-*   \param[in] b    - coefficient of linear term
-*   \param[in] c    - constant term
-*   \param[in] opts - opts
-*
-*   \return p - piecewise polynomial of one interval
-*************************************************************/
-struct PiecewisePoly *
-piecewise_poly_quadratic(double a, double b, double c, struct PwPolyOpts * opts)
-{
+/* /\********************************************************\//\** */
+/* *   Construct a piecewise quadratic function \f$ ax^2 + bx + c \f$ */
+/* * */
+/* *   \param[in] a    - coefficient of squared term */
+/* *   \param[in] b    - coefficient of linear term */
+/* *   \param[in] c    - constant term */
+/* *   \param[in] opts - opts */
+/* * */
+/* *   \return p - piecewise polynomial of one interval */
+/* *************************************************************\/ */
+/* struct PiecewisePoly * */
+/* piecewise_poly_quadratic(double a, double b, double c, struct PwPolyOpts * opts) */
+/* { */
     
-    struct PiecewisePoly * p = piecewise_poly_alloc();
-    double coeff[3];
-    coeff[0] = a; coeff[1] = b; coeff[2] = c;
+/*     struct PiecewisePoly * p = piecewise_poly_alloc(); */
+/*     double coeff[3]; */
+/*     coeff[0] = a; coeff[1] = b; coeff[2] = c; */
 
+/*     p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub); */
+/*     orth_poly_expansion_approx(&pw_eval_quad_func, coeff, p->ope); */
+/*     orth_poly_expansion_round(&(p->ope)); */
+/*     return p; */
+/* } */
+
+/********************************************************//**
+*   Generate a quadratic piecewise polynomial expansion
+    a * (x-offset)^2
+*
+*   \param[in] a      - value of the slope function
+*   \param[in] offset - offset
+*   \param[in] opts   - options
+*
+*   \return quadratic polynomial
+*************************************************************/
+struct PiecewisePoly * piecewise_poly_quadratic(double a, double offset, struct PwPolyOpts * opts)
+{
+    struct PiecewisePoly * p = piecewise_poly_alloc();
+    p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
+    double coeff[3];
+    coeff[0] = a; coeff[1] = -2*a*offset; coeff[2] = a*offset*offset;
     p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
     orth_poly_expansion_approx(&pw_eval_quad_func, coeff, p->ope);
     orth_poly_expansion_round(&(p->ope));
@@ -695,13 +736,13 @@ int piecewise_poly_isflat(const struct PiecewisePoly * p)
 *
 *   \return pw lower bound
 *************************************************************/
-double piecewise_poly_lb(const struct PiecewisePoly * a)
+double piecewise_poly_get_lb(const struct PiecewisePoly * a)
 {
     if (a->leaf  == 1){
         return a->ope->lower_bound;
     }
     else{
-        return piecewise_poly_lb(a->branches[0]);
+        return piecewise_poly_get_lb(a->branches[0]);
     }
 }
 
@@ -713,14 +754,14 @@ double piecewise_poly_lb(const struct PiecewisePoly * a)
 *
 *   \return pw upper bound
 *************************************************************/
-double piecewise_poly_ub(const struct PiecewisePoly * a)
+double piecewise_poly_get_ub(const struct PiecewisePoly * a)
 {
 
     if (a->leaf == 1){
         return a->ope->upper_bound;
     }
     else{
-        return piecewise_poly_ub(a->branches[a->nbranches-1]);
+        return piecewise_poly_get_ub(a->branches[a->nbranches-1]);
     }
 
 }
@@ -794,7 +835,7 @@ piecewise_poly_boundaries(const struct PiecewisePoly * a, size_t *N,
     }
     else{
         if ( (*onNum) == 0){
-            (*nodes)[0] = piecewise_poly_lb(a);
+            (*nodes)[0] = piecewise_poly_get_lb(a);
             *onNum = 1;
             piecewise_poly_boundaries(a,N,nodes,onNum);
         }
@@ -831,7 +872,7 @@ piecewise_poly_eval(const struct PiecewisePoly * poly, double x){
     }
     else{
         for (size_t ii = 0; ii < poly->nbranches; ii++){
-            if (x < piecewise_poly_ub(poly->branches[ii])+1e-14){
+            if (x < piecewise_poly_get_ub(poly->branches[ii])+1e-14){
                 out = piecewise_poly_eval(poly->branches[ii],x);
                 break;
             }
@@ -853,12 +894,12 @@ double piecewise_poly_deriv_eval(const struct PiecewisePoly * poly, double x)
     
     double out = 0.1234567890;
     if (poly->leaf == 1){
-        out = orth_poly_expansion_deriv_eval(x,poly->ope);
+        out = orth_poly_expansion_deriv_eval(poly->ope, x);
     }
     else{
         for (size_t ii = 0; ii < poly->nbranches; ii++){
-            if (x < piecewise_poly_ub(poly->branches[ii])+1e-14){
-                out = piecewise_poly_deriv_eval(poly->branches[ii],x);
+            if (x < piecewise_poly_get_ub(poly->branches[ii])+1e-14){
+                out = piecewise_poly_deriv_eval(poly->branches[ii], x);
                 break;
             }
         }
@@ -1024,7 +1065,7 @@ double *
 piecewise_poly_real_roots(const struct PiecewisePoly * p, size_t * nkeep)
 {
     *nkeep = 0;    
-    //printf("lb = %G\n",piecewise_poly_lb(p));
+    //printf("lb = %G\n",piecewise_poly_get_lb(p));
     double * roots = piecewise_poly_rr(p,nkeep);
     
     /*
@@ -1138,8 +1179,8 @@ double piecewise_poly_absmax(const struct PiecewisePoly * p, double * x, void * 
     //printf("here!\n");
     double locfinal, valfinal;
     if ( p->leaf == 1){
-        //double lb = piecewise_poly_lb(p);
-        //double ub = piecewise_poly_ub(p);
+        //double lb = piecewise_poly_get_lb(p);
+        //double ub = piecewise_poly_get_ub(p);
         //printf("in leaf (%G,%G)\n",lb,ub);
         //if ((ub - lb) < 1000.0*DBL_EPSILON){
         //    return 0.0;
@@ -1612,11 +1653,11 @@ piecewise_poly_prod(const struct PiecewisePoly * a,
 /* { */
 /*     fprintf(stderr, "piecewise_poly_match1 implementation not complete\n"); */
 /*     exit(1); */
-/*     double lba = piecewise_poly_lb(a); */
-/*     double lbb = piecewise_poly_lb(b); */
+/*     double lba = piecewise_poly_get_lb(a); */
+/*     double lbb = piecewise_poly_get_lb(b); */
 /*     assert(fabs(lba-lbb) == 0); */
-/*     double uba = piecewise_poly_ub(a); */
-/*     double ubb = piecewise_poly_ub(b); */
+/*     double uba = piecewise_poly_get_ub(a); */
+/*     double ubb = piecewise_poly_get_ub(b); */
 /*     assert(fabs(uba-ubb) == 0); */
 
 /*     if ( (a->leaf == 1) && (b->leaf == 0) ) */
@@ -1769,8 +1810,8 @@ piecewise_poly_trim_left(struct PiecewisePoly ** a)
     }
     else if ( (*a)->down[0]->ope != NULL)  // remove the left 
     {
-        //printf("removing left lb=%G ub=%G \n", piecewise_poly_lb((*a)->left), piecewise_poly_ub((*a)->left));
-        //printf("new lb should be %G \n", piecewise_poly_lb((*a)->right));
+        //printf("removing left lb=%G ub=%G \n", piecewise_poly_get_lb((*a)->left), piecewise_poly_get_ub((*a)->left));
+        //printf("new lb should be %G \n", piecewise_poly_get_lb((*a)->right));
         poly = orth_poly_expansion_copy((*a)->down[0]->ope);
         //piecewise_poly_free( (*a)->left);
         
@@ -1788,7 +1829,7 @@ piecewise_poly_trim_left(struct PiecewisePoly ** a)
         //}
         //(*a)->left = (*a)->right->left;
         //(*a)->right = (*a)->right->right;
-       // printf("new lb = %G \n", piecewise_poly_lb(*a));
+       // printf("new lb = %G \n", piecewise_poly_get_lb(*a));
     }
     else {
         poly = piecewise_poly_trim_left( &((*a)->down[0]));
@@ -1816,8 +1857,8 @@ int piecewise_poly_check_discontinuity(struct PiecewisePoly * left,
         return 0;
     }
 
-    double ubl = piecewise_poly_ub(left);
-    double lbr = piecewise_poly_lb(right);
+    double ubl = piecewise_poly_get_ub(left);
+    double lbr = piecewise_poly_get_lb(right);
     assert(fabs(ubl-lbr) < DBL_EPSILON*100);
 
     double val1, val2;
@@ -1874,7 +1915,7 @@ piecewise_poly_merge_left(struct PiecewisePoly ** p, struct PwPolyOpts * aopts)
         disc = piecewise_poly_check_discontinuity(pnew->left, *p, 2, 1e-1);
     }
     while (disc == 0){
-        //printf("discontinuity does not exist at %G \n", piecewise_poly_ub(pnew->left));
+        //printf("discontinuity does not exist at %G \n", piecewise_poly_get_ub(pnew->left));
         struct OrthPolyExpansion * rightcut = piecewise_poly_trim_left(p);
 
         //printf("p == NULL 2 = %d\n", *p ==NULL);
@@ -1890,7 +1931,7 @@ piecewise_poly_merge_left(struct PiecewisePoly ** p, struct PwPolyOpts * aopts)
         struct PiecewisePoly * newleft = piecewise_poly_alloc();
         if (aopts == NULL){
             newleft->ope = orth_poly_expansion_approx_adapt(pw_eval_neighbor,&c,
-               rightcut->p->ptype, piecewise_poly_lb(c.a), piecewise_poly_ub(c.b), NULL);
+               rightcut->p->ptype, piecewise_poly_get_lb(c.a), piecewise_poly_get_ub(c.b), NULL);
 
         }
         else{
@@ -1900,7 +1941,7 @@ piecewise_poly_merge_left(struct PiecewisePoly ** p, struct PwPolyOpts * aopts)
             adopts.tol = aopts->epsilon;
 
             newleft->ope = orth_poly_expansion_approx_adapt(pw_eval_neighbor,&c,
-                rightcut->p->ptype, piecewise_poly_lb(c.a), piecewise_poly_ub(c.b), &adopts);
+                rightcut->p->ptype, piecewise_poly_get_lb(c.a), piecewise_poly_get_ub(c.b), &adopts);
         }
         orth_poly_expansion_free(rightcut);
         rightcut = NULL;
@@ -1919,7 +1960,7 @@ piecewise_poly_merge_left(struct PiecewisePoly ** p, struct PwPolyOpts * aopts)
     }
     //printf("p==NULL? %d\n",*p==NULL);
     if (disc == 1){
-        pnew->split = piecewise_poly_ub(pnew->left);
+        pnew->split = piecewise_poly_get_ub(pnew->left);
         pnew->right = piecewise_poly_merge_left(p,aopts);
         pnew->ope = NULL;
     }
@@ -2312,8 +2353,8 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
     double normalization = piecewise_poly_inner(pw,pw);
     /* double normalization = 1; */
 
-    double true_lb = piecewise_poly_lb(pw);
-    double true_ub = piecewise_poly_ub(pw);
+    double true_lb = piecewise_poly_get_lb(pw);
+    double true_ub = piecewise_poly_get_ub(pw);
 
     /* printf("refining (%G,%G)\n",true_lb,true_ub); */
     /* printf("number of branches = %zu\n",pw->nbranches); */
@@ -2324,8 +2365,8 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
 
 
         assert (pw->branches[ii]->leaf == 1);
-        double lb = piecewise_poly_lb(pw->branches[ii]);
-        double ub = piecewise_poly_ub(pw->branches[ii]);
+        double lb = piecewise_poly_get_lb(pw->branches[ii]);
+        double ub = piecewise_poly_get_ub(pw->branches[ii]);
         /* printf("\t refining branch %zu\n",ii); */
         /* printf("\tlb=%G,ub=%G,diff=%3.5E,minsize=%3.5E\n",lb,ub,ub-lb,aopts->minsize); */
         int refine = 0;
@@ -2597,4 +2638,93 @@ size_t piecewise_poly_get_num_params(const struct PiecewisePoly * poly)
     (void)(poly);
     NOT_IMPLEMENTED_MSG("piecewise_poly_get_num_params")
     return 0;
+}
+
+
+/********************************************************//**
+*   Update an expansion's parameters
+*            
+*   \param[in] ope     - expansion to update
+*   \param[in] nparams - number of parameters
+*   \param[in] param   - parameters
+
+*   \returns 0 if successful
+*************************************************************/
+int
+piecewise_poly_update_params(struct PiecewisePoly * ope,
+                             size_t nparams, const double * param)
+{
+    (void) (ope);
+    (void) (nparams);
+    (void) (param);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_update_params")
+    return 1;
+}
+
+/********************************************************//*
+*   Evaluate the gradient 
+*   with respect to the parameters
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     nx   - number of x points
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return 0 success, 1 otherwise
+*************************************************************/
+int piecewise_poly_param_grad_eval(
+    const struct PiecewisePoly * poly, size_t nx, const double * x, double * grad)
+{
+    (void)(poly);
+    (void)(nx);
+    (void)(x);
+    (void)(grad);
+    
+    NOT_IMPLEMENTED_MSG("piecewise_poly_param_grad_eval");
+    return 1;
+}
+
+/********************************************************//*
+*   Evaluate the gradient 
+*   with respect to the parameters
+*
+*   \param[in]     poly - polynomial expansion
+*   \param[in]     x    - location at which to evaluate
+*   \param[in,out] grad - gradient values (N,nx)
+*
+*   \return evaluation
+*************************************************************/
+double piecewise_poly_param_grad_eval2(
+    const struct PiecewisePoly * poly, double x, double * grad)
+{
+    (void)(poly);
+    (void)(x);
+    (void)(grad);
+
+    NOT_IMPLEMENTED_MSG("piecewise_poly_param_grad_eval2");
+    return 0.0;
+}
+
+/********************************************************//**
+    Take a gradient of the squared norm 
+    with respect to its parameters, and add a scaled version
+    of this gradient to *grad*
+
+    \param[in]     poly  - polynomial
+    \param[in]     scale - scaling for additional gradient
+    \param[in,out] grad  - gradient, on output adds scale * new_grad
+
+    \return  0 - success, 1 -failure
+
+************************************************************/
+int
+piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly * poly,
+                                       double scale, double * grad)
+{
+    (void)(poly);
+    (void)(scale);
+    (void)(grad);
+
+    NOT_IMPLEMENTED_MSG("piecewise_poly_param_grad_eval2");
+    return 1;
 }

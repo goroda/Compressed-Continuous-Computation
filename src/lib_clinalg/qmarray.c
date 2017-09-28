@@ -2272,8 +2272,8 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     //printf("done\n");
     //if ( r < 0){
     if ( r > 1){
-        double lb = generic_function_get_lower_bound(A->funcs[0]);
-        double ub = generic_function_get_upper_bound(A->funcs[0]);
+        double lb = generic_function_get_lb(A->funcs[0]);
+        double ub = generic_function_get_ub(A->funcs[0]);
         remove_duplicates(r, &pivi, &pivx,lb,ub);
         for (ii = 0; ii < r; ii++){
             for (jj = 0; jj < r; jj++){

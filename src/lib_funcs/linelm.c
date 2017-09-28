@@ -516,8 +516,10 @@ double * lin_elem_exp_get_params_ref(const struct LinElemExp * lexp, size_t * np
     \param[in] lexp  - expansion
     \param[in] dim   - number of parameters
     \param[in] param - parameters
+
+    \returns 0 if succesfull
 *************************************************************/
-void
+int
 lin_elem_exp_update_params(struct LinElemExp * lexp,
                            size_t dim, const double * param)
 {
@@ -526,6 +528,8 @@ lin_elem_exp_update_params(struct LinElemExp * lexp,
     for (size_t ii = 0; ii < dim; ii++){
         lexp->coeff[ii] = param[ii];
     }
+
+    return 0;
 }
     
 /********************************************************//**
@@ -1312,18 +1316,15 @@ static int leprod(size_t N, const double * x,double * out, void * arg)
     
    \param[in] f   - first function
    \param[in] g   - second function
-   \param[in] arg - extra arguments (not yet implemented)
 
    \returns product
             
    \note 
 *************************************************************/
 struct LinElemExp * lin_elem_exp_prod(const struct LinElemExp * f,
-                                      const struct LinElemExp * g,
-                                      void * arg)
+                                      const struct LinElemExp * g)
 {
 
-    (void)(arg);
     double lb = f->nodes[0] < g->nodes[0] ? g->nodes[0] : f->nodes[0];
     double ub = f->nodes[f->num_nodes-1] > g->nodes[g->num_nodes-1] ? g->nodes[g->num_nodes-1] : f->nodes[f->num_nodes-1];
 
@@ -1920,6 +1921,27 @@ lin_elem_exp_linear(double a, double b,
 }
 
 /********************************************************//**
+    Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
+
+    \param[in] a      - quadratic coefficients
+    \param[in] offset - shift of the function
+    \param[in] fc     - function class
+    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+
+    \return gf - quadratic
+*************************************************************/
+struct LinElemExp * 
+lin_elem_exp_quadratic(double a, double offset,
+                       const struct LinElemExpAopts * opts)
+{
+    (void)(a);
+    (void)(offset);
+    (void)(opts);
+    NOT_IMPLEMENTED_MSG("lin_elem_exp_quadratic");
+    return NULL;
+}
+
+/********************************************************//**
     Multiply by -1
 
     \param[in,out] f - function
@@ -2029,7 +2051,7 @@ void lin_elem_exp_scale(double a, struct LinElemExp * f)
 
     \return lower bound
 *************************************************************/
-double lin_elem_exp_lb(struct LinElemExp * f)
+double lin_elem_exp_get_lb(struct LinElemExp * f)
 {
     return f->nodes[0];
 }
@@ -2041,7 +2063,7 @@ double lin_elem_exp_lb(struct LinElemExp * f)
 
     \return upper bound
 *************************************************************/
-double lin_elem_exp_ub(struct LinElemExp * f)
+double lin_elem_exp_get_ub(struct LinElemExp * f)
 {
     return f->nodes[f->num_nodes-1];
 }

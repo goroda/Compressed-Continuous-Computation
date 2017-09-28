@@ -118,7 +118,8 @@ void Test_pw_linear(CuTest * tc){
 
 double pw_quad(double x,void * args){
     (void)(args);
-    return 1e-10 * x * x + 3.2 * x + -0.2;
+    /* return 1e-10 * x * x + 3.2 * x + -0.2; */
+    return 1e-10 * pow(x  - 1e8,2); /* x + 3.2 * x + -0.2; */
 }
 
 void Test_pw_quad(CuTest * tc){
@@ -130,7 +131,8 @@ void Test_pw_quad(CuTest * tc){
     double ub = 0.7;
     struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub);
     
-    struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,3.2,-0.2,opts);
+    /* struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,3.2,-0.2,opts); */
+    struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,1e8,opts);    
 
     // compute error
     double abs_err;
@@ -185,8 +187,8 @@ void Test_pw_approx_nonnormal(CuTest * tc){
     pw_poly_opts_set_pts(opts,N,pts);
     opoly_t pw = piecewise_poly_approx1(opts,fw);
 
-    double lb1 = piecewise_poly_lb(pw->branches[0]);
-    double ub1 = piecewise_poly_ub(pw->branches[0]);
+    double lb1 = piecewise_poly_get_lb(pw->branches[0]);
+    double ub1 = piecewise_poly_get_ub(pw->branches[0]);
     CuAssertDblEquals(tc,pts[0],lb1,1e-14);
     CuAssertDblEquals(tc,pts[1],ub1,1e-14);
 
@@ -346,8 +348,8 @@ void Test_pw_flatten(CuTest * tc){
     CuAssertDblEquals(tc,nodesb[0],lb,1e-15);
     CuAssertDblEquals(tc,nodesb[Nb-1],ub,1e-15);
     for (size_t ii = 0; ii < nregions; ii++){
-        CuAssertDblEquals(tc,nodesa[ii+1],piecewise_poly_ub(pw->branches[ii]),1e-15);
-        CuAssertDblEquals(tc,nodesa[ii],piecewise_poly_lb(pw->branches[ii]),1e-15);
+        CuAssertDblEquals(tc,nodesa[ii+1],piecewise_poly_get_ub(pw->branches[ii]),1e-15);
+        CuAssertDblEquals(tc,nodesa[ii],piecewise_poly_get_lb(pw->branches[ii]),1e-15);
     }
 
     free(nodesa); nodesa = NULL;
@@ -1289,7 +1291,7 @@ void Test_pw_trim(CuTest * tc){
     double new_lb = nodes[1];
     struct OrthPolyExpansion * temp = piecewise_poly_trim_left(&pw);
 
-    double new_lb_check = piecewise_poly_lb(pw);
+    double new_lb_check = piecewise_poly_get_lb(pw);
     CuAssertDblEquals(tc,new_lb,new_lb_check,1e-15);
 
     orth_poly_expansion_free(temp);

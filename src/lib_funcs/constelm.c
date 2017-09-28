@@ -471,16 +471,20 @@ double * const_elem_exp_get_params_ref(const struct ConstElemExp * lexp, size_t 
     \param[in] lexp  - expansion
     \param[in] dim   - number of parameters
     \param[in] param - parameters
+
+    \returns 0 if sucessful
 *************************************************************/
-void
+int
 const_elem_exp_update_params(struct ConstElemExp * lexp,
-                           size_t dim, const double * param)
+                             size_t dim, const double * param)
 {
     assert (lexp != NULL);
     assert (lexp->num_nodes == dim);
     for (size_t ii = 0; ii < dim; ii++){
         lexp->coeff[ii] = param[ii];
     }
+
+    return 0;
 }
     
 /********************************************************//**
@@ -1048,17 +1052,14 @@ int const_elem_exp_axpy(double a,
     
    \param[in] f   - first function
    \param[in] g   - second function
-   \param[in] arg - extra arguments (not yet implemented)
 
    \returns product
             
    \note 
 *************************************************************/
 struct ConstElemExp * const_elem_exp_prod(const struct ConstElemExp * f,
-                                          const struct ConstElemExp * g,
-                                          void * arg)
+                                          const struct ConstElemExp * g)
 {
-    (void)(arg);
     
     int samedisc = const_elem_sdiscp(f,g);
     struct ConstElemExp * prod = NULL;    
@@ -1288,6 +1289,48 @@ const_elem_exp_constant(double a,
 }
 
 /********************************************************//**
+    Return a linear function (NOT possible for const_elem)
+
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+    \param[in] aopts  - extra arguments depending on function_class, 
+                        sub_type, etc.
+
+    \return gf - linear function
+*************************************************************/
+struct ConstElemExp * 
+const_elem_exp_linear(double a, double offset,
+                        const struct ConstElemExpAopts * opts)
+{
+    (void)(a);
+    (void)(offset);
+    (void)(opts);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_linear");
+    return NULL;
+}
+
+/********************************************************//**
+    Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
+
+    \param[in] a      - quadratic coefficients
+    \param[in] offset - shift of the function
+    \param[in] fc     - function class
+    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+
+    \return gf - quadratic
+*************************************************************/
+struct ConstElemExp * 
+const_elem_exp_quadratic(double a, double offset,
+                        const struct ConstElemExpAopts * opts)
+{
+    (void)(a);
+    (void)(offset);
+    (void)(opts);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_quadratic");
+    return NULL;
+}
+
+/********************************************************//**
     Multiply by -1
 
     \param[in,out] f - function
@@ -1386,7 +1429,7 @@ void const_elem_exp_scale(double a, struct ConstElemExp * f)
 
     \return lower bound
 *************************************************************/
-double const_elem_exp_lb(struct ConstElemExp * f)
+double const_elem_exp_get_lb(struct ConstElemExp * f)
 {
     return f->nodes[0];
 }
@@ -1398,7 +1441,7 @@ double const_elem_exp_lb(struct ConstElemExp * f)
 
     \return upper bound
 *************************************************************/
-double const_elem_exp_ub(struct ConstElemExp * f)
+double const_elem_exp_get_ub(struct ConstElemExp * f)
 {
     return f->nodes[f->num_nodes-1];
 }

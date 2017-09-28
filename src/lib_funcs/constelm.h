@@ -101,9 +101,10 @@ struct ConstElemExp * const_elem_exp_init(size_t, double *, double *);
 struct ConstElemExp *
 const_elem_exp_create_with_params(struct ConstElemExpAopts *,
                                 size_t, const double *);
-void
+int
 const_elem_exp_update_params(struct ConstElemExp *,
-                           size_t, const double *);
+                             size_t, const double *);
+
 size_t const_elem_exp_get_params(const struct ConstElemExp *, double *);
 double * const_elem_exp_get_params_ref(const struct ConstElemExp *, size_t *);
 
@@ -135,7 +136,7 @@ double const_elem_exp_integrate_weighted(const struct ConstElemExp *);
 double const_elem_exp_inner(const struct ConstElemExp *,const struct ConstElemExp *);
 int const_elem_exp_axpy(double, const struct ConstElemExp *,struct ConstElemExp *);
 struct ConstElemExp *
-const_elem_exp_prod(const struct ConstElemExp *,const struct ConstElemExp *,void *);
+const_elem_exp_prod(const struct ConstElemExp *,const struct ConstElemExp *);
 double const_elem_exp_norm(const struct ConstElemExp *);
 double const_elem_exp_max(const struct ConstElemExp *, double *);
 double const_elem_exp_min(const struct ConstElemExp *, double *);
@@ -154,9 +155,12 @@ const_elem_exp_constant(double,
                       const struct ConstElemExpAopts *);
 struct ConstElemExp * 
 const_elem_exp_linear(double, double,
-                    const struct ConstElemExpAopts *);
-double const_elem_exp_lb(struct ConstElemExp *);
-double const_elem_exp_ub(struct ConstElemExp *);
+                      const struct ConstElemExpAopts *);
+struct ConstElemExp * 
+const_elem_exp_quadratic(double, double, const struct ConstElemExpAopts *);
+
+double const_elem_exp_get_lb(struct ConstElemExp *);
+double const_elem_exp_get_ub(struct ConstElemExp *);
 struct ConstElemExp *
 const_elem_exp_onezero(size_t, double *,
                      struct ConstElemExpAopts *);

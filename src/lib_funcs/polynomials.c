@@ -1461,6 +1461,25 @@ size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion * ope)
 }
 
 /********************************************************//**
+*   Get lower bounds
+*************************************************************/
+double orth_poly_expansion_get_lb(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->lower_bound;
+}
+
+/********************************************************//**
+*   Get upper bounds
+*************************************************************/
+double orth_poly_expansion_get_ub(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->upper_bound;
+}
+
+
+/********************************************************//**
 *   Initialize an expansion of a certain orthogonal polynomial family
 *            
 *   \param[in] ptype    - type of polynomial
@@ -1602,8 +1621,10 @@ double * orth_poly_expansion_get_params_ref(
 *   \param[in] ope     - expansion to update
 *   \param[in] nparams - number of polynomials
 *   \param[in] param   - parameters
+
+*   \returns 0 if successful
 *************************************************************/
-void
+int
 orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
                                   size_t nparams, const double * param)
 {
@@ -1634,6 +1655,7 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
             }
         }
     }
+    return 0;
 }
 
 /********************************************************//**
@@ -1849,15 +1871,15 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 /********************************************************//**
 *   Evaluate the derivative of an orthogonal polynomial expansion
 *
+*   \param[in] poly - pointer to orth poly expansion
 *   \param[in] x    - location at which to evaluate
-*   \param[in] args - pointer to orth poly expansion
+*
 *
 *   \return out - value of derivative
 *************************************************************/
-double orth_poly_expansion_deriv_eval(double x, void * args)
+double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion * poly, double x)
 {
-    assert (args != NULL);
-    struct OrthPolyExpansion * poly = args;
+    assert (poly != NULL);
     assert (poly->kristoffel_eval == 0);
 
     double x_normalized = space_mapping_map(poly->space_transform,x);
@@ -1945,7 +1967,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
         }
     }
     else{
-        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);      
+        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval_for_approx, p, out);      
     }
     return out;
 }
@@ -3407,11 +3429,10 @@ struct OrthPolyExpansion *
 orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
                          const struct OrthPolyExpansion * b)
 {
-
+    
     struct OrthPolyExpansion * c = NULL;
     double lb = a->lower_bound;
     double ub = a->upper_bound;
-
 
     enum poly_type p = a->p->ptype;
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){

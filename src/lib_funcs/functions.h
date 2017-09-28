@@ -109,7 +109,15 @@ struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
 // SINGLE IN_GENOUT
 double generic_function_integrate(const struct GenericFunction *);
 double generic_function_integrate_weighted(const struct GenericFunction *);
+
 size_t generic_function_get_num_params(const struct GenericFunction *);
+double generic_function_get_lb(const struct GenericFunction * f);
+double generic_function_get_ub(const struct GenericFunction * f);
+
+
+enum function_class generic_function_get_fc(const struct GenericFunction * f);
+
+
 
 
 void generic_function_copy_pa(const struct GenericFunction *,
@@ -231,10 +239,6 @@ void generic_function_weighted_sum_pa(double, struct GenericFunction *,
 struct GenericFunction *
 generic_function_approximate1d(enum function_class,void *,struct Fwrap *);
 
-// extraction functions
-double generic_function_get_lower_bound(const struct GenericFunction * f);
-double generic_function_get_upper_bound(const struct GenericFunction * f);
-enum function_class generic_function_get_fc(const struct GenericFunction * f);
 
 void
 generic_function_sum3_up(double, struct GenericFunction *,
@@ -336,7 +340,7 @@ void regress_1d_opts_set_initial_parameters(struct Regress1DOpts *, const double
 
 struct GenericFunction *
 generic_function_create_with_params(enum function_class,void *,size_t,const double*);
-void
+int
 generic_function_update_params(struct GenericFunction *, size_t,const double *);
 
 int generic_function_param_grad_eval(const struct GenericFunction *, size_t,

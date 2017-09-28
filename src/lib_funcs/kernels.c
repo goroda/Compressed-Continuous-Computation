@@ -898,7 +898,7 @@ kernel_expansion_init(const struct KernelApproxOpts * opts)
 /********************************************************//**
     Update the params of a kernel expansion
 *************************************************************/
-void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
+int kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
 {
 
     if (ke->include_kernel_param == 0){
@@ -917,6 +917,8 @@ void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, con
             }
         }
     }
+
+    return 0;
 }
 
 /********************************************************//**
@@ -966,6 +968,7 @@ kernel_expansion_zero(const struct KernelApproxOpts * opts, int force_param)
 
     return ke;
 }
+
 
 /********************************************************//**
     Return an approximately linear function
@@ -1017,6 +1020,40 @@ kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts *
     return ke;
 }
 
+/********************************************************//**
+    Return a constant function
+
+    \param[in] val  - value
+    \param[in] opts - options
+
+    \return ke - zero function
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_constant(double val, const struct KernelApproxOpts * opts)
+{
+    return kernel_expansion_linear(0.0, val, opts);
+}
+
+/*******************************************************//**
+    Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
+
+    \param[in] a      - quadratic coefficients
+    \param[in] offset - shift of the function
+    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+
+    \return gf - quadratic
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_quadratic(double a, double offset, void * aopts)
+{
+    (void)(a);
+    (void)(offset);
+    (void)(aopts);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_quadratic")
+    return NULL;
+}
+                           
+    
 /********************************************************//**
 *   Evaluate a kernel expansion
 *************************************************************/
@@ -1087,10 +1124,9 @@ struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion * k
 /********************************************************//**
 *   Evaluate the derivative of a kernel expansion (useful for gradients)
 *************************************************************/
-double kernel_expansion_deriv_eval(double x, void * kernin)
+double kernel_expansion_deriv_eval(const struct KernelExpansion * kern, double x)    
 {
-    assert (kernin != NULL);
-    struct KernelExpansion * kern = kernin;
+    assert (kern != NULL);
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)
     {
@@ -1102,7 +1138,7 @@ double kernel_expansion_deriv_eval(double x, void * kernin)
 /********************************************************//**
 *   Add two kernels
 *************************************************************/
-void kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelExpansion * y)
+int kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelExpansion * y)
 {
     int same_nodes_and_kernels = check_same_nodes_kernels(x,y);
 
@@ -1115,8 +1151,9 @@ void kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelEx
     else{
         fprintf(stderr, "Cannot axpy kernel expansions that have different structures\n");
         exit(1);
-            
     }
+
+    return 0;
 }
 
 /********************************************************//**
@@ -1137,6 +1174,25 @@ double kernel_expansion_integrate(struct KernelExpansion * a)
 double kernel_expansion_integrate_weighted(struct KernelExpansion * a)
 {
     return kernel_expansion_integrate(a);
+}
+
+/********************************************************//**
+   Multiply two functions
+    
+   \param[in] f   - first function
+   \param[in] g   - second function
+
+   \returns product
+            
+   \note 
+*************************************************************/
+struct KernelExpansion * kernel_expansion_prod(const struct KernelExpansion * f,
+                                               const struct KernelExpansion * g)
+{
+    (void)(f);
+    (void)(g);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_prod")
+    return NULL;
 }
 
 /********************************************************//**
