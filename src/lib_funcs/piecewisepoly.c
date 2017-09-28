@@ -47,6 +47,7 @@
 
 #include "stringmanip.h"
 #include "array.h"
+#include "futil.h"
 #include "polynomials.h"
 #include "piecewisepoly.h"
 #include "linalg.h"
@@ -966,6 +967,22 @@ piecewise_poly_integrate(const struct PiecewisePoly * poly)
         }
     }
     return out;
+}
+
+/********************************************************//**
+*   Integrate a piecewise polynomial
+*
+*   \param[in] poly  - pw polynomial to integrate
+*
+*   \return Integral of approximation
+*  
+*   \note Should make this tail recursive in the future
+*************************************************************/
+double piecewise_poly_integrate_weighted(const struct PiecewisePoly * poly)
+{
+    (void) poly;
+    NOT_IMPLEMENTED_MSG("piecewise_poly_integrate_weighted")
+    return 0.0;
 }
 
 double * piecewise_poly_rr(const struct PiecewisePoly * p, size_t * nkeep)
@@ -2573,4 +2590,11 @@ struct PiecewisePoly * piecewise_poly_loadtxt(FILE * stream)
     }
     
     return poly;
+}
+
+size_t piecewise_poly_get_num_params(const struct PiecewisePoly * poly)
+{
+    (void)(poly);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_get_num_params")
+    return 0;
 }

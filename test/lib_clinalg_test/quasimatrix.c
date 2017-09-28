@@ -227,10 +227,10 @@ void Test_quasimatrix_householder_weird_domain(CuTest * tc){
     struct Quasimatrix * Anew = qmm(Q,R,3);
     for (size_t ii = 0; ii < 3; ii++){
         struct GenericFunction * gf = quasimatrix_get_func(Anew,ii);
-        double integral = generic_function_integral(gf);
+        double integral = generic_function_integrate(gf);
 
         struct GenericFunction * g2 = quasimatrix_get_func(Acopy,ii);
-        double integral2 = generic_function_integral(g2);
+        double integral2 = generic_function_integrate(g2);
         CuAssertDblEquals(tc,integral,integral2,1e-13);
     }
 
@@ -444,10 +444,10 @@ void Test_quasimatrix_serialize(CuTest * tc){
     for (size_t ii = 0; ii < 3; ii++){
         /* printf("ii = %zu\n",ii); */
         struct GenericFunction * gf = quasimatrix_get_func(A,ii);
-        double integral = generic_function_integral(gf);
+        double integral = generic_function_integrate(gf);
         /* printf("\t Integral A = %G\n ",integral); */
         struct GenericFunction * g2 = quasimatrix_get_func(B,ii);
-        double integral2 = generic_function_integral(g2);
+        double integral2 = generic_function_integrate(g2);
         /* printf("\t Integral B= %G\n",integral,integral2); */
         CuAssertDblEquals(tc,integral,integral2,1e-13);
     }

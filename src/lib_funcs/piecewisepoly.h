@@ -128,6 +128,7 @@ void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
 void piecewise_poly_scale(double, struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_deriv(const struct PiecewisePoly *);
 double piecewise_poly_integrate(const struct PiecewisePoly *);
+double piecewise_poly_integrate_weighted(const struct PiecewisePoly *);
 double * piecewise_poly_real_roots(const struct PiecewisePoly *, size_t *);
 double piecewise_poly_max(const struct PiecewisePoly *, double *);
 double piecewise_poly_min(const struct PiecewisePoly *, double *);
@@ -209,6 +210,9 @@ piecewise_poly_savetxt(const struct PiecewisePoly *, FILE *,
                        size_t);
 struct PiecewisePoly * piecewise_poly_loadtxt(FILE *);
 
+
+// OTHER STUFF
+size_t piecewise_poly_get_num_params(const struct PiecewisePoly *);
 #endif
 
 

@@ -38,6 +38,7 @@
 /* \file kernels.h */
 /* Provides header files for kernels.c */
 
+#include <stdlib.h>
 
 double gauss_kernel_eval(double, double, double, double);
 double gauss_kernel_deriv(double, double, double, double);
@@ -88,11 +89,14 @@ kernel_expansion_linear(double, double, const struct KernelApproxOpts *);
 double kernel_expansion_eval(struct KernelExpansion *, double);
 void kernel_expansion_evalN(struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
+struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion *);
 double kernel_expansion_deriv_eval(double,void*);
 void kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
 double kernel_expansion_integrate(struct KernelExpansion *);
+double kernel_expansion_integrate_weighted(struct KernelExpansion *);
 double kernel_expansion_inner(struct KernelExpansion *, struct KernelExpansion *);
 void kernel_expansion_scale(double, struct KernelExpansion *);
+void kernel_expansion_flip_sign(struct KernelExpansion * );
 
 size_t kernel_expansion_get_num_params(const struct KernelExpansion *);
 size_t kernel_expansion_get_params(const struct KernelExpansion *, double *);

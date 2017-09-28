@@ -130,6 +130,7 @@ int
 lin_elem_exp_squared_norm_param_grad(const struct LinElemExp *,
                                      double, double *);
 double lin_elem_exp_integrate(const struct LinElemExp *);
+double lin_elem_exp_integrate_weighted(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
 int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);
 struct LinElemExp *

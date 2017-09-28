@@ -131,6 +131,7 @@ int
 const_elem_exp_squared_norm_param_grad(const struct ConstElemExp *,
                                      double, double *);
 double const_elem_exp_integrate(const struct ConstElemExp *);
+double const_elem_exp_integrate_weighted(const struct ConstElemExp *);
 double const_elem_exp_inner(const struct ConstElemExp *,const struct ConstElemExp *);
 int const_elem_exp_axpy(double, const struct ConstElemExp *,struct ConstElemExp *);
 struct ConstElemExp *

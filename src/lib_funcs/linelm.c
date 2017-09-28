@@ -52,6 +52,7 @@
 #include "stringmanip.h"
 #include "array.h"
 #include "linalg.h"
+#include "futil.h"
 #include "linelm.h"
 
 /** \struct LinElemExpAopts
@@ -938,6 +939,14 @@ double lin_elem_exp_integrate(const struct LinElemExp * f)
     return integral;
 }
 
+double lin_elem_exp_integrate_weighted(const struct LinElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("lin_elem_exp_integrate_weighted")
+    return 0.0;
+}
+
+    
 /********************************************************//**
 *   Determine if two functions have the same discretization
 *

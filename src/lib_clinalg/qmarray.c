@@ -1501,7 +1501,7 @@ double * qmarray_integrate(const struct Qmarray * a)
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
             out[ii*a->nrows + jj] = 
-                generic_function_integral(a->funcs[ii*a->nrows+jj]);
+                generic_function_integrate(a->funcs[ii*a->nrows+jj]);
         }
     }
     
@@ -1530,7 +1530,7 @@ double * qmarray_integrate_weighted(const struct Qmarray * a)
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
             out[ii*a->nrows + jj] = 
-                generic_function_integral_weighted(a->funcs[ii*a->nrows+jj]);
+                generic_function_integrate_weighted(a->funcs[ii*a->nrows+jj]);
         }
     }
     

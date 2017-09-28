@@ -119,36 +119,60 @@ generic_function_alloc(size_t dim, enum function_class fc)
     out->f = NULL;
     out->fargs = NULL;
 
-
-    switch(out->fc){
-    case PIECEWISE: out->copy = (copy_t)piecewise_poly_copy;
-    }
     return out;
 }
 
-/********************************************************//**
-    (Deep) Copy a generic function
-
-    \param[in] gf - generic function
-
-    \return generic function
-************************************************************/
-struct GenericFunction * 
-generic_function_copy(const struct GenericFunction * gf)
-{
-    struct GenericFunction * out = NULL; 
-
-    out = generic_function_alloc(gf->dim, gf->fc);
-    switch (gf->fc){
-    case PIECEWISE:  out->f = piecewise_poly_copy(gf->f);      break;
-    case POLYNOMIAL: out->f = orth_poly_expansion_copy(gf->f); break;
-    case LINELM:     out->f = lin_elem_exp_copy(gf->f);        break;
-    case CONSTELM:   out->f = const_elem_exp_copy(gf->f);      break;
-    case KERNEL:     out->f = kernel_expansion_copy(gf->f);    break;
+#define GF_SWITCH_NO_OUT(operation) \
+    switch (gf->fc){                                                    \
+    case PIECEWISE:  piecewise_poly_##operation(gf->f);      break; \
+    case POLYNOMIAL: orth_poly_expansion_##operation(gf->f); break; \
+    case LINELM:     lin_elem_exp_##operation(gf->f);        break; \
+    case CONSTELM:   const_elem_exp_##operation(gf->f);      break; \
+    case KERNEL:     kernel_expansion_##operation(gf->f);    break; \
     }
-    
-    return out;
+
+#define GF_IN_OUT(operation) \
+struct GenericFunction * generic_function_##operation(const struct GenericFunction * gf) \
+{ \
+    struct GenericFunction * out = NULL;                                       \
+    out = generic_function_alloc(gf->dim, gf->fc);                             \
+    switch (gf->fc){                                                           \
+    case PIECEWISE:  out->f = piecewise_poly_##operation(gf->f);      break;   \
+    case POLYNOMIAL: out->f = orth_poly_expansion_##operation(gf->f); break;   \
+    case LINELM:     out->f = lin_elem_exp_##operation(gf->f);        break;   \
+    case CONSTELM:   out->f = const_elem_exp_##operation(gf->f);      break;   \
+    case KERNEL:     out->f = kernel_expansion_##operation(gf->f);    break;   \
+    }                                                                          \
+    return out;                                                                \
 }
+
+#define GF_IN_GENOUT(operation, typeout, init) (                        \
+##typeout generic_function_##operation(const struct GenericFunction * gf) \
+{ \
+    ##typeout out = init;                                                   \
+    switch (gf->fc){                                                    \
+    case PIECEWISE:  out = piecewise_poly_##operation(gf->f);      break;   \
+    case POLYNOMIAL: out = orth_poly_expansion_##operation(gf->f); break;   \
+    case LINELM:     out = lin_elem_exp_##operation(gf->f);        break;   \
+    case CONSTELM:   out = const_elem_exp_##operation(gf->f);      break;   \
+    case KERNEL:     out = kernel_expansion_##operation(gf->f);    break;   \
+    }                                                                          \
+    return out;                                                                \
+})
+
+
+///////////////////////
+// IN: const Generic Function
+// OUT: Generic Function
+GF_IN_OUT(copy)   // (Deep) Copy a generic function 
+GF_IN_OUT(deriv) //  Take the derivative of a generic function
+
+///////////////////////
+// IN: const Generic Function
+// OUT: generic thing
+GF_IN_GENOUT(integrate, double, 0.0)           // Compute an integral
+GF_IN_GENOUT(integrate_weighted, double, 0.0)  // Take the derivative of a generic function
+GF_IN_GENOUT(get_num_params, size_t, 0)        // Get the number of parameters describing the generic function
 
 /********************************************************//**
     Copy a generic function to a preallocated generic function
@@ -178,13 +202,7 @@ void generic_function_copy_pa(const struct GenericFunction * gf,
 void generic_function_free(struct GenericFunction * gf){
     if (gf != NULL){
         if (gf->f != NULL) {
-            switch (gf->fc){
-            case PIECEWISE:  piecewise_poly_free(gf->f);      break;
-            case POLYNOMIAL: orth_poly_expansion_free(gf->f); break;
-            case LINELM:     lin_elem_exp_free(gf->f);        break;
-            case CONSTELM:   const_elem_exp_free(gf->f);      break;
-            case KERNEL:     kernel_expansion_free(gf->f);    break;
-            }
+            GF_SWITCH_NO_OUT(free)
             gf->f = NULL;
         }
         free(gf); gf = NULL;
@@ -436,26 +454,7 @@ generic_function_poly_randu(enum poly_type ptype,
     return gf;
 }
 
-/********************************************************//**
-    Take the derivative of a generic function
 
-    \param[in] gf - generic function
-
-    \return generic function representing the derivative
-************************************************************/
-struct GenericFunction * 
-generic_function_deriv(const struct GenericFunction * gf)
-{
-    struct GenericFunction * out = generic_function_alloc(1,gf->fc);
-    switch (gf->fc){
-    case PIECEWISE:  out->f = piecewise_poly_deriv(gf->f);      break;
-    case POLYNOMIAL: out->f = orth_poly_expansion_deriv(gf->f); break;
-    case LINELM:     out->f = lin_elem_exp_deriv(gf->f);        break;
-    case CONSTELM:   out->f = const_elem_exp_deriv(gf->f);      break;
-    case KERNEL: assert(1==0);                                  break;
-    }
-    return out;
-}
 
 /********************************************************//**
     Evaluate the derivative of a generic function
@@ -849,28 +848,6 @@ double generic_function_norm(const struct GenericFunction * f){
 }
 
  /********************************************************//**
- *   Compute the integral of a generic function
- *
- *   \param[in] f - generic function
- *
- *   \return out - integral
- ************************************************************/
- double generic_function_integral(const struct GenericFunction * f){
-     
-     assert (f != NULL);
-     /* printf("integrating fc = %d\n",f->fc); */
-     double out = 0.0;
-     switch (f->fc){
-     case PIECEWISE:  out = piecewise_poly_integrate(f->f);      break;
-     case POLYNOMIAL: out = orth_poly_expansion_integrate(f->f); break;
-     case LINELM:     out = lin_elem_exp_integrate(f->f);        break;
-     case CONSTELM:   out = const_elem_exp_integrate(f->f);      break;         
-     case KERNEL:     out = kernel_expansion_integrate(f->f);    break;
-     }
-     return out;
- }
-
- /********************************************************//**
     Compute the integral of a generic function
  
     \param[in] f - generic function
@@ -925,7 +902,7 @@ double generic_function_norm(const struct GenericFunction * f){
      double * out = calloc_double(n);
      size_t ii;
      for (ii = 0; ii < n; ii++){
-         out[ii] = generic_function_integral(a[ii*lda]);
+         out[ii] = generic_function_integrate(a[ii*lda]);
      }
      return out;
  }
@@ -1311,17 +1288,11 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
  /********************************************************//**
  *   Flip the sign of a generic function f(x) to -f(x)
  *
- *   \param[in,out] f - number of functions
+ *   \param[in,out] gf - number of functions
  ************************************************************/
- void generic_function_flip_sign(struct GenericFunction * f)
+ void generic_function_flip_sign(struct GenericFunction * gf)
  {
-     switch (f->fc){
-     case PIECEWISE:  piecewise_poly_flip_sign(f->f);      break;
-     case POLYNOMIAL: orth_poly_expansion_flip_sign(f->f); break;
-     case LINELM:     lin_elem_exp_flip_sign(f->f);        break;
-     case CONSTELM:   const_elem_exp_flip_sign(f->f);      break;         
-     case KERNEL:     kernel_expansion_scale(-1.0,f->f);   break;
-     }
+     GF_SWITCH_NO_OUT(flip_sign)
  }
 
  /********************************************************//**
@@ -1352,7 +1323,7 @@ generic_function_onezero(enum function_class fc, double one, size_t nz,
      double lb = -0.123456789;
 
      switch (f->fc){
-     case PIECEWISE:  lb = piecewise_poly_lb(f->f);             break;
+     case PIECEWISE:  lb = piecewise_poly_lb(f->f);         break;
      case POLYNOMIAL: lb = ((struct OrthPolyExpansion *) f->f)->lower_bound; break;
      case LINELM:     lb = lin_elem_exp_lb(f->f);          break;
      case CONSTELM:   lb = const_elem_exp_lb(f->f);        break;         
@@ -2924,34 +2895,7 @@ void regress_1d_opts_destroy(struct Regress1DOpts * opts)
 }
 
 
-/********************************************************//**
-    Get the number of parameters describing the generic function
-************************************************************/
-size_t generic_function_get_num_params(const struct GenericFunction * gf)
-{
 
-    assert (gf != NULL);
-    size_t nparam = 0;
-    switch (gf->fc){
-    case PIECEWISE:
-        assert (1 == 0);
-        break;
-    case POLYNOMIAL:
-        nparam = orth_poly_expansion_get_num_params(gf->f);
-        break;
-    case LINELM:
-        nparam = lin_elem_exp_get_num_params(gf->f);
-        break;
-    case CONSTELM:
-        nparam = const_elem_exp_get_num_params(gf->f);
-        break;        
-    case KERNEL:
-        nparam = kernel_expansion_get_num_params(gf->f);
-        break;
-    }   
-
-    return nparam;
-}
 
 /********************************************************//**
     Get the parameters of generic function
@@ -3616,6 +3560,7 @@ generic_function_regress1d(struct Regress1DOpts * opts, struct c3Opt * optimizer
 
     return func;
 }
+
 
 
 

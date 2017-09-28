@@ -52,6 +52,7 @@
 #include "stringmanip.h"
 #include "array.h"
 #include "linalg.h"
+#include "futil.h"
 #include "constelm.h"
 
 /** \struct ConstElemExpAopts
@@ -764,6 +765,13 @@ double const_elem_exp_integrate(const struct ConstElemExp * f)
     dx = (f->nodes[f->num_nodes-1]-f->nodes[f->num_nodes-2])*0.5;
     integral += f->coeff[f->num_nodes-1] * dx ;
     return integral;
+}
+
+double const_elem_exp_integrate_weighted(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_integrate_weighted");
+    return 0.0;
 }
 
 /********************************************************//**

@@ -73,7 +73,7 @@ struct Interval
     double ub;
 };
 
-typedef void* (*copy_t)(void*);
+/* typedef void* (*copy_t)(void*); */
     
 /** \struct GenericFunction
  * \brief Interface between the world and specific functions such as polynomials, radial
@@ -91,23 +91,27 @@ struct GenericFunction {
     
     size_t dim;
     enum function_class fc;
-    /* union */
-    /* { */
-    /*     enum poly_type ptype; */
-    /* } sub_type; */
     void * f;
     void * fargs;
 
-    copy_t copy;
+    /* copy_t copy; */
     /* void (*copy)(void *); */
 };
 
 struct GenericFunction * generic_function_alloc_base(size_t);
 struct GenericFunction ** generic_function_array_alloc(size_t);
-struct GenericFunction *
-generic_function_alloc(size_t, enum function_class);
-struct GenericFunction *
-generic_function_copy(const struct GenericFunction *);
+struct GenericFunction * generic_function_alloc(size_t, enum function_class);
+
+// Single IN_OUT 
+struct GenericFunction * generic_function_copy(const struct GenericFunction *);
+struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
+
+// SINGLE IN_GENOUT
+double generic_function_integrate(const struct GenericFunction *);
+double generic_function_integrate_weighted(const struct GenericFunction *);
+size_t generic_function_get_num_params(const struct GenericFunction *);
+
+
 void generic_function_copy_pa(const struct GenericFunction *,
                               struct GenericFunction *);
 
@@ -133,7 +137,7 @@ generic_function_quadratic(double,double,enum function_class,void *);
 
 struct GenericFunction * 
 generic_function_poly_randu(enum poly_type,size_t, double, double);
-struct GenericFunction * generic_function_deriv(const struct GenericFunction *);
+
 double generic_function_deriv_eval(const struct GenericFunction *, double);
 
 // generic operations
@@ -158,8 +162,7 @@ double generic_function_array_norm2diff(
                 size_t, struct GenericFunction **, size_t,
                 struct GenericFunction **, size_t);
 
-double generic_function_integral(const struct GenericFunction *);
-double generic_function_integral_weighted(const struct GenericFunction *);
+
 double * 
 generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
 
@@ -324,7 +327,7 @@ struct Regress1DOpts *
 regress_1d_opts_create(enum approx_type, enum regress_type,
                        size_t, const double *, const double *);
 void regress_1d_opts_destroy(struct Regress1DOpts *);
-size_t generic_function_get_num_params(const struct GenericFunction *);
+
 size_t generic_function_get_params(const struct GenericFunction *, double *);
 double * generic_function_get_params_ref(const struct GenericFunction *, size_t *);
 void regress_1d_opts_set_parametric_form(struct Regress1DOpts *, enum function_class, void *);

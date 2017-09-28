@@ -58,6 +58,7 @@
 
 #include "stringmanip.h"
 #include "array.h"
+#include "futil.h"
 #include "polynomials.h"
 #include "hpoly.h"
 #include "lib_quadrature.h"
@@ -1073,6 +1074,15 @@ void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
     }
 }
 
+/********************************************************//**
+*   Obtain the derivative of a kernel
+*************************************************************/
+struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion * ke)
+{
+    (void) (ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_deriv")
+    exit(1);
+}
 
 /********************************************************//**
 *   Evaluate the derivative of a kernel expansion (useful for gradients)
@@ -1122,6 +1132,14 @@ double kernel_expansion_integrate(struct KernelExpansion * a)
 }
 
 /********************************************************//**
+*   Integrate a kernel expansion on a weighted domain
+*************************************************************/
+double kernel_expansion_integrate_weighted(struct KernelExpansion * a)
+{
+    return kernel_expansion_integrate(a);
+}
+
+/********************************************************//**
 *   Inner product between two kernel expansions of the same type
 *
 *   \param[in] a - first kernel
@@ -1160,6 +1178,7 @@ kernel_expansion_inner(struct KernelExpansion * a,
 }
 
 
+
 /********************************************************//**
 *   Multiply by scalar and overwrite expansion
 *
@@ -1172,6 +1191,12 @@ void kernel_expansion_scale(double a, struct KernelExpansion * x)
     for (ii = 0; ii < x->nkernels; ii++){
         x->coeff[ii] *= a;
     }
+}
+
+/* Multiply a kernel expansion by -1 */
+void kernel_expansion_flip_sign(struct KernelExpansion * x)
+{
+    kernel_expansion_scale(-1.0, x);
 }
 
 /********************************************************//*
