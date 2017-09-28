@@ -1398,6 +1398,8 @@ double
 piecewise_poly_inner(const struct PiecewisePoly * a,
                      const struct PiecewisePoly * b)
 {
+    assert (a != NULL);
+    assert (b != NULL);
     if ((a->leaf == 1) && (b->leaf == 1)){
         return orth_poly_expansion_inner(a->ope,b->ope);
     }
@@ -1430,23 +1432,36 @@ piecewise_poly_inner(const struct PiecewisePoly * a,
 *   \return 0 if successful, 1 if error
 *
 ************************************************************/
-int piecewise_poly_axpy(double a,struct PiecewisePoly * x, 
-                        struct PiecewisePoly * y)
+int piecewise_poly_axpy(double a,struct PiecewisePoly * x, struct PiecewisePoly * y)
 {   
     
     //piecewise_poly_match1(x,y);
-    piecewise_poly_flatten(x);
-    piecewise_poly_flatten(y);
+    /* piecewise_poly_flatten(x); */
+    /* piecewise_poly_flatten(y); */
+
+    struct PiecewisePoly * aa = NULL;
+    struct PiecewisePoly * bb = NULL;
+    piecewise_poly_match(x,&aa,y,&bb);
+    
+    piecewise_poly_flatten(aa);
+    piecewise_poly_flatten(bb);
+
     
     int success = 1;
-    fprintf(stderr, "piecewise_poly_axpy not implemented yet\n");
+    /* fprintf(stderr, "piecewise_poly_axpy not implemented yet\n"); */
     size_t ii;
-    for (ii = 0; ii < y->nbranches; ii++){
-        success = orth_poly_expansion_axpy(a,x->branches[ii]->ope,y->branches[ii]->ope);
+    for (ii = 0; ii < bb->nbranches; ii++){
+        success = orth_poly_expansion_axpy(a,aa->branches[ii]->ope,bb->branches[ii]->ope);
         if (success == 1){
             return success;
         }
     }
+
+    piecewise_poly_free(y); y = NULL;
+    y = piecewise_poly_copy(bb);
+
+    piecewise_poly_free(aa); aa = NULL;
+    piecewise_poly_free(bb); bb = NULL;        
     return success;
 }
 

@@ -149,6 +149,11 @@ struct GenericFunction *
 generic_function_prod(struct GenericFunction *, struct GenericFunction *);
 struct GenericFunction *
 generic_function_daxpby(double, const struct GenericFunction *, double, const struct GenericFunction *);
+struct GenericFunction **
+generic_function_array_daxpby(size_t, double, size_t, 
+        struct GenericFunction **, double, size_t, 
+        struct GenericFunction **);
+
 
 
 
@@ -191,6 +196,11 @@ void generic_function_kronh2(int, size_t, size_t, size_t, size_t,
                              struct GenericFunction **, struct GenericFunction **, 
                              struct GenericFunction **);
 void generic_function_array_orth(size_t,struct GenericFunction **, enum function_class,void *);
+void
+generic_function_array_daxpby2(size_t, double, size_t, 
+        struct GenericFunction **, double, size_t, 
+        struct GenericFunction **, size_t, struct GenericFunction **);
+
 
 ////////////////////////////////////////////////////////////////
 // Evaluators
@@ -217,69 +227,23 @@ double generic_function_norm(const struct GenericFunction *);
 
 
 //////////////////////////////////////////////////////////////////////////
-/////// Have not organized below here!
-// generic operations
-
-
-double generic_function_inner(const struct GenericFunction *,
-                              const struct GenericFunction *);
-double generic_function_inner_weighted(const struct GenericFunction *, 
-                                       const struct GenericFunction *);
+// Rest of analysis
+double generic_function_inner(const struct GenericFunction *, const struct GenericFunction *);
+double generic_function_inner_weighted(const struct GenericFunction *, const struct GenericFunction *);
 double generic_function_inner_sum(size_t, size_t, struct GenericFunction **, 
                                   size_t, struct GenericFunction **);
-double generic_function_inner_weighted_sum(size_t, size_t, 
-                                           struct GenericFunction **, 
-                                           size_t, 
-                                           struct GenericFunction **);
-
-double generic_function_norm2diff(const struct GenericFunction *, 
-                                  const struct GenericFunction *);
-double generic_function_array_norm2diff(
-                size_t, struct GenericFunction **, size_t,
-                struct GenericFunction **, size_t);
-
-
-double * 
-generic_function_integral_array(size_t , size_t, struct GenericFunction ** a);
-
+double generic_function_inner_weighted_sum(size_t, size_t, struct GenericFunction **, 
+                                           size_t, struct GenericFunction **);
+double generic_function_norm2diff(const struct GenericFunction *, const struct GenericFunction *);
+double generic_function_array_norm2diff(size_t, struct GenericFunction **, size_t,
+                                        struct GenericFunction **, size_t);
+double * generic_function_integral_array(size_t, size_t, struct GenericFunction **);
 double generic_function_array_norm(size_t, size_t, struct GenericFunction **);
-
-struct GenericFunction **
-generic_function_array_daxpby(size_t, double, size_t, 
-        struct GenericFunction **, double, size_t, 
-        struct GenericFunction **);
-
-void
-generic_function_array_daxpby2(size_t, double, size_t, 
-        struct GenericFunction **, double, size_t, 
-        struct GenericFunction **, size_t, struct GenericFunction **);
-
-
 double generic_function_absmax(const struct GenericFunction *, double *,void *);
-double generic_function_absmax_gen(const struct GenericFunction *, 
-                                   void *, size_t, void *);
-double generic_function_array_absmax(size_t, size_t, 
-                                     struct GenericFunction **, 
-                                     size_t *, double *, void *);
-double 
-generic_function_array_absmax_piv(size_t, size_t, 
-                                  struct GenericFunction **, 
-                                  struct Pivot *,
-                                  void *);
-
-
-// more complicated operations
-
-/* void generic_function_array_orth1d_columns( */
-/*     struct GenericFunction **, */
-/*     struct GenericFunction **, */
-/*     enum function_class, */
-/*     void *, size_t, */
-/*     size_t, double, */
-/*     double); */
-
-
-
+double generic_function_absmax_gen(const struct GenericFunction *, void *, size_t, void *);
+double generic_function_array_absmax(size_t, size_t, struct GenericFunction **, size_t *, double *, void *);
+double generic_function_array_absmax_piv(size_t, size_t, struct GenericFunction **, struct Pivot *, void *);
+                                  
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////

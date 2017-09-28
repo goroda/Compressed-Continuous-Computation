@@ -1098,257 +1098,6 @@ generic_function_daxpby(double a, const struct GenericFunction * x,
     return out;
 }
 
- /********************************************************//**
- *   Compute the inner product between two generic functions
- *
- *   \param[in] a  - generic function
- *   \param[in] b  - generic function
- *
- *   \return out -  int a(x) b(x) dx 
- ************************************************************/
- double generic_function_inner(const struct GenericFunction * a, 
-                               const struct GenericFunction * b)
-{
-     double out = 0.123456789;   
-     enum function_class fc = a->fc;
-     int apalloc = 0;
-     int bpalloc = 0;
-     struct PiecewisePoly * ap = NULL;
-     struct PiecewisePoly * bp = NULL;
-     if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
-         assert (a->fc != LINELM);
-         assert (b->fc != LINELM);
-         assert (a->fc != CONSTELM);
-         assert (b->fc != CONSTELM);
-         assert (a->fc != KERNEL);
-         assert (b->fc != KERNEL);
-         // everything to PIECEWISE!
-         fc = PIECEWISE;
-         if (a->fc == POLYNOMIAL){
-             ap = piecewise_poly_alloc();
-             apalloc = 1;
-             ap->ope = a->f;
-         }
-         else{
-             ap = a->f;
-         }
-         if (b->fc == POLYNOMIAL){
-             bp = piecewise_poly_alloc();
-             bpalloc = 1;
-             bp->ope = b->f;
-         }
-         else{
-             bp = b->f;
-         }
-     }
-
-     void * in_a = ap;
-     void * in_b = bp;
-     if (ap == NULL){ in_a = a->f; }
-     if (bp == NULL){ in_b = b->f; }
-
-     GF_SWITCH_TWOOUT(inner,fc, out, in_a, in_b)
-
-     if (apalloc == 1){ free(ap); }
-     if (bpalloc == 1){ free(bp); }
-
-     return out;
- }
-
-/********************************************************//**
-*   Compute the weighted inner product between two generic functions
-*
-*   \param[in] a  - generic function
-*   \param[in] b  - generic function
-*
-*   \return out -  int a(x) b(x) w(x) dx 
-************************************************************/
-double generic_function_inner_weighted(const struct GenericFunction * a, 
-                                       const struct GenericFunction * b)
-{
-    assert(a->fc == POLYNOMIAL);
-    assert(b->fc == POLYNOMIAL);
-    double out = orth_poly_expansion_inner_w(a->f,b->f);
-       
-    return out;
-}
-
- /********************************************************//**
- *   Compute the sum of the inner products between
- *   two arrays of generic functions
- *
- *   \param[in] n   - number of inner products
- *   \param[in] lda - stride of functions to use in a
- *   \param[in] a   - first array of generic functions
- *   \param[in] ldb - stride of functions to use in b
- *   \param[in] b   - second array of generic functions
- *
- *   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) dx
- ************************************************************/
- double generic_function_inner_sum(size_t n, size_t lda, 
-                                   struct GenericFunction ** a, 
-                                   size_t ldb, 
-                                   struct GenericFunction ** b)
- {
-     double val = 0.0;
-     for (size_t ii = 0; ii < n; ii++){
-         val += generic_function_inner(a[ii*lda], b[ii*ldb]);
-     }
-     return val;
- }
-
-/********************************************************//**
-*   Compute the sum of the (weighted) inner products between
-*   two arrays of generic functions
-*
-*   \param[in] n   - number of inner products
-*   \param[in] lda - stride of functions to use in a
-*   \param[in] a   - first array of generic functions
-*   \param[in] ldb - stride of functions to use in b
-*   \param[in] b   - second array of generic functions
-*
-*   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) w(x) dx
-************************************************************/
-double generic_function_inner_weighted_sum(size_t n, size_t lda, 
-                                           struct GenericFunction ** a, 
-                                           size_t ldb, 
-                                           struct GenericFunction ** b)
-{
-     double val = 0.0;
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         val += generic_function_inner_weighted(a[ii*lda], b[ii*ldb]);
-     }
-     return val;
-}
-
-
- /********************************************************//**
- *   Compute the norm of the difference between two generic function
- *
- *   \param[in] f1 - generic function
- *   \param[in] f2 - generic function
- *
- *   \return out - norm of difference
- ************************************************************/
- double generic_function_norm2diff(const struct GenericFunction * f1, 
-                                   const struct GenericFunction * f2)
- {
-     struct GenericFunction * f3 = generic_function_daxpby(1.0,f1,-1.0,f2);
-     double out = generic_function_norm(f3);
-     generic_function_free(f3); f3 = NULL;
-     return out;
- }
-
- /********************************************************//**
- *   Compute the norm of the difference between two generic function arrays
- *   
- *   \param[in] n    - number of elements
- *   \param[in] f1   - generic function array
- *   \param[in] inca - incremenent of first array
- *   \param[in] f2   - generic function array
- *   \param[in] incb - incremenent of second array
- *
- *   \return out - norm of difference
- ************************************************************/
- double generic_function_array_norm2diff(
-                 size_t n, struct GenericFunction ** f1, size_t inca,
-                 struct GenericFunction ** f2, size_t incb)
-{
-     double out = 0.0;
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         out += pow(generic_function_norm2diff(f1[ii*inca],f2[ii*incb]),2);
-     }
-     assert (out >= 0.0);
-     return sqrt(out);
-}
-
- /********************************************************//**
-    Compute the integral of a generic function
- 
-    \param[in] f - generic function
- 
-    \return out - integral
-
-    \note Computes \f$ \int f(x) w(x) dx\f$ for every univariate function
-    in the qmarray
-    
-    w(x) depends on underlying parameterization
-    for example, it is 1/2 for legendre (and default for others),
-    gauss for hermite,etc
- ************************************************************/
- double generic_function_integral_weighted(
-     const struct GenericFunction * f){
-     
-     assert (f != NULL);
-     assert (f->fc == POLYNOMIAL);
-     
-     double out = orth_poly_expansion_integrate_weighted(f->f);
-     return out;
- }
-
- /********************************************************//**
- *   Compute the integral of all the functions in a generic function array
- *
- *   \param[in] n   - number of functions
- *   \param[in] lda - stride
- *   \param[in] a   - array of generic functions
- *
- *   \return out - array of integrals
- ************************************************************/
- double * 
- generic_function_integral_array(size_t n,size_t lda,struct GenericFunction ** a)
- {
-     double * out = calloc_double(n);
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         out[ii] = generic_function_integrate(a[ii*lda]);
-     }
-     return out;
- }
-
-
-
-
-
-
-
-
-
-
-
- /********************************************************//**
- *   Compute the norm of an array of generic functions
- *
- *   \param[in] n   - number of functions
- *   \param[in] lda - stride of functions to use in a
- *   \param[in] a   - functions
- *
- *   \return val -sqrt(sum_{i=1^N} int a[ii*lda](x)^2 ) dx)
- ************************************************************/
- double generic_function_array_norm(size_t n, size_t lda, 
-                                    struct GenericFunction ** a)
- {   
-
-     double val = 0.0;
-     size_t ii;
-     for (ii = 0; ii < n; ii++){
-         val += pow(generic_function_norm(a[lda*ii]),2.0);
-     }
-     //val = generic_function_inner_sum(n,lda,a,lda,a);
-
-     return sqrt(val);
- }
-
-
-
-
-
-
-
-
-
 /********************************************************//**
 *   Compute axpby for a an array of generic functions
 *
@@ -1395,42 +1144,8 @@ generic_function_array_daxpby(size_t n, double a, size_t ldx,
     return fout;
 }
 
-/********************************************************//**
-*   Compute axpby for a an array of generic functions and overwrite into z
-*
-*   \param[in]     n   - number of functions
-*   \param[in]     a   - scaling for x
-*   \param[in]     ldx -  stride of functions to use in a
-*   \param[in]     x   - functions
-*   \param[in]     b   - scaling for y
-*   \param[in]     ldy - stride of functions to use in a
-*   \param[in]     y   - functions
-*   \param[in]     ldz - stride for z
-*   \param[in,out] z   -  locations for resulting functions
-*************************************************************/
-void
-generic_function_array_daxpby2(size_t n, double a, size_t ldx, 
-        struct GenericFunction ** x, double b, size_t ldy, 
-        struct GenericFunction ** y, size_t ldz, 
-                               struct GenericFunction ** z)
-{
-    size_t ii;
-    if ( y == NULL){
-        for (ii = 0; ii < n ;ii++){
-            z[ii*ldz] = generic_function_daxpby(a,x[ii*ldx],0.0, NULL);
-        }
-    }
-    else if (x == NULL){
-        for (ii = 0; ii < n ;ii++){
-            z[ii*ldz] = generic_function_daxpby(b,y[ii*ldy],0.0, NULL);
-        }
-    }
-    else{
-        for (ii = 0; ii < n ;ii++){
-            z[ii*ldz] = generic_function_daxpby(a,x[ii*ldx],b, y[ii*ldy]);
-        }
-    }
-}
+
+
 
 GF_IN_GENOUT(get_num_params, size_t, 0)        // Get the number of parameters describing the generic function
 GF_IN_GENOUT(get_lb, double, -0.123456789)     // Get the lower bound of the input space
@@ -2032,6 +1747,43 @@ generic_function_array_orth(size_t n,
 
 }
 
+/********************************************************//**
+*   Compute axpby for a an array of generic functions and overwrite into z
+*
+*   \param[in]     n   - number of functions
+*   \param[in]     a   - scaling for x
+*   \param[in]     ldx -  stride of functions to use in a
+*   \param[in]     x   - functions
+*   \param[in]     b   - scaling for y
+*   \param[in]     ldy - stride of functions to use in a
+*   \param[in]     y   - functions
+*   \param[in]     ldz - stride for z
+*   \param[in,out] z   -  locations for resulting functions
+*************************************************************/
+void
+generic_function_array_daxpby2(size_t n, double a, size_t ldx, 
+        struct GenericFunction ** x, double b, size_t ldy, 
+        struct GenericFunction ** y, size_t ldz, 
+                               struct GenericFunction ** z)
+{
+    size_t ii;
+    if ( y == NULL){
+        for (ii = 0; ii < n ;ii++){
+            z[ii*ldz] = generic_function_daxpby(a,x[ii*ldx],0.0, NULL);
+        }
+    }
+    else if (x == NULL){
+        for (ii = 0; ii < n ;ii++){
+            z[ii*ldz] = generic_function_daxpby(b,y[ii*ldy],0.0, NULL);
+        }
+    }
+    else{
+        for (ii = 0; ii < n ;ii++){
+            z[ii*ldz] = generic_function_daxpby(a,x[ii*ldx],b, y[ii*ldy]);
+        }
+    }
+}
+
 
 
 /********************************************************//**
@@ -2140,7 +1892,40 @@ generic_function_1darray_eval(size_t n, struct GenericFunction ** f, double x)
     return out;
 }
 
-n/********************************************************//**
+/********************************************************//**
+*   Evaluate a generic function consisting of nodal
+*   basis functions at some node
+*
+*   \param[in] f    - function
+*   \param[in] x    - location at which to Evaluate
+*   \param[in] size - byte size of location (sizeof(double) or (sizeof(size_t)))
+*
+*   \return evaluation
+************************************************************/
+static double generic_function_1d_eval_gen(const struct GenericFunction * f,
+                                           void * x, size_t size)
+{
+     assert (f != NULL);
+
+     size_t dsize = sizeof(double);
+     size_t stsize = sizeof(size_t);
+     double out;
+     if (size == dsize){
+         out = generic_function_1d_eval(f,*(double *)x);
+     }
+     else if (size == stsize){
+         out = generic_function_1d_eval_ind(f,*(size_t *)x);
+     }
+     else{
+         fprintf(stderr, "Cannot evaluate generic function at \n");
+         fprintf(stderr, "input of byte size %zu\n ", size);
+         exit(1);
+     }
+
+     return out;
+ }
+
+/********************************************************//**
    Evaluate a generic function array at a given pivot
 ************************************************************/
 double generic_function_1darray_eval_piv(struct GenericFunction ** f, 
@@ -2329,7 +2114,238 @@ double generic_function_norm(const struct GenericFunction * f)
     return sqrt(out);
 }
 
+/********************************************************//**
+*   Compute the inner product between two generic functions
+*
+*   \param[in] a  - generic function
+*   \param[in] b  - generic function
+*
+*   \return out -  int a(x) b(x) dx 
+************************************************************/
+double generic_function_inner(const struct GenericFunction * a, 
+                              const struct GenericFunction * b)
+{
+     double out = 0.123456789;   
+     enum function_class fc = a->fc;
+     int apalloc = 0;
+     int bpalloc = 0;
+     struct PiecewisePoly * ap = NULL;
+     struct PiecewisePoly * bp = NULL;
+     void * in_a = a->f;
+     void * in_b = b->f;
+     if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
+         assert (a->fc != LINELM);
+         assert (b->fc != LINELM);
+         assert (a->fc != CONSTELM);
+         assert (b->fc != CONSTELM);
+         assert (a->fc != KERNEL);
+         assert (b->fc != KERNEL);
+         // everything to PIECEWISE!
+         fc = PIECEWISE;
+         if (a->fc == POLYNOMIAL){
+             ap = piecewise_poly_alloc();
+             apalloc = 1;
+             ap->ope = a->f;
+         }
+         else{
+             ap = a->f;
+         }
+         if (b->fc == POLYNOMIAL){
+             bp = piecewise_poly_alloc();
+             bpalloc = 1;
+             bp->ope = b->f;
+         }
+         else{
+             bp = b->f;
+         }
 
+         in_a = ap;
+         in_b = bp;
+     }
+
+     GF_SWITCH_TWOOUT(inner, fc, out, in_a, in_b)
+
+     if (apalloc == 1){ free(ap); }
+     if (bpalloc == 1){ free(bp); }
+
+     return out;
+ }
+
+/********************************************************//**
+*   Compute the weighted inner product between two generic functions
+*
+*   \param[in] a  - generic function
+*   \param[in] b  - generic function
+*
+*   \return out -  int a(x) b(x) w(x) dx 
+************************************************************/
+double generic_function_inner_weighted(const struct GenericFunction * a, 
+                                       const struct GenericFunction * b)
+{
+    assert(a->fc == POLYNOMIAL);
+    assert(b->fc == POLYNOMIAL);
+    double out = orth_poly_expansion_inner_w(a->f,b->f);
+       
+    return out;
+}
+
+ /********************************************************//**
+ *   Compute the sum of the inner products between
+ *   two arrays of generic functions
+ *
+ *   \param[in] n   - number of inner products
+ *   \param[in] lda - stride of functions to use in a
+ *   \param[in] a   - first array of generic functions
+ *   \param[in] ldb - stride of functions to use in b
+ *   \param[in] b   - second array of generic functions
+ *
+ *   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) dx
+ ************************************************************/
+ double generic_function_inner_sum(size_t n, size_t lda, 
+                                   struct GenericFunction ** a, 
+                                   size_t ldb, 
+                                   struct GenericFunction ** b)
+ {
+     double val = 0.0;
+     for (size_t ii = 0; ii < n; ii++){
+         val += generic_function_inner(a[ii*lda], b[ii*ldb]);
+     }
+     return val;
+ }
+
+/********************************************************//**
+*   Compute the sum of the (weighted) inner products between
+*   two arrays of generic functions
+*
+*   \param[in] n   - number of inner products
+*   \param[in] lda - stride of functions to use in a
+*   \param[in] a   - first array of generic functions
+*   \param[in] ldb - stride of functions to use in b
+*   \param[in] b   - second array of generic functions
+*
+*   \return val - sum_{i=1^N} int a[ii*lda](x) b[ii*ldb](x) w(x) dx
+************************************************************/
+double generic_function_inner_weighted_sum(size_t n, size_t lda, 
+                                           struct GenericFunction ** a, 
+                                           size_t ldb, 
+                                           struct GenericFunction ** b)
+{
+     double val = 0.0;
+     size_t ii;
+     for (ii = 0; ii < n; ii++){
+         val += generic_function_inner_weighted(a[ii*lda], b[ii*ldb]);
+     }
+     return val;
+}
+
+
+/********************************************************//**
+*   Compute the norm of the difference between two generic function
+*
+*   \param[in] f1 - generic function
+*   \param[in] f2 - generic function
+*
+*   \return out - norm of difference
+************************************************************/
+double generic_function_norm2diff(const struct GenericFunction * f1, 
+                                  const struct GenericFunction * f2)
+{
+    struct GenericFunction * f3 = generic_function_daxpby(1.0,f1,-1.0,f2);
+    double out = generic_function_norm(f3);
+    generic_function_free(f3); f3 = NULL;
+    return out;
+}
+
+/********************************************************//**
+*   Compute the norm of the difference between two generic function arrays
+*   
+*   \param[in] n    - number of elements
+*   \param[in] f1   - generic function array
+*   \param[in] inca - incremenent of first array
+*   \param[in] f2   - generic function array
+*   \param[in] incb - incremenent of second array
+*
+*   \return out - norm of difference
+************************************************************/
+double generic_function_array_norm2diff(
+    size_t n, struct GenericFunction ** f1, size_t inca,
+    struct GenericFunction ** f2, size_t incb)
+{
+     double out = 0.0;
+     size_t ii;
+     for (ii = 0; ii < n; ii++){
+         out += pow(generic_function_norm2diff(f1[ii*inca],f2[ii*incb]),2);
+     }
+     assert (out >= 0.0);
+     return sqrt(out);
+}
+
+/********************************************************//**
+   Compute the integral of a generic function
+
+   \param[in] f - generic function
+ 
+   \return out - integral
+
+   \note Computes \f$ \int f(x) w(x) dx\f$ for every univariate function
+   in the qmarray
+   
+   w(x) depends on underlying parameterization
+   for example, it is 1/2 for legendre (and default for others),
+   gauss for hermite,etc
+************************************************************/
+double generic_function_integral_weighted(
+    const struct GenericFunction * f){
+     
+    assert (f != NULL);
+    assert (f->fc == POLYNOMIAL);
+     
+    double out = orth_poly_expansion_integrate_weighted(f->f);
+    return out;
+}
+
+/********************************************************//**
+*   Compute the integral of all the functions in a generic function array
+*
+*   \param[in] n   - number of functions
+*   \param[in] lda - stride
+*   \param[in] a   - array of generic functions
+*
+*   \return out - array of integrals
+************************************************************/
+double * 
+generic_function_integral_array(size_t n,size_t lda,struct GenericFunction ** a)
+{
+    double * out = calloc_double(n);
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        out[ii] = generic_function_integrate(a[ii*lda]);
+    }
+    return out;
+}
+
+/********************************************************//**
+*   Compute the norm of an array of generic functions
+*
+*   \param[in] n   - number of functions
+*   \param[in] lda - stride of functions to use in a
+*   \param[in] a   - functions
+*
+*   \return val -sqrt(sum_{i=1^N} int a[ii*lda](x)^2 ) dx)
+***********************************************************/
+double generic_function_array_norm(size_t n, size_t lda, 
+                                   struct GenericFunction ** a)
+{   
+
+    double val = 0.0;
+    size_t ii;
+    for (ii = 0; ii < n; ii++){
+        val += pow(generic_function_norm(a[lda*ii]),2.0);
+    }
+    //val = generic_function_inner_sum(n,lda,a,lda,a);
+
+    return sqrt(val);
+}
 
 
 /********************************************************//**
@@ -2475,6 +2491,7 @@ generic_function_array_absmax_piv(size_t n, size_t lda,
     }
     return maxval;
 }
+
 
 
 
@@ -3091,51 +3108,4 @@ double param_RLSRKHSregress_cost(size_t dim, const double * param, double * grad
     return out;
 }
 
-/* /\********************************************************\//\** */
-/*     L1 penality */
-/* ************************************************************\/ */
 
-
-
-/* /////////////////////// */
-/* // IN: const Generic Function */
-/* // OUT: Generic Function */
-
-
-
-/* /////////////////////// */
-/* // IN: const Generic Function */
-/* // OUT: generic thing */
-
-/* /\********************************************************\//\** */
-/* *   Evaluate a generic function consisting of nodal */
-/* *   basis functions at some node */
-/* * */
-/* *   \param[in] f    - function */
-/* *   \param[in] x    - location at which to Evaluate */
-/* *   \param[in] size - byte size of location (sizeof(double) or (sizeof(size_t))) */
-/* * */
-/* *   \return evaluation */
-/* ************************************************************\/ */
-/* double generic_function_1d_eval_gen(const struct GenericFunction * f,  */
-/*                                     void * x, size_t size) */
-/* { */
-/*      assert (f != NULL); */
-
-/*      size_t dsize = sizeof(double); */
-/*      size_t stsize = sizeof(size_t); */
-/*      double out; */
-/*      if (size == dsize){ */
-/*          out = generic_function_1d_eval(f,*(double *)x); */
-/*      } */
-/*      else if (size == stsize){ */
-/*          out = generic_function_1d_eval_ind(f,*(size_t *)x); */
-/*      } */
-/*      else{ */
-/*          fprintf(stderr, "Cannot evaluate generic function at \n"); */
-/*          fprintf(stderr, "input of byte size %zu\n ", size); */
-/*          exit(1); */
-/*      } */
-
-/*      return out; */
-/*  } */
