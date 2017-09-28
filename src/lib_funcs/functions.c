@@ -405,6 +405,35 @@ generic_function_linear(double a, double offset,
 }
 
 /*******************************************************//**
+    Update a linear function
+
+    \param[in] gf     - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+    \param[in] aopts  - extra arguments depending on function_class, 
+                        sub_type, etc.
+
+    \returns 0 if successfull, 1 otherwise                   
+    \note 
+    Existing function must be linear
+***********************************************************/
+int
+generic_function_linear_update(struct GenericFunction * gf,
+                               double a, double offset)
+{   
+    switch (gf->fc){
+    case CONSTANT:                                                       break;
+    case PIECEWISE:  assert (1 == 0);      break;
+    case POLYNOMIAL: orth_poly_expansion_linear_update(gf->f, a, offset); break;
+    case LINELM:     assert (1 == 0); break;
+    case CONSTELM:   fprintf(stderr,"Cannot make linear out of CONSTELM\n");  exit(1);           
+    case RATIONAL:                                                       break;
+    case KERNEL:     assert (1 == 0); break;
+    }
+    return 0;
+}
+
+/*******************************************************//**
     Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
 
     \param[in] a      - quadratic coefficients
