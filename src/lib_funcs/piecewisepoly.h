@@ -71,7 +71,6 @@ void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
 size_t pw_poly_opts_get_nparams(const struct PwPolyOpts*);
 void   pw_poly_opts_set_nparams(struct PwPolyOpts*, size_t);
 
-
 /** \struct PiecewisePoly
  * \brief Tree structure to represent piecewise polynomials
  * \var PiecewisePoly::leaf
@@ -157,6 +156,8 @@ void piecewise_poly_match(const struct PiecewisePoly *, struct PiecewisePoly **,
 struct PiecewisePoly *
 piecewise_poly_prod(const struct PiecewisePoly *,const struct PiecewisePoly *);
 double piecewise_poly_inner(const struct PiecewisePoly *,const struct PiecewisePoly *);
+int piecewise_poly_axpy(double, struct PiecewisePoly *, struct PiecewisePoly *);
+
 struct PiecewisePoly *
 piecewise_poly_daxpby(double, const struct PiecewisePoly *,
                       double, const struct PiecewisePoly *);
@@ -208,7 +209,7 @@ unsigned char *
 deserialize_piecewise_poly(unsigned char *, struct PiecewisePoly ** ); 
 
 
-void print_piecewise_poly(struct PiecewisePoly * pw, size_t, void *);
+void print_piecewise_poly(struct PiecewisePoly * pw, size_t, void *, FILE *);
 
 void
 piecewise_poly_savetxt(const struct PiecewisePoly *, FILE *,
@@ -222,7 +223,8 @@ int piecewise_poly_update_params(struct PiecewisePoly *, size_t, const double *)
 int piecewise_poly_param_grad_eval(const struct PiecewisePoly *, size_t, const double *, double *);
 double piecewise_poly_param_grad_eval2(const struct PiecewisePoly *, double, double *);
 int piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly *, double, double *);
-                                           
+size_t piecewise_poly_get_params(const struct PiecewisePoly *, double *);
+double * piecewise_poly_get_params_ref(const struct PiecewisePoly *, size_t *);
 #endif
 
 

@@ -1926,6 +1926,10 @@ double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion * poly, dou
     return out;
 }
 
+static inline double orth_poly_expansion_deriv_eval_for_approx(double x, void* poly){
+    return orth_poly_expansion_deriv_eval(poly, x);
+}
+
 /********************************************************//**
 *   Evaluate the derivative of an orth poly expansion
 *
@@ -2344,7 +2348,7 @@ int orth_poly_expansion_arr_evalN(size_t n,
             if (isnan(y[ii + jj* incy]) || y[ii+jj * incy] > 1e100){
                 fprintf(stderr,"Warning, evaluation in legendre_array_eval is nan\n");
                 fprintf(stderr,"Polynomial %zu, evaluation %zu\n",ii,jj);
-                print_orth_poly_expansion(parr[ii],0,NULL);
+                print_orth_poly_expansion(parr[ii],0,NULL,stderr);
                 exit(1);
             }
             else if (isinf(y[ii + jj * incy])){
@@ -4842,27 +4846,27 @@ char * convert_ptype_to_char(enum poly_type ptype)
 
 }
 void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec, 
-            void * args)
+                               void * args, FILE *fp)
 {
 
     if (args == NULL){
-        printf("Orthogonal Polynomial Expansion:\n");
-        printf("--------------------------------\n");
-        printf("Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
-        printf("Coefficients = ");
+        fprintf(fp, "Orthogonal Polynomial Expansion:\n");
+        fprintf(fp, "--------------------------------\n");
+        fprintf(fp, "Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
+        fprintf(fp, "Coefficients = ");
         size_t ii;
         for (ii = 0; ii < p->num_poly; ii++){
             if (prec == 0){
-                printf("%3.1f ", p->coeff[ii]);
+                fprintf(fp, "%3.1f ", p->coeff[ii]);
             }
             else if (prec == 1){
-                printf("%3.3f ", p->coeff[ii]);
+                fprintf(fp, "%3.3f ", p->coeff[ii]);
             }
             else if (prec == 2){
-                printf("%3.15f ", p->coeff[ii]);
+                fprintf(fp, "%3.15f ", p->coeff[ii]);
             }
             else{
-                printf("%3.15E ", p->coeff[ii]);
+                fprintf(fp, "%3.15E ", p->coeff[ii]);
             }
         }
         printf("\n");

@@ -1057,7 +1057,7 @@ kernel_expansion_quadratic(double a, double offset, void * aopts)
 /********************************************************//**
 *   Evaluate a kernel expansion
 *************************************************************/
-double kernel_expansion_eval(struct KernelExpansion * kern, double x)
+double kernel_expansion_eval(const struct KernelExpansion * kern, double x)
 {
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)
@@ -1518,19 +1518,19 @@ void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct K
 }
 
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 
-                            void * args)
+                            void * args, FILE *fp)
 {
 
     (void)(prec);
     char kern[256];
     if (args == NULL){
-        printf("Kernel Expansion:\n");
-        printf("--------------------------------\n");
-        printf("Number of kernels = %zu\n",k->nkernels);
+        fprintf(fp, "Kernel Expansion:\n");
+        fprintf(fp, "--------------------------------\n");
+        fprintf(fp, "Number of kernels = %zu\n",k->nkernels);
         for (size_t ii = 0; ii < k->nkernels; ii++){
             kernel_to_string(k->kernels[ii],kern);
-            printf("Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
-            printf("\t %s\n\n",kern);
+            fprintf(fp, "Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
+            fprintf(fp, "\t %s\n\n",kern);
             /* print_kernel(k); */
         }
     }
@@ -1539,5 +1539,68 @@ void print_kernel_expansion(struct KernelExpansion * k, size_t prec,
 
 
 
+/********************************************************//**
+    Compute the location and value of the maximum, 
+    in absolute value,
+
+    \param[in]     f       - function
+    \param[in,out] x       - location of maximum
+    \param[in]     optargs - optimization arguments
+
+    \return absolute value of the maximum
+************************************************************/
+double kernel_expansion_absmax(const struct KernelExpansion * f, double * x, void * optargs)
+{
+    if (optargs == NULL){
+        fprintf(stderr, "Must provide optimization arguments to kernel_expansion_absmax\n");
+        exit(1);
+    }
+    
+    struct c3Vector * optnodes = optargs;
+    double mval = fabs(kernel_expansion_eval(f, optnodes->elem[0]));
+    *x = optnodes->elem[0];
+    double cval = mval;
+    *x = optnodes->elem[0];
+    for (size_t ii = 0; ii < optnodes->size; ii++){
+        double val = fabs(kernel_expansion_eval(f, optnodes->elem[ii]));
+        double tval = val;
+        if (val > mval){
+            mval = val;
+            cval = tval;
+            *x = optnodes->elem[ii];
+        }
+    }
+    return cval;
+}
+
+/********************************************************//**
+    Save a unction in text format
+
+    \param[in] f     -  function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+
+************************************************************/
+void kernel_expansion_savetxt(const struct KernelExpansion * gf,
+                              FILE * stream, size_t prec)
+{
+    (void)(gf);
+    (void)(stream);
+    (void)(prec);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_savetxt");
+}
 
 
+/********************************************************//**
+    Load a function in text format
+
+    \param[in] stream - stream to save it to
+
+    \return kernel expansion
+************************************************************/
+struct KernelExpansion * kernel_expansion_loadtxt(FILE * stream)
+{
+    (void)(stream);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_loadtxt")
+    return NULL;
+}

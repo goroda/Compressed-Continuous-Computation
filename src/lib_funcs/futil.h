@@ -44,4 +44,163 @@
 
 #define NOT_IMPLEMENTED_MSG(str) fprintf(stderr, "%s not yet implemented\n", str);
 
+
+// MACROS TO AID GENERIC PROGRAMMING
+
+#define GF_SWITCH_NO_OUT(operation)                                 \
+    switch (gf->fc){                                                \
+    case PIECEWISE:  piecewise_poly_##operation(gf->f);      break; \
+    case POLYNOMIAL: orth_poly_expansion_##operation(gf->f); break; \
+    case LINELM:     lin_elem_exp_##operation(gf->f);        break; \
+    case CONSTELM:   const_elem_exp_##operation(gf->f);      break; \
+    case KERNEL:     kernel_expansion_##operation(gf->f);    break; \
+    }
+
+#define GF_SWITCH_NO_ONEOUT(operation, fc, A, B)                     \
+    switch (fc){                                                     \
+    case PIECEWISE:  piecewise_poly_##operation(A,B);      break;    \
+    case POLYNOMIAL: orth_poly_expansion_##operation(A,B); break;    \
+    case LINELM:     lin_elem_exp_##operation(A,B);        break;    \
+    case CONSTELM:   const_elem_exp_##operation(A,B);      break;    \
+    case KERNEL:     kernel_expansion_##operation(A,B);    break;    \
+    }
+
+#define GF_SWITCH_TEMPOUT(operation) \
+    switch (gf->fc){                                                       \
+    case PIECEWISE:  temp = piecewise_poly_##operation(gf->f);      break; \
+    case POLYNOMIAL: temp = orth_poly_expansion_##operation(gf->f); break; \
+    case LINELM:     temp = lin_elem_exp_##operation(gf->f);        break; \
+    case CONSTELM:   temp = const_elem_exp_##operation(gf->f);      break; \
+    case KERNEL:     temp = kernel_expansion_##operation(gf->f);    break; \
+    }
+
+#define GF_SWITCH_ONEOUT(operation,fc,O,A)                            \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = piecewise_poly_##operation(A);      break; \
+    case POLYNOMIAL: O = orth_poly_expansion_##operation(A); break; \
+    case LINELM:     O = lin_elem_exp_##operation(A);        break; \
+    case CONSTELM:   O = const_elem_exp_##operation(A);      break; \
+    case KERNEL:     O = kernel_expansion_##operation(A);    break; \
+    }
+
+#define GF_OPTS_SWITCH_ONEOUT(operation,fc,O,A)                            \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = pw_poly_opts_##operation(A);      break; \
+    case POLYNOMIAL: O = ope_opts_##operation(A); break; \
+    case LINELM:     O = lin_elem_exp_aopts_##operation(A);        break; \
+    case CONSTELM:   O = const_elem_exp_aopts_##operation(A);      break; \
+    case KERNEL:     O = kernel_approx_opts_##operation(A);    break; \
+    }
+
+#define GF_SWITCH_TWOOUT(operation,fc,O,A,B)                            \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = piecewise_poly_##operation(A,B);      break; \
+    case POLYNOMIAL: O = orth_poly_expansion_##operation(A,B); break; \
+    case LINELM:     O = lin_elem_exp_##operation(A,B);        break; \
+    case CONSTELM:   O = const_elem_exp_##operation(A,B);      break; \
+    case KERNEL:     O = kernel_expansion_##operation(A,B);    break; \
+    }
+
+#define GF_SWITCH_THREEOUT(operation,fc,O,A,B,C)                       \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = piecewise_poly_##operation(A,B,C);      break;  \
+    case POLYNOMIAL: O = orth_poly_expansion_##operation(A,B,C); break;  \
+    case LINELM:     O = lin_elem_exp_##operation(A,B,C);        break;  \
+    case CONSTELM:   O = const_elem_exp_##operation(A,B,C);      break;  \
+    case KERNEL:     O = kernel_expansion_##operation(A,B,C);    break;  \
+    }
+
+#define GF_SWITCH_NO_THREEOUT(operation,fc,A,B,C)                       \
+    switch (fc){                                                        \
+    case PIECEWISE:  piecewise_poly_##operation(A,B,C);      break;  \
+    case POLYNOMIAL: orth_poly_expansion_##operation(A,B,C); break;  \
+    case LINELM:     lin_elem_exp_##operation(A,B,C);        break;  \
+    case CONSTELM:   const_elem_exp_##operation(A,B,C);      break;  \
+    case KERNEL:     kernel_expansion_##operation(A,B,C);    break;  \
+    }
+
+#define GF_SWITCH_THREE_FRONT(operation,fc,A,B,C)                  \
+    switch (fc){                                                    \
+    case PIECEWISE:  operation##_piecewise_poly(A,B,C);      break; \
+    case POLYNOMIAL: operation##_orth_poly_expansion(A,B,C); break; \
+    case LINELM:     operation##_lin_elem_exp(A,B,C);        break; \
+    case CONSTELM:   operation##_const_elem_exp(A,B,C);      break; \
+    case KERNEL:     operation##_kernel_expansion(A,B,C);    break; \
+    }
+
+
+#define GF_SWITCH_NO_FOUROUT_FRONT(operation,fc,A,B,C,D)                 \
+    switch (fc){                                                        \
+    case PIECEWISE:  operation##_piecewise_poly(A,B,C,D);      break;    \
+    case POLYNOMIAL: operation##_orth_poly_expansion(A,B,C,D); break;    \
+    case LINELM:     operation##_lin_elem_exp(A,B,C,D);        break;    \
+    case CONSTELM:   operation##_const_elem_exp(A,B,C,D);      break;    \
+    case KERNEL:     operation##_kernel_expansion(A,B,C,D);    break;    \
+    }
+
+#define GF_SWITCH_THREEOUT_FRONT(operation,fc,O,A,B,C)                  \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = operation##_piecewise_poly(A,B,C);      break; \
+    case POLYNOMIAL: O = operation##_orth_poly_expansion(A,B,C); break; \
+    case LINELM:     O = operation##_lin_elem_exp(A,B,C);        break; \
+    case CONSTELM:   O = operation##_const_elem_exp(A,B,C);      break; \
+    case KERNEL:     O = operation##_kernel_expansion(A,B,C);    break; \
+    }
+
+#define GF_SWITCH_TWOOUT_FRONT(operation,fc,O,A,B)                  \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = operation##_piecewise_poly(A,B);      break; \
+    case POLYNOMIAL: O = operation##_orth_poly_expansion(A,B); break; \
+    case LINELM:     O = operation##_lin_elem_exp(A,B);        break; \
+    case CONSTELM:   O = operation##_const_elem_exp(A,B);      break; \
+    case KERNEL:     O = operation##_kernel_expansion(A,B);    break; \
+    }
+
+#define GF_SWITCH_FOUROUT(operation,fc,O,A,B,C,D)                       \
+    switch (fc){                                                        \
+    case PIECEWISE:  O = piecewise_poly_##operation(A,B,C,D);      break; \
+    case POLYNOMIAL: O = orth_poly_expansion_##operation(A,B,C,D); break; \
+    case LINELM:     O = lin_elem_exp_##operation(A,B,C,D);        break; \
+    case CONSTELM:   O = const_elem_exp_##operation(A,B,C,D);      break; \
+    case KERNEL:     O = kernel_expansion_##operation(A,B,C,D);    break; \
+    }
+
+#define GF_SWITCH_SIX(operation,fc,A,B,C,D,E,F)                       \
+    switch (fc){                                                        \
+    case PIECEWISE:  piecewise_poly_##operation(A,B,C,D,E,F);      break; \
+    case POLYNOMIAL: orth_poly_expansion_##operation(A,B,C,D,E,F); break; \
+    case LINELM:     lin_elem_exp_##operation(A,B,C,D,E,F);        break; \
+    case CONSTELM:   const_elem_exp_##operation(A,B,C,D,E,F);      break; \
+    case KERNEL:     kernel_expansion_##operation(A,B,C,D,E,F);    break; \
+    }
+
+#define GF_IN_OUT(operation) \
+struct GenericFunction * generic_function_##operation(const struct GenericFunction * gf) \
+{ \
+    struct GenericFunction * out = NULL;                                       \
+    out = generic_function_alloc(gf->dim, gf->fc);                             \
+    switch (gf->fc){                                                           \
+    case PIECEWISE:  out->f = piecewise_poly_##operation(gf->f);      break;   \
+    case POLYNOMIAL: out->f = orth_poly_expansion_##operation(gf->f); break;   \
+    case LINELM:     out->f = lin_elem_exp_##operation(gf->f);        break;   \
+    case CONSTELM:   out->f = const_elem_exp_##operation(gf->f);      break;   \
+    case KERNEL:     out->f = kernel_expansion_##operation(gf->f);    break;   \
+    }                                                                          \
+    return out;                                                                \
+}
+
+#define GF_IN_GENOUT(operation, typeout, init) \
+typeout generic_function_##operation(const struct GenericFunction * gf) \
+{ \
+    typeout out = init;                            \
+    switch (gf->fc){                                                    \
+    case PIECEWISE:  out = piecewise_poly_##operation(gf->f);      break;   \
+    case POLYNOMIAL: out = orth_poly_expansion_##operation(gf->f); break;   \
+    case LINELM:     out = lin_elem_exp_##operation(gf->f);        break;   \
+    case CONSTELM:   out = const_elem_exp_##operation(gf->f);      break;   \
+    case KERNEL:     out = kernel_expansion_##operation(gf->f);    break;   \
+    }                                                                          \
+    return out;                                                                \
+}
+
 #endif

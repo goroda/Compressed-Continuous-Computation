@@ -336,9 +336,8 @@ void pw_poly_opts_set_tol(struct PwPolyOpts * pw, double tol)
 *************************************************************/
 size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
 {
-    assert (opts != NULL);
-    fprintf(stderr, "Error: Cannot yet get number of free parameters from pw poly opts\n");
-    assert (1 == 0);
+    (void)(opts);
+    NOT_IMPLEMENTED_MSG("pw_poly_opts_get_nparams")
     return 0;
 }
 
@@ -347,10 +346,9 @@ size_t pw_poly_opts_get_nparams(const struct PwPolyOpts* opts)
 *************************************************************/
 void pw_poly_opts_set_nparams(struct PwPolyOpts* opts, size_t num)
 {
+    (void)(opts);
     (void)(num);
-    assert (opts != NULL);
-    fprintf(stderr, "Error: Cannot yet set number of free parameters from pw poly opts\n");
-    assert (1 == 0);
+    NOT_IMPLEMENTED_MSG("pw_poly_opts_set_nparams")
 }
 
 
@@ -614,7 +612,6 @@ piecewise_poly_linear(double slope, double offset, struct PwPolyOpts * opts)
 struct PiecewisePoly * piecewise_poly_quadratic(double a, double offset, struct PwPolyOpts * opts)
 {
     struct PiecewisePoly * p = piecewise_poly_alloc();
-    p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
     double coeff[3];
     coeff[0] = a; coeff[1] = -2*a*offset; coeff[2] = a*offset*offset;
     p->ope = orth_poly_expansion_init(opts->ptype, 3, opts->lb, opts->ub);
@@ -2563,13 +2560,13 @@ deserialize_piecewise_poly(unsigned char * ser,
     return ptr;
 }
 
-void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args)
+void print_piecewise_poly(struct PiecewisePoly * pw, size_t prec, void *args, FILE* fp)
 {
     if (pw->ope != NULL){
-        print_orth_poly_expansion(pw->ope,prec,args);
+        print_orth_poly_expansion(pw->ope,prec,args,fp);
     }
     else{
-        printf("Tree structure with %zu branches\n",pw->nbranches);
+        fprintf(fp, "Tree structure with %zu branches\n",pw->nbranches);
     }
 }
 
@@ -2727,4 +2724,27 @@ piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly * poly,
 
     NOT_IMPLEMENTED_MSG("piecewise_poly_param_grad_eval2");
     return 1;
+}
+
+
+/********************************************************//**
+*   Get parameters 
+*************************************************************/
+size_t piecewise_poly_get_params(const struct PiecewisePoly * pw, double * param)
+{
+    (void)(pw);
+    (void)(param);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_get_params")
+    return 0;
+}
+
+/********************************************************//**
+*   Get parameters by reference
+*************************************************************/
+double * piecewise_poly_get_params_ref(const struct PiecewisePoly * pw, size_t *nparam)
+{
+    (void)(pw);
+    (void)(nparam);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_get_params_ref")
+    return NULL;
 }

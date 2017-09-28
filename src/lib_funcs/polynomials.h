@@ -242,9 +242,7 @@ struct OrthPolyExpansion *
 orth_poly_expansion_genorder(size_t,struct OpeOpts*);
 
 double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
-inline double orth_poly_expansion_deriv_eval_for_approx(double x, void* poly){
-    return orth_poly_expansion_deriv_eval(poly, x);
-}
+
 
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion *);
@@ -376,6 +374,6 @@ double orth_poly_expansion_absmax(struct OrthPolyExpansion *, double *,void*);
 
 /////////////////////////////////////////////////////////
 // Utilities
-void print_orth_poly_expansion(struct OrthPolyExpansion *, size_t, void *);
+void print_orth_poly_expansion(struct OrthPolyExpansion *, size_t, void *, FILE*);
 
 #endif

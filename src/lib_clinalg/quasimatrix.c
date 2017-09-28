@@ -947,7 +947,7 @@ void quasimatrix_print(const struct Quasimatrix * qm,FILE *fp,
     printf("=========================================\n");
     size_t ii;
     for (ii = 0; ii < qm->n; ii++){
-        print_generic_function(qm->funcs[ii],prec,args);
+        print_generic_function(qm->funcs[ii],prec,args, fp);
         printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     }
 }

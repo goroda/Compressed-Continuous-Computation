@@ -3979,7 +3979,7 @@ int qmarray_lq_gs(struct Qmarray * A, double ** R)
 }
 
 
-void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
+void print_qmarray(struct Qmarray * qm, size_t prec, void * args, FILE *fp)
 {
 
     printf("Quasimatrix Array (%zu,%zu)\n",qm->nrows, qm->ncols);
@@ -3988,7 +3988,7 @@ void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
     for (ii = 0; ii < qm->nrows; ii++){
         for (jj = 0; jj < qm->ncols; jj++){
             printf("(%zu, %zu)\n",ii,jj);
-            print_generic_function(qm->funcs[jj*qm->nrows+ ii],prec,args);
+            print_generic_function(qm->funcs[jj*qm->nrows+ ii],prec,args,fp);
             printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         }
     }

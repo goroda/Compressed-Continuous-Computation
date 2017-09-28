@@ -222,5 +222,5 @@ int qmarray_lq(struct Qmarray *, struct Qmarray **, double **, struct OneApproxO
 int qmarray_qr_gs(struct Qmarray *, double **);
 int qmarray_lq_gs(struct Qmarray *, double **);
 
-void print_qmarray(struct Qmarray *, size_t, void *);
+void print_qmarray(struct Qmarray *, size_t, void *, FILE *);
 #endif

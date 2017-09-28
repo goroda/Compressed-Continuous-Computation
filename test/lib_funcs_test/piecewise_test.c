@@ -132,7 +132,7 @@ void Test_pw_quad(CuTest * tc){
     struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,lb,ub);
     
     /* struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,3.2,-0.2,opts); */
-    struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,1e8,opts);    
+    struct PiecewisePoly * pw = piecewise_poly_quadratic(1e-10,1e8,opts);
 
     // compute error
     double abs_err;
