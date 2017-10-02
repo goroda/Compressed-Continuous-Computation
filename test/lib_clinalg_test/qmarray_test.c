@@ -130,20 +130,22 @@ qmarray_test_equality1(CuTest * tc, struct Qmarray * A,
     CuAssertIntEquals(tc,nrowsA,nrowsB);
     CuAssertIntEquals(tc,ncolsA,ncolsB);
 
-    for (size_t ii = 0; ii < ncolsA; ii++){
-        struct Quasimatrix * a1 = qmarray_extract_column(A,ii);
-        struct Quasimatrix * a2 = qmarray_extract_column(A,ii);
-
-        struct Quasimatrix * temp = NULL;
-        double diff;
-        temp = quasimatrix_daxpby(1.0, a1,-1.0, a2);
-        diff = quasimatrix_norm(temp);
-        CuAssertDblEquals(tc, 0.0, diff, tol);
-
-        quasimatrix_free(temp); temp = NULL;
-        quasimatrix_free(a1);
-        quasimatrix_free(a2);        
+    for (size_t ii = 0; ii < nrowsA; ii++){
+        /* printf("Testing row %zu\n", ii); */
+        for (size_t jj = 0; jj < ncolsA; jj++){
+            /* printf("\t Testing col %zu\n", jj); */
+            struct GenericFunction * f1 = qmarray_get_func(A, ii, jj);
+            struct GenericFunction * f2 = qmarray_get_func(B, ii, jj);
+            double diff = generic_function_norm2diff(f1, f2);
+            /* printf("Function 1 \n"); */
+            /* print_generic_function(f1, 2, NULL, stdout); */
+            /* printf("Function 2 \n"); */
+            /* print_generic_function(f2, 2, NULL, stdout); */
+            /* printf("diff = %G\n", diff); */
+            CuAssertDblEquals(tc, 0.0, diff, tol);
+        }
     }
+    
 }
 
 static void 
@@ -319,31 +321,43 @@ void Test_qmarray_householder(CuTest * tc){
     fwrap_set_func_array(fw,3,func4,NULL);
 
     struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,-1.0,1.0);
-    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(PIECEWISE, opts);
 
     struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
-    struct Qmarray * Acopy = qmarray_copy(A);
-    qmarray_test_equality1(tc,A,Acopy,1e-15);
+    CuAssertIntEquals(tc,2,qmarray_get_nrows(A));
+    CuAssertIntEquals(tc,2,qmarray_get_ncols(A));
+    /* print_qmarray(A, 1, NULL, stdout); */
 
+
+    /* printf("\n\n********* copy *****************\n\n"); */
+    struct Qmarray * Acopy = qmarray_copy(A);
+    CuAssertIntEquals(tc,2,qmarray_get_nrows(Acopy));
+    CuAssertIntEquals(tc,2,qmarray_get_ncols(Acopy));
+    /* print_qmarray(Acopy, 2, NULL, stdout); */
+    qmarray_test_equality1(tc,A,Acopy,3e-14);
+
+    
+    /* printf("Do householdering simple\n"); */
     double * R = calloc_double(2*2);
     struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
 
+    
     size_t nrows = qmarray_get_nrows(Q);
     size_t ncols = qmarray_get_ncols(Q);
     CuAssertIntEquals(tc,2,nrows);
     CuAssertIntEquals(tc,2,ncols);
 
-    qmarray_test_col_orth(tc,Q,1e-14);
+    qmarray_test_col_orth(tc,Q,4e-14);
     
     // test equivalence
     struct Qmarray * Anew = qmam(Q,R,2);
-    qmarray_test_equality1(tc,Anew,Acopy,1e-15);
-    
+    qmarray_test_equality1(tc,Anew,Acopy,4e-14);
     qmarray_free(A);
     qmarray_free(Q);
+    free(R);    
     qmarray_free(Acopy);
     qmarray_free(Anew);
-    free(R);
+
     fwrap_destroy(fw);
     pw_poly_opts_free(opts);
     one_approx_opts_free(qmopts);
@@ -2086,7 +2100,7 @@ CuSuite * CLinalgQmarrayGetSuite(){
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm);    
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm);
     SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
 
     SUITE_ADD_TEST(suite,Test_fast_mat_kron);

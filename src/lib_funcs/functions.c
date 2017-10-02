@@ -276,44 +276,6 @@ serialize_generic_function(unsigned char * ser,
 
 }
 
-/********************************************************//**
-*   Deserialize a generic function
-*
-*   \param[in]     ser - serialized function
-*   \param[in,out] gf  -  generic function
-*
-*   \return ptr = ser + nBytes of gf
-************************************************************/
-unsigned char *
-deserialize_generic_function(unsigned char * ser, 
-                             struct GenericFunction ** gf)
-{
-    
-    int fci;
-    size_t dim;
-    enum function_class fc;
-    
-    unsigned char * ptr = deserialize_size_t(ser, &dim);
-    ptr = deserialize_int(ptr, &fci);
-    fc = (enum function_class) fci;
-    *gf = generic_function_alloc(dim,fc);
-
-    /* GF_SWITCH_TWOOUT_FRONT(deserialize,fc,ptr,ptr,&((*gf)->f)) */
-    /* /\* printf("deserialize generic function %zu, %d\n",dim,fc); *\/ */
-    struct PiecewisePoly * pw = NULL;
-    struct OrthPolyExpansion * ope = NULL;
-    struct LinElemExp * le = NULL;
-    struct ConstElemExp * ce = NULL;
-    struct KernelExpansion * ke = NULL;
-    switch (fc){
-    case PIECEWISE:  ptr = deserialize_piecewise_poly(ptr,&pw);       (*gf)->f = pw;  break;
-    case POLYNOMIAL: ptr = deserialize_orth_poly_expansion(ptr,&ope); (*gf)->f = ope; break;
-    case LINELM:     ptr = deserialize_lin_elem_exp(ptr,&le);         (*gf)->f = le;  break;
-    case CONSTELM:   ptr = deserialize_const_elem_exp(ptr,&ce);       (*gf)->f = ce;  break;
-    case KERNEL:     ptr = deserialize_kernel_expansion(ptr,&ke);     (*gf)->f = ke;  break;
-    }
-    return ptr;
-}
 
 
 /********************************************************//**
@@ -361,32 +323,6 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     GF_SWITCH_NO_FOUROUT_FRONT(print,gf->fc,gf->f,prec,args,fp)
 }
 
-
-
-/********************************************************//**
-    Create a generic function by approximating a one dimensional function
-
-    \param[in] fc    - function approximation class
-    \param[in] f     - wrapped function
-    \param[in] aopts - approximation options
-
-    \return gf - generic function
-************************************************************/
-struct GenericFunction * 
-generic_function_approximate1d(enum function_class fc, void * aopts,
-                               struct Fwrap * f)
-{
-    struct GenericFunction * gf = generic_function_alloc(1,fc);
-    switch (fc){
-    case PIECEWISE:  gf->f = piecewise_poly_approx1_adapt(aopts,f);      break;
-    case POLYNOMIAL: gf->f = orth_poly_expansion_approx_adapt(aopts,f);  break;
-    case LINELM:     gf->f = lin_elem_exp_approx(aopts,f);               break;
-    case CONSTELM:   gf->f = const_elem_exp_approx(aopts,f);             break;        
-    case KERNEL: assert (1 == 0);                                        break;
-    }
-
-    return gf;
-}
 
 /********************************************************//**
     Create a generic function through regression of data
@@ -485,16 +421,7 @@ generic_function_create_with_params(enum function_class fc, void * aopts, size_t
 {
 
     struct GenericFunction * gf = generic_function_alloc(1,fc);
-
-    switch (fc){
-    case PIECEWISE:                                                                    break;
-    case POLYNOMIAL: gf->f = orth_poly_expansion_create_with_params(aopts,dim,param);  break;
-    case LINELM:     gf->f = lin_elem_exp_create_with_params(aopts,dim,param);         break;
-    case CONSTELM:   gf->f = const_elem_exp_create_with_params(aopts,dim,param);       break;        
-    case KERNEL:     gf->f = kernel_expansion_create_with_params(aopts,dim,param);     break;
-    }
-
-    //print_generic_function(gf,0,NULL);
+    GF_SWITCH_THREEOUT(create_with_params, fc, gf->f, aopts, dim, param);
     return gf;
 }
 
@@ -856,247 +783,7 @@ generic_function_create_nodal(struct GenericFunction * f,size_t N, double * x)
 
     return out;
 }
-/********************************************************//**
-*   Compute the sum of the product between the functions of two function arrays
-*
-*   \param[in] n   - number of functions
-*   \param[in] lda - stride of first array
-*   \param[in] a   - array of generic functions
-*   \param[in] ldb - stride of second array
-*   \param[in] b   - array of generic functions
-*
-*   \return out - generic function
-************************************************************/
-struct GenericFunction *
-generic_function_sum_prod(size_t n, size_t lda,  struct GenericFunction ** a, 
-                          size_t ldb, struct GenericFunction ** b)
-{
-    size_t ii;
-    int allpoly = 1;
-    for (ii = 0; ii < n; ii++){
-        if (a[ii*lda]->fc != POLYNOMIAL){
-            allpoly = 0;
-            break;
-        }
-        if (b[ii*ldb]->fc != POLYNOMIAL){
-            allpoly = 0;
-            break;
-        }
-    }
 
-    if (allpoly == 1){
-        struct OrthPolyExpansion ** aa = NULL;
-        struct OrthPolyExpansion ** bb= NULL;
-        if (NULL == (aa = malloc(n * sizeof(struct OrthPolyExpansion *)))){
-            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
-            exit(1);
-        }
-        if (NULL == (bb = malloc(n * sizeof(struct OrthPolyExpansion *)))){
-            fprintf(stderr, "failed to allocate memmory in generic_function_sum_prod\n");
-            exit(1);
-        }
-        for  (ii = 0; ii < n; ii++){
-            aa[ii] = a[ii*lda]->f;
-            bb[ii] = b[ii*ldb]->f;
-        }
-
-        struct GenericFunction * gf = generic_function_alloc(1,a[0]->fc);
-        gf->f = orth_poly_expansion_sum_prod(n,1,aa,1,bb);
-        gf->fargs = NULL;
-        free(aa); aa = NULL;
-        free(bb); bb = NULL;
-
-        assert (gf->f != NULL);
-        return gf;
-    }
-
-    ii = 0;
-    struct GenericFunction * out = generic_function_prod(a[lda*ii],b[ldb*ii]);
-    struct GenericFunction * out2 = NULL;
-    struct GenericFunction * temp = NULL;
-    for (ii = 1; ii < n; ii++){
-        temp = generic_function_prod(a[lda*ii],b[ldb*ii]);
-        if (out2 == NULL){
-            out2 = generic_function_daxpby(1.0,out, 1.0, temp);
-            generic_function_free(out); out = NULL;
-        }
-        else if (out == NULL){
-            out = generic_function_daxpby(1.0,out2, 1.0, temp);
-            generic_function_free(out2); out2 = NULL;
-        }
-        generic_function_free(temp);
-    }
-
-    if (out == NULL){
-        return out2;
-    }
-    else if (out2 == NULL){
-        return out;
-    }
-    return NULL;
-}
-
-/********************************************************//**
-*   Compute the product between two generic functions
-*
-*   \param[in] a  - generic function
-*   \param[in] b  - generic function
-*
-*   \return out(x) = a(x)b(x)  - generic function
-************************************************************/
-struct GenericFunction *
-generic_function_prod(struct GenericFunction * a, struct GenericFunction * b)
-{     
-    enum function_class fc = a->fc;
-    int apalloc = 0;
-    int bpalloc = 0;
-    struct PiecewisePoly * ap = NULL;
-    struct PiecewisePoly * bp = NULL;
-    if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
-        // everything to PIECEWISE!
-        fc = PIECEWISE;
-        if (a->fc == POLYNOMIAL){
-            ap = piecewise_poly_alloc();
-            apalloc = 1;
-            ap->ope = a->f;
-        }
-        else{
-            ap = a->f;
-        }
-        if (b->fc == POLYNOMIAL){
-            bp = piecewise_poly_alloc();
-            bpalloc = 1;
-            bp->ope = b->f;
-        }
-        else{
-            bp = b->f;
-        }
-    }
-
-    void * in_a = ap;
-    void * in_b = bp;
-         
-    if (ap == NULL){ in_a = a->f; }
-    if (bp == NULL){ in_b = b->f; }
-
-    struct GenericFunction * out = generic_function_alloc(a->dim, fc);
-    out->fargs = a->fargs;
-         
-    GF_SWITCH_TWOOUT(prod, fc, out->f, in_a, in_b)
-
-        if (apalloc == 1){
-            free(ap);
-        }
-    if (bpalloc == 1){
-        free(bp);
-    }
-    return out;
-}
-
- /********************************************************//**
- *   Add two generic functions z = ax + by
- *
- *   \param[in] a - scaling of first function
- *   \param[in] x - first function
- *   \param[in] b - scaling of second function
- *   \param[in] y - second function
- *
- *   \return generic function 
- *
- *   \note
- *       Handling the function class of the output is not very smart
- ************************************************************/
-struct GenericFunction * 
-generic_function_daxpby(double a, const struct GenericFunction * x, 
-                        double b, const struct GenericFunction * y)
-{
-    //printf("in here! a =%G b = %G\n",a,b);
-
-    struct GenericFunction * out = NULL;
-    struct PiecewisePoly * pw = NULL;
-    if (x == NULL){
-        assert ( y != NULL);
-        out = generic_function_copy(y);
-        generic_function_scale(b, out);
-    }
-    else if (y == NULL){
-        assert ( x != NULL );
-        out = generic_function_copy(x);
-        generic_function_scale(a, out);
-    }
-    else {
-        /* printf("in the else!\n"); */
-        if (x->fc == y->fc){
-            out = generic_function_copy(x);
-            generic_function_scale(a, out);
-            generic_function_axpy(b, y, out);
-        }
-        else if (x->fc != y->fc){
-            if ((x->fc == LINELM) || (y->fc == LINELM)){
-                fprintf(stderr,
-                        "Can't add linear elements with other stuff\n");
-                exit(1);
-            }
-            if ((x->fc == CONSTELM) || (y->fc == CONSTELM)){
-                fprintf(stderr,
-                        "Can't add piecewise constant elements with other stuff\n");
-                exit(1);
-            }
-            else if ((x->fc == KERNEL) || (y->fc == KERNEL)){
-                fprintf(stderr,
-                        "Can't add kernel expansions with other stuff\n");
-                exit(1);
-            }
-            //printf("dont match! a=%G, b=%G\n",a,b);
-            int apalloc = 0;
-            int bpalloc = 0;
-            struct PiecewisePoly * ap = NULL;
-            struct PiecewisePoly * bp = NULL;
-            if (x->fc == POLYNOMIAL){
-                ap = piecewise_poly_alloc();
-                apalloc = 1;
-                ap->ope = x->f;
-            }
-            else{
-                ap = x->f;
-            }
-            if (y->fc == POLYNOMIAL){
-                bp = piecewise_poly_alloc();
-                bpalloc = 1;
-                bp->ope = y->f;
-            }
-            else{
-                bp = y->f;
-            }
-            pw = piecewise_poly_daxpby(a, ap, b, bp);
-            //printf("got it pw is null? %d\n",pw==NULL);
-            /*
-              printf("---\n");
-              printf("a=%G\n",a);
-              print_piecewise_poly(ap,2,NULL);
-              printf("b=%G\n",b);
-              print_piecewise_poly(bp,2,NULL);
-              printf("total \n");
-              print_piecewise_poly(pw,2,NULL);
-              printf("---\n");
-            */
-            out = generic_function_alloc(x->dim,PIECEWISE);
-
-
-            out->f = pw;
-            out->fargs = NULL;
-            if (apalloc == 1){
-                free(ap);
-            }
-            if (bpalloc == 1){
-                free(bp);
-            }
-        }
-    }
-
-    //printf("in there!|n");
-    return out;
-}
 
 /********************************************************//**
 *   Compute axpby for a an array of generic functions
@@ -1143,9 +830,6 @@ generic_function_array_daxpby(size_t n, double a, size_t ldx,
     //printf("return \n");
     return fout;
 }
-
-
-
 
 GF_IN_GENOUT(get_num_params, size_t, 0)        // Get the number of parameters describing the generic function
 GF_IN_GENOUT(get_lb, double, -0.123456789)     // Get the lower bound of the input space
@@ -1401,72 +1085,6 @@ generic_function_array_flip_sign(size_t n, size_t lda,
     }
 }
 
-/********************************************************//**
-*   Add two generic functions z = ax + by where z is preallocated (pa)
-*
-*   \param[in]     a - scaling of first function 
-*   \param[in]     x - first function (NOT NULL)
-*   \param[in]     b - scaling of second function
-*   \param[in]     y - second function (NOT NULL)
-*   \param[in,out] z - Generic function is allocated but sub function (may) not be
-*
-*   \note
-*   Handling when dealing with PW poly is not yet good.
-************************************************************/
-void
-generic_function_weighted_sum_pa(double a, struct GenericFunction * x, 
-        double b, struct GenericFunction * y, struct GenericFunction ** z)
-{
-    assert (x != NULL);
-    assert (y != NULL);
-    if  (x->fc != y->fc){
-        //printf("here\n");
-        generic_function_free(*z); *z = NULL;
-        *z = generic_function_daxpby(a,x,b,y);
-        assert ( (*z)->f != NULL);
-        //printf("there %d\n",(*z)->f == NULL);
-        //printf("xnull? %d ynull? %d\n",x->f==NULL,y->f==NULL);
-
-        //fprintf(stderr, "generic_function_weighted_sum_pa cannot yet handle generic functions with different function classes\n");
-        //fprintf(stderr, "type of x is %d and type of y is %d --- (0:PIECEWISE,1:POLYNOMIAL)\n",x->fc,y->fc);
-        //fprintf(stderr, "type of z is %d\n",z->fc);
-        //exit(1);
-    }
-    else{
-        enum function_class fc = x->fc;
-        if (fc == POLYNOMIAL){
-            if ((*z)->f == NULL){
-                (*z)->fc = POLYNOMIAL;
-                (*z)->f = orth_poly_expansion_daxpby(a, x->f,b, y->f );
-                (*z)->fargs = NULL;
-            }
-            else{
-                fprintf(stderr, "cant handle overwriting functions yet\n");
-                exit(1);
-            }
-        }
-        else if (fc == LINELM){
-            assert ((*z)->f == NULL);
-            (*z)->fc = LINELM;
-            (*z)->f = lin_elem_exp_copy(y->f);
-            lin_elem_exp_scale(b,(*z)->f);
-            lin_elem_exp_axpy(a,x->f,(*z)->f);
-            (*z)->fargs = NULL;
-        }
-        else if (fc == CONSTELM){
-            assert ((*z)->f == NULL);
-            (*z)->fc = CONSTELM;
-            (*z)->f = const_elem_exp_copy(y->f);
-            const_elem_exp_scale(b,(*z)->f);
-            const_elem_exp_axpy(a,x->f,(*z)->f);
-            (*z)->fargs = NULL;            
-        }
-        else{
-            generic_function_free(*z); (*z) = NULL;
-            *z = generic_function_daxpby(a,x,b,y);
-        }
-    }
-}
 
 /********************************************************//**
 *   Multiply and add 3 functions \f$ z \leftarrow ax + by + cz \f$
@@ -1517,8 +1135,8 @@ int generic_function_axpy(double a, const struct GenericFunction * x,
     assert (x->fc == y->fc);
 
     int out = 1;
-    GF_SWITCH_THREEOUT(axpy, x->fc, out, a, x->f, y->f)
-        return out;
+    GF_SWITCH_THREEOUT(axpy, x->fc, out, a, x->f, y->f);
+    return out;
 }
 
 /********************************************************//**
@@ -1667,85 +1285,7 @@ void generic_function_kronh2(int left, size_t r, size_t m, size_t n, size_t l,
     }
 }
 
-/*******************************************************//**
-    Fill a generic_function array with orthonormal functions 
-    of a particular class and sub_type
 
-    \param[in]     n       - number of columns
-    \param[in,out] gfarray - array to fill with functions
-    \param[in]     fc      - function class
-    \param[in]     args    - extra arguments depending on 
-                             function_class, sub_type, etc.
-************************************************************/
-void
-generic_function_array_orth(size_t n,
-                            struct GenericFunction ** gfarray,
-                            enum function_class fc,
-                            void * args)
-{
-    size_t ii;
-    /* double lb, ub; */
-    struct LinElemExp ** b = NULL;
-    struct ConstElemExp ** ce = NULL;    
-    struct KernelExpansion ** ke = NULL;
-    switch (fc){
-    case PIECEWISE:
-        /* printf("generating orthonormal piecewise\n"); */
-        for (ii = 0; ii < n; ii++){
-            gfarray[ii] = generic_function_alloc(1,fc);
-            gfarray[ii]->f = piecewise_poly_genorder(ii,args);
-            gfarray[ii]->fargs = NULL;
-        }
-        break;
-    case POLYNOMIAL:
-        for (ii = 0; ii < n; ii++){
-            /* printf("on ii = %zu, fc=%d\n",ii,fc); */
-            gfarray[ii] = generic_function_alloc(1,fc);
-            gfarray[ii]->f = orth_poly_expansion_genorder(ii,args);
-            gfarray[ii]->fargs = NULL;
-        }
-        break;
-    case LINELM:
-        b = malloc(n * sizeof(struct LinElemExp *));
-        for (ii = 0 ; ii < n; ii++){
-            gfarray[ii] = generic_function_alloc(1,fc);
-            b[ii] = NULL;
-        }
-        lin_elem_exp_orth_basis(n,b,args);
-        for (ii = 0; ii < n; ii++){
-            gfarray[ii]->f = b[ii];
-        }
-        free(b); b = NULL;
-        break;
-    case CONSTELM:
-        ce = malloc(n * sizeof(struct LinElemExp *));
-        for (ii = 0 ; ii < n; ii++){
-            gfarray[ii] = generic_function_alloc(1,fc);
-            ce[ii] = NULL;
-        }
-        const_elem_exp_orth_basis(n,ce,args);
-        for (ii = 0; ii < n; ii++){
-            gfarray[ii]->f = ce[ii];
-        }
-        free(ce); ce = NULL;
-        break;        
-    case KERNEL:
-        /* assert(1==0); */
-        ke = malloc(n * sizeof(struct KernelExpansion *));
-        for (ii = 0 ; ii < n; ii++){
-            gfarray[ii] = generic_function_alloc(1,fc);
-            ke[ii] = NULL;
-        }
-        kernel_expansion_orth_basis(n,ke,args);
-        for (ii = 0; ii < n; ii++){
-            gfarray[ii]->f = ke[ii];
-        }
-        free(ke); ke = NULL;
- 
-        break;
-    }
-
-}
 
 /********************************************************//**
 *   Compute axpby for a an array of generic functions and overwrite into z
@@ -2114,62 +1654,6 @@ double generic_function_norm(const struct GenericFunction * f)
     return sqrt(out);
 }
 
-/********************************************************//**
-*   Compute the inner product between two generic functions
-*
-*   \param[in] a  - generic function
-*   \param[in] b  - generic function
-*
-*   \return out -  int a(x) b(x) dx 
-************************************************************/
-double generic_function_inner(const struct GenericFunction * a, 
-                              const struct GenericFunction * b)
-{
-     double out = 0.123456789;   
-     enum function_class fc = a->fc;
-     int apalloc = 0;
-     int bpalloc = 0;
-     struct PiecewisePoly * ap = NULL;
-     struct PiecewisePoly * bp = NULL;
-     void * in_a = a->f;
-     void * in_b = b->f;
-     if ( (a->fc != b->fc) || (a->fc == PIECEWISE) ){
-         assert (a->fc != LINELM);
-         assert (b->fc != LINELM);
-         assert (a->fc != CONSTELM);
-         assert (b->fc != CONSTELM);
-         assert (a->fc != KERNEL);
-         assert (b->fc != KERNEL);
-         // everything to PIECEWISE!
-         fc = PIECEWISE;
-         if (a->fc == POLYNOMIAL){
-             ap = piecewise_poly_alloc();
-             apalloc = 1;
-             ap->ope = a->f;
-         }
-         else{
-             ap = a->f;
-         }
-         if (b->fc == POLYNOMIAL){
-             bp = piecewise_poly_alloc();
-             bpalloc = 1;
-             bp->ope = b->f;
-         }
-         else{
-             bp = b->f;
-         }
-
-         in_a = ap;
-         in_b = bp;
-     }
-
-     GF_SWITCH_TWOOUT(inner, fc, out, in_a, in_b)
-
-     if (apalloc == 1){ free(ap); }
-     if (bpalloc == 1){ free(bp); }
-
-     return out;
- }
 
 /********************************************************//**
 *   Compute the weighted inner product between two generic functions
@@ -2348,55 +1832,6 @@ double generic_function_array_norm(size_t n, size_t lda,
 }
 
 
-/********************************************************//**
-    Compute the location and value of the maximum, 
-    in absolute value, element of a generic function 
-
-    \param[in]     f       - function
-    \param[in,out] x       - location of maximum
-    \param[in]     optargs - optimization arguments
-
-    \return absolute value of the maximum
-************************************************************/
-double generic_function_absmax(const struct GenericFunction * f, double * x, void * optargs)
-{
-    double out = 0.123456789;
-    size_t dsize = sizeof(double);
-    switch (f->fc){
-    case PIECEWISE:  out = piecewise_poly_absmax(f->f,x,optargs);        break;
-    case POLYNOMIAL: out = orth_poly_expansion_absmax(f->f,x,optargs);   break;
-    case LINELM:     out = lin_elem_exp_absmax(f->f,x,dsize,optargs);    break;
-    case CONSTELM:   out = const_elem_exp_absmax(f->f,x,dsize,optargs);  break;        
-    case KERNEL:     out = kernel_expansion_absmax(f->f, x, optargs);    break;
-    }
-    return out;
-}
-
-/********************************************************//**
-    Compute the (generic) location and value of the maximum, 
-    in absolute value, element of a generic function 
-
-    \param[in]     f       - function
-    \param[in,out] x       - location of maximum
-    \param[in]     size    - number of bytes of x
-    \param[in]     optargs - optimization arguments
-
-    \return absolute value of the maximum
-************************************************************/
-double generic_function_absmax_gen(const struct GenericFunction * f, 
-                                   void * x, size_t size, void * optargs)
-{
-    double out = 0.123456789;
-    /* size_t dsize = sizeof(double); */
-    switch (f->fc){
-    case PIECEWISE:  out = piecewise_poly_absmax(f->f,x,optargs);        break;
-    case POLYNOMIAL: out = orth_poly_expansion_absmax(f->f,x,optargs);   break;
-    case LINELM:     out = lin_elem_exp_absmax(f->f,x,size,optargs);     break;
-    case CONSTELM:   out = const_elem_exp_absmax(f->f,x,size,optargs);   break;        
-    case KERNEL:     out = kernel_expansion_absmax(f->f, x, optargs);    break;
-    }
-    return out;
-}
 
 /********************************************************//**
     Compute the index, location and value of the maximum, in absolute value, 

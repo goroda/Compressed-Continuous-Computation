@@ -1604,3 +1604,5 @@ struct KernelExpansion * kernel_expansion_loadtxt(FILE * stream)
     NOT_IMPLEMENTED_MSG("kernel_expansion_loadtxt")
     return NULL;
 }
+
+

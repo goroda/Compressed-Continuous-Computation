@@ -398,6 +398,27 @@ piecewise_poly_array_alloc(size_t size)
     return p;
 }
 
+static void piecewise_poly_copy_inside(const struct PiecewisePoly * src, struct PiecewisePoly * dst)
+{
+    if (src->leaf == 1){
+        dst->ope = orth_poly_expansion_copy(src->ope);
+        dst->leaf = 1;
+        dst->nbranches = 0;
+        dst->branches = NULL;
+    }
+    else{
+        dst->leaf = 0;
+        dst->nbranches = src->nbranches;
+        dst->ope = NULL;
+        dst->branches = piecewise_poly_array_alloc(dst->nbranches);
+        size_t ii;
+        for (ii = 0; ii < dst->nbranches; ii++){
+            dst->branches[ii] = piecewise_poly_copy(src->branches[ii]);
+        }
+    }
+}
+
+
 /********************************************************//**
 *   Copy a piecewise polynomial
 *   
@@ -410,22 +431,27 @@ piecewise_poly_copy(const struct PiecewisePoly * a)
 {
     if ( a != NULL ){
         struct PiecewisePoly * p = piecewise_poly_alloc();
-        if (a->leaf == 1){
-            p->ope = orth_poly_expansion_copy(a->ope);
-        }
-        else{
-            p->leaf = 0;
-            p->nbranches = a->nbranches;
-            p->ope = NULL;
-            p->branches = piecewise_poly_array_alloc(p->nbranches);
-            size_t ii;
-            for (ii = 0; ii < p->nbranches; ii++){
-                p->branches[ii] = piecewise_poly_copy(a->branches[ii]);
-            }
-        }
+        piecewise_poly_copy_inside(a, p);
         return p;
     }
     return NULL;
+}
+
+static void piecewise_poly_free_inside(struct PiecewisePoly * poly)
+{
+    if (poly->leaf == 1){
+        orth_poly_expansion_free(poly->ope);
+        poly->ope = NULL;
+    }
+    else{
+        size_t ii;
+        for (ii = 0; ii < poly->nbranches; ii++){
+            piecewise_poly_free(poly->branches[ii]);
+            poly->branches[ii] = NULL;
+        }
+        free(poly->branches);
+        poly->branches = NULL;
+    }
 }
 
 /********************************************************//**
@@ -438,19 +464,7 @@ piecewise_poly_free(struct PiecewisePoly * poly){
     
     if (poly != NULL)
     {   
-        if (poly->leaf == 1){
-            orth_poly_expansion_free(poly->ope);
-            poly->ope = NULL;
-        }
-        else{
-            size_t ii;
-            for (ii = 0; ii < poly->nbranches; ii++){
-                piecewise_poly_free(poly->branches[ii]);
-                poly->branches[ii] = NULL;
-            }
-            free(poly->branches);
-            poly->branches = NULL;
-        }
+        piecewise_poly_free_inside(poly);
         free(poly);
         poly = NULL;
     }
@@ -935,7 +949,7 @@ void piecewise_poly_evalN(const struct PiecewisePoly * poly, size_t N,
 void piecewise_poly_scale(double a, struct PiecewisePoly * poly){
     
     if (poly->leaf == 1){
-        orth_poly_expansion_scale(a,poly->ope);
+        orth_poly_expansion_scale(a, poly->ope);
     }
     else{
         size_t ii;
@@ -1401,7 +1415,7 @@ piecewise_poly_inner(const struct PiecewisePoly * a,
     assert (a != NULL);
     assert (b != NULL);
     if ((a->leaf == 1) && (b->leaf == 1)){
-        return orth_poly_expansion_inner(a->ope,b->ope);
+        return orth_poly_expansion_inner(a->ope, b->ope);
     }
     //printf("there!\n");
 
@@ -1422,6 +1436,18 @@ piecewise_poly_inner(const struct PiecewisePoly * a,
     return integral;
 }
 
+static void piecewise_poly_matched_axpy(double a, struct PiecewisePoly * x, struct PiecewisePoly * y)
+{
+    if (x->leaf == 1){
+        orth_poly_expansion_axpy(a, x->ope, y->ope);
+    }
+    else{
+        for (size_t ii = 0; ii < x->nbranches; ii++){
+            piecewise_poly_matched_axpy(a, x->branches[ii], y->branches[ii]);
+        }
+    }
+}
+
 /********************************************************//**
 *   Add two piecewise polynomials \f$ y \leftarrow ax + y \f$
 *
@@ -1434,35 +1460,24 @@ piecewise_poly_inner(const struct PiecewisePoly * a,
 ************************************************************/
 int piecewise_poly_axpy(double a,struct PiecewisePoly * x, struct PiecewisePoly * y)
 {   
-    
-    //piecewise_poly_match1(x,y);
-    /* piecewise_poly_flatten(x); */
-    /* piecewise_poly_flatten(y); */
+
+    assert (x != NULL);
+    assert (y != NULL);
+
+    if ((x->leaf == 1) && (y->leaf == 1)){
+        return orth_poly_expansion_axpy(a, x->ope, y->ope);
+    }
 
     struct PiecewisePoly * aa = NULL;
     struct PiecewisePoly * bb = NULL;
     piecewise_poly_match(x,&aa,y,&bb);
-    
-    piecewise_poly_flatten(aa);
-    piecewise_poly_flatten(bb);
-
-    
-    int success = 1;
-    /* fprintf(stderr, "piecewise_poly_axpy not implemented yet\n"); */
-    size_t ii;
-    for (ii = 0; ii < bb->nbranches; ii++){
-        success = orth_poly_expansion_axpy(a,aa->branches[ii]->ope,bb->branches[ii]->ope);
-        if (success == 1){
-            return success;
-        }
-    }
-
-    piecewise_poly_free(y); y = NULL;
-    y = piecewise_poly_copy(bb);
+    piecewise_poly_matched_axpy(a, aa, bb);
+    piecewise_poly_free_inside(y); 
+    piecewise_poly_copy_inside(bb, y);
 
     piecewise_poly_free(aa); aa = NULL;
-    piecewise_poly_free(bb); bb = NULL;        
-    return success;
+    piecewise_poly_free(bb); bb = NULL;
+    return 0;
 }
 
 /********************************************************//**
@@ -2761,5 +2776,25 @@ double * piecewise_poly_get_params_ref(const struct PiecewisePoly * pw, size_t *
     (void)(pw);
     (void)(nparam);
     NOT_IMPLEMENTED_MSG("piecewise_poly_get_params_ref")
+    return NULL;
+}
+
+/********************************************************//**
+*   Initialize a function with certain parameters
+*            
+*   \param[in] opts    - approximation options
+*   \param[in] nparams - number of polynomials
+*   \param[in] param   - parameters
+*
+*   \return p function
+*************************************************************/
+struct PiecewisePoly * 
+piecewise_poly_create_with_params(struct PwPolyOpts * opts,
+                                  size_t nparams, const double * param)
+{
+    (void)(opts);
+    (void)(nparams);
+    (void)(param);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_create_with_params\n");
     return NULL;
 }
