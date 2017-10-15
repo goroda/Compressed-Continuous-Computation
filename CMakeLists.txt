@@ -26,7 +26,7 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-    set(CMAKE_SKIP_RPATH TRUE)
+    # set(CMAKE_SKIP_RPATH TRUE)
 
     # use, i.e., don't skip the full RPATH for the build tree
     # set(CMAKE_SKIP_BUILD_RPATH FALSE)

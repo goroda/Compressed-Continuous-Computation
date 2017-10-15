@@ -120,39 +120,39 @@ int main(int argc, char * argv[])
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
         switch (next_option)
         {
-            case 'h': 
-                print_code_usage(stdout, 0);
-            case 'f':
-                function = strtoul(optarg,NULL,10);
-                break;
-            case 'p':
-                maxorder = strtoul(optarg,NULL,10);
-                break;
-            case 'b':
-                basis = strtoul(optarg,NULL,10);
-                break;
-	    case 'd':
-                dim = strtoul(optarg,NULL,10);
-                break;		
-            case 'r':
-                rank_2_print_funcs = strtoul(optarg,NULL,10);
-                break;
-            case 'a':
-                adapt = strtoul(optarg,NULL,10);
-                break;
+        case 'h': 
+            print_code_usage(stdout, 0);
+        case 'f':
+            function = strtoul(optarg,NULL,10);
+            break;
+        case 'p':
+            maxorder = strtoul(optarg,NULL,10);
+            break;
+        case 'b':
+            basis = strtoul(optarg,NULL,10);
+            break;
+        case 'd':
+            dim = strtoul(optarg,NULL,10);
+            break;		
+        case 'r':
+            rank_2_print_funcs = strtoul(optarg,NULL,10);
+            break;
+        case 'a':
+            adapt = strtoul(optarg,NULL,10);
+            break;
 	    case 't':
 	        spec_tol = 1;
-                tol_user = atof(optarg);
-                break;
-            case 'v':
-                verbose = strtoul(optarg,NULL,10);
-                break;
-            case '?': // The user specified an invalid option 
-                print_code_usage (stderr, 1);
-            case -1: // Done with options. 
-                break;
-            default: // Something unexpected
-                abort();
+            tol_user = atof(optarg);
+            break;
+        case 'v':
+            verbose = strtoul(optarg,NULL,10);
+            break;
+        case '?': // The user specified an invalid option 
+            print_code_usage (stderr, 1);
+        case -1: // Done with options. 
+            break;
+        default: // Something unexpected
+            abort();
         }
 
     } while (next_option != -1);
@@ -291,12 +291,43 @@ int main(int argc, char * argv[])
         free_dd(dim,start);
     }
     else{
-    
+
 
         size_t nloop = 7;
-        /* double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5}; */
         double tol[7] = {1e1,1e-1,1e-3,1e-5,1e-7,1e-9,1e-11};
-	
+        /* printf("dim = %zu\n", dim); */
+        /* double tol[10] */
+        if (dim == 8){
+            tol[0] = 1e0;
+            tol[1] = 1e-2;
+            tol[2] = 1e-7;
+            tol[3] = 1e-12;
+            tol[4] = 1e-13;
+            /* tol[3] = 1e-11; */
+            /* tol[4] = 1e-16; */
+            nloop = 5;
+            /* tol[4] =  */
+        }
+        else if (dim == 16)
+        {
+            tol[0] = 1e0;
+            tol[1] = 1e-2;
+            tol[2] = 1e-7;
+            tol[3] = 1e-12;
+            tol[4] = 1e-13;
+            nloop = 5;
+        }
+        else if (dim == 32)
+        {
+            tol[0] = 1e0;
+            tol[1] = 1e-2;
+            tol[2] = 1e-7;
+            tol[3] = 1e-12;
+            tol[4] = 1e-13;
+            nloop = 5;
+        }
+        /* double tol[10] = {1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5}; */
+
         if (spec_tol == 1){
             nloop = 1;
             tol[0] = tol_user;
@@ -318,12 +349,40 @@ int main(int argc, char * argv[])
             if (basis == 0){
                 struct PwPolyOpts * opts = pw_poly_opts_alloc(LEGENDRE,gauss_lb,gauss_ub);
 
-                pw_poly_opts_set_nregions(opts,nregion);
-                pw_poly_opts_set_maxorder(opts,maxorder);
-                pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,3));
-                pw_poly_opts_set_coeffs_check(opts,1);
-                pw_poly_opts_set_tol(opts,tol[zz]);
-                qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+
+                if (dim == 8){
+                    /* pw_poly_opts_set_nregions(opts, 3); */
+                    pw_poly_opts_set_nregions(opts, 5);
+                    pw_poly_opts_set_maxorder(opts, 5);
+                    pw_poly_opts_set_minsize(opts, pow(1.0/(double)nregion,5));
+                    pw_poly_opts_set_coeffs_check(opts, 2);
+                    pw_poly_opts_set_tol(opts,tol[zz]);
+                    qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+                }
+                else if (dim == 16){
+                    pw_poly_opts_set_nregions(opts, 5);
+                    pw_poly_opts_set_maxorder(opts, 5);
+                    pw_poly_opts_set_minsize(opts, pow(1.0/(double)nregion,5));
+                    pw_poly_opts_set_coeffs_check(opts, 2);
+                    pw_poly_opts_set_tol(opts,tol[zz]);
+                    qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+                }
+                else if (dim == 32){
+                    pw_poly_opts_set_nregions(opts, 5);
+                    pw_poly_opts_set_maxorder(opts, 5);
+                    pw_poly_opts_set_minsize(opts, pow(1.0/(double)nregion,5));
+                    pw_poly_opts_set_coeffs_check(opts, 2);
+                    pw_poly_opts_set_tol(opts,tol[zz]);
+                    qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+                }
+                else{
+                    pw_poly_opts_set_nregions(opts,nregion);
+                    pw_poly_opts_set_maxorder(opts,maxorder);
+                    pw_poly_opts_set_minsize(opts,pow(1.0/(double)nregion,7));
+                    pw_poly_opts_set_coeffs_check(opts,2);
+                    pw_poly_opts_set_tol(opts,tol[zz]);
+                    qmopts = one_approx_opts_alloc(PIECEWISE,opts);
+                }
             }
             else if (basis == 1){
                 double hmin = 1e-2;
@@ -387,6 +446,15 @@ int main(int argc, char * argv[])
                       erf((gauss_center)/(sqrt(2.) * gauss_width))) *
                      (erf((gauss_center-1)/(sqrt(2.) * gauss_width)) -
                       erf((gauss_center)/(sqrt(2.) * gauss_width))));
+            }
+            else if (dim == 8){
+                intexact = 0.999746658149447739979665567984951974143853706901411053849;
+            }
+            else if (dim == 16){
+                intexact = 0.99949338048098872120298190608628479106;
+            }
+            else if (dim == 32){
+                intexact = 0.998987017625314485625442252710526570757449350923141016318;
             }
             /* double intexact = 0.5 * gauss_width * sqrt(M_PI/2.0) * */
             /*     ((erf((gauss_center-1)/(sqrt(2.) * gauss_width)) - */
