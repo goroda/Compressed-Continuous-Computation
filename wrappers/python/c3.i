@@ -77,6 +77,14 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 };
 
 
+// Python Memory Management
+%newobject function_train_alloc;
+struct FunctionTrain * function_train_alloc(size_t);
+%delobject function_train_free;
+void function_train_free(struct FunctionTrain *);
+
+
+// Modified Python Interface
 %rename (ft_regress_run) my_ft_regress_run;
 %exception my_ft_regress_run{
     $action
@@ -265,11 +273,11 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
         $1[i] = PyFloat_AsDouble(s);
     }
 
-    printf("size = %d\n",size);
-    printf("list_elem = ");
-    for (int ii = 0; ii < size; ii++){
-      printf("$1[%d] = %G\n",ii,$1[ii]);
-    }
+    /* printf("size = %d\n",size); */
+    /* printf("list_elem = "); */
+    /* for (int ii = 0; ii < size; ii++){ */
+    /*   printf("$1[%d] = %G\n",ii,$1[ii]); */
+    /* } */
  }
 
 %typemap(freearg) (double * onedx){

@@ -233,6 +233,9 @@ orth_poly_expansion_constant(double, struct OpeOpts *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_linear(double, double, struct OpeOpts *);
 
+int
+orth_poly_expansion_linear_update(struct OrthPolyExpansion *, double, double);
+    
 struct OrthPolyExpansion * 
 orth_poly_expansion_quadratic(double, double, struct OpeOpts *);
 

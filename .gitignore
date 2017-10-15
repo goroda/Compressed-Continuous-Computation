@@ -53,4 +53,6 @@ wrappers/python/c3_wrap.c
 wrappers/python/callback/build*
 
 
+fly*
+
 *.desktop

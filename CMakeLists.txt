@@ -26,6 +26,23 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
+    set(CMAKE_SKIP_RPATH TRUE)
+
+    # use, i.e., don't skip the full RPATH for the build tree
+    # set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+    # # when building, don't use the rpath already
+    # # (but later on when installing)
+    # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+    # set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+    # # the RPATH to be used when installing, but only if it's not a system directory
+    # list(FIND cmake_platform_implicit_link_directories "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+    # if("${isSystemDir}" STREQUAL "-1")
+    #     set(cmake_install_rpath "${CMAKE_INSTALL_PREFIX}/lib")
+    # endif("${isSystemDir}" STREQUAL "-1")
+        
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 

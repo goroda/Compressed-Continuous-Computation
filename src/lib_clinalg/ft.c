@@ -155,6 +155,7 @@ size_t ft_mem_space_get_incr(struct FTMemSpace * ftmem)
 ***************************************************************/
 struct FunctionTrain * function_train_alloc(size_t dim)
 {
+    /* printf("Allocating Function Train\n"); */
     struct FunctionTrain * ft = NULL;
     if ( NULL == (ft = malloc(sizeof(struct FunctionTrain)))){
         fprintf(stderr, "failed to allocate memory for function train.\n");
@@ -178,6 +179,8 @@ struct FunctionTrain * function_train_alloc(size_t dim)
     ft->evaldd2 = NULL;
     ft->evaldd3 = NULL;
     ft->evaldd4 = NULL;
+
+    /* printf("Done Allocating Function Train\n"); */
     return ft;
 }
 
@@ -212,7 +215,9 @@ struct FunctionTrain * function_train_copy(const struct FunctionTrain * a)
 **************************************************************/
 void function_train_free(struct FunctionTrain * ft)
 {
+    /* printf("\t Freeing Function Train\n"); */
     if (ft != NULL){
+        /* printf("\t\t FT is not null\n"); */
         free(ft->ranks);
         ft->ranks = NULL;
         size_t ii;
@@ -233,6 +238,7 @@ void function_train_free(struct FunctionTrain * ft)
         free_dd(ft->dim,ft->evaldd4);     ft->evaldd4 = NULL;
         free(ft); ft = NULL;
     }
+    /* printf("\t\tDone Freeing Function Train\n"); */
 }
 
 /***********************************************************//**
@@ -1710,6 +1716,51 @@ function_train_linear(const double * c, size_t ldc,
     }
 
     return ft;
+}
+
+/***********************************************************//**
+    Update a function-train representation of
+
+    \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
+
+    \param[in] ft    - existing linear ft, formed by function_train_linear
+    \param[in] c     - slope of the function in each dimension (ldc x dim)
+    \param[in] ldc   - stride of c
+    \param[in] a     - value
+    \param[in] lda   - stride of a
+
+    \return 0 if successfull, 1 otherwise
+
+    \note This assumes that we are updating an FT created (and not modified)
+    with function_train_linear. 
+***************************************************************/
+int
+function_train_linear_update(
+    struct FunctionTrain * ft,
+    const double * c, size_t ldc, 
+    const double * a, size_t lda)
+{
+
+    size_t dim = ft->dim;
+    size_t onDim = 0;
+    generic_function_linear_update(ft->cores[onDim]->funcs[0],
+                                   c[onDim*ldc], a[onDim*lda]);
+                                   
+    
+    if (dim > 1){
+        for (onDim = 1; onDim < dim-1; onDim++){
+            generic_function_linear_update(ft->cores[onDim]->funcs[1],
+                                           c[onDim*ldc],
+                                           a[onDim*lda]);
+        }
+
+        onDim = dim-1;
+        generic_function_linear_update(ft->cores[onDim]->funcs[1],
+                                       c[onDim*ldc],
+                                       a[onDim*lda]);
+    }
+
+    return 0;
 }
 
 /***********************************************************//**
