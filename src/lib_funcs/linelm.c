@@ -1736,14 +1736,13 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         /* dprint(N,lexp->nodes); */
         fwrap_eval(N,lexp->nodes,lexp->coeff,f);
 
-	if (fabs(lexp->nodes[0] - opts->nodes[0]) > 1e-15){
-	    fprintf(stderr, "In lin_elem_exp_approx\n");
-  	    fprintf(stderr,"N nodes %zu\n",N);
-	    fprintf(stderr,"First approx_opt_node is %G\n",opts->nodes[0]);
-	    fprintf(stderr,"First expansion opt_node is %G\n",lexp->nodes[0]);
-	    exit(1);
-	}
-
+        if (fabs(lexp->nodes[0] - opts->nodes[0]) > 1e-15){
+            fprintf(stderr, "In lin_elem_exp_approx\n");
+            fprintf(stderr,"N nodes %zu\n",N);
+            fprintf(stderr,"First approx_opt_node is %G\n",opts->nodes[0]);
+            fprintf(stderr,"First expansion opt_node is %G\n",lexp->nodes[0]);
+            exit(1);
+        }
         /* printf("cannot evaluate them"); */
     }
     else{
