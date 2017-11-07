@@ -59,8 +59,8 @@ The modules will be created in wrappers/python. I have created a FunctionTrain c
 To enable proper access to the python library add the following to your environmental variables
 ``` shell
 export C3HOME=~/Software/c3
-export PYC3="${C3HOME}/wrappers/python"
-export PYTHONPATH=$PYTHONPATH:$PYC#
+export PYC3=${C3HOME}/wrappers/python
+export PYTHONPATH=$PYTHONPATH:${PYC3}
 ```
 
 Then, one can run the examples from the root c3 directory as 
