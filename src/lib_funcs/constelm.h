@@ -74,7 +74,7 @@ void   const_elem_exp_aopts_set_nparams(struct ConstElemExpAopts*, size_t);
 /////////////////////////////////////////////////////////////////////
 
 /** \struct ConstElemExp
- * \brief structure to represent an expansion of linear elements
+ * \brief structure to represent an expansion of piecewise constant elements
  * \var ConstElemExp::num_nodes
  * number of basis functions or nodes
  * \var ConstElemExp::nodes
@@ -156,6 +156,7 @@ const_elem_exp_constant(double,
 struct ConstElemExp * 
 const_elem_exp_linear(double, double,
                       const struct ConstElemExpAopts *);
+int const_elem_exp_linear_update(struct ConstElemExp *, double, double);
 struct ConstElemExp * 
 const_elem_exp_quadratic(double, double, const struct ConstElemExpAopts *);
 

@@ -1719,6 +1719,51 @@ function_train_linear(const double * c, size_t ldc,
 }
 
 /***********************************************************//**
+    Update a function-train representation of
+
+    \f$ (x_1c_1+a_1) + (x_2c_2+a_2)  + .... + (x_dc_d+a_d) \f$
+
+    \param[in] ft    - existing linear ft, formed by function_train_linear
+    \param[in] c     - slope of the function in each dimension (ldc x dim)
+    \param[in] ldc   - stride of c
+    \param[in] a     - value
+    \param[in] lda   - stride of a
+
+    \return 0 if successfull, 1 otherwise
+
+    \note This assumes that we are updating an FT created (and not modified)
+    with function_train_linear. 
+***************************************************************/
+int
+function_train_linear_update(
+    struct FunctionTrain * ft,
+    const double * c, size_t ldc, 
+    const double * a, size_t lda)
+{
+
+    size_t dim = ft->dim;
+    size_t onDim = 0;
+    generic_function_linear_update(ft->cores[onDim]->funcs[0],
+                                   c[onDim*ldc], a[onDim*lda]);
+                                   
+    
+    if (dim > 1){
+        for (onDim = 1; onDim < dim-1; onDim++){
+            generic_function_linear_update(ft->cores[onDim]->funcs[1],
+                                           c[onDim*ldc],
+                                           a[onDim*lda]);
+        }
+
+        onDim = dim-1;
+        generic_function_linear_update(ft->cores[onDim]->funcs[1],
+                                       c[onDim*ldc],
+                                       a[onDim*lda]);
+    }
+
+    return 0;
+}
+
+/***********************************************************//**
     Compute a function train representation of \f$ \prod_{i=1}^d(a_ix_i) \f$
 
     \param[in] coeffs   - coefficients

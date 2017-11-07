@@ -1797,6 +1797,33 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 }
 
 /********************************************************//**
+*   Update a linear orthonormal polynomial expansion
+*
+*   \param[in] p      - existing linear polynomial
+*   \param[in] a      - value of the slope function
+*   \param[in] offset - offset
+*   \param[in] opts   - options
+*
+*   \return 0 if succesfull, 1 otherwise
+*
+*************************************************************/
+int
+orth_poly_expansion_linear_update(struct OrthPolyExpansion * p, double a, double offset)
+{
+    assert (isnan(a) == 0);
+    assert (isinf(a) == 0);
+    assert (isnan(offset) == 0);
+    assert (isinf(offset) == 0);
+
+    p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
+    p->coeff[0] = (offset - p->p->lin_const -
+                   p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
+                   p->p->const_term;
+
+    return 0;
+}
+
+/********************************************************//**
 *   Generate a quadratic orthonormal polynomial expansion
     a * (x-offset)^2
 *

@@ -125,6 +125,9 @@ struct GenericFunction *
 generic_function_constant(double, enum function_class,void *);
 struct GenericFunction * 
 generic_function_linear(double, double,enum function_class, void *);
+int
+generic_function_linear_update(struct GenericFunction *, double , double);
+
 struct GenericFunction * 
 generic_function_quadratic(double,double,enum function_class,void *);
 struct GenericFunction * 

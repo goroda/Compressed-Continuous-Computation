@@ -110,6 +110,7 @@ piecewise_poly_zero(struct PwPolyOpts *, int);
 
 struct PiecewisePoly * 
 piecewise_poly_linear(double, double, struct PwPolyOpts *);
+int piecewise_poly_linear_update(struct PiecewisePoly *, double, double);
 /* struct PiecewisePoly *  */
 /* piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *); */
 struct PiecewisePoly * piecewise_poly_quadratic(double, double, struct PwPolyOpts *);

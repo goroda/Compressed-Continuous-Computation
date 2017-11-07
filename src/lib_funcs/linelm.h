@@ -166,6 +166,8 @@ lin_elem_exp_constant(double,
 struct LinElemExp * 
 lin_elem_exp_linear(double, double,
                     const struct LinElemExpAopts *);
+int
+lin_elem_exp_linear_update(struct LinElemExp *, double, double);
 struct LinElemExp * 
 lin_elem_exp_quadratic(double, double,
                        const struct LinElemExpAopts *);

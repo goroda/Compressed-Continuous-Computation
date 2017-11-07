@@ -1020,6 +1020,25 @@ kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts *
     return ke;
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] f      - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+
+    \returns 0 if successfull, 1 otherwise                   
+***********************************************************/
+int kernel_linear_update(struct ConstElemExp * f, double a, double offset)
+{
+    (void) f;
+    (void) a;
+    (void) offset;
+    NOT_IMPLEMENTED_MSG("kernel_linear_update");
+    return 1;
+}
+
+
 /********************************************************//**
     Return a constant function
 

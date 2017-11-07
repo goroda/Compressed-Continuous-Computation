@@ -589,6 +589,26 @@ piecewise_poly_linear(double slope, double offset, struct PwPolyOpts * opts)
     return p;
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] f      - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+
+    \returns 0 if successfull, 1 otherwise                   
+***********************************************************/
+int
+piecewise_poly_linear_update(struct PiecewisePoly * f,
+                             double a, double offset)
+{
+    (void) f;
+    (void) a;
+    (void) offset;
+    NOT_IMPLEMENTED_MSG("piecewise_poly_linear_update");
+    return 1;
+}
+
 /* /\********************************************************\//\** */
 /* *   Construct a piecewise quadratic function \f$ ax^2 + bx + c \f$ */
 /* * */

@@ -1919,6 +1919,27 @@ lin_elem_exp_linear(double a, double b,
     return lexp;
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] f      - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+
+    \returns 0 if successfull, 1 otherwise                   
+***********************************************************/
+int
+lin_elem_exp_linear_update(struct LinElemExp * f,
+                           double a, double offset)
+{
+    (void) f;
+    (void) a;
+    (void) offset;
+    NOT_IMPLEMENTED_MSG("lin_elem_exp_linear_update");
+    return 1;
+}
+
+
 /********************************************************//**
     Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
 

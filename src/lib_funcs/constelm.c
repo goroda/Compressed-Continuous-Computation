@@ -1309,6 +1309,26 @@ const_elem_exp_linear(double a, double offset,
     return NULL;
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] f      - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+
+    \returns 0 if successfull, 1 otherwise                   
+***********************************************************/
+int
+const_elem_exp_linear_update(struct ConstElemExp * f,
+                             double a, double offset)
+{
+    (void) f;
+    (void) a;
+    (void) offset;
+    NOT_IMPLEMENTED_MSG("const_elem_exp_linear_update");
+    return 1;
+}
+
 /********************************************************//**
     Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
 

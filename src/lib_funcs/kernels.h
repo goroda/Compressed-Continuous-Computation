@@ -88,6 +88,7 @@ kernel_expansion_zero(const struct KernelApproxOpts *, int);
 struct KernelExpansion * kernel_expansion_constant(double val, const struct KernelApproxOpts *);
 struct KernelExpansion *
 kernel_expansion_linear(double, double, const struct KernelApproxOpts *);
+int kernel_linear_update(struct ConstElemExp *, double, double);
 struct KernelExpansion * kernel_expansion_quadratic(double, double, void *);
 
 double kernel_expansion_eval(const struct KernelExpansion *, double);

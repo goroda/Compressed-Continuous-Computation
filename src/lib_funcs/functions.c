@@ -323,6 +323,28 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     GF_SWITCH_NO_FOUROUT_FRONT(print,gf->fc,gf->f,prec,args,fp)
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] gf     - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+    \param[in] aopts  - extra arguments depending on function_class, 
+                        sub_type, etc.
+
+    \returns 0 if successfull, 1 otherwise                   
+    \note 
+    Existing function must be linear
+***********************************************************/
+int
+generic_function_linear_update(struct GenericFunction * gf,
+                               double a, double offset)
+{
+    int temp = 0;
+    GF_SWITCH_THREEOUT(linear_update,gf->fc,temp,gf->f,a,offset)
+    return temp
+}
+
 
 /********************************************************//**
     Create a generic function through regression of data
