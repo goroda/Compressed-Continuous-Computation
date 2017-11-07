@@ -150,6 +150,11 @@ function_train_constant(double a, struct MultiApproxOpts *);
 struct FunctionTrain *
 function_train_linear(const double *, size_t, const double *, size_t,
                       struct MultiApproxOpts *);
+int
+function_train_linear_update(
+    struct FunctionTrain * ,
+    const double *, size_t, 
+    const double *, size_t);
 
 struct FunctionTrain *
 function_train_rankone_prod(const double *,

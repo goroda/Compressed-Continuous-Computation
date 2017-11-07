@@ -9,6 +9,8 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
 
+include(c3.cmake)
+c3_always_full_rpath()
 
 if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)
@@ -94,7 +96,7 @@ option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+# SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 include_directories(src)
 include_directories(src/lib_stringmanip)
@@ -112,22 +114,6 @@ include_directories(src/lib_funcdecomp)
 include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 include_directories(include)
-
-
-# include(cmake/c3-config.cmake)
-
-# set(include_dest "include/c3-${C3_VERSION}")
-# set(main_lib_dest "lib/c3-${C3_VERSION}")
-# set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
-# set(include_dest "include/c3")
-# set(main_lib_dest "lib/c3")
-# set (include_dest "~/Software/c3_installed/include/c3")
-# set (main_lib_dest "~/Software/c3_installed/lib/c3")
-# set (bin_dest "~/Software/c3_installed/bin")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
 
 add_subdirectory(src)
 add_subdirectory(test)

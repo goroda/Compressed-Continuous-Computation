@@ -106,7 +106,7 @@ struct LinElemExp * lin_elem_exp_init(size_t, double *, double *);
 struct LinElemExp *
 lin_elem_exp_create_with_params(struct LinElemExpAopts *,
                                 size_t, const double *);
-void
+int
 lin_elem_exp_update_params(struct LinElemExp *,
                            size_t, const double *);
 size_t lin_elem_exp_get_params(const struct LinElemExp *, double *);
@@ -130,10 +130,11 @@ int
 lin_elem_exp_squared_norm_param_grad(const struct LinElemExp *,
                                      double, double *);
 double lin_elem_exp_integrate(const struct LinElemExp *);
+double lin_elem_exp_integrate_weighted(const struct LinElemExp *);
 double lin_elem_exp_inner(const struct LinElemExp *,const struct LinElemExp *);
 int lin_elem_exp_axpy(double, const struct LinElemExp *,struct LinElemExp *);
 struct LinElemExp *
-lin_elem_exp_prod(const struct LinElemExp *,const struct LinElemExp *,void *);
+lin_elem_exp_prod(const struct LinElemExp *, const struct LinElemExp *);
 double lin_elem_exp_norm(const struct LinElemExp *);
 double lin_elem_exp_max(const struct LinElemExp *, double *);
 double lin_elem_exp_min(const struct LinElemExp *, double *);
@@ -165,8 +166,13 @@ lin_elem_exp_constant(double,
 struct LinElemExp * 
 lin_elem_exp_linear(double, double,
                     const struct LinElemExpAopts *);
-double lin_elem_exp_lb(struct LinElemExp *);
-double lin_elem_exp_ub(struct LinElemExp *);
+int
+lin_elem_exp_linear_update(struct LinElemExp *, double, double);
+struct LinElemExp * 
+lin_elem_exp_quadratic(double, double,
+                       const struct LinElemExpAopts *);
+double lin_elem_exp_get_lb(struct LinElemExp *);
+double lin_elem_exp_get_ub(struct LinElemExp *);
 struct LinElemExp *
 lin_elem_exp_onezero(size_t, double *,
                      struct LinElemExpAopts *);

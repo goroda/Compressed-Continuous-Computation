@@ -1501,7 +1501,7 @@ double * qmarray_integrate(const struct Qmarray * a)
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
             out[ii*a->nrows + jj] = 
-                generic_function_integral(a->funcs[ii*a->nrows+jj]);
+                generic_function_integrate(a->funcs[ii*a->nrows+jj]);
         }
     }
     
@@ -1530,7 +1530,7 @@ double * qmarray_integrate_weighted(const struct Qmarray * a)
     for (ii = 0; ii < a->ncols; ii++){
         for (jj = 0; jj < a->nrows; jj++){
             out[ii*a->nrows + jj] = 
-                generic_function_integral_weighted(a->funcs[ii*a->nrows+jj]);
+                generic_function_integrate_weighted(a->funcs[ii*a->nrows+jj]);
         }
     }
     
@@ -2272,8 +2272,8 @@ int qmarray_maxvol1d(struct Qmarray * A, double * Asinv, size_t * pivi,
     //printf("done\n");
     //if ( r < 0){
     if ( r > 1){
-        double lb = generic_function_get_lower_bound(A->funcs[0]);
-        double ub = generic_function_get_upper_bound(A->funcs[0]);
+        double lb = generic_function_get_lb(A->funcs[0]);
+        double ub = generic_function_get_ub(A->funcs[0]);
         remove_duplicates(r, &pivi, &pivx,lb,ub);
         for (ii = 0; ii < r; ii++){
             for (jj = 0; jj < r; jj++){
@@ -3979,7 +3979,7 @@ int qmarray_lq_gs(struct Qmarray * A, double ** R)
 }
 
 
-void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
+void print_qmarray(struct Qmarray * qm, size_t prec, void * args, FILE *fp)
 {
 
     printf("Quasimatrix Array (%zu,%zu)\n",qm->nrows, qm->ncols);
@@ -3988,7 +3988,7 @@ void print_qmarray(struct Qmarray * qm, size_t prec, void * args)
     for (ii = 0; ii < qm->nrows; ii++){
         for (jj = 0; jj < qm->ncols; jj++){
             printf("(%zu, %zu)\n",ii,jj);
-            print_generic_function(qm->funcs[jj*qm->nrows+ ii],prec,args);
+            print_generic_function(qm->funcs[jj*qm->nrows+ ii],prec,args,fp);
             printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         }
     }

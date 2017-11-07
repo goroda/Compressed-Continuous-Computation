@@ -1461,6 +1461,25 @@ size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion * ope)
 }
 
 /********************************************************//**
+*   Get lower bounds
+*************************************************************/
+double orth_poly_expansion_get_lb(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->lower_bound;
+}
+
+/********************************************************//**
+*   Get upper bounds
+*************************************************************/
+double orth_poly_expansion_get_ub(const struct OrthPolyExpansion * ope)
+{
+    assert (ope != NULL);
+    return ope->upper_bound;
+}
+
+
+/********************************************************//**
 *   Initialize an expansion of a certain orthogonal polynomial family
 *            
 *   \param[in] ptype    - type of polynomial
@@ -1602,8 +1621,10 @@ double * orth_poly_expansion_get_params_ref(
 *   \param[in] ope     - expansion to update
 *   \param[in] nparams - number of polynomials
 *   \param[in] param   - parameters
+
+*   \returns 0 if successful
 *************************************************************/
-void
+int
 orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
                                   size_t nparams, const double * param)
 {
@@ -1634,6 +1655,7 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
             }
         }
     }
+    return 0;
 }
 
 /********************************************************//**
@@ -1775,6 +1797,33 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 }
 
 /********************************************************//**
+*   Update a linear orthonormal polynomial expansion
+*
+*   \param[in] p      - existing linear polynomial
+*   \param[in] a      - value of the slope function
+*   \param[in] offset - offset
+*   \param[in] opts   - options
+*
+*   \return 0 if succesfull, 1 otherwise
+*
+*************************************************************/
+int
+orth_poly_expansion_linear_update(struct OrthPolyExpansion * p, double a, double offset)
+{
+    assert (isnan(a) == 0);
+    assert (isinf(a) == 0);
+    assert (isnan(offset) == 0);
+    assert (isinf(offset) == 0);
+
+    p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
+    p->coeff[0] = (offset - p->p->lin_const -
+                   p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
+                   p->p->const_term;
+
+    return 0;
+}
+
+/********************************************************//**
 *   Generate a quadratic orthonormal polynomial expansion
     a * (x-offset)^2
 *
@@ -1849,15 +1898,15 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 /********************************************************//**
 *   Evaluate the derivative of an orthogonal polynomial expansion
 *
+*   \param[in] poly - pointer to orth poly expansion
 *   \param[in] x    - location at which to evaluate
-*   \param[in] args - pointer to orth poly expansion
+*
 *
 *   \return out - value of derivative
 *************************************************************/
-double orth_poly_expansion_deriv_eval(double x, void * args)
+double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion * poly, double x)
 {
-    assert (args != NULL);
-    struct OrthPolyExpansion * poly = args;
+    assert (poly != NULL);
     assert (poly->kristoffel_eval == 0);
 
     double x_normalized = space_mapping_map(poly->space_transform,x);
@@ -1904,6 +1953,10 @@ double orth_poly_expansion_deriv_eval(double x, void * args)
     return out;
 }
 
+static inline double orth_poly_expansion_deriv_eval_for_approx(double x, void* poly){
+    return orth_poly_expansion_deriv_eval(poly, x);
+}
+
 /********************************************************//**
 *   Evaluate the derivative of an orth poly expansion
 *
@@ -1945,7 +1998,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
         }
     }
     else{
-        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval, p, out);      
+        orth_poly_expansion_approx(orth_poly_expansion_deriv_eval_for_approx, p, out);      
     }
     return out;
 }
@@ -2322,7 +2375,7 @@ int orth_poly_expansion_arr_evalN(size_t n,
             if (isnan(y[ii + jj* incy]) || y[ii+jj * incy] > 1e100){
                 fprintf(stderr,"Warning, evaluation in legendre_array_eval is nan\n");
                 fprintf(stderr,"Polynomial %zu, evaluation %zu\n",ii,jj);
-                print_orth_poly_expansion(parr[ii],0,NULL);
+                print_orth_poly_expansion(parr[ii],0,NULL,stderr);
                 exit(1);
             }
             else if (isinf(y[ii + jj * incy])){
@@ -3407,11 +3460,10 @@ struct OrthPolyExpansion *
 orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
                          const struct OrthPolyExpansion * b)
 {
-
+    
     struct OrthPolyExpansion * c = NULL;
     double lb = a->lower_bound;
     double ub = a->upper_bound;
-
 
     enum poly_type p = a->p->ptype;
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
@@ -4821,27 +4873,27 @@ char * convert_ptype_to_char(enum poly_type ptype)
 
 }
 void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec, 
-            void * args)
+                               void * args, FILE *fp)
 {
 
     if (args == NULL){
-        printf("Orthogonal Polynomial Expansion:\n");
-        printf("--------------------------------\n");
-        printf("Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
-        printf("Coefficients = ");
+        fprintf(fp, "Orthogonal Polynomial Expansion:\n");
+        fprintf(fp, "--------------------------------\n");
+        fprintf(fp, "Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
+        fprintf(fp, "Coefficients = ");
         size_t ii;
         for (ii = 0; ii < p->num_poly; ii++){
             if (prec == 0){
-                printf("%3.1f ", p->coeff[ii]);
+                fprintf(fp, "%3.1f ", p->coeff[ii]);
             }
             else if (prec == 1){
-                printf("%3.3f ", p->coeff[ii]);
+                fprintf(fp, "%3.3f ", p->coeff[ii]);
             }
             else if (prec == 2){
-                printf("%3.15f ", p->coeff[ii]);
+                fprintf(fp, "%3.15f ", p->coeff[ii]);
             }
             else{
-                printf("%3.15E ", p->coeff[ii]);
+                fprintf(fp, "%3.15E ", p->coeff[ii]);
             }
         }
         printf("\n");

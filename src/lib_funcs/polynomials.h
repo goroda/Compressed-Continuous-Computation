@@ -205,6 +205,8 @@ struct OrthPolyExpansion{
 
 size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion *);
 size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion *);
+double orth_poly_expansion_get_lb(const struct OrthPolyExpansion *);
+double orth_poly_expansion_get_ub(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_init(enum poly_type, size_t, double, double);
 struct OrthPolyExpansion * 
@@ -214,7 +216,7 @@ orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *)
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
 double * orth_poly_expansion_get_params_ref(const struct OrthPolyExpansion *, size_t *);
 
-void
+int
 orth_poly_expansion_update_params(struct OrthPolyExpansion *,
                                   size_t, const double *);
 
@@ -233,13 +235,18 @@ orth_poly_expansion_constant(double, struct OpeOpts *);
 struct OrthPolyExpansion * 
 orth_poly_expansion_linear(double, double, struct OpeOpts *);
 
+int
+orth_poly_expansion_linear_update(struct OrthPolyExpansion *, double, double);
+    
 struct OrthPolyExpansion * 
 orth_poly_expansion_quadratic(double, double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_genorder(size_t,struct OpeOpts*);
 
-double orth_poly_expansion_deriv_eval(double, void *);
+double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
+
+
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion *);
 
@@ -370,6 +377,6 @@ double orth_poly_expansion_absmax(struct OrthPolyExpansion *, double *,void*);
 
 /////////////////////////////////////////////////////////
 // Utilities
-void print_orth_poly_expansion(struct OrthPolyExpansion *, size_t, void *);
+void print_orth_poly_expansion(struct OrthPolyExpansion *, size_t, void *, FILE*);
 
 #endif
