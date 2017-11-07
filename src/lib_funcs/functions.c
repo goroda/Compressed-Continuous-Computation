@@ -342,7 +342,7 @@ generic_function_linear_update(struct GenericFunction * gf,
 {
     int temp = 0;
     GF_SWITCH_THREEOUT(linear_update,gf->fc,temp,gf->f,a,offset)
-    return temp
+    return temp;
 }
 
 

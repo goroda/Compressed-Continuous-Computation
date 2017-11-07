@@ -45,6 +45,9 @@
     #include "optimization.h"
     #include "quadrature.h"
 
+    int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
+    void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
+
     typedef long unsigned int size_t;
 %}
 

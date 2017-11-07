@@ -115,22 +115,6 @@ include_directories(src/lib_optimization)
 include_directories(src/lib_probability)
 include_directories(include)
 
-
-# include(cmake/c3-config.cmake)
-
-# set(include_dest "include/c3-${C3_VERSION}")
-# set(main_lib_dest "lib/c3-${C3_VERSION}")
-# set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
-# set(include_dest "include/c3")
-# set(main_lib_dest "lib/c3")
-# set (include_dest "~/Software/c3_installed/include/c3")
-# set (main_lib_dest "~/Software/c3_installed/lib/c3")
-# set (bin_dest "~/Software/c3_installed/bin")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-# set (lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
-
-
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(examples)

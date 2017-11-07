@@ -1029,12 +1029,12 @@ kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts *
 
     \returns 0 if successfull, 1 otherwise                   
 ***********************************************************/
-int kernel_linear_update(struct ConstElemExp * f, double a, double offset)
+int kernel_expansion_linear_update(struct KernelExpansion * f, double a, double offset)
 {
     (void) f;
     (void) a;
     (void) offset;
-    NOT_IMPLEMENTED_MSG("kernel_linear_update");
+    NOT_IMPLEMENTED_MSG("kernel_expansion_linear_update");
     return 1;
 }
 
