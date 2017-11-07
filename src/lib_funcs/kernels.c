@@ -58,6 +58,7 @@
 
 #include "stringmanip.h"
 #include "array.h"
+#include "futil.h"
 #include "polynomials.h"
 #include "hpoly.h"
 #include "lib_quadrature.h"
@@ -897,7 +898,7 @@ kernel_expansion_init(const struct KernelApproxOpts * opts)
 /********************************************************//**
     Update the params of a kernel expansion
 *************************************************************/
-void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
+int kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, const double * param)
 {
 
     if (ke->include_kernel_param == 0){
@@ -916,6 +917,8 @@ void kernel_expansion_update_params(struct KernelExpansion * ke, size_t dim, con
             }
         }
     }
+
+    return 0;
 }
 
 /********************************************************//**
@@ -965,6 +968,7 @@ kernel_expansion_zero(const struct KernelApproxOpts * opts, int force_param)
 
     return ke;
 }
+
 
 /********************************************************//**
     Return an approximately linear function
@@ -1016,10 +1020,63 @@ kernel_expansion_linear(double a, double offset, const struct KernelApproxOpts *
     return ke;
 }
 
+/*******************************************************//**
+    Update a linear function
+
+    \param[in] f      - existing linear function
+    \param[in] a      - slope of the function
+    \param[in] offset - offset of the function
+
+    \returns 0 if successfull, 1 otherwise                   
+***********************************************************/
+int kernel_expansion_linear_update(struct KernelExpansion * f, double a, double offset)
+{
+    (void) f;
+    (void) a;
+    (void) offset;
+    NOT_IMPLEMENTED_MSG("kernel_expansion_linear_update");
+    return 1;
+}
+
+
+/********************************************************//**
+    Return a constant function
+
+    \param[in] val  - value
+    \param[in] opts - options
+
+    \return ke - zero function
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_constant(double val, const struct KernelApproxOpts * opts)
+{
+    return kernel_expansion_linear(0.0, val, opts);
+}
+
+/*******************************************************//**
+    Return a quadratic function a * (x - offset)^2 = a (x^2 - 2offset x + offset^2)
+
+    \param[in] a      - quadratic coefficients
+    \param[in] offset - shift of the function
+    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+
+    \return gf - quadratic
+************************************************************/
+struct KernelExpansion *
+kernel_expansion_quadratic(double a, double offset, void * aopts)
+{
+    (void)(a);
+    (void)(offset);
+    (void)(aopts);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_quadratic")
+    return NULL;
+}
+                           
+    
 /********************************************************//**
 *   Evaluate a kernel expansion
 *************************************************************/
-double kernel_expansion_eval(struct KernelExpansion * kern, double x)
+double kernel_expansion_eval(const struct KernelExpansion * kern, double x)
 {
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)
@@ -1073,14 +1130,22 @@ void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
     }
 }
 
+/********************************************************//**
+*   Obtain the derivative of a kernel
+*************************************************************/
+struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion * ke)
+{
+    (void) (ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_deriv")
+    exit(1);
+}
 
 /********************************************************//**
 *   Evaluate the derivative of a kernel expansion (useful for gradients)
 *************************************************************/
-double kernel_expansion_deriv_eval(double x, void * kernin)
+double kernel_expansion_deriv_eval(const struct KernelExpansion * kern, double x)    
 {
-    assert (kernin != NULL);
-    struct KernelExpansion * kern = kernin;
+    assert (kern != NULL);
     double out = 0.0;
     for (size_t ii = 0; ii < kern->nkernels; ii++)
     {
@@ -1092,7 +1157,7 @@ double kernel_expansion_deriv_eval(double x, void * kernin)
 /********************************************************//**
 *   Add two kernels
 *************************************************************/
-void kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelExpansion * y)
+int kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelExpansion * y)
 {
     int same_nodes_and_kernels = check_same_nodes_kernels(x,y);
 
@@ -1105,8 +1170,9 @@ void kernel_expansion_axpy(double a, struct KernelExpansion * x, struct KernelEx
     else{
         fprintf(stderr, "Cannot axpy kernel expansions that have different structures\n");
         exit(1);
-            
     }
+
+    return 0;
 }
 
 /********************************************************//**
@@ -1119,6 +1185,33 @@ double kernel_expansion_integrate(struct KernelExpansion * a)
         out += a->coeff[ii]*kernel_integrate(a->kernels[ii],a->lb,a->ub);
     }
     return out;
+}
+
+/********************************************************//**
+*   Integrate a kernel expansion on a weighted domain
+*************************************************************/
+double kernel_expansion_integrate_weighted(struct KernelExpansion * a)
+{
+    return kernel_expansion_integrate(a);
+}
+
+/********************************************************//**
+   Multiply two functions
+    
+   \param[in] f   - first function
+   \param[in] g   - second function
+
+   \returns product
+            
+   \note 
+*************************************************************/
+struct KernelExpansion * kernel_expansion_prod(const struct KernelExpansion * f,
+                                               const struct KernelExpansion * g)
+{
+    (void)(f);
+    (void)(g);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_prod")
+    return NULL;
 }
 
 /********************************************************//**
@@ -1160,6 +1253,7 @@ kernel_expansion_inner(struct KernelExpansion * a,
 }
 
 
+
 /********************************************************//**
 *   Multiply by scalar and overwrite expansion
 *
@@ -1172,6 +1266,12 @@ void kernel_expansion_scale(double a, struct KernelExpansion * x)
     for (ii = 0; ii < x->nkernels; ii++){
         x->coeff[ii] *= a;
     }
+}
+
+/* Multiply a kernel expansion by -1 */
+void kernel_expansion_flip_sign(struct KernelExpansion * x)
+{
+    kernel_expansion_scale(-1.0, x);
 }
 
 /********************************************************//*
@@ -1437,19 +1537,19 @@ void kernel_expansion_orth_basis(size_t n, struct KernelExpansion ** f, struct K
 }
 
 void print_kernel_expansion(struct KernelExpansion * k, size_t prec, 
-                            void * args)
+                            void * args, FILE *fp)
 {
 
     (void)(prec);
     char kern[256];
     if (args == NULL){
-        printf("Kernel Expansion:\n");
-        printf("--------------------------------\n");
-        printf("Number of kernels = %zu\n",k->nkernels);
+        fprintf(fp, "Kernel Expansion:\n");
+        fprintf(fp, "--------------------------------\n");
+        fprintf(fp, "Number of kernels = %zu\n",k->nkernels);
         for (size_t ii = 0; ii < k->nkernels; ii++){
             kernel_to_string(k->kernels[ii],kern);
-            printf("Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
-            printf("\t %s\n\n",kern);
+            fprintf(fp, "Kernel %zu: weight=%G \n",ii,k->coeff[ii]);
+            fprintf(fp, "\t %s\n\n",kern);
             /* print_kernel(k); */
         }
     }
@@ -1458,5 +1558,70 @@ void print_kernel_expansion(struct KernelExpansion * k, size_t prec,
 
 
 
+/********************************************************//**
+    Compute the location and value of the maximum, 
+    in absolute value,
+
+    \param[in]     f       - function
+    \param[in,out] x       - location of maximum
+    \param[in]     optargs - optimization arguments
+
+    \return absolute value of the maximum
+************************************************************/
+double kernel_expansion_absmax(const struct KernelExpansion * f, double * x, void * optargs)
+{
+    if (optargs == NULL){
+        fprintf(stderr, "Must provide optimization arguments to kernel_expansion_absmax\n");
+        exit(1);
+    }
+    
+    struct c3Vector * optnodes = optargs;
+    double mval = fabs(kernel_expansion_eval(f, optnodes->elem[0]));
+    *x = optnodes->elem[0];
+    double cval = mval;
+    *x = optnodes->elem[0];
+    for (size_t ii = 0; ii < optnodes->size; ii++){
+        double val = fabs(kernel_expansion_eval(f, optnodes->elem[ii]));
+        double tval = val;
+        if (val > mval){
+            mval = val;
+            cval = tval;
+            *x = optnodes->elem[ii];
+        }
+    }
+    return cval;
+}
+
+/********************************************************//**
+    Save a unction in text format
+
+    \param[in] f     -  function to save
+    \param[in] stream - stream to save it to
+    \param[in] prec   - precision with which to save it
+
+************************************************************/
+void kernel_expansion_savetxt(const struct KernelExpansion * f,
+                              FILE * stream, size_t prec)
+{
+    (void)(f);
+    (void)(stream);
+    (void)(prec);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_savetxt");
+}
+
+
+/********************************************************//**
+    Load a function in text format
+
+    \param[in] stream - stream to save it to
+
+    \return kernel expansion
+************************************************************/
+struct KernelExpansion * kernel_expansion_loadtxt(FILE * stream)
+{
+    (void)(stream);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_loadtxt")
+    return NULL;
+}
 
 

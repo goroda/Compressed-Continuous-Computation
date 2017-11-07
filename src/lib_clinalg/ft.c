@@ -3169,7 +3169,7 @@ ftapprox_cross(struct Fwrap * fw,
             struct FunctionTrain * tprod = function_train_product(ft,ft);
             printf("prod integral = %G\n",function_train_integrate(tprod));
             printf("norm2 = %G\n",function_train_norm2(ft));
-            print_qmarray(tprod->cores[0],0,NULL);
+            print_qmarray(tprod->cores[0],0,NULL,stdout);
             //print_qmarray(tprod->cores[1],0,NULL);
             function_train_free(tprod);
         }

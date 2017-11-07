@@ -1,7 +1,22 @@
 """ Compressed continuous computation in python """
 
 from __future__ import print_function
-import c3
+
+import sys
+import os
+try: 
+    import c3
+except ImportError:
+    try: 
+        c3home = os.environ['C3HOME']        
+    except:
+        print("Must set environ variable C3HOME")
+    c3home = os.path.join(c3home,"build","wrappers","python")
+    if (os.path.exists(c3home) is False):
+        raise ImportError("Must have ${C3HOME}/build/wrappers/python directory structure")
+    sys.path.insert(0, c3home)
+    import c3
+    
 import numpy as np
 import copy
 import pycback as pcb
@@ -46,7 +61,8 @@ class FunctionTrain(object):
 
     def set_dim_opts(self, dim, ftype, lb=-1, ub=1, nparam=4,
                      kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0,
-                     lin_elem_nodes=None):
+                     lin_elem_nodes=None, maxnum=np.inf, coeff_check=2, tol=1e-10,
+                     nregions=5):
         """ Set approximation options per dimension """
 
         if self.opts[dim] is not None:
@@ -57,9 +73,13 @@ class FunctionTrain(object):
         o['lb'] = lb
         o['ub'] = ub
         o['nparam'] = nparam
+        o['maxnum'] = maxnum
+        o['coeff_check'] = coeff_check
         o['kernel_height_scale'] = kernel_height_scale
         o['kernel_width_scale'] = kernel_width_scale
         o['kernel_adapt_center'] = kernel_adapt_center
+        o['tol'] = tol
+        o['nregions'] = nregions
         if lin_elem_nodes is not None:
             assert lin_elem_nodes.ndim == 1
             lin_elem_nodes = np.unique(lin_elem_nodes.round(decimals=12))
@@ -79,20 +99,28 @@ class FunctionTrain(object):
             lb = self.opts[ii]['lb']
             ub = self.opts[ii]['ub']
             nparam = self.opts[ii]['nparam']
+            maxnum = self.opts[ii]['maxnum']
+            coeff_check = self.opts[ii]['coeff_check']
+            tol = self.opts[ii]['tol']
             kernel_height_scale = self.opts[ii]['kernel_height_scale']
             kernel_width_scale = self.opts[ii]['kernel_width_scale']
             kernel_adapt_center = self.opts[ii]['kernel_adapt_center']
             lin_elem_nodes = self.opts[ii]['lin_elem_nodes']
+            nregions = self.opts[ii]['nregions']
             if ftype == "legendre":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.LEGENDRE))
                 c3.ope_opts_set_lb(c3_ope_opts[ii], lb)
                 c3.ope_opts_set_ub(c3_ope_opts[ii], ub)
                 c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
-                c3.ope_opts_set_tol(c3_ope_opts[ii], 1e-10)
+                c3.ope_opts_set_coeffs_check(c3_ope_opts[ii], coeff_check)
+                c3.ope_opts_set_start(c3_ope_opts[ii], nparam)
+                if np.isinf(maxnum) is False:
+                    c3.ope_opts_set_maxnum(c3_ope_opts[ii], maxnum)
+                c3.ope_opts_set_tol(c3_ope_opts[ii], tol)
             elif ftype == "hermite":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.HERMITE))
                 c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
-                c3.ope_opts_set_tol(c3_ope_opts[ii], 1e-10)
+                c3.ope_opts_set_tol(c3_ope_opts[ii], tol)
             elif ftype == "linelm":
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
@@ -106,13 +134,11 @@ class FunctionTrain(object):
                 c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[-1],
                                                        kernel_adapt_center)
             elif ftype == "piecewise":
-                nregions = 20
                 c3_ope_opts.append(c3.pw_poly_opts_alloc(c3.LEGENDRE, lb, ub))
-
                 c3.pw_poly_opts_set_maxorder(c3_ope_opts[-1], nparam)
-                c3.pw_poly_opts_set_coeffs_check(c3_ope_opts[-1], 0)
-                c3.pw_poly_opts_set_tol(c3_ope_opts[-1], 1e-6)
-                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], (ub-lb)/nregions)
+                c3.pw_poly_opts_set_coeffs_check(c3_ope_opts[-1], coeff_check)
+                c3.pw_poly_opts_set_tol(c3_ope_opts[-1], tol)
+                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**8)
                 c3.pw_poly_opts_set_nregions(c3_ope_opts[-1], nregions)
             else:
                 raise AttributeError('No options can be specified for function type '
@@ -167,7 +193,7 @@ class FunctionTrain(object):
         # print("OKkkk")
 
     def _assemble_cross_args(self, verbose, init_rank, maxrank=10, cross_tol=1e-8,
-                             round_tol=1e-8, kickrank=5):
+                             round_tol=1e-8, kickrank=5, maxiter=5):
 
 
         start_fibers = c3.malloc_dd(self.dim)
@@ -176,12 +202,14 @@ class FunctionTrain(object):
 
         for ii in range(self.dim):
             c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
-                               self.opts[ii]['ub'], init_rank)
+                               self.opts[ii]['ub'], init_rank);
+            # c3.dd_row_linspace(start_fibers, ii, 0.8,
+            #                    1.2, init_rank)
 
         c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
         c3.c3approx_set_verbose(c3a, verbose)
         c3.c3approx_set_cross_tol(c3a, cross_tol)
-        c3.c3approx_set_cross_maxiter(c3a, 5)
+        c3.c3approx_set_cross_maxiter(c3a, maxiter)
         c3.c3approx_set_round_tol(c3a, round_tol)
         c3.c3approx_set_adapt_maxrank_all(c3a, maxrank)
         c3.c3approx_set_adapt_kickrank(c3a, kickrank)
@@ -190,7 +218,7 @@ class FunctionTrain(object):
         return c3a, onedopts, low_opts
 
     def build_approximation(self, f, fargs, init_rank, verbose, adapt, maxrank=10, cross_tol=1e-8,
-                            round_tol=1e-8, kickrank=5):
+                            round_tol=1e-8, kickrank=5, maxiter=5):
         """ Build an adaptive approximation of *f* """
 
         fobj = pcb.alloc_cobj()
@@ -201,7 +229,8 @@ class FunctionTrain(object):
                                                             maxrank=maxrank,
                                                             cross_tol=cross_tol,
                                                             round_tol=round_tol,
-                                                            kickrank=kickrank)
+                                                            kickrank=kickrank,
+                                                            maxiter=maxiter)
         # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a, fw, adapt)
 

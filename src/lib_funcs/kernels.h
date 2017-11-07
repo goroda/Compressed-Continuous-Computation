@@ -38,6 +38,8 @@
 /* \file kernels.h */
 /* Provides header files for kernels.c */
 
+#include <stdlib.h>
+#include <stdio.h>
 
 double gauss_kernel_eval(double, double, double, double);
 double gauss_kernel_deriv(double, double, double, double);
@@ -77,22 +79,31 @@ size_t kernel_expansion_get_nkernels(const struct KernelExpansion *);
 void kernel_expansion_add_kernel(struct KernelExpansion *, double, struct Kernel *);
 
 struct KernelExpansion * kernel_expansion_init(const struct KernelApproxOpts *);
-void kernel_expansion_update_params(struct KernelExpansion *, size_t, const double *);
+int kernel_expansion_update_params(struct KernelExpansion *, size_t, const double *);
 struct KernelExpansion *
 kernel_expansion_create_with_params(struct KernelApproxOpts *,
                                     size_t, const double *);
 struct KernelExpansion *
 kernel_expansion_zero(const struct KernelApproxOpts *, int);
+struct KernelExpansion * kernel_expansion_constant(double val, const struct KernelApproxOpts *);
 struct KernelExpansion *
 kernel_expansion_linear(double, double, const struct KernelApproxOpts *);
-double kernel_expansion_eval(struct KernelExpansion *, double);
-void kernel_expansion_evalN(struct KernelExpansion *, size_t,
+int kernel_expansion_linear_update(struct KernelExpansion *, double, double);
+struct KernelExpansion * kernel_expansion_quadratic(double, double, void *);
+
+double kernel_expansion_eval(const struct KernelExpansion *, double);
+void kernel_expansion_evalN(const struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
-double kernel_expansion_deriv_eval(double,void*);
-void kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
+struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion *);
+double kernel_expansion_deriv_eval(const struct KernelExpansion *, double);
+int kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
 double kernel_expansion_integrate(struct KernelExpansion *);
+double kernel_expansion_integrate_weighted(struct KernelExpansion *);
+struct KernelExpansion * kernel_expansion_prod(const struct KernelExpansion *,
+                                               const struct KernelExpansion *);
 double kernel_expansion_inner(struct KernelExpansion *, struct KernelExpansion *);
 void kernel_expansion_scale(double, struct KernelExpansion *);
+void kernel_expansion_flip_sign(struct KernelExpansion * );
 
 size_t kernel_expansion_get_num_params(const struct KernelExpansion *);
 size_t kernel_expansion_get_params(const struct KernelExpansion *, double *);
@@ -107,4 +118,7 @@ int
 kernel_expansion_squared_norm_param_grad(const struct KernelExpansion *,
                                          double, double *);
 
-void print_kernel_expansion(struct KernelExpansion *, size_t, void *);
+void print_kernel_expansion(struct KernelExpansion *, size_t, void *, FILE*);
+double kernel_expansion_absmax(const struct KernelExpansion *, double *, void *);
+void kernel_expansion_savetxt(const struct KernelExpansion *, FILE *, size_t);
+struct KernelExpansion * kernel_expansion_loadtxt(FILE *);

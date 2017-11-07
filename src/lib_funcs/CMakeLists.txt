@@ -8,6 +8,8 @@ file(GLOB SRC_FILES
     linelm.c
     kernels.c
     fapprox.c
+    funcs_mixed.c
+    funcs_not_standard.c
     functions.c
     monitoring.c
     space.c

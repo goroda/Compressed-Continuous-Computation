@@ -45,6 +45,7 @@
 #define PIECEWISEPOLY_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 struct PwPolyOpts;
 struct PwPolyOpts;
@@ -69,7 +70,6 @@ void pw_poly_opts_set_coeffs_check(struct PwPolyOpts *, size_t);
 
 size_t pw_poly_opts_get_nparams(const struct PwPolyOpts*);
 void   pw_poly_opts_set_nparams(struct PwPolyOpts*, size_t);
-
 
 /** \struct PiecewisePoly
  * \brief Tree structure to represent piecewise polynomials
@@ -106,16 +106,21 @@ piecewise_poly_genorder(size_t, struct PwPolyOpts *);
 struct PiecewisePoly * 
 piecewise_poly_constant(double, struct PwPolyOpts *);
 struct PiecewisePoly * 
-piecewise_poly_linear(double, double, struct PwPolyOpts *);
+piecewise_poly_zero(struct PwPolyOpts *, int);
+
 struct PiecewisePoly * 
-piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *);
+piecewise_poly_linear(double, double, struct PwPolyOpts *);
+int piecewise_poly_linear_update(struct PiecewisePoly *, double, double);
+/* struct PiecewisePoly *  */
+/* piecewise_poly_quadratic(double,double,double, struct PwPolyOpts *); */
+struct PiecewisePoly * piecewise_poly_quadratic(double, double, struct PwPolyOpts *);
 /* void piecewise_poly_split(struct PiecewisePoly *, double); */
 void piecewise_poly_splitn(struct PiecewisePoly *, size_t, const double *);
 
 //basic functions to extract information
 int piecewise_poly_isflat(const struct PiecewisePoly *);
-double piecewise_poly_lb(const struct PiecewisePoly *);
-double piecewise_poly_ub(const struct PiecewisePoly *);
+double piecewise_poly_get_lb(const struct PiecewisePoly *);
+double piecewise_poly_get_ub(const struct PiecewisePoly *);
 void piecewise_poly_nregions_base(size_t *,const struct PiecewisePoly *);
 size_t piecewise_poly_nregions(const struct PiecewisePoly *);
 void piecewise_poly_boundaries(const struct PiecewisePoly *,size_t *,double**,size_t *);
@@ -128,6 +133,7 @@ void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
 void piecewise_poly_scale(double, struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_deriv(const struct PiecewisePoly *);
 double piecewise_poly_integrate(const struct PiecewisePoly *);
+double piecewise_poly_integrate_weighted(const struct PiecewisePoly *);
 double * piecewise_poly_real_roots(const struct PiecewisePoly *, size_t *);
 double piecewise_poly_max(const struct PiecewisePoly *, double *);
 double piecewise_poly_min(const struct PiecewisePoly *, double *);
@@ -151,6 +157,8 @@ void piecewise_poly_match(const struct PiecewisePoly *, struct PiecewisePoly **,
 struct PiecewisePoly *
 piecewise_poly_prod(const struct PiecewisePoly *,const struct PiecewisePoly *);
 double piecewise_poly_inner(const struct PiecewisePoly *,const struct PiecewisePoly *);
+int piecewise_poly_axpy(double, struct PiecewisePoly *, struct PiecewisePoly *);
+
 struct PiecewisePoly *
 piecewise_poly_daxpby(double, const struct PiecewisePoly *,
                       double, const struct PiecewisePoly *);
@@ -202,13 +210,23 @@ unsigned char *
 deserialize_piecewise_poly(unsigned char *, struct PiecewisePoly ** ); 
 
 
-void print_piecewise_poly(struct PiecewisePoly * pw, size_t, void *);
+void print_piecewise_poly(struct PiecewisePoly * pw, size_t, void *, FILE *);
 
 void
 piecewise_poly_savetxt(const struct PiecewisePoly *, FILE *,
                        size_t);
 struct PiecewisePoly * piecewise_poly_loadtxt(FILE *);
 
+
+// OTHER STUFF
+size_t piecewise_poly_get_num_params(const struct PiecewisePoly *);
+int piecewise_poly_update_params(struct PiecewisePoly *, size_t, const double *);
+int piecewise_poly_param_grad_eval(const struct PiecewisePoly *, size_t, const double *, double *);
+double piecewise_poly_param_grad_eval2(const struct PiecewisePoly *, double, double *);
+int piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly *, double, double *);
+size_t piecewise_poly_get_params(const struct PiecewisePoly *, double *);
+double * piecewise_poly_get_params_ref(const struct PiecewisePoly *, size_t *);
+struct PiecewisePoly * piecewise_poly_create_with_params(struct PwPolyOpts *, size_t, const double *);
 #endif
 
 

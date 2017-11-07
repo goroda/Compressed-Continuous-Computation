@@ -43,7 +43,7 @@ cmake ..
 make
 ```
 
-This will install all shared libraries into c3/lib. The main shared library is libc3, the rest are all submodules. To install to a particular location use
+This will install all shared libraries into c3/build/src. The main shared library is libc3, the rest are all submodules. To install to a particular location use
 
 ``` shell
 cmake .. -DCMAKE_INSTALL_PREFIX=/your/choice
@@ -56,20 +56,16 @@ I have created a partial python interface to the library. This library requires 
 
 The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
 
-To run an example in python first make sure that the c3 library is on your path. For example, do
+To enable proper access to the python library add the following to your environmental variables
 ``` shell
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:<path_to_c3_lib>
+export C3HOME=~/Software/c3
+export PYC3=${C3HOME}/wrappers/python
+export PYTHONPATH=$PYTHONPATH:${PYC3}
 ```
-on a Linux system, or 
-``` shell
-export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:<path_to_c3_lib>
-```
-on Mac OS X. For example, if the library is installed in a default location the path would be  /path_to_c3/lib.
 
-Then, one can run the examples by
+Then, one can run the examples from the root c3 directory as 
 ``` shell
-cd wrappers/python
-python pytest.py
+python wrappers/python/pytest.py
 ```
 
 ## Configuration Options
@@ -112,7 +108,7 @@ Please open a Github issue to ask a question, report a bug, or to request featur
 To contribute, fork the repository and setup a branch.
 
 Author: Alex A. Gorodetsky  
-Contact: goroda@mit.edu  
+Contact: alex@alexgorodetsky.com  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
 License: BSD
