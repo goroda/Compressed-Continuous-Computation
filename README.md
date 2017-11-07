@@ -108,7 +108,7 @@ Please open a Github issue to ask a question, report a bug, or to request featur
 To contribute, fork the repository and setup a branch.
 
 Author: Alex A. Gorodetsky  
-Contact: goroda@mit.edu  
+Contact: alex@alexgorodetsky.com  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
 License: BSD
