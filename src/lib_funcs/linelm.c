@@ -1924,10 +1924,9 @@ lin_elem_exp_linear(double a, double b,
 
     \param[in] a      - quadratic coefficients
     \param[in] offset - shift of the function
-    \param[in] fc     - function class
-    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+    \param[in] opts  - extra arguments depending on function_class, sub_type,  etc.
 
-    \return gf - quadratic
+    \return quadratic
 *************************************************************/
 struct LinElemExp * 
 lin_elem_exp_quadratic(double a, double offset,

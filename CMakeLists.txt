@@ -9,6 +9,8 @@ set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
 option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
 
+include(c3.cmake)
+c3_always_full_rpath()
 
 if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)
@@ -26,23 +28,6 @@ if (APPLE)
         
     set(blas_lapack ${macblas}/Accelerate)
 
-    set(CMAKE_SKIP_RPATH TRUE)
-
-    # use, i.e., don't skip the full RPATH for the build tree
-    # set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-    # # when building, don't use the rpath already
-    # # (but later on when installing)
-    # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-
-    # set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-    # # the RPATH to be used when installing, but only if it's not a system directory
-    # list(FIND cmake_platform_implicit_link_directories "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-    # if("${isSystemDir}" STREQUAL "-1")
-    #     set(cmake_install_rpath "${CMAKE_INSTALL_PREFIX}/lib")
-    # endif("${isSystemDir}" STREQUAL "-1")
-        
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
@@ -111,7 +96,7 @@ option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 
 set(CMAKE_C_FLAGS "${compiler_flags}")
 
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+# SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 include_directories(src)
 include_directories(src/lib_stringmanip)

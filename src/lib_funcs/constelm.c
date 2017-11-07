@@ -1293,14 +1293,14 @@ const_elem_exp_constant(double a,
 
     \param[in] a      - slope of the function
     \param[in] offset - offset of the function
-    \param[in] aopts  - extra arguments depending on function_class, 
+    \param[in] opts  - extra arguments depending on function_class, 
                         sub_type, etc.
 
-    \return gf - linear function
+    \return gf - constant element function
 *************************************************************/
 struct ConstElemExp * 
 const_elem_exp_linear(double a, double offset,
-                        const struct ConstElemExpAopts * opts)
+                      const struct ConstElemExpAopts * opts)
 {
     (void)(a);
     (void)(offset);
@@ -1314,10 +1314,9 @@ const_elem_exp_linear(double a, double offset,
 
     \param[in] a      - quadratic coefficients
     \param[in] offset - shift of the function
-    \param[in] fc     - function class
-    \param[in] aopts  - extra arguments depending on function_class, sub_type,  etc.
+    \param[in] opts   - extra arguments depending on function_class, sub_type,  etc.
 
-    \return gf - quadratic
+    \return quadratic function
 *************************************************************/
 struct ConstElemExp * 
 const_elem_exp_quadratic(double a, double offset,

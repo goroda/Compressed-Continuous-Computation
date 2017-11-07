@@ -1581,10 +1581,10 @@ double kernel_expansion_absmax(const struct KernelExpansion * f, double * x, voi
     \param[in] prec   - precision with which to save it
 
 ************************************************************/
-void kernel_expansion_savetxt(const struct KernelExpansion * gf,
+void kernel_expansion_savetxt(const struct KernelExpansion * f,
                               FILE * stream, size_t prec)
 {
-    (void)(gf);
+    (void)(f);
     (void)(stream);
     (void)(prec);
     NOT_IMPLEMENTED_MSG("kernel_expansion_savetxt");
