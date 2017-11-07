@@ -1,7 +1,22 @@
 """ Compressed continuous computation in python """
 
 from __future__ import print_function
-import c3
+
+import sys
+import os
+try: 
+    import c3
+except ImportError:
+    try: 
+        c3home = os.environ['C3HOME']        
+    except:
+        print("Must set environ variable C3HOME")
+    c3home = os.path.join(c3home,"build","wrappers","python")
+    if (os.path.exists(c3home) is False):
+        raise ImportError("Must have ${C3HOME}/build/wrappers/python directory structure")
+    sys.path.insert(0, c3home)
+    import c3
+    
 import numpy as np
 import copy
 import pycback as pcb
