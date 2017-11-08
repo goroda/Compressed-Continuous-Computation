@@ -40,19 +40,19 @@
 
 #include "CuTest.h"
 
-CuSuite * ChebGetSuite();
-CuSuite * LegGetSuite();
-CuSuite * HermGetSuite();
-CuSuite * LelmGetSuite();
-CuSuite * CelmGetSuite();
-CuSuite * StandardPolyGetSuite();
-CuSuite * PolyAlgorithmsGetSuite();
-CuSuite * PolySerializationGetSuite();
-CuSuite * LinkedListGetSuite();
-CuSuite * PiecewisePolyGetSuite();
-CuSuite * PolyApproxSuite();
-CuSuite * PolyRegressionSuite();
-CuSuite * KernGetSuite();
+CuSuite * ChebGetSuite(void);
+CuSuite * LegGetSuite(void);
+CuSuite * HermGetSuite(void);
+CuSuite * LelmGetSuite(void);
+CuSuite * CelmGetSuite(void);
+CuSuite * StandardPolyGetSuite(void);
+CuSuite * PolyAlgorithmsGetSuite(void);
+CuSuite * PolySerializationGetSuite(void);
+CuSuite * LinkedListGetSuite(void);
+CuSuite * PiecewisePolyGetSuite(void);
+CuSuite * PolyApproxSuite(void);
+CuSuite * PolyRegressionSuite(void);
+CuSuite * KernGetSuite(void);
 
 
 #endif

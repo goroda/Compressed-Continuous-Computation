@@ -62,7 +62,7 @@ double * sgd_test_problem_get_start(void * arg);
 double * sgd_test_problem_get_sol(void * arg);
 double sgd_test_problem_eval(size_t dim,size_t,const double * x,double * grad,void *arg);
 
-void create_sgd_probs();
+void create_sgd_probs(void);
 
 extern struct SgdTestProblem sprobs[34];
 

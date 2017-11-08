@@ -40,6 +40,6 @@
 
 #include "CuTest.h"
 
-CuSuite * FFTGetSuite();
+CuSuite * FFTGetSuite(void);
 
 #endif

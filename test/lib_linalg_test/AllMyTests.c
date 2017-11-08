@@ -44,8 +44,8 @@
 #include <stdlib.h>
 #include "CuTest.h"
 
-CuSuite * MatrixUtilGetSuite();
-CuSuite * LinalgGetSuite();
+CuSuite * MatrixUtilGetSuite(void);
+CuSuite * LinalgGetSuite(void);
 
 void RunAllTests(void) {
     

@@ -40,12 +40,12 @@
 
 #include "CuTest.h"
 
-CuSuite * QuasimatrixGetSuite();
-CuSuite * CLinalgQmarrayGetSuite();
-CuSuite * CLinalgFuncTrainGetSuite();
-CuSuite * CLinalgCrossIndGetSuite();
-CuSuite * CLinalgFuncTrainArrayGetSuite();
-CuSuite * CLinalgDMRGGetSuite();
-CuSuite * CLinalgDiffusionGetSuite();
+CuSuite * QuasimatrixGetSuite(void);
+CuSuite * CLinalgQmarrayGetSuite(void);
+CuSuite * CLinalgFuncTrainGetSuite(void);
+CuSuite * CLinalgCrossIndGetSuite(void);
+CuSuite * CLinalgFuncTrainArrayGetSuite(void);
+CuSuite * CLinalgDMRGGetSuite(void);
+CuSuite * CLinalgDiffusionGetSuite(void);
 
 #endif

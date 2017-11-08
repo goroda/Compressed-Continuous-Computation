@@ -1802,7 +1802,6 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
 *   \param[in] p      - existing linear polynomial
 *   \param[in] a      - value of the slope function
 *   \param[in] offset - offset
-*   \param[in] opts   - options
 *
 *   \return 0 if succesfull, 1 otherwise
 *
