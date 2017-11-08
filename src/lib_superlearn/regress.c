@@ -1069,7 +1069,7 @@ void ft_regress_set_max_als_sweep(struct FTRegress * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
     assert (opts->regopts != NULL);
-    regress_opts_set_max_als_sweep(opts->regopts,maxsweeps);
+    regress_opts_set_max_als_sweep(opts->regopts, maxsweeps);
 }
 
 /***********************************************************//**

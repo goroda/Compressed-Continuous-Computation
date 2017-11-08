@@ -1,43 +1,51 @@
-""" Compressed continuous computation in python """
+""" Compressed Continuous Computation in python """
 
 from __future__ import print_function
 
 import sys
 import os
-try: 
+try:
     import c3
 except ImportError:
-    try: 
-        c3home = os.environ['C3HOME']        
-    except:
+    try:
+        C3HOME = os.environ['C3HOME']
+    except KeyError:
         print("Must set environ variable C3HOME")
-    c3home = os.path.join(c3home,"build","wrappers","python")
-    if (os.path.exists(c3home) is False):
+    C3HOME = os.path.join(C3HOME, "build", "wrappers", "python")
+    if os.path.exists(C3HOME) is False:
         raise ImportError("Must have ${C3HOME}/build/wrappers/python directory structure")
-    sys.path.insert(0, c3home)
+    sys.path.insert(0, C3HOME)
     import c3
-    
+
 import numpy as np
 import copy
 import pycback as pcb
 import atexit
 # import contextlib
 
+def poly_randu(dim, ranks, maxorder):
+    """ Random function with specified ranks and legendre polynomials of maximum order"""
+    bds = c3.bounding_box_init_std(dim)
+    ft = c3.function_train_poly_randu(c3.LEGENDRE, bds, ranks, maxorder)
+    c3.bounding_box_free(bds)
+    return FunctionTrain(dim, ft=ft)
+
 class FunctionTrain(object):
     """ Function-Train Decompositions """
 
     ft = None
-    def __init__(self, din):
+    def __init__(self, din, ft=None):
         """ Initialize a Function Train of dimension *din* """
 
         self.dim = din
-
         self.opts = []
         self.ranks = [1]
         for ii in range(din):
             self.opts.append(None)
             self.ranks.append(1)
 
+        if ft is not None:
+            self.ft = ft
         # atexit.register(self.cleanup)
 
     def copy(self):
@@ -124,15 +132,22 @@ class FunctionTrain(object):
             elif ftype == "linelm":
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
-                x = list(np.linspace(lb, ub))
-                width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
-                c3_ope_opts.append(
-                    c3.kernel_approx_opts_gauss(nparam,
-                                                x,
-                                                kernel_height_scale,
-                                                kernel_width_scale))
-                c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[-1],
-                                                       kernel_adapt_center)
+                if kernel_adapt_center == 0:
+                    x = list(np.linspace(lb, ub, nparam))
+                    width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+                    c3_ope_opts.append(c3.kernel_approx_opts_gauss(nparam, x,
+                                                                   kernel_height_scale,
+                                                                   kernel_width_scale))
+                else:
+                    assert nparam % 2 == 0, "number of parameters has to be even for adaptation"
+                    n2 = int(nparam/2)
+                    x = list(np.linspace(lb, ub, n2))
+                    width = (n2)**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+                    c3_ope_opts.append(c3.kernel_approx_opts_gauss(n2, x,
+                                                                   kernel_height_scale,
+                                                                   kernel_width_scale))
+                    c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[-1], kernel_adapt_center)
+                                                           
             elif ftype == "piecewise":
                 c3_ope_opts.append(c3.pw_poly_opts_alloc(c3.LEGENDRE, lb, ub))
                 c3.pw_poly_opts_set_maxorder(c3_ope_opts[-1], nparam)
@@ -243,7 +258,7 @@ class FunctionTrain(object):
                          opt_absxtol=1e-30, opt_maxiter=2000, opt_sgd_learn_rate=1e-3,
                          adaptrank=0, roundtol=1e-5, maxrank=10, kickrank=2,
                          kristoffel=False, regweight=1e-7, cvnparam=None,
-                         cvregweight=None, kfold=5, cvverbose=0,
+                         cvregweight=None, kfold=5, cvverbose=0, als_max_sweep=10,
                          norm_ydata=False):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
@@ -286,9 +301,11 @@ class FunctionTrain(object):
             c3.ft_regress_set_regularization_weight(reg, regweight)
         elif alg == "ALS" and obj == "LS":
             c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
         elif alg == "ALS" and obj == "LS_SPARSECORE":
             c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS_SPARSEL2)
             c3.ft_regress_set_regularization_weight(reg, regweight)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
         else:
             raise AttributeError('Option combination of algorithm and objective not implemented '\
                                  + alg + obj)
@@ -305,6 +322,7 @@ class FunctionTrain(object):
 
         if self.ft is not None:
             c3.function_train_free(self.ft)
+
 
 
         cv = None
