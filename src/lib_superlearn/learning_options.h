@@ -85,6 +85,10 @@ struct RegressOpts
     size_t * restrict_rank_opt;
 
     int kristoffel_active;
+
+
+    size_t nepochs;
+    double * stored_fvals;
 };
 
 struct RegressOpts * regress_opts_alloc(size_t);
@@ -97,4 +101,8 @@ void regress_opts_set_verbose(struct RegressOpts *, int);
 void regress_opts_set_restrict_rank(struct RegressOpts *, size_t, size_t);
 void regress_opts_set_regularization_weight(struct RegressOpts *, double);
 double regress_opts_get_regularization_weight(const struct RegressOpts *);
+void regress_opts_add_stored_vals(struct RegressOpts *, size_t, double *);
+size_t regress_opts_get_nepochs(const struct RegressOpts *);
+double * regress_opts_get_stored_fvals(const struct RegressOpts *);
+
 #endif

@@ -84,9 +84,11 @@ void c3opt_add_objective_stoch(
     void *);
 void c3opt_set_verbose(struct c3Opt *, int);
 void c3opt_set_maxiter(struct c3Opt *, size_t);
+size_t c3opt_get_maxiter(const struct c3Opt *);
 void c3opt_set_absxtol(struct c3Opt *, double);
 
 size_t c3opt_get_niters(struct c3Opt *);
+double c3opt_get_stored_function(const struct c3Opt *, size_t);
 size_t c3opt_get_nevals(struct c3Opt *);
 size_t c3opt_get_ngvals(struct c3Opt *);
 
@@ -94,6 +96,8 @@ void c3opt_set_relftol(struct c3Opt *, double);
 void c3opt_set_gtol(struct c3Opt *, double);
 
 void c3opt_set_storage_options(struct c3Opt *, int, int, int);
+int c3opt_get_store_func(const struct c3Opt *);
+
 void c3opt_print_stored_values(struct c3Opt *, FILE *, int, int);
     
 int c3opt_ls_get_initial(const struct c3Opt *);

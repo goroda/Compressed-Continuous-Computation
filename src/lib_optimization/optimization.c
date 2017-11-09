@@ -718,7 +718,7 @@ void c3opt_set_maxiter(struct c3Opt * opt , size_t maxiter)
     opt->maxiter = maxiter;;
 }
 
-size_t c3opt_get_maxiter(struct c3Opt * opt)
+size_t c3opt_get_maxiter(const struct c3Opt * opt)
 {
     assert (opt != NULL);
     return opt->maxiter;
@@ -733,6 +733,13 @@ void c3opt_set_absxtol(struct c3Opt * opt, double absxtol)
 size_t c3opt_get_niters(struct c3Opt * opt){
     assert (opt != NULL);
     return opt->niters;
+}
+
+double c3opt_get_stored_function(const struct c3Opt * opt, size_t ii)
+{
+    assert (opt->store_func == 1);
+    assert (ii < opt->niters);
+    return opt->stored_func[ii];
 }
 
 size_t c3opt_get_nevals(struct c3Opt * opt){
@@ -798,6 +805,12 @@ void c3opt_set_storage_options(struct c3Opt * opt, int store_func, int store_gra
     if (opt->store_func == 1){
         opt->stored_func = calloc_double(sizeof(double)*opt->maxiter);
     }
+}
+
+int c3opt_get_store_func(const struct c3Opt * opt)
+{
+    assert (opt != NULL);
+    return opt->store_func;
 }
 
 void c3opt_print_stored_values(struct c3Opt * opt, FILE * fp, int width, int prec)
@@ -1634,7 +1647,7 @@ static void sgd_term_check(struct c3Opt * opt,
     }
 
     // check training set error
-    *train_error = 0;
+    *train_error = 0.0;
     for (size_t ii = 0; ii < ndata_train; ii++){
         *train_error += c3opt_eval_stoch(opt,order[ii],next_step,NULL);
     }
@@ -1756,6 +1769,13 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     memmove(previous_step,x,d*sizeof(double));
 
 
+    if (opt->store_func == 1){
+        sgd_term_check(opt,d,next_step,current_step,ndata_train,
+                       ndata,order,&xdiff,&train_error,&test_error);
+        opt->stored_func[opt->niters] = train_error;
+        opt->niters++;
+    }
+
     double * first_moment = calloc_double(d);
     double * bias_corrected_first = calloc_double(d);
     double * second_moment = calloc_double(d);
@@ -1820,8 +1840,12 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         time++;
 
 
-
+        if (opt->store_func == 1){
+            opt->stored_func[opt->niters] = train_error;
+        }
         opt->niters++;
+
+
         *fval = train_error;
         memmove(x,next_step,d*sizeof(double));
 
@@ -1895,10 +1919,10 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
     double gtol = c3opt_get_gtol(opt);
     double relftol = c3opt_get_relftol(opt);
     double absxtol = c3opt_get_absxtol(opt);
-    
+
     opt->nevals = 0;
     opt->ngvals = 0;
-    opt->niters = 1;    
+    opt->niters = 1;
 
     *fval = c3opt_eval(opt,x,grad);
 

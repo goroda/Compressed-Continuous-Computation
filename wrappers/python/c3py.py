@@ -243,8 +243,8 @@ class FunctionTrain(object):
                          opt_absxtol=1e-30, opt_maxiter=2000, opt_sgd_learn_rate=1e-3,
                          adaptrank=0, roundtol=1e-5, maxrank=10, kickrank=2,
                          kristoffel=False, regweight=1e-7, cvnparam=None,
-                         cvregweight=None, kfold=5, cvverbose=0,
-                         norm_ydata=False):
+                         cvregweight=None, kfold=5, cvverbose=0, als_max_sweep=20,
+                         norm_ydata=False, store_opt_info=False):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -267,6 +267,9 @@ class FunctionTrain(object):
         else:
             raise AttributeError('Optimizer:  ' + opt_type + " is unknown")
 
+        if store_opt_info is True:
+            c3.c3opt_set_storage_options(optimizer, 1, 0, 0)
+            
         if verbose > 1:
             c3.c3opt_set_verbose(optimizer, 1)
 
@@ -286,9 +289,11 @@ class FunctionTrain(object):
             c3.ft_regress_set_regularization_weight(reg, regweight)
         elif alg == "ALS" and obj == "LS":
             c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
         elif alg == "ALS" and obj == "LS_SPARSECORE":
             c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS_SPARSEL2)
             c3.ft_regress_set_regularization_weight(reg, regweight)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
         else:
             raise AttributeError('Option combination of algorithm and objective not implemented '\
                                  + alg + obj)
@@ -348,6 +353,20 @@ class FunctionTrain(object):
             c3.function_train_free(self.ft)
             self.ft = ft_use
 
+        if store_opt_info is True:
+            if alg == "ALS":
+                nepoch = c3.ft_regress_get_nepochs(reg)
+                results = np.zeros((nepoch))
+                for ii in range(nepoch):
+                    results[ii] = c3.ft_regress_get_stored_fvals(reg, ii)
+            else:
+                nepoch = c3.c3opt_get_niters(optimizer)
+                results = np.zeros((nepoch))
+                for ii in range(nepoch):
+                    results[ii] = c3.c3opt_get_stored_function(optimizer, ii)
+
+            # print("nepoch", nepoch)
+
         c3.ft_regress_free(reg)
         c3.c3opt_free(optimizer)
 
@@ -355,6 +374,9 @@ class FunctionTrain(object):
         # print("Free params")
         self._free_approx_params(c3a, onedopts, low_opts)
         # print("Done Free params")
+
+        if store_opt_info is True:
+            return results
 
 
     def set_ranks(self, ranks):

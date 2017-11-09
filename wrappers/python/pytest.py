@@ -1,5 +1,6 @@
 import c3py # import the python interface to the c3 library
 import numpy as np
+import matplotlib.pyplot as plt
 
 ## Define two functions
 def func1(x,param=None):
@@ -29,7 +30,10 @@ nparam = 2                             # number of parameters per univariate fun
 ft = c3py.FunctionTrain(dim)
 for ii in range(dim):
     ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
-ft.build_data_model(ndata,x,y1,alg="AIO",obj="LS",adaptrank=1,kickrank=1,roundtol=1e-10,verbose=0)
+ft.build_data_model(ndata, x, y1, alg="AIO", obj="LS", adaptrank=1,
+                    kickrank=1, roundtol=1e-10, verbose=2, store_opt_info=False)
+
+
 
 
 ## Run a fixed-rank regression routine to approximate the second function with stochastic gradient descent
@@ -132,7 +136,48 @@ print("Fteval =",ft4eval, "Should be =",eval4s)
 
 
 print("\n\n\n")
+print("Now getting optimization trajectories, run interactively and then type plt.show()")
 
+dim = 2                                # number of features
+ndata = 50                             # number of data points
+x = np.random.rand(ndata,dim)*2.0-1.0  # training samples
+y1 = func2(x) + np.random.randn(ndata)*0.01  # function values 
+
+lb = -1                                # lower bounds of features
+ub = 1                                 # upper bounds of features
+nparam = 20                            # number of parameters per univariate function
+
+ranks = [2]*(dim+1)
+ranks[0] = 1
+ranks[dim] = 1
+
+ft = c3py.FunctionTrain(dim)
+ft.set_ranks(ranks)
+for ii in range(dim):
+    ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_ft = ft.build_data_model(ndata, x, y1, alg="AIO", obj="LS", adaptrank=0, verbose=0, store_opt_info=True)
+
+ft_sgd = c3py.FunctionTrain(dim)
+ft_sgd.set_ranks(ranks)
+for ii in range(dim):
+    ft_sgd.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_sgd = ft_sgd.build_data_model(ndata, x, y1, alg="AIO", obj="LS", opt_type="SGD", opt_sgd_learn_rate=1e-5,
+                                  adaptrank=0, verbose=0, opt_maxiter=500, store_opt_info=True)
+
+ft_als = c3py.FunctionTrain(dim)
+ft_als.set_ranks(ranks)
+for ii in range(dim):
+    ft_als.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_als = ft_als.build_data_model(ndata, x, y1, alg="ALS", obj="LS",
+                                  adaptrank=0, verbose=0,  store_opt_info=True)
+
+
+plt.figure()
+plt.plot(np.log10(opt_ft), label='AIO')
+plt.plot(np.log10(opt_sgd), label='SGD')
+plt.plot(np.log10(opt_als), label='ALS')
+# plt.semilogy(opt_als, label='ALS')
+plt.legend()
 
 
 # Test serialization
