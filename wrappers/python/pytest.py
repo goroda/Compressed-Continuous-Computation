@@ -31,7 +31,7 @@ ft = c3py.FunctionTrain(dim)
 for ii in range(dim):
     ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
 ft.build_data_model(ndata, x, y1, alg="AIO", obj="LS", adaptrank=1,
-                    kickrank=1, roundtol=1e-10, verbose=2, store_opt_info=False)
+                    kickrank=1, roundtol=1e-10, verbose=0, store_opt_info=False)
 
 
 

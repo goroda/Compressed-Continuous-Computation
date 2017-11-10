@@ -124,7 +124,7 @@ class FunctionTrain(object):
             elif ftype == "linelm":
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
-                x = list(np.linspace(lb, ub))
+                x = list(np.linspace(lb, ub, nparam))
                 width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
                 c3_ope_opts.append(
                     c3.kernel_approx_opts_gauss(nparam,
