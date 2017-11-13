@@ -44,11 +44,11 @@
 #include "unconstrained_functions.h"
 #include "sgd_functions.h"
 
-CuSuite * OptGetSuite();
-CuSuite * BFGSGetSuite();
-CuSuite * LBFGSGetSuite();
-CuSuite * BGradGetSuite();
-CuSuite * SGDGetSuite();
+CuSuite * OptGetSuite(void);
+CuSuite * BFGSGetSuite(void);
+CuSuite * LBFGSGetSuite(void);
+CuSuite * BGradGetSuite(void);
+CuSuite * SGDGetSuite(void);
 
 void RunAllTests(void) {
     

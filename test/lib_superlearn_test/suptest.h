@@ -40,6 +40,6 @@
 
 #include "CuTest.h"
 
-CuSuite * CLinalgRegressGetSuite();
+CuSuite * CLinalgRegressGetSuite(void);
 
 #endif

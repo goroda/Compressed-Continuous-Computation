@@ -44,6 +44,7 @@
 #include <math.h>
 
 #include "lib_linalg.h"
+#include "lib_optimization.h"
 #include "regress.h"
 #include "objective_functions.h"
 
@@ -536,6 +537,12 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
     slp.mem = mem;
 
 
+    double * stored_fvals = NULL;
+    size_t nepochs = 0;
+    if (c3opt_get_store_func(optimizer) == 1){
+        stored_fvals = calloc_double(2 * ropts->max_als_sweeps * ftp->dim * c3opt_get_maxiter(optimizer));
+    }
+    
     size_t maxrank = function_train_get_maxrank(ftp->ft);
     double * core_evals = calloc_double(maxrank*maxrank);
     // initialize running_rl
@@ -575,8 +582,9 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
 
         // forward sweep
         for (size_t ii = 0; ii < ftp->dim; ii++){
-            if (ropts->verbose > 1){
+            if (ropts->verbose > 0){
                 printf("\tDim %zu: ",ii);
+                /* printf("\t\t Niters thus far %zu: ", c3opt_get_niters(optimizer)); */
             }
             /* sl_mem_manager_reset_running(mem); */
             ropts->als_active_core = ii;
@@ -588,8 +596,14 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             int res = slp_solve(&slp,guess);
             assert (res == 0);
             double val = slp_get_minimum(&slp);
+            if (stored_fvals != NULL){
+                for (size_t zz = 0; zz < c3opt_get_niters(optimizer); zz++){
+                    stored_fvals[nepochs] = c3opt_get_stored_function(optimizer, zz);
+                    nepochs++;
+                }
+            }
             
-            if (ropts->verbose > 1){
+            if (ropts->verbose > 0){
                 printf("\t\tObjVal = %3.5G\n",val);
             }
 
@@ -657,6 +671,13 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             int res = slp_solve(&slp,guess);
             assert (res == 0);
             double val = slp_get_minimum(&slp);
+            if (stored_fvals != NULL){
+                for (size_t zz = 0; zz < c3opt_get_niters(optimizer); zz++){
+                    stored_fvals[nepochs] = c3opt_get_stored_function(optimizer, zz);
+                    nepochs++;
+                }
+            }
+
 
 
             if (ropts->verbose > 1){
@@ -692,7 +713,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
         }
     }
 
-
+    if (stored_fvals != NULL){
+        /* printf("NEPOCHS = %zu\n", nepochs); */
+        regress_opts_add_stored_vals(ropts, nepochs, stored_fvals);
+    }
+    
     struct FunctionTrain * ft_final = function_train_copy(ftp->ft);
     sl_mem_manager_free(mem); mem = NULL;
     objective_function_free(&obj); obj = NULL;
@@ -1112,6 +1137,37 @@ double ft_regress_get_regularization_weight(const struct FTRegress * opts)
     return regress_opts_get_regularization_weight(opts->regopts);
 }
 
+
+/***********************************************************//**
+    Get number of epochs
+    
+    \param[in] opts    - regression options
+    
+    \return nepochs
+***************************************************************/
+size_t ft_regress_get_nepochs(const struct FTRegress * opts)
+{
+    assert (opts != NULL);
+    return regress_opts_get_nepochs(opts->regopts);
+}
+
+/***********************************************************//**
+    Get objective function per epoch
+    
+    \param[in] opts  - regression options
+    \param[in] index - epoch at whch to get value
+    
+    \return objective function
+***************************************************************/
+double ft_regress_get_stored_fvals(const struct FTRegress * opts, size_t index)
+{
+    assert (opts != NULL);
+    size_t nepochs = regress_opts_get_nepochs(opts->regopts);
+    assert (index < nepochs);
+    double * fvals = regress_opts_get_stored_fvals(opts->regopts);
+    return fvals[index];
+}
+
 /***********************************************************//**
     Run regression and return the result
 
@@ -1150,7 +1206,6 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
                                       optimizer,ftr->opt_restricted,N,x,y,ftr->finalize);
     }
     else{
-
         ft = c3_regression_run(ftr->ftp,ftr->regopts,optimizer,N,x,y);
     }
     return ft;
@@ -1190,13 +1245,16 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     ftr->adapt = 0; // turn off adaptation since in here!
     size_t * ranks = calloc_size_t(ftr->dim+1);
 
-    size_t kfold = 5;
+    size_t kfold = ftr->kfold;
+    if (kfold > N){
+        kfold = N;
+    }
     int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(N,ftr->dim,x,y,kfold,cvverbose);
 
 
     if (ftr->regopts->verbose > 0){
-        printf("run initial  cv\n");
+        printf("run initial  cv kfold=%zu, N = %zu\n", kfold, N);
     }
 
     double err = cross_validate_run(cv,ftr,optimizer);

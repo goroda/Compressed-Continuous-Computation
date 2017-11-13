@@ -52,7 +52,7 @@ double function_get_lower(void *);
 double function_get_upper(void *);
 void function_eval(size_t, const double *, double *, void *);
 
-void create_functions();
+void create_functions(void);
 extern size_t num_funcs;
 extern struct Function funcs[34];
 

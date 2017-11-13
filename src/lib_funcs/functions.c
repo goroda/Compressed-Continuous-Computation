@@ -329,8 +329,6 @@ void print_generic_function(const struct GenericFunction * gf, size_t prec,void 
     \param[in] gf     - existing linear function
     \param[in] a      - slope of the function
     \param[in] offset - offset of the function
-    \param[in] aopts  - extra arguments depending on function_class, 
-                        sub_type, etc.
 
     \returns 0 if successfull, 1 otherwise                   
     \note 

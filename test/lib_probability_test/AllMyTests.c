@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include "CuTest.h"
 
-CuSuite * ProbGetSuite();
+CuSuite * ProbGetSuite(void);
 
 void RunAllTests(void) {
     

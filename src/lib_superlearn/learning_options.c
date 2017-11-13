@@ -54,6 +54,9 @@ void regress_opts_free(struct RegressOpts * opts)
 {
     if (opts != NULL){
         free(opts->restrict_rank_opt); opts->restrict_rank_opt = NULL;
+        if (opts->stored_fvals != NULL){
+            free(opts->stored_fvals); opts->stored_fvals = NULL;
+        }
         free(opts); opts = NULL;
     }
 }
@@ -81,6 +84,9 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     ropts->restrict_rank_opt = calloc_size_t(dim);
 
     ropts->kristoffel_active = 0;
+
+    ropts->nepochs = 0;
+    ropts->stored_fvals = NULL;
     return ropts;
 }
 
@@ -217,5 +223,46 @@ void regress_opts_set_restrict_rank(struct RegressOpts * opts, size_t ind, size_
 {
     assert (opts != NULL);
     opts->restrict_rank_opt[ind] = rank;
+}
+
+
+/***********************************************************//**
+    Add function values per epoch of optimization
+    
+    \param[in,out] opts    - regression options
+    \param[in]     nepochs - number of epochs
+    \param[in]     fvals   - objective value per epoch
+***************************************************************/
+void regress_opts_add_stored_vals(struct RegressOpts * opts, size_t nepochs, double * fvals)
+{
+    assert (opts != NULL);
+    opts->nepochs = nepochs;
+    opts->stored_fvals = fvals;
+}
+
+/***********************************************************//**
+    Get number of epochs
+    
+    \param[in] opts    - regression options
+    
+    \return nepochs
+***************************************************************/
+size_t regress_opts_get_nepochs(const struct RegressOpts * opts)
+{
+    assert (opts != NULL);
+    return opts->nepochs;
+}
+
+/***********************************************************//**
+    Get objective function per epoch
+    
+    \param[in] opts - regression options
+    
+    \return objective value per epoch
+***************************************************************/
+double * regress_opts_get_stored_fvals(const struct RegressOpts * opts)
+{
+    assert (opts != NULL);
+    return opts->stored_fvals;
 }
 
