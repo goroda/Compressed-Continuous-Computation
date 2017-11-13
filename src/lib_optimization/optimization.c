@@ -199,7 +199,8 @@ struct c3SGD * c3sgd_alloc()
 
     sgd->validation_fraction = 0.1;
     sgd->learn_rate = 1e-3;
-    sgd->learn_rate_decay = 0.999;
+    sgd->learn_rate_decay = 0.993;
+    /* sgd->learn_rate_decay = 0.999; */
 
     sgd->nsamples = 0;
 

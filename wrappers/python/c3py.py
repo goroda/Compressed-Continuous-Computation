@@ -147,7 +147,6 @@ class FunctionTrain(object):
                                                                    kernel_height_scale,
                                                                    kernel_width_scale))
                     c3.kernel_approx_opts_set_center_adapt(c3_ope_opts[-1], kernel_adapt_center)
-                                                           
             elif ftype == "piecewise":
                 c3_ope_opts.append(c3.pw_poly_opts_alloc(c3.LEGENDRE, lb, ub))
                 c3.pw_poly_opts_set_maxorder(c3_ope_opts[-1], nparam)
