@@ -91,7 +91,7 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
         exit(1);
     }
         
-    ls->maxiter = 10000;
+    ls->maxiter = 20;
     ls->set_initial = set_initial;
     
     return ls;
@@ -1972,6 +1972,12 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
         }
     }
 
+    /* if (grad_norm > 10 * fabs(*fval)){ */
+    /*     for (size_t ii = 0; ii < d; ii++){ */
+    /*         grad[ii] *= 1e-2*(fabs(*fval) / grad_norm); */
+    /*     } */
+    /*     printf("lower grad, new norm = %3.5G\n", sqrt(cblas_ddot(d,grad,1,grad,1))); */
+    /* } */
 
     size_t iter = 0;
     double fvaltemp;
@@ -2159,6 +2165,14 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
             }
                 
         }
+
+        /* if (fabs(eta) > 10 * fabs(*fval)){ */
+        /*     for (size_t ii = 0; ii < d; ii++){ */
+        /*         workspace[ii+d] *= 1e-2*(fabs(*fval) / eta); */
+        /*     } */
+        /*     /\* printf("lower grad, new norm = %3.5G\n", sqrt(cblas_ddot(d,grad,1,grad,1))); *\/ */
+        /* } */
+
         
         if (verbose > 0){
             printf("Iteration:%zu/%zu\n",iter,maxiter);
