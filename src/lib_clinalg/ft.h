@@ -138,7 +138,7 @@ void function_train_eval_fiber_ind(struct FunctionTrain *,
 // generators
 struct FunctionTrain *
 function_train_poly_randu(enum poly_type,struct BoundingBox *,
-                          size_t *, size_t);
+                          size_t * ranks, size_t);
 struct FunctionTrain *
 function_train_rankone(struct MultiApproxOpts *, struct Fwrap *);
 struct FunctionTrain *

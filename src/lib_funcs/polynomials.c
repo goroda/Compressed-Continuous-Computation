@@ -2464,7 +2464,8 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
         if (poly->kristoffel_eval == 1){
             /* printf("normalizing for kristoffel out = %G, %G\n",out,den); */
             /* dprint(poly->num_poly,poly->coeff); */
-            out /= sqrt(den);
+            /* out /= sqrt(den); */
+            out /= sqrt( den / ( (double) poly->num_poly )) ;
         }
     }
     else{
@@ -2511,7 +2512,9 @@ double orth_poly_expansion_get_kristoffel_weight(const struct OrthPolyExpansion 
         den += pnew*pnew;
     }
 
-    return sqrt(den);
+    // Normalize by number of functions
+    return sqrt(den / ( (double) poly->num_poly ) );
+    //return sqrt(den);
 }
 
 /********************************************************//**
@@ -2582,7 +2585,9 @@ int orth_poly_expansion_param_grad_eval(
         if (poly->kristoffel_eval == 1){
             /* printf("gradient normalized by kristoffel %G\n",den); */
             for (size_t jj = 0; jj < poly->num_poly; jj++){
-                grad[ii*nparam+jj] /= sqrt(den);
+                // Normalize by number of functions
+                grad[ii*nparam+jj] /= sqrt(den / ( (double) poly->num_poly ));
+                //grad[ii*nparam+jj] /= sqrt(den);
             }
         }
     }
@@ -2638,7 +2643,9 @@ double orth_poly_expansion_param_grad_eval2(
     if (poly->kristoffel_eval == 1){
         /* printf("gradient normalized by kristoffel %G\n",den); */
         for (size_t jj = 0; jj < poly->num_poly; jj++){
-            grad[jj] /= sqrt(den);
+            // Normalize by number of functions
+            grad[jj] /= sqrt(den / ( (double) poly->num_poly ));
+            /* grad[jj] /= sqrt(den); */
         }
     }
     return out;    

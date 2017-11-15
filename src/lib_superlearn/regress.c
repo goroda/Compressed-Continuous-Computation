@@ -1094,7 +1094,7 @@ void ft_regress_set_max_als_sweep(struct FTRegress * opts, size_t maxsweeps)
 {
     assert (opts != NULL);
     assert (opts->regopts != NULL);
-    regress_opts_set_max_als_sweep(opts->regopts,maxsweeps);
+    regress_opts_set_max_als_sweep(opts->regopts, maxsweeps);
 }
 
 /***********************************************************//**
@@ -1245,13 +1245,16 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
     ftr->adapt = 0; // turn off adaptation since in here!
     size_t * ranks = calloc_size_t(ftr->dim+1);
 
-    size_t kfold = 5;
+    size_t kfold = ftr->kfold;
+    if (kfold > N){
+        kfold = N;
+    }
     int cvverbose = 0;
     struct CrossValidate * cv = cross_validate_init(N,ftr->dim,x,y,kfold,cvverbose);
 
 
     if (ftr->regopts->verbose > 0){
-        printf("run initial  cv\n");
+        printf("run initial  cv kfold=%zu, N = %zu\n", kfold, N);
     }
 
     double err = cross_validate_run(cv,ftr,optimizer);
