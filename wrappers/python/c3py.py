@@ -297,6 +297,9 @@ class FunctionTrain(object):
         else:
             raise AttributeError('Option combination of algorithm and objective not implemented '\
                                  + alg + obj)
+        if alg == 'ALS':
+            c3.ft_regress_set_als_conv_tol(reg, opt_relftol)
+            
         if adaptrank != 0:
             c3.ft_regress_set_adapt(reg, adaptrank)
             c3.ft_regress_set_roundtol(reg, roundtol)

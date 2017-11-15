@@ -1787,6 +1787,7 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
     double eps = 1e-8;
     size_t time = 1;
     double avg_ginner;
+    double ginner;
     size_t iter;
     for (iter = 0; iter < maxiter; iter++){
         shuffle(ndata,order);
@@ -1797,8 +1798,10 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
             
             /* printf(" starting step: "); dprint(d,current_step); */
             /* printf("point %zu\n",order[ii]); */
+            ginner = cblas_ddot(d,workspace,1,workspace,1);
             *fval = c3opt_eval_stoch(opt,order[ii],current_step,workspace);
-            avg_ginner += cblas_ddot(d,workspace,1,workspace,1);
+            avg_ginner += ginner;
+            /* printf("ginner = %3.5G\n", ginner); */
             if ((do_momentum == 0) || (iter < 10)){
 
                 for (size_t jj = 0; jj < d; jj++){
@@ -1828,12 +1831,16 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
                        ndata,order,&xdiff,&train_error,&test_error);
 
         double grad_inner = avg_ginner / (double)(ndata_train);
-        double dtrain = (train_error - old_train)/train_error;
+        double dtrain = fabs(train_error - old_train);
+        if (old_train > 1e-10){
+            dtrain /= train_error;            
+        }
+
         /* double dtest = test_error - old_test; */
 
         if (verbose > 0){
             printf("  %-4zu |",iter+1);
-            printf("   %-22.7G|   %-23.7G| %-22.7G| %-14.5G| %-14.5G",train_error,test_error,xdiff,learn_rate,grad_inner);
+            printf("   %-22.7G|   %-23.7G| %-22.7G| %-14.5G| %-14.5G |  %-14.5G",train_error,test_error,xdiff,learn_rate,grad_inner, dtrain);
             /* printf("x = "); dprint(d,x); */
             printf("\n");
         }
