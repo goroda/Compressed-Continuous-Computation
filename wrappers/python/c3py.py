@@ -133,12 +133,24 @@ class FunctionTrain(object):
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
                 if kernel_adapt_center == 0:
-                    x = list(np.linspace(lb, ub, nparam))
+                    if lin_elem_nodes is not None:
+                        x = list(lin_elem_nodes)
+                    else:
+                        x = list(np.linspace(lb, ub, nparam))
+                    nparam = len(x)
+                    std = np.std(x)
+                    # print("standard deviation = ", std,  (ub-lb)/np.sqrt(12.0))
                     width = nparam**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+                    width = nparam**(-0.2) * std * kernel_width_scale
                     c3_ope_opts.append(c3.kernel_approx_opts_gauss(nparam, x,
                                                                    kernel_height_scale,
                                                                    kernel_width_scale))
                 else:
+                    if lin_elem_nodes is not None:
+                        x = list(lin_elem_nodes)
+                        nparam = 2*len(x)
+                    else:
+                        x = list(np.linspace(lb, ub, nparam))
                     assert nparam % 2 == 0, "number of parameters has to be even for adaptation"
                     n2 = int(nparam/2)
                     x = list(np.linspace(lb, ub, n2))
@@ -273,6 +285,7 @@ class FunctionTrain(object):
         if opt_type == "BFGS":
             optimizer = c3.c3opt_create(c3.BFGS)
             c3.c3opt_set_absxtol(optimizer, opt_absxtol)
+            c3.c3opt_ls_set_maxiter(optimizer, 100)
             # c3.c3opt_ls_set_alpha(optimizer, 0.1)
             # c3.c3opt_ls_set_beta(optimizer, 0.5)
         elif opt_type == "SGD":
