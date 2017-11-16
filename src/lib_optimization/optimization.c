@@ -91,7 +91,7 @@ struct c3LS * c3ls_alloc(enum c3opt_ls_alg alg,int set_initial)
         exit(1);
     }
         
-    ls->maxiter = 20;
+    ls->maxiter = 500;
     ls->set_initial = set_initial;
     
     return ls;
@@ -966,12 +966,16 @@ double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
     assert (opt->f != NULL);
     double out = opt->f(opt->d,x,grad,opt->farg);
     if (isnan(out)){
-        fprintf(stderr,"Optimization function valueis NaN\n");
+        fprintf(stderr,"Optimization function value is NaN\n");
+        fprintf(stderr, "x = \n");
+        for (size_t ii = 0; ii < opt->d; ii++){
+            fprintf(stderr, "x[%zu] = %3.5G\n", ii, x[ii]);
+        }
         exit(1);
     }
     else if (isinf(out)){
         fprintf(stderr,"Optimization function value is inf\n");
-        exit(1);
+        /* exit(1); */
     }
     
     opt->nevals+=1;

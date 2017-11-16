@@ -481,7 +481,7 @@ void ft_param_create_constant(struct FTparam * ftp, double val,
     function_train_free(const_ft); const_ft = NULL;
 }
 
-/***********************************************************//**
+/******************************************Rf*****************//**
     Create a parameterization from a linear least squares fit to 
     x and y
 

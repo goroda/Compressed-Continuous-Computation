@@ -258,7 +258,7 @@ class FunctionTrain(object):
                          adaptrank=0, roundtol=1e-5, maxrank=10, kickrank=2,
                          kristoffel=False, regweight=1e-7, cvnparam=None,
                          cvregweight=None, kfold=5, cvverbose=0, als_max_sweep=20,
-                         norm_ydata=False, store_opt_info=False):
+                         cvrank=None, norm_ydata=False, store_opt_info=False):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -273,6 +273,8 @@ class FunctionTrain(object):
         if opt_type == "BFGS":
             optimizer = c3.c3opt_create(c3.BFGS)
             c3.c3opt_set_absxtol(optimizer, opt_absxtol)
+            # c3.c3opt_ls_set_alpha(optimizer, 0.1)
+            # c3.c3opt_ls_set_beta(optimizer, 0.5)
         elif opt_type == "SGD":
             optimizer = c3.c3opt_create(c3.SGD)
             c3.c3opt_set_sgd_nsamples(optimizer, xdata.shape[0])
@@ -333,16 +335,23 @@ class FunctionTrain(object):
 
         cv = None
         cvgrid = None
-        if (cvnparam is not None) and (cvregweight is None):
+        if (cvnparam is not None) and (cvregweight is None) and (cvrank is None):
             cvgrid = c3.cv_opt_grid_init(1)
             c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
-        elif (cvnparam is None) and (cvregweight is not None):
+        elif (cvnparam is None) and (cvregweight is not None) and (cvrank is None):
             cvgrid = c3.cv_opt_grid_init(1)
             c3.cv_opt_grid_add_param(cvgrid, "reg_weight", len(cvregweight), list(cvregweight))
-        elif (cvnparam is not None) and (cvregweight is not None):
+        elif (cvnparam is not None) and (cvregweight is not None) and (cvrank is None):
             cvgrid = c3.cv_opt_grid_init(2)
             c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
             c3.cv_opt_grid_add_param(cvgrid, "reg_weight", len(cvregeight), list(cvnparam))
+        elif (cvnparam is not None) and (cvrank is not None):
+            cvgrid = c3.cv_opt_grid_init(2)
+            c3.cv_opt_grid_add_param(cvgrid, "rank", len(cvrank), list(cvrank))
+            c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
+
+        
+        
 
         yuse = ydata
         if norm_ydata is True:
@@ -356,7 +365,7 @@ class FunctionTrain(object):
             #print("Cross validation is not working yet!\n")
             c3.cv_opt_grid_set_verbose(cvgrid, cvverbose)
 
-            cv = c3.cross_validate_init(self.dim, xdata.flatten(order='C'), yuse, kfold, 0)
+            cv = c3.cross_validate_init(self.dim, xdata.flatten(order='C'), yuse, kfold, cvverbose)
             c3.cross_validate_grid_opt(cv, cvgrid, reg, optimizer)
             c3.cv_opt_grid_free(cvgrid)
             c3.cross_validate_free(cv)
