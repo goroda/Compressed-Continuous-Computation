@@ -1861,21 +1861,23 @@ int c3_opt_sgd(struct c3Opt * opt, double * x, double * fval)
         *fval = train_error;
         memmove(x,next_step,d*sizeof(double));
 
-        if (grad_inner < gtol){
-            ret = C3OPT_GTOL_REACHED;
-            break;
-        }
-        else if (fabs(dtrain) < relftol){
-            ret = C3OPT_FTOL_REACHED;
-            break;
-        }
-        else if (fabs(xdiff) < absxtol){
-            ret = C3OPT_XTOL_REACHED;
-            break;
-        }
+        if (iter > 5){
+            if (grad_inner < gtol){
+                ret = C3OPT_GTOL_REACHED;
+                break;
+            }
+            else if (fabs(dtrain) < relftol){
+                ret = C3OPT_FTOL_REACHED;
+                break;
+            }
+            else if (fabs(xdiff) < absxtol){
+                ret = C3OPT_XTOL_REACHED;
+                break;
+            }
 
-        if (learn_rate < 1e-20){
-            break;
+            if (learn_rate < 1e-20){
+                break;
+            }
         }
 
     }

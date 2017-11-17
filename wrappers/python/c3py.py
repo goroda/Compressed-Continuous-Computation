@@ -154,7 +154,9 @@ class FunctionTrain(object):
                     assert nparam % 2 == 0, "number of parameters has to be even for adaptation"
                     n2 = int(nparam/2)
                     x = list(np.linspace(lb, ub, n2))
+                    std = np.std(x)
                     width = (n2)**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+                    width = n2**(-0.2) * std * kernel_width_scale
                     c3_ope_opts.append(c3.kernel_approx_opts_gauss(n2, x,
                                                                    kernel_height_scale,
                                                                    kernel_width_scale))
