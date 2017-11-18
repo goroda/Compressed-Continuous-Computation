@@ -69,7 +69,7 @@ class FunctionTrain(object):
 
     def set_dim_opts(self, dim, ftype, lb=-1, ub=1, nparam=4,
                      kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0,
-                     lin_elem_nodes=None, maxnum=np.inf, coeff_check=2, tol=1e-10,
+                     lin_elem_nodes=None, kernel_nodes=None, maxnum=np.inf, coeff_check=2, tol=1e-10,
                      nregions=5):
         """ Set approximation options per dimension """
 
@@ -97,6 +97,13 @@ class FunctionTrain(object):
         else:
             lin_elem_nodes = np.linspace(lb, ub, nparam)
         o['lin_elem_nodes'] = lin_elem_nodes
+        if kernel_nodes is not None:
+            assert kernel_nodes.ndim == 1
+            kernel_nodes = np.unique(kernel_nodes.round(decimals=12))
+            o['nparam'] = len(kernel_nodes)
+            o['lb'] = kernel_nodes[0]
+            o['ub'] = kernel_nodes[-1]
+        o['kernel_nodes'] = kernel_nodes
         self.opts.insert(dim, o)
 
     def __convert_opts_to_c3_form__(self):
@@ -114,6 +121,7 @@ class FunctionTrain(object):
             kernel_width_scale = self.opts[ii]['kernel_width_scale']
             kernel_adapt_center = self.opts[ii]['kernel_adapt_center']
             lin_elem_nodes = self.opts[ii]['lin_elem_nodes']
+            kernel_nodes = self.opts[ii]['kernel_nodes']
             nregions = self.opts[ii]['nregions']
             if ftype == "legendre":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.LEGENDRE))
@@ -133,8 +141,8 @@ class FunctionTrain(object):
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
                 if kernel_adapt_center == 0:
-                    if lin_elem_nodes is not None:
-                        x = list(lin_elem_nodes)
+                    if kernel_nodes is not None:
+                        x = list(kernel_nodes)
                     else:
                         x = list(np.linspace(lb, ub, nparam))
                     nparam = len(x)
@@ -146,16 +154,17 @@ class FunctionTrain(object):
                                                                    kernel_height_scale,
                                                                    kernel_width_scale))
                 else:
-                    if lin_elem_nodes is not None:
-                        x = list(lin_elem_nodes)
+                    if kernel_nodes is not None:
+                        x = list(kernel_nodes)
                         nparam = 2*len(x)
                     else:
-                        x = list(np.linspace(lb, ub, nparam))
-                    assert nparam % 2 == 0, "number of parameters has to be even for adaptation"
-                    n2 = int(nparam/2)
-                    x = list(np.linspace(lb, ub, n2))
+                        # print("here!!")
+                        assert nparam % 2 == 0, "number of parameters has to be even for adaptation"
+                        n2 = int(nparam/2)
+                        x = list(np.linspace(lb, ub, n2))
+                        # print("x = ", x)
                     std = np.std(x)
-                    width = (n2)**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
+                    # width = (n2)**(-0.2) / np.sqrt(12.0) * (ub-lb)  * kernel_width_scale
                     width = n2**(-0.2) * std * kernel_width_scale
                     c3_ope_opts.append(c3.kernel_approx_opts_gauss(n2, x,
                                                                    kernel_height_scale,
