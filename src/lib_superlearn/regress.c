@@ -1191,7 +1191,7 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
         /* yavg /= (double) N; */
 
-        size_t dim = ftr->dim;
+        /* size_t dim = ftr->dim; */
         /* ft_param_create_from_lin_ls(ftr->ftp,N,x,y,pow(1e-3, 1.0/dim)); */
         ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-2);
 
