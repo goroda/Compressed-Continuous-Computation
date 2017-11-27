@@ -156,7 +156,8 @@ class FunctionTrain(object):
                 else:
                     if kernel_nodes is not None:
                         x = list(kernel_nodes)
-                        nparam = 2*len(x)
+                        n2 = len(x)
+                        nparam = 2*n2
                     else:
                         # print("here!!")
                         assert nparam % 2 == 0, "number of parameters has to be even for adaptation"

@@ -974,7 +974,8 @@ double c3opt_eval(struct c3Opt * opt, const double * x, double * grad)
         exit(1);
     }
     else if (isinf(out)){
-        fprintf(stderr,"Optimization function value is inf\n");
+        (void)(1);
+        /* fprintf(stderr,"Optimization function value is inf\n");; */
         /* exit(1); */
     }
     
