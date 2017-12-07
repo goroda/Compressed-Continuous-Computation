@@ -1,5 +1,6 @@
 // Copyright (c) 2015-2016, Massachusetts Institute of Technology
 // Copyright (c) 2016-2017 Sandia Corporation
+// Copyright (c) 2017 NTESS, LLC.
 
 // This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
@@ -33,6 +34,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Code
+
 
 
 /** \file qmarray.c
