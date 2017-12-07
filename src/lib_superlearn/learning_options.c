@@ -87,6 +87,10 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
 
     ropts->nepochs = 0;
     ropts->stored_fvals = NULL;
+
+
+    ropts->sample_weights = NULL;
+    
     return ropts;
 }
 
@@ -136,6 +140,20 @@ struct RegressOpts * regress_opts_create(size_t dim, enum REGTYPE type, enum REG
 
     return opts;
 }
+
+
+/***********************************************************//**
+    Set weights on data by reference
+    
+    \param[in,out] opts    - regression options
+    \param[in]     weights - weights
+***************************************************************/
+void regress_opts_set_sample_weights(struct RegressOpts * opts, const double * weights)
+{
+    assert (opts != NULL);
+    opts->sample_weights = weights;
+}
+
 
 /***********************************************************//**
     Set maximum number of als sweeps

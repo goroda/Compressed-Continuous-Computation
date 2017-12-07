@@ -1056,6 +1056,146 @@ void Test_LS_AIO_new(CuTest * tc)
     multi_approx_opts_free(fapp);
 }
 
+void Test_LS_AIO_new_weighted(CuTest * tc)
+{
+    srand(seed);
+    printf("\nLS_AIO_new: Testing AIO regression on a randomly generated low rank function with weighted first sample \n");
+    printf("\t  Dimensions: 5\n");
+    printf("\t  Ranks:      [1 3 2 4 2 1]\n");
+    printf("\t  LPOLY order: 3\n");
+    printf("\t  nunknowns:   108\n");
+    printf("\t  ndata:       1000\n");
+
+    size_t dim = 5;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    /* size_t ranks[11] = {1,2,2,2,3,4,2,2,2,2,1}; */
+    /* size_t ranks[3] = {1,3,1}; */
+    size_t ranks[6] = {1,3,2,4,2,1};
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * a =
+        function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
+    
+    // create data
+    size_t ndata = 1000;
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+    double * w = calloc_double(ndata);
+    
+    // // add noise
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        // no noise!
+        y[ii] = function_train_eval(a,x+ii*dim);
+        /* y[ii] += randn(); */
+
+        if (ii > 0){
+            w[ii] = 1.0;
+        }
+        else{
+            w[ii] = 1e10;
+        }
+    }
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
+    
+    double * param_space = calloc_double(nunknowns);
+    double * true_params = calloc_double(nunknowns);
+    size_t onparam=0;
+    size_t incr, running=0;
+    for (size_t ii = 0; ii < dim; ii++){
+        /* printf("ii = %zu\n",ii); */
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+
+        incr = function_train_core_get_params(a,ii,
+                                              param_space + running);
+        function_train_core_get_params(a,ii,
+                                       true_params + running);
+        /* for (size_t jj = 0; jj < incr; jj++){ */
+        /*     printf("%zu,%G\n",running+jj,true_params[running+jj]); */
+        /* } */
+        running += incr;
+        for (size_t jj = 0; jj < ranks[ii]; jj++){
+            for (size_t kk = 0; kk < ranks[ii+1]; kk++){
+                param_space[onparam] += randn()*0.01;
+                onparam++;
+            }
+        }
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks);    
+    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
+    regress_opts_set_sample_weights(ropts, w);
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    
+
+    struct FunctionTrain * ft = c3_regression_run(ftp,ropts,optimizer,ndata,x,y);
+    double diff = function_train_relnorm2diff(ft,a);
+    printf("\n\t  Relative Error from low level interface = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-4);
+
+    double eval0 = function_train_eval(ft, x);
+    double diff0 = fabs(y[0] - eval0);
+    double eval1 = function_train_eval(ft, x + dim);
+    double diff1 = fabs(y[1] - eval1);
+    printf("\t Error on heavily weighted sample = %3.5G\n", diff0);
+    printf("\t Error on next sample = %3.5G\n", diff1);
+    CuAssertDblEquals(tc, 0.0, diff0, 1e-10);
+    CuAssertIntEquals(tc, 1, diff0 < diff1);
+
+    struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
+    ft_regress_set_alg_and_obj(reg,AIO,FTLS);
+    ft_regress_update_params(reg,param_space);
+    ft_regress_set_sample_weights(reg, w);
+    struct FunctionTrain * ft2 = ft_regress_run(reg,optimizer,ndata,x,y);
+
+    diff = function_train_relnorm2diff(ft2,a);
+    printf("\t  Relative Error from higher level interface = %G\n",diff);
+    CuAssertDblEquals(tc,0.0,diff,1e-4);
+
+    eval0 = function_train_eval(ft, x);
+    diff0 = fabs(y[0] - eval0);
+    eval1 = function_train_eval(ft, x + dim);
+    diff1 = fabs(y[1] - eval1);
+    printf("\t Error on heavily weighted sample = %3.5G\n", diff0);
+    printf("\t Error on next sample = %3.5G\n", diff1);
+    CuAssertDblEquals(tc, 0.0, diff0, 1e-10);
+    CuAssertIntEquals(tc, 1, diff0 < diff1);
+
+    
+    ft_regress_free(reg);     reg = NULL;
+    function_train_free(ft2); ft2 = NULL;
+
+    c3opt_free(optimizer); optimizer = NULL;
+    
+    function_train_free(ft);  ft = NULL;
+    free(param_space);        param_space = NULL;
+    free(true_params);        true_params = NULL;
+    ft_param_free(ftp);       ftp  = NULL;
+    regress_opts_free(ropts); ropts = NULL;
+    bounding_box_free(bds);   bds  = NULL;
+    function_train_free(a);   a    = NULL;
+
+    free(x); x = NULL;
+    free(y); y = NULL;
+    free(w); w = NULL;
+    
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+}
+
 static double lin_func(double * x){
     double w[5] = {0.2, -0.2, 0.4, 0.3, -0.1};
 
@@ -2698,7 +2838,7 @@ void Test_kristoffel(CuTest * tc)
         kristoffel_weight += v1*v1;
         poly->coeff[ii] = 0.0;
     }
-    kristoffel_weight = sqrt(kristoffel_weight);
+    kristoffel_weight = sqrt(kristoffel_weight / (double) (maxorder+1));
 
     
     double pt[5];    
@@ -3075,6 +3215,7 @@ CuSuite * CLinalgRegressGetSuite()
 
     /* next 4 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_weighted);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */

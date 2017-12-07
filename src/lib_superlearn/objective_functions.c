@@ -129,13 +129,22 @@ double objective_eval(size_t nparam, const double * param, double * grad,
     return out;
 }
 
+// Note this is also defined in regress.c
+struct PP
+{
+    struct FTparam * ftp;
+    struct RegressOpts * opts;
+};
+
 double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
                                            size_t Ndata, size_t * data_index, struct Data * data,
                                            struct SLMemManager * mem, void * args)
 {
 
     struct LeastSquaresArgs * ls = args;
-
+    struct PP * pp =  ls->args;
+    struct RegressOpts * opts = pp->opts;
+    
     double * evals = NULL;
     double * grads = NULL; 
 
@@ -147,13 +156,25 @@ double c3_objective_function_least_squares(size_t nparam, const double * param, 
         if (data_index == NULL){
             for (size_t ii = 0; ii < Ndata; ii++){
                 dy = data_subtract_from_y(data,ii,evals[ii]);
-                out += dy * dy;
+                if (opts->sample_weights == NULL){
+                    out += dy * dy;
+                }
+                else{
+                    out += dy * dy * opts->sample_weights[ii];
+                }
+                
             }
         }
         else{
             for (size_t ii = 0; ii < Ndata; ii++){
                 dy = data_subtract_from_y(data,data_index[ii],evals[ii]);
-                out += dy * dy;
+
+                if (opts->sample_weights == NULL){
+                    out += dy * dy;
+                }
+                else{
+                    out += dy * dy * opts->sample_weights[data_index[ii]];
+                }
             }
         }
     }
@@ -163,18 +184,36 @@ double c3_objective_function_least_squares(size_t nparam, const double * param, 
         if (data_index == NULL){
             for (size_t ii = 0; ii < Ndata; ii++){
                 dy = data_subtract_from_y(data,ii,evals[ii]);
-                out += dy * dy;
-                for (size_t jj = 0; jj < nparam; jj++){
-                    grad[jj] -= 2.0 * dy * grads[ii*nparam+jj];
+
+                if (opts->sample_weights == NULL){
+                    out += dy * dy;
+                    for (size_t jj = 0; jj < nparam; jj++){
+                        grad[jj] -= 2.0 * dy * grads[ii*nparam+jj];
+                    }
+                }
+                else{
+                    out += dy * dy * opts->sample_weights[ii];
+                    for (size_t jj = 0; jj < nparam; jj++){
+                        grad[jj] -= 2.0 * dy * grads[ii*nparam+jj] * opts->sample_weights[ii];
+                    }
                 }
             }
         }
         else{
             for (size_t ii = 0; ii < Ndata; ii++){
                 dy = data_subtract_from_y(data,data_index[ii],evals[ii]);
-                out += dy * dy;
-                for (size_t jj = 0; jj < nparam; jj++){
-                    grad[jj] -= 2.0 * dy * grads[ii*nparam+jj];
+                if (opts->sample_weights == NULL){
+                    out += dy * dy;
+                    for (size_t jj = 0; jj < nparam; jj++){
+                        grad[jj] -= 2.0 * dy * grads[ii*nparam+jj];
+                    }
+                }
+                else{
+                    out += dy * dy * opts->sample_weights[data_index[ii]];
+                    for (size_t jj = 0; jj < nparam; jj++){
+                        grad[jj] -= 2.0 * dy * grads[ii*nparam+jj] *
+                            opts->sample_weights[data_index[ii]];
+                    }
                 }
             }
         }

@@ -297,7 +297,7 @@ class FunctionTrain(object):
         if opt_type == "BFGS":
             optimizer = c3.c3opt_create(c3.BFGS)
             c3.c3opt_set_absxtol(optimizer, opt_absxtol)
-            c3.c3opt_ls_set_maxiter(optimizer, 100)
+            c3.c3opt_ls_set_maxiter(optimizer, 300)
             # c3.c3opt_ls_set_alpha(optimizer, 0.1)
             # c3.c3opt_ls_set_beta(optimizer, 0.5)
         elif opt_type == "SGD":

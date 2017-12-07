@@ -85,7 +85,6 @@ struct FTRegress
 
 };
 
-
 /** \struct PP
  * \brief Store items that will be passed as void to optimizer
  */
@@ -461,7 +460,6 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     sl_mem_manager_check_structure(mem,ftp,x);
     struct Data * data = data_alloc(N,ftp->dim);
     data_set_xy(data,x,y);
-
     
     struct PP pp;
     pp.ftp = ftp;
@@ -835,6 +833,21 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
 }
 
 /***********************************************************//**
+    Set a reference to the weights on the data points for regression
+    
+    \param[in] ftr     - regression structure
+    \param[in] weights - weights on the data points (should be same size as data)
+
+***************************************************************/
+void ft_regress_set_sample_weights(const struct FTRegress * ftr, const double * weights)
+{
+    assert (ftr != NULL);
+    assert (ftr->regopts != NULL);
+    regress_opts_set_sample_weights(ftr->regopts, weights);
+}
+
+
+/***********************************************************//**
     Get dimension
     
     \param[in] ftr - regression structure
@@ -845,7 +858,6 @@ size_t ft_regress_get_dim(const struct FTRegress * ftr)
     assert (ftr != NULL);
     return ftr->dim;
 }
-
 
 /***********************************************************//**
     Turn on/off adaptation
@@ -1213,7 +1225,6 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     return ft;
 }
 
-
 /***********************************************************//**
     Run regression with rank adaptation and return the result
 
@@ -1323,7 +1334,8 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         if (ftr->regopts->verbose > 0){
             printf("Kicked ranks: "); iprint_sz(ftr->dim+1,ranks);
             if (opt_only_restricted == 1){
-                printf("restrict optimization to >=: "); iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
+                printf("restrict optimization to >=: ");
+                iprint_sz(ft->dim-1,ftr->regopts->restrict_rank_opt);
             }
             printf("Nrounded params: %zu\n",nparams_rounded);
         }

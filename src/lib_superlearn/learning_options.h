@@ -86,14 +86,16 @@ struct RegressOpts
 
     int kristoffel_active;
 
-
     size_t nepochs;
     double * stored_fvals;
+
+    const double * sample_weights;
 };
 
 struct RegressOpts * regress_opts_alloc(size_t);
 void regress_opts_free(struct RegressOpts *);
 struct RegressOpts * regress_opts_create(size_t, enum REGTYPE, enum REGOBJ);
+void regress_opts_set_sample_weights(struct RegressOpts *, const double *);
 void regress_opts_set_max_als_sweep(struct RegressOpts *, size_t);
 void regress_opts_set_kristoffel(struct RegressOpts *, int);
 void regress_opts_set_als_conv_tol(struct RegressOpts *, double);

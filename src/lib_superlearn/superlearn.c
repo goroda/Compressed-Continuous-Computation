@@ -35,12 +35,16 @@
 //Code
 
 /** \file superlearn.c
- * Provides routines for supervised learning
+ * Provides routines for supervised learning and interfaces to optimizers
  */
 
 #include "superlearn.h"
 #include "objective_functions.h"
 
+
+/***********************************************************//**
+    C3OPt optimizer interface for batch descent
+***************************************************************/
 double objective_batch(size_t nparam, const double * param, double * grad, void * arg)
 {
     struct SLP * slp = arg;
@@ -48,13 +52,18 @@ double objective_batch(size_t nparam, const double * param, double * grad, void 
     return objective_eval(nparam,param,grad,N,NULL,arg);
 }
 
+/***********************************************************//**
+    C3OPt optimizer interface for stochastic gradient descent
+***************************************************************/
 double objective_stoch(size_t nparam, size_t ind, const double * param, double * grad, void * arg)
 {
     return objective_eval(nparam,param,grad,1,&ind,arg);
 }
 
 
-
+/***********************************************************//**
+   Setup C3OPT optimizer and minimizeo objective                                                         
+***************************************************************/
 int objective_minimize(struct SLP * slp, struct c3Opt * optimizer,
                        size_t nparam, double * guess, double *val)
 
