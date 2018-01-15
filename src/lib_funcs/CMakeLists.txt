@@ -7,6 +7,7 @@ file(GLOB SRC_FILES
     hpoly.c
     linelm.c
     kernels.c
+    wavelets.c
     fapprox.c
     funcs_mixed.c
     funcs_not_standard.c
