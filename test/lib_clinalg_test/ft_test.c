@@ -1813,7 +1813,7 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
     fwrap_set_fvec(fw,funcnd2,NULL);
     // set function monitor
 
-    size_t N = 20;
+    size_t N = 80;
     double * x = linspace(-1.0,1.0,N);
     struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
@@ -1827,6 +1827,8 @@ void Test_ftapprox_cross_linelm1(CuTest * tc)
         start[ii] = linspace(-1.0,1.0,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_tol(c3a, 1e-12);
+    c3approx_set_cross_maxiter(c3a, 15);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,0);
 
     N = 10;
@@ -2029,7 +2031,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     fwrap_set_fvec(fw,func_not_all,NULL);
     // set function monitor
 
-    size_t N = 20;
+    size_t N = 40;
     double * x = linspace(-1.0,1.0,N);
     struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
