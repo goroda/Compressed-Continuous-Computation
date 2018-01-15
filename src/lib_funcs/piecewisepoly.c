@@ -2400,6 +2400,7 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
 
     size_t N = aopts->maxorder+1;
     double normalization = piecewise_poly_inner(pw,pw);
+    /* normalization=1; */
     /* double normalization = 1; */
 
     double true_lb = piecewise_poly_get_lb(pw);
@@ -2497,6 +2498,7 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
         size_t npolys = N;
         size_t ncheck = aopts->coeff_check < npolys ? aopts->coeff_check : npolys;
         double normalization = cblas_ddot(npolys,poly->ope->coeff,1,poly->ope->coeff,1);
+        /* normalization = 1; */
         /* double normalization = 1.0; */
         for (size_t jj = 0; jj < ncheck; jj++){
             double c =  poly->ope->coeff[npolys-1-jj];

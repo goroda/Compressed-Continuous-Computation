@@ -3380,8 +3380,8 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        /* if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){ */
-        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+        if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){
+        /* if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){ */
         /* if ( diff < cargs->epsilon){ */
             done = 1;
             break;
