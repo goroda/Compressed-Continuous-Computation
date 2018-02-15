@@ -107,9 +107,10 @@ I aim to document (with Doxygen) every function available to the user and provid
 Please open a Github issue to ask a question, report a bug, or to request features.
 To contribute, fork the repository and setup a branch.
 
-Author: Alex A. Gorodetsky  
-Contact: alex@alexgorodetsky.com  
+Author: [Alex A. Gorodetsky](https://www.alexgorodetsky.com)  
+Contact: [goroda@umich.edu](mailto:goroda@umich.edu)  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
+Copyright (c) 2018, University of Michigan  
 License: BSD
 
