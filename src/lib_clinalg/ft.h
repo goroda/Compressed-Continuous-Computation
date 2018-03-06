@@ -239,6 +239,7 @@ void ft_cross_args_set_maxrank_ind(struct FtCrossArgs *, size_t, size_t);
 void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
 size_t * ft_cross_args_get_ranks(const struct FtCrossArgs *);
+size_t function_train_get_rank(const struct FunctionTrain *, size_t);
 struct FtCrossArgs * ft_cross_args_copy(const struct FtCrossArgs *);
 void ft_cross_args_free(struct FtCrossArgs *);
 

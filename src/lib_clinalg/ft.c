@@ -457,6 +457,17 @@ size_t function_train_get_dim(const struct FunctionTrain * ft)
 }
 
 /***********************************************************//**
+    Get rank
+***************************************************************/
+size_t function_train_get_rank(const struct FunctionTrain * ft, size_t index)
+{
+    assert (ft != NULL);
+    assert (ft->ranks != NULL);
+    assert (index < ft->dim+1);
+    return ft->ranks[index];
+}
+
+/***********************************************************//**
     Get ranks                                                            
 ***************************************************************/
 size_t * function_train_get_ranks(const struct FunctionTrain * ft)

@@ -68,8 +68,10 @@ class FunctionTrain(object):
         self.ft = ft
 
     def set_dim_opts(self, dim, ftype, lb=-1, ub=1, nparam=4,
-                     kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0,
-                     lin_elem_nodes=None, kernel_nodes=None, maxnum=np.inf, coeff_check=2, tol=1e-10,
+                     kernel_height_scale=1.0, kernel_width_scale=1.0,
+                     kernel_adapt_center=0,
+                     lin_elem_nodes=None, kernel_nodes=None,
+                     maxnum=np.inf, coeff_check=2, tol=1e-10,
                      nregions=5):
         """ Set approximation options per dimension """
 
@@ -542,6 +544,13 @@ class FunctionTrain(object):
         else:
             return ft_out
 
+    def get_ranks(self):
+        dim = c3.function_train_get_dim(self.ft)
+        ranks = [1]*(dim+1)
+        for ii in range(dim+1):
+            ranks[ii] = c3.function_train_get_rank(self.ft, ii)
+        return np.array(ranks)
+        
     def norm2(self):
         return c3.function_train_norm2(self.ft)
 
@@ -561,3 +570,4 @@ class FunctionTrain(object):
         if self.ft is not None:
             c3.function_train_free(self.ft)
             self.ft = None
+
