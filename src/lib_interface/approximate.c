@@ -249,14 +249,16 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
     c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
     ft_cross_args_set_verbose(c3a->fca,verbose);
     ft_cross_args_set_round_tol(c3a->fca,1e-14);
-    
+    printf("ok here?!\n");
     size_t * ranks = ft_cross_args_get_ranks(c3a->fca);
     cross_index_array_initialize(c3a->dim,c3a->isr,0,1,ranks,(void**)start,sizeof(double));
     cross_index_array_initialize(c3a->dim,c3a->isl,0,0,ranks+1,(void**)start,sizeof(double));
+    printf("ok here there?!\n");
     if (c3a->ftref != NULL){
         function_train_free(c3a->ftref); c3a->ftref = NULL;
     }
     c3a->ftref = function_train_constant(1.0,c3a->fapp);
+    printf("lets go?!\n");
     /* exit(1); */
      /* function_train_get_lb(c3a->ftref); */
 }
