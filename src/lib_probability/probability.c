@@ -1003,17 +1003,24 @@ struct ProbabilityDensity * probability_density_load(char * filename)
     return pdf;
 }
 
-
+// n is number of samples
+// dim is number of dimensions
+// x is the location of evaluation (n x 1)
+// out is allocated storage area
+// args is additional arguments
 int pdf_stdmvn_helper(size_t n, size_t dim,const double *x, double * out, void * args)
 {
     size_t * totdim = args;
     assert (dim < *totdim);
     
     double scale = 1.0 / sqrt(pow(2.0*M_PI,*totdim));
-    
+
+    /* double scale[4] = {1.0, 2.0, 3.0, 4.0}; */
+    /* double width[4] = { 0.1, 0.2, 0.3, 0.4} */
     scale = pow(scale,1.0/( (double) *totdim));
     for (size_t ii = 0; ii < n; ii++){
-        out[ii] = scale * exp(-0.5*pow(x[ii],2)); 
+        out[ii] = scale * exp(-0.5*pow(x[ii],2));
+        /* out[ii] = scale[dim] * exp(-1.0/width[dim] * pow(x[ii],2)); // for dimension dependent output */
     }
 
     return 0;
