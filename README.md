@@ -98,6 +98,20 @@ make PyWrapper
 1) Mac OS X with clang version 8.0  
 2) Ubuntu with gcc version 5.0
 
+
+## Solutions to some possible problems
+
+### Error: Unable to find 'python.swg'
+
+On Mac OS X, if SWIG is installed with macports using
+``` shell
+sudo port install swig
+```
+then the above error might occur. To remedy this error install the swig-python package
+``` shell
+sudo port install swig-python
+```
+
 ## Coding practices
 
 I aim to document (with Doxygen) every function available to the user and provide a unit test. Furthermore, I won't push code to the master branch that has memory leaks. I am constantly looking for more suggestions for improving the robustness of the code if any issues are encountered. 
