@@ -195,6 +195,8 @@ size_t qmarray_func_get_nparams(const struct Qmarray *,
                                 size_t, size_t);
 size_t qmarray_get_nparams(const struct Qmarray *,size_t *);
 size_t qmarray_get_params(struct Qmarray *,double *);
+void qmarray_uni_update_params(struct Qmarray *, size_t, size_t,
+                               size_t, const double *);
 void qmarray_update_params(struct Qmarray *, size_t, const double *);
 void qmarray_param_grad_eval(struct Qmarray *, size_t,
                              const double *, size_t,

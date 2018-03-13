@@ -836,6 +836,20 @@ size_t function_train_get_params(const struct FunctionTrain * ft,
     return running;
 }
 
+
+/***********************************************************//**
+   Update the parameters of a single univariate function
+***************************************************************/
+void function_train_uni_update_params(struct FunctionTrain * ft,
+                                       size_t core,
+                                       size_t row,
+                                       size_t col,
+                                       size_t nparam,
+                                       const double * param)
+{
+    qmarray_uni_update_params(ft->cores[core], row, col, nparam, param);
+}
+
 /***********************************************************//**
    Update the parameters defining a function train core
 ***************************************************************/

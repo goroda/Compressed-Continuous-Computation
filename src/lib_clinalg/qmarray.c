@@ -3272,6 +3272,30 @@ size_t qmarray_get_params(struct Qmarray * qma, double * param)
 }
 
 /***********************************************************//**
+    Update parameters of a single generic function
+
+    \param[in,out]  qma    - quasimatrix array whose parameters to update
+    \param[in]      row    - row of the function to update
+    \param[in]      col    - column of the function
+    \param[in]      nparam - total number of parameters
+    \param[in]      param  - parameters with which to update
+***************************************************************/
+void qmarray_uni_update_params(struct Qmarray * qma, size_t row, size_t col,
+                           size_t nparam, const double * param)
+{
+
+
+     size_t ind = col * qma->nrows + row;
+     size_t nparam_expect = generic_function_get_num_params(qma->funcs[ind]);
+     if (nparam_expect != nparam){
+         fprintf(stderr, "Trying to update a univariate function in\n");
+         fprintf(stderr, "qmarray_uni_update_params with the wrong number of parameters\n");
+         exit(1);
+     }
+     generic_function_update_params(qma->funcs[ind],nparam,param);
+}
+
+/***********************************************************//**
     Update Qmarray parameters
 
     \param[in,out]  qma     - quasimatrix array whose parameters to update
