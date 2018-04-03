@@ -64,7 +64,7 @@ void RunAllTests(void) {
     CuSuite * diff = CLinalgDiffusionGetSuite();
 
     
-    /* CuSuiteAddSuite(suite, clin); */ // nothing here is used
+    /* CuSuiteAddSuite(suite, clin); nothing here is used */
     
     CuSuiteAddSuite(suite, qma);
     CuSuiteAddSuite(suite, ftr);

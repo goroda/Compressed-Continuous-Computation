@@ -497,6 +497,44 @@ struct FunctionTrain * exact_diffusion(
 }
 
 
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] exactly
+
+    \param[in] a    - scalar coefficients
+    \param[in] f    - input to diffusion operator
+    \param[in] opts - approxmation options
+
+    \return out - exact application of diffusion operator 
+    
+    \note 
+        Result is not rounded. Might want to perform rounding afterwards
+***************************************************************/
+struct FunctionTrain * exact_laplace(struct FunctionTrain * f)
+{
+    size_t dim = f->dim;
+
+    struct FunctionTrain * out = NULL;
+    struct FT1DArray * ft1d = function_train_gradient(f);
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        struct FT1DArray * temp = function_train_gradient(ft1d->ft[ii]);
+        if (ii == 0){
+            out = function_train_copy(temp->ft[ii]);
+        }
+        else{
+            struct FunctionTrain * temp_ii = function_train_sum(out, temp->ft[ii]);
+            function_train_free(out); out = NULL;
+            out = function_train_copy(temp_ii);
+            function_train_free(temp_ii); temp_ii = NULL;
+        }
+        
+        ft1d_array_free(temp); temp = NULL;
+    }
+    ft1d_array_free(ft1d);
+    return out;
+}
+
+
 
 
 
