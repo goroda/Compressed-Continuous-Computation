@@ -2499,6 +2499,19 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
 }
 
 /********************************************************//**
+    Truncate functions in FT
+
+    \param[in,out] ft - FT
+    \param[in] epsilon - threshold
+***********************************************************/
+void function_train_truncate(struct FunctionTrain * ft, double epsilon)
+{
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        qmarray_roundt(&ft->cores[ii], epsilon);
+    }    
+}
+
+/********************************************************//**
     Reapproximate a function train with new approximation options
     in a nonadaptive way. MultiApproxOpts should have all info needed
 
