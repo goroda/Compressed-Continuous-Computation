@@ -62,6 +62,9 @@ struct ConstElemExpAopts *
 const_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void const_elem_exp_aopts_free(struct ConstElemExpAopts *);
 void const_elem_exp_aopts_free_deep(struct ConstElemExpAopts **);
+
+double const_elem_exp_aopts_get_lb(const struct ConstElemExpAopts *);
+double const_elem_exp_aopts_get_ub(const struct ConstElemExpAopts *);
 void const_elem_exp_aopts_set_nodes(struct ConstElemExpAopts *,
                                   size_t, double *);
 

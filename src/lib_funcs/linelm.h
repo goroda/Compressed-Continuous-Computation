@@ -62,6 +62,8 @@ struct LinElemExpAopts *
 lin_elem_exp_aopts_alloc_adapt(size_t,double *,double,double,double, double);
 void lin_elem_exp_aopts_free(struct LinElemExpAopts *);
 void lin_elem_exp_aopts_free_deep(struct LinElemExpAopts **);
+double lin_elem_exp_aopts_get_lb(const struct LinElemExpAopts *);
+double lin_elem_exp_aopts_get_ub(const struct LinElemExpAopts *);
 void lin_elem_exp_aopts_set_nodes(struct LinElemExpAopts *,
                                   size_t, double *);
 void lin_elem_exp_aopts_set_nodes_copy(struct LinElemExpAopts *,

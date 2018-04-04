@@ -614,12 +614,28 @@ void kernel_approx_opts_set_lb(struct KernelApproxOpts * opts, double lb)
 }
 
 /********************************************************//**
+*   Get lower bounds
+*************************************************************/
+double  kernel_approx_opts_get_lb(struct KernelApproxOpts * opts)
+{
+    return opts->lb;
+}
+
+/********************************************************//**
 *   Set upper bounds
 *************************************************************/
 void kernel_approx_opts_set_ub(struct KernelApproxOpts * opts, double ub)
 {
     opts->ub = ub;
     opts->prac_ub = ub;
+}
+
+/********************************************************//**
+*   Get upper bounds
+*************************************************************/
+double  kernel_approx_opts_get_ub(struct KernelApproxOpts * opts)
+{
+    return opts->ub;
 }
 
 struct KernelExpansion

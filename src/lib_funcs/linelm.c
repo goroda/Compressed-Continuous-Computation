@@ -197,6 +197,24 @@ size_t lin_elem_exp_aopts_get_num_nodes(const struct LinElemExpAopts * aopts)
     return aopts->num_nodes;
 }
 
+/********************************************************//**
+    Get the lower bound
+*************************************************************/
+double lin_elem_exp_aopts_get_lb(const struct LinElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->lb;
+}
+
+/********************************************************//**
+    Get the upper bound
+*************************************************************/
+double lin_elem_exp_aopts_get_ub(const struct LinElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->ub;
+}
+
 
 /********************************************************//**
     Sets new nodes (by reference) for approximation options.

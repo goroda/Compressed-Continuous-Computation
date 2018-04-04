@@ -165,6 +165,66 @@ size_t one_approx_opts_get_nparams(const struct OneApproxOpts * oa)
     return nparams;
 }
 
+/***********************************************************//**
+  Get the lower bounds
+***************************************************************/
+double one_approx_opts_get_lb(const struct OneApproxOpts * oa)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    double lb = 0.0;
+    if (oa->fc == POLYNOMIAL){
+        lb = ope_opts_get_lb(oa->aopts);
+    }
+    else if (oa->fc == PIECEWISE){
+        lb = pw_poly_opts_get_lb(oa->aopts);
+    }
+    else if (oa->fc == LINELM){
+        lb = lin_elem_exp_aopts_get_lb(oa->aopts);
+    }
+    else if (oa->fc == CONSTELM){
+        lb = const_elem_exp_aopts_get_lb(oa->aopts);
+    }    
+    else if (oa->fc == KERNEL){
+        lb = kernel_approx_opts_get_lb(oa->aopts);
+    }
+    else{
+        fprintf(stderr,"Cannot get lower_bound for one_approx options of type %d\n",
+                oa->fc);
+    }
+    return lb;
+}
+
+/***********************************************************//**
+  Get the upper bounds
+***************************************************************/
+double one_approx_opts_get_ub(const struct OneApproxOpts * oa)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    double ub = 0.0;
+    if (oa->fc == POLYNOMIAL){
+        ub = ope_opts_get_ub(oa->aopts);
+    }
+    else if (oa->fc == PIECEWISE){
+        ub = pw_poly_opts_get_ub(oa->aopts);
+    }
+    else if (oa->fc == LINELM){
+        ub = lin_elem_exp_aopts_get_ub(oa->aopts);
+    }
+    else if (oa->fc == CONSTELM){
+        ub = const_elem_exp_aopts_get_ub(oa->aopts);
+    }    
+    else if (oa->fc == KERNEL){
+        ub = kernel_approx_opts_get_ub(oa->aopts);
+    }
+    else{
+        fprintf(stderr,"Cannot get upper bound for one_approx options of type %d\n",
+                oa->fc);
+    }
+    return ub;
+}
+
 
 /***********************************************************//**
   Set the number of parametrs in the approximation optins
@@ -416,6 +476,30 @@ size_t multi_approx_opts_get_dim_nparams(const struct MultiApproxOpts * f, size_
 {
     assert (f != NULL);
     return one_approx_opts_get_nparams(f->aopts[ind]);
+}
+
+/***********************************************************//**
+    Get the lower bounds of a particular dimension
+    
+    \param[in] f   - multi approx structure
+    \param[in] ind - which function to inquire about
+***************************************************************/
+double multi_approx_opts_get_dim_lb(const struct MultiApproxOpts * f, size_t ind)
+{
+    assert (f != NULL);
+    return one_approx_opts_get_lb(f->aopts[ind]);
+}
+
+/***********************************************************//**
+    Get the upper bounds of a particular dimension
+    
+    \param[in] f   - multi approx structure
+    \param[in] ind - which function to inquire about
+***************************************************************/
+double multi_approx_opts_get_dim_ub(const struct MultiApproxOpts * f, size_t ind)
+{
+    assert (f != NULL);
+    return one_approx_opts_get_ub(f->aopts[ind]);
 }
 
 /***********************************************************//**

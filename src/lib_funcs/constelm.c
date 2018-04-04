@@ -187,6 +187,25 @@ void const_elem_exp_aopts_free_deep(struct ConstElemExpAopts ** aopts)
     }
 }
 
+
+/********************************************************//**
+    Get the lower bound
+*************************************************************/
+double const_elem_exp_aopts_get_lb(const struct ConstElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->lb;
+}
+
+/********************************************************//**
+    Get the upper bound
+*************************************************************/
+double const_elem_exp_aopts_get_ub(const struct ConstElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->ub;
+}
+
 /********************************************************//**
     Get number of nodes
 *************************************************************/
@@ -195,7 +214,6 @@ size_t const_elem_exp_aopts_get_num_nodes(const struct ConstElemExpAopts * aopts
     assert (aopts != NULL);
     return aopts->num_nodes;
 }
-
 
 /********************************************************//**
     Sets new nodes (by reference) for approximation options.
@@ -296,7 +314,7 @@ void const_elem_exp_aopts_set_nparams(struct ConstElemExpAopts* lexp, size_t num
 {
     assert (lexp != NULL);
     lexp->num_nodes = num;
-    fprintf(stderr,"Warning: setting new nparams in linelem aopts. Do I need to adjust the node locations?\n");
+    fprintf(stderr,"Warning: setting new nparams in constelem aopts. Do I need to adjust the node locations?\n");
 }
 
 
