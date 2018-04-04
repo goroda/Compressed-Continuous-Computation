@@ -498,11 +498,9 @@ struct FunctionTrain * exact_diffusion(
 
 
 /***********************************************************//**
-    Compute \f[ z(x) = \nabla \cdot \left[ a(x) \nabla f(x) \right] \f] exactly
+    Compute \f[ z(x) = \nabla \cdot \left[ \nabla f(x) \right] \f] exactly
 
-    \param[in] a    - scalar coefficients
     \param[in] f    - input to diffusion operator
-    \param[in] opts - approxmation options
 
     \return out - exact application of diffusion operator 
     
