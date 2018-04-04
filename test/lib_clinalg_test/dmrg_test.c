@@ -641,6 +641,191 @@ void Test_diffusion_dmrg(CuTest * tc)
     free_dd(dim,startp);
 }
 
+
+double psi0ft(const double *x, void * args)
+{
+    (void) args;
+    size_t dim=2;
+    double out = 1.0;
+    double pi = acos(-1.0);
+    for(size_t k=0; k<dim; k++){
+        out *= exp(-0.5*pow(x[k],2))/pow(pi,0.25); 
+    }
+    return out;
+}
+
+double psi0ft_lap(const double *xin, void * args)
+{
+    (void) args;
+    double x = xin[0];
+    double y = xin[1];
+    double out = -1.12838*pow(2.71828182845904523536028747135,-0.5*x*x - 0.5*y*y) + 
+        0.56419*pow(2.71828182845904523536028747135,-0.5*x*x - 0.5*y*y)*x*x + 
+        0.56419*pow(2.71828182845904523536028747135, -0.5*x*x - 0.5*y*y)*y*y;
+        
+
+    return out;
+}
+
+void Test_diffusion_laplace(CuTest * tc)
+{
+    printf("Testing Function: diffusion_laplace\n");
+
+    double lb = -4.;
+    double ub = -lb;
+    
+    size_t dim = 2;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,7); /* order ? */
+    ope_opts_set_coeffs_check(opts,2); // keep 7th order
+    ope_opts_set_tol(opts,1e-20); /* cross approximation tolerance ? */
+    ope_opts_set_maxnum(opts,100); /* maximum number of polynomials */
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    /* CROSS */
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 3;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+      c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+      start[ii] = linspace(-0.5,0.3,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_maxiter(c3a, 10);
+    c3approx_set_cross_tol(c3a,1e-20);
+    c3approx_set_round_tol(c3a,1e-20);
+
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,psi0ft,NULL);
+    struct FunctionTrain * ft_psir = c3approx_do_cross(c3a,fw,1);
+    /* printf("ranks of ft_psir = "); */
+    double * xt = linspace(lb, ub, 20);
+    for (size_t ii = 0; ii < 20; ii++){
+        for (size_t jj = 0; jj < 20; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_psir, pt_test);
+            double eval_true = psi0ft(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            CuAssertDblEquals(tc, 0, diff, 1e-13);
+        }
+    }
+
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
+    struct FunctionTrain * ft_round =
+        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    
+    for (size_t ii = 0; ii < 20; ii++){
+        for (size_t jj = 0; jj < 20; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_lap, pt_test);
+            double eval_ftr = function_train_eval(ft_round, pt_test);
+            double eval_true = psi0ft_lap(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff, 1e-6);
+            double diff2 = eval_ftr - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff2, 1e-6);
+        }
+    }
+
+    function_train_free(ft_psir); ft_psir = NULL;
+    function_train_free(ft_lap); ft_lap = NULL;
+    function_train_free(ft_round); ft_round = NULL;
+    free(xt); xt = NULL;
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    function_train_free(ft_psir);
+}
+
+void Test_diffusion_laplace_linelm(CuTest * tc)
+{
+    printf("Testing Function: diffusion_laplace_linelm\n");
+
+    double lb = -4.;
+    double ub = -lb;
+    
+    size_t dim = 2;
+    size_t N = 256;
+    double * xt = linspace(lb, ub, N);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,xt);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
+
+    /* CROSS */
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+      c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+      start[ii] = linspace(lb,ub,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_maxiter(c3a, 10);
+    c3approx_set_cross_tol(c3a,1e-19);
+    c3approx_set_round_tol(c3a,1e-10);
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,psi0ft,NULL);
+    struct FunctionTrain * ft_psir = c3approx_do_cross(c3a,fw,1);
+    /* printf("ranks of ft_psir = "); */
+
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_psir, pt_test);
+            double eval_true = psi0ft(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff, 1e-13);
+        }
+    }
+
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
+    struct FunctionTrain * ft_round =
+        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    /* printf("lap ranks = "); iprint_sz(3, function_train_get_ranks(ft_lap)); */
+    /* printf("rounded ranks = "); iprint_sz(3, function_train_get_ranks(ft_round)); */
+    double dx = xt[1] - xt[0];
+    /* printf("dx = %G\n", dx); */
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_lap, pt_test);
+            double eval_true = psi0ft_lap(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            /* CuAssertDblEquals(tc, 0, diff, 1e-4); */
+            CuAssertDblEquals(tc, 0, diff, dx);
+
+            double eval_ftr = function_train_eval(ft_round, pt_test);
+            double diff2 = eval_ftr - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            /* CuAssertDblEquals(tc, 0, diff2, 1e-6); */
+            CuAssertDblEquals(tc, 0, diff2, dx);
+        }
+    }
+    function_train_free(ft_round); ft_round = NULL;
+    function_train_free(ft_lap); ft_lap = NULL;
+
+    function_train_free(ft_psir); ft_psir = NULL;
+
+    free(xt); xt = NULL;
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    function_train_free(ft_psir);
+}
+
+
 CuSuite * CLinalgDiffusionGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
@@ -650,5 +835,7 @@ CuSuite * CLinalgDiffusionGetSuite()
     SUITE_ADD_TEST(suite, Test_diffusion_firstright);
     SUITE_ADD_TEST(suite, Test_diffusion_op_struct);
     SUITE_ADD_TEST(suite, Test_diffusion_dmrg);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm);
     return suite;
 }
