@@ -356,15 +356,20 @@ qmarray_orth1d_rows(size_t nrows, size_t ncols, struct OneApproxOpts * opts)
     for (ii = 0; ii < nrows; ii++){
         funcs[ii] = NULL;
     }
-    //printf("wwwhat\n");
+    /* printf("wwwhat\n"); */
     generic_function_array_orth(nrows, funcs, opts->fc, opts->aopts);
-    //printf("wwwhere\n");
+    /* printf("wwwhere\n"); */
+    /* for (size_t ii = 0; ii < nrows; ii++){ */
+    /*     printf("after array_orth ii = %zu\n", ii); */
+    /*     print_generic_function(funcs[ii], 4, NULL, stdout);         */
+    /* } */
     
     struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
     
     size_t onnon = 0;
     size_t onorder = 0;
     for (jj = 0; jj < nrows; jj++){
+        assert (onorder < nrows);
         qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
         double normfunc = generic_function_norm(qm->funcs[onnon*nrows+jj]);
         /* printf("normfunc rows = %3.15G\n", normfunc); */
@@ -372,6 +377,8 @@ qmarray_orth1d_rows(size_t nrows, size_t ncols, struct OneApproxOpts * opts)
             printf("normfunc rows = %3.15G\n", normfunc);
             printf("num_rows = %zu\n", nrows);
             printf("num_cols = %zu\n", ncols);
+            printf("onorder = %zu\n", onorder);
+            print_generic_function(qm->funcs[onnon*nrows+jj], 4, NULL, stdout);
             exit(1);
         }
         for (kk = 0; kk < onnon; kk++){
@@ -493,7 +500,10 @@ qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
                 printf("normfunc cols = %3.15G\n", normfunc);
                 printf("num_rows = %zu\n", nrows);
                 printf("num_cols = %zu\n", ncols);
-                print_generic_function(qm->funcs[jj*nrows+onnon], 4, NULL, stdout); 
+                print_generic_function(qm->funcs[jj*nrows+onnon], 4, NULL, stdout);
+
+                generic_function_free(qm->funcs[jj*nrows+onnon]);
+                qm->funcs[jj*nrows+onnon] = generic_function_copy(zero);
                 exit(1);
             }
 
@@ -2867,7 +2877,9 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
         }
     }
     else if (strcmp(dir, "LQ") == 0){
+        /* printf("lets go LQ!\n"); */
         Q = qmarray_orth1d_rows(A->nrows,ncols,app);
+        /* printf("got orth1d_rows!\n"); */
         if (app->fc != PIECEWISE){
             //free(R); R = NULL;
             int out = qmarray_lq(A,&Q,&R,app);

@@ -457,6 +457,16 @@ size_t function_train_get_dim(const struct FunctionTrain * ft)
 }
 
 /***********************************************************//**
+    Get core
+***************************************************************/
+struct Qmarray* function_train_get_core(const struct FunctionTrain * ft, size_t ind)
+{
+    assert(ft != NULL);
+    assert (ind < ft->dim);
+    return ft->cores[ind];
+}
+
+/***********************************************************//**
     Get rank
 ***************************************************************/
 size_t function_train_get_rank(const struct FunctionTrain * ft, size_t index)
@@ -2395,7 +2405,9 @@ function_train_orthor(struct FunctionTrain * a,
     // update last core
 //    printf("dim = %zu\n",a->dim);
     o = multi_approx_opts_get_aopts(aopts,core);
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core])); */
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L,o);
+    /* printf("done with LQ\n"); */
     for (ii = 2; ii < a->dim; ii++){
         core = a->dim-ii;
         //printf("on core %zu\n",core);
@@ -2425,6 +2437,11 @@ struct FunctionTrain *
 function_train_round(struct FunctionTrain * ain, double epsilon,
                      struct MultiApproxOpts * aopts)
 {
+    double normain = function_train_norm2(ain);
+    printf("normain = %3.15G\n", normain);
+    if (normain < 1e-20){
+        return function_train_constant(0.0, aopts);
+    }
     struct OneApproxOpts * o = NULL;
     struct FunctionTrain * a = function_train_copy(ain);
 //    size_t ii;

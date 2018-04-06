@@ -103,6 +103,7 @@ size_t * function_train_get_ranks(const struct FunctionTrain *);
 size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
 
+struct Qmarray* function_train_get_core(const struct FunctionTrain *, size_t);
 // evaluators
 void function_train_eval_up_to_core(struct FunctionTrain *,
                                     size_t, const double *,
