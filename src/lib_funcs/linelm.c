@@ -1354,7 +1354,14 @@ struct LinElemExp * lin_elem_exp_prod(const struct LinElemExp * f,
     struct LinElemExpAopts * opts = NULL;
     double hmin = 1e-3;
     double delta = 1e-4;
-    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,lb,ub,delta,hmin);
+    int samedisc = lin_elem_sdiscp(f,g);
+    if (samedisc == 1){
+        opts = lin_elem_exp_aopts_alloc(f->num_nodes, f->nodes);
+    }
+    else{
+        opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,lb,ub,delta,hmin);
+    }
+
 
     struct Fwrap * fw = fwrap_create(1,"general-vec");
     fwrap_set_fvec(fw,leprod,&fg);
@@ -2011,23 +2018,31 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExp
 
     if (opts->adapt == 0){
         assert (opts->nodes != NULL);
-        assert (n <= opts->num_nodes);
+        /* assert (n <= opts->num_nodes); */
         double * zeros = calloc_double(opts->num_nodes);
+        /* double * zeros = calloc_double(n); */
+        /* double * nodes = linspace(opts->lb, opts->ub, n); */
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = lin_elem_exp_init(opts->num_nodes,opts->nodes,zeros);
-            f[ii]->coeff[ii] = 1.0;
+            /* f[ii] = lin_elem_exp_init(n,opts->nodes,zeros); */
+            if (ii < opts->num_nodes){
+                f[ii]->coeff[ii] = 1.0;
+            }
         }
+        /* free(nodes); nodes = NULL; */
         double norm, proj;
         for (size_t ii = 0; ii < n; ii++){
-            norm = lin_elem_exp_norm(f[ii]);
+            norm = lin_elem_exp_norm(f[ii]) + 1e-20;
             lin_elem_exp_scale(1/norm,f[ii]);
             assert (f[ii]->num_nodes != 0);
             for (size_t jj = ii+1; jj < n; jj++){
                 proj = lin_elem_exp_inner(f[ii],f[jj]);
                 lin_elem_exp_axpy(-proj,f[ii],f[jj]);
             }
-            
         }
+
+
+        /* for (size_t ii = n) */
         free(zeros); zeros = NULL;
     }
     else{

@@ -823,6 +823,15 @@ size_t function_train_core_get_params(const struct FunctionTrain * ft,
 }
 
 /***********************************************************//**
+   Get function paramaters
+***************************************************************/
+void * function_train_get_uni(const struct FunctionTrain * ft,
+                              size_t core, size_t row, size_t col)
+{
+    return  qmarray_get_func_base(ft->cores[core], row, col);
+}
+
+/***********************************************************//**
    Get parameters
 ***************************************************************/
 size_t function_train_get_params(const struct FunctionTrain * ft,

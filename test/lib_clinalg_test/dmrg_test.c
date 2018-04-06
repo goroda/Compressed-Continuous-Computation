@@ -647,9 +647,9 @@ double psi0ft(const double *x, void * args)
     (void) args;
     size_t dim=2;
     double out = 1.0;
-    double pi = acos(-1.0);
+    /* double pi = acos(-1.0); */
     for(size_t k=0; k<dim; k++){
-        out *= exp(-0.5*pow(x[k],2))/pow(pi,0.25); 
+        out *= exp(-0.5*pow(x[k],2))/pow(M_PI,0.25); 
     }
     return out;
 }

@@ -1987,6 +1987,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
 
     out->num_poly -= 1;
     if (p->p->ptype == LEGENDRE){
+    /* if (1 == 0){ */
 
         double dtransform_dx = space_mapping_map_deriv(p->space_transform,0.0);
         for (size_t ii = 0; ii < p->num_poly-1; ii++){ // loop over coefficients

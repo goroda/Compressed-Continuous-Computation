@@ -366,6 +366,14 @@ qmarray_orth1d_rows(size_t nrows, size_t ncols, struct OneApproxOpts * opts)
     size_t onorder = 0;
     for (jj = 0; jj < nrows; jj++){
         qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
+        double normfunc = generic_function_norm(qm->funcs[onnon*nrows+jj]);
+        /* printf("normfunc rows = %3.15G\n", normfunc); */
+        if (isnan(normfunc)){
+            printf("normfunc rows = %3.15G\n", normfunc);
+            printf("num_rows = %zu\n", nrows);
+            printf("num_cols = %zu\n", ncols);
+            exit(1);
+        }
         for (kk = 0; kk < onnon; kk++){
             qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
         }
@@ -479,6 +487,16 @@ qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
         size_t onorder = 0;
         for (size_t jj = 0; jj < ncols; jj++){
             qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+            double normfunc = generic_function_norm(qm->funcs[jj*nrows+onnon]);
+            /* printf("normfunc cols = %3.15G %d \n", normfunc, isnan(normfunc)); */
+            if (isnan(normfunc)){
+                printf("normfunc cols = %3.15G\n", normfunc);
+                printf("num_rows = %zu\n", nrows);
+                printf("num_cols = %zu\n", ncols);
+                print_generic_function(qm->funcs[jj*nrows+onnon], 4, NULL, stdout); 
+                exit(1);
+            }
+
             for (size_t kk = 0; kk < onnon; kk++){
                 qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
             }
@@ -563,6 +581,19 @@ qmarray_poly_randu(enum poly_type ptype,
 
 
 // getters and setters
+/**********************************************************//**
+    Return a typed function                                                           
+**************************************************************/
+void *
+qmarray_get_func_base(const struct Qmarray * qma, size_t row, size_t col)
+{
+    assert (qma != NULL);
+    assert (row < qma->nrows);
+    assert (col < qma->ncols);
+
+    return qma->funcs[col*qma->nrows+row]->f;
+}
+
 /**********************************************************//**
     Return a function                                                           
 **************************************************************/

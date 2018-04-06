@@ -99,6 +99,7 @@ struct Qmarray *
 qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
 
 // getters and setters
+void * qmarray_get_func_base(const struct Qmarray *, size_t, size_t);
 struct GenericFunction *
 qmarray_get_func(const struct Qmarray *, size_t, size_t);
 

@@ -110,7 +110,7 @@ void function_train_eval_up_to_core(struct FunctionTrain *,
 double function_train_eval(struct FunctionTrain *, const double * evalnd_pt);
 
 size_t function_train_func_get_nparams(const struct FunctionTrain *,
-                                     size_t, size_t, size_t);
+                                       size_t, size_t, size_t);
 size_t function_train_core_get_nparams(const struct FunctionTrain *,
                                        size_t,size_t *);
 size_t function_train_get_nparams(const struct FunctionTrain *);
@@ -118,6 +118,9 @@ size_t function_train_core_get_params(const struct FunctionTrain *,
                                       size_t,double *);
 size_t function_train_get_params(const struct FunctionTrain *,
                                  double *);
+void * function_train_get_uni(const struct FunctionTrain *, size_t, size_t, size_t);
+
+
 void function_train_uni_update_params(struct FunctionTrain *, size_t, size_t, size_t, size_t, const double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
