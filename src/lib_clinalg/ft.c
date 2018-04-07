@@ -2438,7 +2438,7 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
                      struct MultiApproxOpts * aopts)
 {
     double normain = function_train_norm2(ain);
-    printf("normain = %3.15G\n", normain);
+    /* printf("normain = %3.15G\n", normain); */
     if (normain < 1e-20){
         return function_train_constant(0.0, aopts);
     }
