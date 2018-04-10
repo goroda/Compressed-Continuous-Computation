@@ -2032,12 +2032,14 @@ void lin_elem_exp_orth_basis(size_t n, struct LinElemExp ** f, struct LinElemExp
         /* free(nodes); nodes = NULL; */
         double norm, proj;
         for (size_t ii = 0; ii < n; ii++){
-            norm = lin_elem_exp_norm(f[ii]) + 1e-20;
-            lin_elem_exp_scale(1/norm,f[ii]);
-            assert (f[ii]->num_nodes != 0);
-            for (size_t jj = ii+1; jj < n; jj++){
-                proj = lin_elem_exp_inner(f[ii],f[jj]);
-                lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+            norm = lin_elem_exp_norm(f[ii]);
+            if (norm > 1e-200){
+                lin_elem_exp_scale(1/norm,f[ii]);
+                assert (f[ii]->num_nodes != 0);
+                for (size_t jj = ii+1; jj < n; jj++){
+                    proj = lin_elem_exp_inner(f[ii],f[jj]);
+                    lin_elem_exp_axpy(-proj,f[ii],f[jj]);
+                }
             }
         }
 

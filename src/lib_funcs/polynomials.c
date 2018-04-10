@@ -52,7 +52,7 @@
 /* #define ZEROTHRESH  1e0 * DBL_MIN */
 /* #define ZEROTHRESH  1e-200 */
 //#define ZEROTHRESH 0.0
-//#define ZEROTHRESH  1e2 * DBL_EPSILON
+/* #define ZEROTHRESH  1e0 * DBL_EPSILON */
 //#define ZEROTHRESH  1e-12
 
 #include "stringmanip.h"
@@ -1880,9 +1880,14 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
         break;
     case CHEBYSHEV:
-        fprintf(stderr,"cannot generate orthonormal polynomial of\n");
-        fprintf(stderr,"order for CHEBYSHEV type\n;");
-        exit(1);
+        p->coeff[order] = 1.0;
+        double norm = orth_poly_expansion_inner(p, p);
+        p->coeff[order] /= (norm * sqrt(m));
+        break;
+        /* fprintf(stderr,"cannot generate orthonormal polynomial of\n"); */
+        /* fprintf(stderr,"order for CHEBYSHEV type\n;"); */
+        /* exit(1); */
+
     case STANDARD:
         fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
         fprintf(stderr,"order for STANDARD type\n;");
@@ -1975,6 +1980,8 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
     if (p == NULL) return NULL;
     assert (p->kristoffel_eval == 0);
 
+    orth_poly_expansion_round(&p);
+            
     struct OrthPolyExpansion * out = NULL;
 
     out = orth_poly_expansion_copy(p);
@@ -2002,6 +2009,8 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
     else{
         orth_poly_expansion_approx(orth_poly_expansion_deriv_eval_for_approx, p, out);      
     }
+
+    orth_poly_expansion_round(&out);
     return out;
 }
 
@@ -2927,18 +2936,30 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
 void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
     if (0 == 0){
-        double thresh = ZEROTHRESH;
+        double thresh = 10.0*ZEROTHRESH;
+        /* double thresh = 10.0*DBL_EPSILON; */
         //printf("thresh = %G\n",thresh);
         size_t jj = 0;
         //
         int allzero = 1;
+        /* double maxcoeff = fabs((*p)->coeff[0]); */
+        /* for (size_t ii = 1; ii < (*p)->num_poly; ii++){ */
+        /*     double val = fabs((*p)->coeff[ii]); */
+        /*     if (val > maxcoeff){ */
+        /*         maxcoeff = val; */
+        /*     } */
+        /* } */
 	    for (jj = 0; jj < (*p)->num_poly;jj++){
-	       if (fabs((*p)->coeff[jj]) < thresh){
-               (*p)->coeff[jj] = 0.0;
-           }
-           else{
-               allzero = 0;
-           }
+            if (fabs((*p)->coeff[jj]) < thresh){
+                (*p)->coeff[jj] = 0.0;
+            }
+            /* else if (fabs((*p)->coeff[jj])/maxcoeff < thresh){ */
+            /*     (*p)->coeff[jj] = 0.0; */
+            /* } */
+            else{
+                allzero = 0;
+            }
+           
 	    }
         if (allzero == 1){
             (*p)->num_poly = 1;
@@ -2968,7 +2989,9 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
                 }
             }
         }
-        //orth_poly_expansion_roundt(p,thresh);
+
+        /* printf("rounded coeffs = "); dprint((*p)->num_poly, (*p)->coeff); */
+        /* orth_poly_expansion_roundt(p,ZEROTHRESH); */
     }
 }
 

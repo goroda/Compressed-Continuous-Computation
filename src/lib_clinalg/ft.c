@@ -55,6 +55,7 @@
 
 #ifndef ZEROTHRESH
     #define ZEROTHRESH 1e2*DBL_EPSILON
+    /* #define ZEROTHRESH 1e0*DBL_EPSILON */
     /* #define ZEROTHRESH 1e-200 */
 #endif
 
@@ -3277,7 +3278,7 @@ ftapprox_cross(struct Fwrap * fw,
         /* den = function_train_norm2(ft); */
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm L/R Sweep = %E\n",den);
+            printf("...... New FT norm L/R Sweep = %3.15E\n",den);
             printf("...... Error L/R Sweep = %E\n",diff);
         }
         
@@ -3440,7 +3441,7 @@ ftapprox_cross(struct Fwrap * fw,
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... New FT norm R/L Sweep = %3.15E\n",den);
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 

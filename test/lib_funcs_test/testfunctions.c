@@ -55,6 +55,19 @@ int Sin3xTx2(size_t N, const double * x, double * out, void * args)
     return 0;
 }
 
+int gaussbump(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        /* out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]); */
+        out[ii] = exp(-pow(x[ii],2)/0.1);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
 double funcderiv(double x, void * args){
     assert ( args == NULL );
     return 3.0 * cos(3.0 * x) + 2.0 * x;

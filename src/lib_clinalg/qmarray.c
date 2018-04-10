@@ -57,6 +57,9 @@
 #define ZEROTHRESH 1e2*DBL_EPSILON
 #define ZERO 1e2*DBL_EPSILON
 
+/* #define ZEROTHRESH 1e0*DBL_EPSILON */
+/* #define ZERO 1e0*DBL_EPSILON */
+
 /* #define ZEROTHRESH 1e-200 */
 /* #define ZERO 1e-200 */
 

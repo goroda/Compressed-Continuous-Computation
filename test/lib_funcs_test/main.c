@@ -65,6 +65,7 @@ void RunAllTests(void) {
     CuSuite * kern = KernGetSuite();
 
     // polynomials
+
     CuSuiteAddSuite(suite, cheb);
     CuSuiteAddSuite(suite, leg);
     CuSuiteAddSuite(suite, herm);

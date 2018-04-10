@@ -479,6 +479,42 @@ void Test_legendre_approx(CuTest * tc){
     POLY_FREE(cpoly);
 }
 
+
+
+void Test_legendre_approx_gaussbump(CuTest * tc){
+
+    printf("Testing function: legendre_approx_gaussbump\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump,NULL);
+
+    // approximation
+    /* size_t N = 50; */
+    double lb=-1.0,ub=1.0;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_start(opts,10);
+    ope_opts_set_coeffs_check(opts,4);
+    ope_opts_set_tol(opts,1e-8);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    /* opoly_t cpoly = orth_poly_expansion_init(LEGENDRE,N,lb,ub); */
+    /* int res = orth_poly_expansion_approx_vec(cpoly,fw,NULL); */
+    /* CuAssertIntEquals(tc,0,res); */
+    opoly_t cpoly = orth_poly_expansion_approx_adapt(opts,fw);
+
+    // compute error
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,1000,cpoly,gaussbump,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+    POLY_FREE(cpoly);
+}
+
 void Test_legendre_approx_nonnormal(CuTest * tc){
 
     printf("Testing function: legendre_approx on (a,b)\n");
@@ -1090,6 +1126,7 @@ CuSuite * LegGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, Test_legendre_approx);
+    SUITE_ADD_TEST(suite, Test_legendre_approx_gaussbump);
     SUITE_ADD_TEST(suite, Test_legendre_approx_nonnormal);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt);
     SUITE_ADD_TEST(suite, Test_legendre_approx_adapt_weird);
