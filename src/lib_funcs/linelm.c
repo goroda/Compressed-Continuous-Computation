@@ -747,7 +747,7 @@ double lin_elem_exp_get_nodal_val(const struct LinElemExp * f, size_t node)
 *
 *   \param[in] f - function
 *
-*   \return integral
+*   \return derivative
 *************************************************************/
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 {
@@ -808,6 +808,22 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 
     return le;
 }
+
+/********************************************************//**
+*   Take a second derivative same nodes,
+*
+*   \param[in] f - function
+*************************************************************/
+struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp * f)
+{
+    struct LinElemExp * temp = lin_elem_exp_deriv(f);
+    struct LinElemExp * out = lin_elem_exp_deriv(temp);
+    lin_elem_exp_free(temp); temp = NULL;
+
+    return out;
+}
+
+
 
 /********************************************************//*
 *   Evaluate the gradient of a linear element expansion 

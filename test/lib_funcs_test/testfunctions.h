@@ -43,12 +43,16 @@
 #include <stdlib.h>
 
 int Sin3xTx2(size_t, const double *, double *, void *);
-int gaussbump(size_t, const double *, double *, void *);
 double funcderiv(double, void *);
+double funcdderiv(double, void *);
+int gaussbump(size_t, const double *, double *, void *);
+
 int powX2(size_t, const double *, double *, void *);
 int TwoPowX3(size_t, const double *, double *, void *);
 
 int polyroots(size_t, const double *, double *, void *);
 int maxminpoly(size_t, const double *, double *, void *);
 int x3minusx(size_t, const double *, double *, void *);
+double x3minusxd(double, void *);
+double x3minusxdd(double, void *);
 #endif

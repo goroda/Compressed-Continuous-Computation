@@ -48,6 +48,8 @@
 #include <assert.h>
 
 //#define ZEROTHRESH 1e-20
+/* #define ZEROTHRESH  1e0 * DBL_EPSILON */
+/* #define ZEROTHRESH  1e-3 * DBL_EPSILON */
 #define ZEROTHRESH  1e0 * DBL_EPSILON
 /* #define ZEROTHRESH  1e0 * DBL_MIN */
 /* #define ZEROTHRESH  1e-200 */
@@ -1880,13 +1882,14 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
         break;
     case CHEBYSHEV:
-        p->coeff[order] = 1.0;
-        double norm = orth_poly_expansion_inner(p, p);
-        p->coeff[order] /= (norm * sqrt(m));
-        break;
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
+        /* double norm = orth_poly_expansion_inner(p, p); */
+        /* p->coeff[order] /= (norm * sqrt(m)); */
+        /* break; */
         /* fprintf(stderr,"cannot generate orthonormal polynomial of\n"); */
         /* fprintf(stderr,"order for CHEBYSHEV type\n;"); */
         /* exit(1); */
+        break;
 
     case STANDARD:
         fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
@@ -1898,6 +1901,55 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
 
     //printf("there \n");
     return p;
+}
+
+/********************************************************//**
+    Generate an orthonormal basis
+    
+    \param[in]     n    - number of basis function
+    \param[in,out] f    - space to write polynomials
+    \param[in]     opts - approximation options
+
+    \note
+    Uses modified gram schmidt to determine function coefficients
+    Each function f[ii] must have the same nodes
+*************************************************************/
+void
+orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f, struct OpeOpts * opts)
+{
+
+    if (opts->ptype == CHEBYSHEV){
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = orth_poly_expansion_init_from_opts(opts, ii+1);
+            f[ii]->coeff[ii] = 1.0;
+        }
+        // now gram schmidt
+        double norm, proj;
+        for (size_t ii = 0; ii < n; ii++){
+            norm = sqrt(orth_poly_expansion_inner(f[ii], f[ii])); 
+            if (norm > 1e-200){
+                orth_poly_expansion_scale(1.0/norm, f[ii]);
+                for (size_t jj = ii+1; jj < n; jj++){
+                    proj = orth_poly_expansion_inner(f[ii],f[jj]);
+                    orth_poly_expansion_axpy(-proj,f[ii],f[jj]);
+                }
+            }
+        }
+    }
+    else if ((opts->ptype == HERMITE)  || (opts->ptype == LEGENDRE)){
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = orth_poly_expansion_init_from_opts(opts, ii+1);
+            double m = space_mapping_map_inverse_deriv(f[ii]->space_transform,0);
+            f[ii]->coeff[ii] = 1.0 / sqrt(f[ii]->p->norm(ii)) / sqrt(m);
+            if (opts->ptype == LEGENDRE){
+                f[ii]->coeff[ii] /= sqrt(2.0);
+            }
+        }
+    }
+    else{
+        fprintf(stderr, "Cannot generate an orthonormal basis for polytype %d", opts->ptype);
+        exit(1);
+    }
 }
 
 
@@ -1959,8 +2011,65 @@ double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion * poly, dou
     return out;
 }
 
+
 static inline double orth_poly_expansion_deriv_eval_for_approx(double x, void* poly){
     return orth_poly_expansion_deriv_eval(poly, x);
+}
+
+/********************************************************//**
+*   Evaluate the derivative of an orthogonal polynomial expansion
+*
+*   \param[in] poly - pointer to orth poly expansion
+*   \param[in] x    - location at which to evaluate
+*
+*
+*   \return out - value of derivative
+*************************************************************/
+double cheb_expansion_deriv_eval(const struct OrthPolyExpansion * poly, double x)
+{
+    assert (poly != NULL);
+    assert (poly->kristoffel_eval == 0);
+
+    double dmult = space_mapping_map_deriv(poly->space_transform,x);
+    if (poly->num_poly == 1){
+        return 0.0;
+    }
+    else if (poly->num_poly == 2){
+        return poly->coeff[1] * dmult;
+    }
+
+    double x_norm = space_mapping_map(poly->space_transform,x);
+    
+    if (poly->num_poly == 3){
+        return (poly->coeff[1] + poly->coeff[2] * 4 * x_norm) * dmult;
+    }
+
+    double * cheb_eval = calloc_double(poly->num_poly);
+    double * cheb_evald = calloc_double(poly->num_poly);
+    cheb_eval[0] = 1.0;
+    cheb_eval[1] = x_norm;
+    cheb_eval[2] = 2.0*x_norm*cheb_eval[1] - cheb_eval[0];
+    
+    cheb_evald[0] = 0.0;
+    cheb_evald[1] = 1.0;
+    cheb_evald[2] = 4.0*x_norm;
+
+    double out = poly->coeff[1]*cheb_evald[1] + poly->coeff[2]*cheb_evald[2];
+    for (size_t ii = 3; ii < poly->num_poly; ii++){
+        cheb_eval[ii] = 2.0 * x_norm * cheb_eval[ii-1] - cheb_eval[ii-2];
+        cheb_evald[ii] = 2.0 * cheb_eval[ii-1] + 2.0 * x_norm * cheb_evald[ii-1] - 
+            cheb_evald[ii-2];
+        out += poly->coeff[ii]*cheb_evald[ii];
+    }
+
+    out *= dmult;
+    free(cheb_eval); cheb_eval = NULL;
+    free(cheb_evald); cheb_evald = NULL;
+    return out;
+}
+
+static inline double cheb_expansion_deriv_eval_for_approx(double x, void* poly){
+    return cheb_expansion_deriv_eval(poly, x);
 }
 
 /********************************************************//**
@@ -1989,6 +2098,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
         out->coeff[ii] = 0.0;
     }
     if (p->num_poly == 1){
+        orth_poly_expansion_round(&out);
         return out;
     }
 
@@ -2006,8 +2116,134 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
             out->coeff[ii] *= sqrt((double) ( 2 * (ii) + 1))* dtransform_dx;
         }
     }
+    else if (p->p->ptype == CHEBYSHEV){
+        orth_poly_expansion_approx(cheb_expansion_deriv_eval_for_approx, p, out);      
+    }
     else{
         orth_poly_expansion_approx(orth_poly_expansion_deriv_eval_for_approx, p, out);      
+    }
+
+    orth_poly_expansion_round(&out);
+    return out;
+}
+
+/********************************************************//**
+*   Evaluate the second derivative of a chebyshev expansion
+*
+*   \param[in] poly - pointer to orth poly expansion
+*   \param[in] x    - location at which to evaluate
+*
+*
+*   \return out - value of derivative
+*************************************************************/
+double cheb_expansion_dderiv_eval(const struct OrthPolyExpansion * poly, double x)
+{
+    assert (poly != NULL);
+    assert (poly->kristoffel_eval == 0);
+
+    
+    double dmult = space_mapping_map_deriv(poly->space_transform,x);
+    if (poly->num_poly <= 2){
+        return 0.0;
+    }
+    else if (poly->num_poly == 3){
+        return poly->coeff[2] * 4.0;
+    }
+
+    double x_norm = space_mapping_map(poly->space_transform,x);
+    /* printf("x_norm = %3.15G\n", x_norm); */
+    
+    if (poly->num_poly == 4){
+        /* printf("here yo!\n"); */
+        return (poly->coeff[2] * 4 + poly->coeff[3]*24.0*x_norm) * dmult * dmult;
+    }
+
+    double * cheb_eval   = calloc_double(poly->num_poly);
+    double * cheb_evald  = calloc_double(poly->num_poly);
+    double * cheb_evaldd = calloc_double(poly->num_poly);
+    cheb_eval[0] = 1.0;
+    cheb_eval[1] = x_norm;
+    cheb_eval[2] = 2.0*x_norm*cheb_eval[1] - cheb_eval[0];
+    cheb_eval[3] = 2.0*x_norm*cheb_eval[2] - cheb_eval[1];
+    
+    cheb_evald[0] = 0.0;
+    cheb_evald[1] = 1.0;
+    cheb_evald[2] = 4.0*x_norm;
+    cheb_evald[3] = 2.0 * cheb_eval[2] + 2.0 * x_norm * cheb_evald[2] - cheb_evald[1];
+
+    cheb_evaldd[0] = 0.0;
+    cheb_evaldd[1] = 0.0;
+    cheb_evaldd[2] = 4.0;
+    cheb_evaldd[3] = 24.0 * x_norm;
+
+    double out = poly->coeff[2]*cheb_evaldd[2] + poly->coeff[3]*cheb_evaldd[3];
+    for (size_t ii = 4; ii < poly->num_poly; ii++){
+        cheb_eval[ii] = 2.0 * x_norm * cheb_eval[ii-1] - cheb_eval[ii-2];
+        cheb_evald[ii] = 2.0 * cheb_eval[ii-1] + 2.0 * x_norm * cheb_evald[ii-1] - 
+            cheb_evald[ii-2];
+        cheb_evaldd[ii] = 4.0 * cheb_evald[ii-1] + 2.0 * x_norm * cheb_evaldd[ii-1] -
+            cheb_evaldd[ii-2];
+
+        out += poly->coeff[ii]*cheb_evaldd[ii];
+    }
+
+    out *= dmult*dmult;
+    /* if (fabs(x_norm) > 0.999){ */
+    /*     printf("out = %3.15G\n", out); */
+    /* } */
+    free(cheb_eval); cheb_eval = NULL;
+    free(cheb_evald); cheb_evald = NULL;
+    free(cheb_evaldd); cheb_evaldd = NULL;
+    return out;
+}
+
+static inline double cheb_expansion_dderiv_eval_for_approx(double x, void* poly){
+    return cheb_expansion_dderiv_eval(poly, x);
+}
+/********************************************************//**
+*   Evaluate the second derivative of an orth poly expansion
+*
+*   \param[in] p - orthogonal polynomial expansion
+*   
+*   \return derivative
+*
+*   \note
+*       Could speed this up slightly by using partial sum
+*       to keep track of sum of coefficients
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
+{
+    if (p == NULL) return NULL;
+    assert (p->kristoffel_eval == 0);
+
+    orth_poly_expansion_round(&p);
+            
+    struct OrthPolyExpansion * out = NULL;
+
+    out = orth_poly_expansion_copy(p);
+    for (size_t ii = 0; ii < out->nalloc; ii++){
+        out->coeff[ii] = 0.0;
+    }
+    if (p->num_poly < 2){
+        return out;
+    }
+
+    /* printf("lets go!\n"); */
+    /* dprint(p->num_poly, p->coeff); */
+    out->num_poly -= 2;
+    if (p->p->ptype == CHEBYSHEV){
+        orth_poly_expansion_approx(cheb_expansion_dderiv_eval_for_approx, p, out);              
+    }
+    else{
+        
+        struct OrthPolyExpansion * temp = orth_poly_expansion_deriv(p);
+        orth_poly_expansion_free(out);
+        out = orth_poly_expansion_deriv(temp);
+        orth_poly_expansion_free(temp); temp = NULL;
+        /* fprintf(stderr, "Cannot yet take second derivative for polynomial of type %d\n", */
+        /*         p->p->ptype); */
+        /* exit(1); */
     }
 
     orth_poly_expansion_round(&out);
@@ -2936,26 +3172,30 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
 void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
     if (0 == 0){
-        double thresh = 10.0*ZEROTHRESH;
+        /* double thresh = 1e-3*ZEROTHRESH; */
+        double thresh = ZEROTHRESH;
+        /* double thresh = 1e-30; */
         /* double thresh = 10.0*DBL_EPSILON; */
-        //printf("thresh = %G\n",thresh);
+        /* printf("thresh = %G\n",thresh); */
         size_t jj = 0;
         //
         int allzero = 1;
-        /* double maxcoeff = fabs((*p)->coeff[0]); */
-        /* for (size_t ii = 1; ii < (*p)->num_poly; ii++){ */
-        /*     double val = fabs((*p)->coeff[ii]); */
-        /*     if (val > maxcoeff){ */
-        /*         maxcoeff = val; */
-        /*     } */
-        /* } */
+        double maxcoeff = fabs((*p)->coeff[0]);
+        for (size_t ii = 1; ii < (*p)->num_poly; ii++){
+            double val = fabs((*p)->coeff[ii]);
+            if (val > maxcoeff){
+                maxcoeff = val;
+            }
+        }
+        maxcoeff = maxcoeff * (*p)->num_poly;
+        /* printf("maxcoeff = %3.15G\n", maxcoeff); */
 	    for (jj = 0; jj < (*p)->num_poly;jj++){
             if (fabs((*p)->coeff[jj]) < thresh){
                 (*p)->coeff[jj] = 0.0;
             }
-            /* else if (fabs((*p)->coeff[jj])/maxcoeff < thresh){ */
-            /*     (*p)->coeff[jj] = 0.0; */
-            /* } */
+            if (fabs((*p)->coeff[jj])/maxcoeff < thresh){
+                (*p)->coeff[jj] = 0.0;
+            }
             else{
                 allzero = 0;
             }
@@ -2991,7 +3231,9 @@ void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
         }
 
         /* printf("rounded coeffs = "); dprint((*p)->num_poly, (*p)->coeff); */
-        /* orth_poly_expansion_roundt(p,ZEROTHRESH); */
+
+        /* orth_poly_expansion_roundt(p,thresh); */
+
     }
 }
 
@@ -3009,9 +3251,13 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     
     size_t jj = 0;
     double sum = 0.0;
-	for (jj = 0; jj < (*p)->num_poly;jj++){
-        sum += pow((*p)->coeff[jj],2);
-	}
+    /* double maxval = fabs((*p)->coeff[0]); */
+	/* for (jj = 1; jj < (*p)->num_poly;jj++){ */
+    /*     sum += pow((*p)->coeff[jj],2); */
+    /*     if (fabs((*p)->coeff[jj]) > maxval){ */
+    /*         maxval = fabs((*p)->coeff[jj]); */
+    /*     } */
+	/* } */
     size_t keep = (*p)->num_poly;
     if (sum <= thresh){
         keep = 1;
@@ -3019,6 +3265,9 @@ void orth_poly_expansion_roundt(struct OrthPolyExpansion ** p, double thresh)
     else{
         double sumrun = 0.0;
         for (jj = 0; jj < (*p)->num_poly; jj++){
+            /* if ((fabs((*p)->coeff[jj]) / maxval) < thresh){ */
+            /*     (*p)->coeff[jj] = 0.0; */
+            /* } */
             sumrun += pow((*p)->coeff[jj],2);
             if ( (sumrun / sum) > (1.0-thresh)){
                 keep = jj+1;
@@ -3077,6 +3326,10 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
             pt = calloc_double(nquad);
             wt = calloc_double(nquad);
             cheb_gauss(poly->num_poly,pt,wt);
+
+            /* clenshaw_curtis(nquad,pt,wt); */
+            /* for (ii = 0; ii < nquad; ii++){wt[ii] *= 0.5;} */
+            
             break;
         case LEGENDRE:
             /* m = (poly->upper_bound - poly->lower_bound) /  */
@@ -3291,6 +3544,17 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     }
     
     orth_poly_expansion_construct(poly,nquad,fvals,quadpt);
+
+    /* printf("constructed\n"); */
+    /* printf("pts = "); dprint(nquad, quadpt); */
+    /* printf("vals = "); dprint(nquad, fvals); */
+    /* for (size_t ii = 0; ii < nquad; ii++){ */
+    /*     double peval = orth_poly_expansion_eval(poly, pt_un[ii]); */
+
+    /*     printf("peval = %3.5G, fval = %3.5G\n", peval*quadwt[ii], fvals[ii]); */
+    /* } */
+    
+    /* exit(1); */
     return return_val;
 }
 
@@ -3326,9 +3590,13 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
             break;
         }
     }
+    
+
+
+    size_t maxnum = ope_opts_get_maxnum(aopts);
     /* printf("TOL SPECIFIED IS %G\n",aopts->tol); */
     /* printf("Ncoeffs check=%zu \n",aopts->coeffs_check); */
-    size_t maxnum = ope_opts_get_maxnum(aopts);
+    /* printf("maxnum = %zu\n", maxnum); */
     while ((coeffs_too_big == 1) && (N < maxnum)){
         /* printf("N = %zu\n",N); */
         coeffs_too_big = 0;
@@ -3562,11 +3830,14 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
         }
         else{
             //printf(" total order of product = %zu\n",a->num_poly+b->num_poly);
-            c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+            c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+5, lb, ub);
             space_mapping_free(c->space_transform); c->space_transform = NULL;
             c->space_transform = space_mapping_copy(a->space_transform);
             orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c);
+            /* printf("num_coeff pre_round = %zu\n", c->num_poly); */
+            /* orth_poly_expansion_approx(&orth_poly_expansion_eval3,comb,c); */
             orth_poly_expansion_round(&c);
+            /* printf("num_coeff post_round = %zu\n", c->num_poly); */
         }
     }
     
@@ -3844,28 +4115,33 @@ orth_poly_expansion_inner(const struct OrthPolyExpansion * a,
         return orth_poly_expansion_inner_w(a,b);
     }
     else if ((a->p->ptype == CHEBYSHEV) && (b->p->ptype == CHEBYSHEV)){
-        // can possibly make this more efficient
-        double out = 0.0;
-        size_t N = a->num_poly < b->num_poly ? a->num_poly : b->num_poly;
-        for (size_t ii = 0; ii < N; ii++){
-            for (size_t jj = 0; jj < ii; jj++){
-                if ( ((ii+jj) % 2) == 0){
-                    out += (a->coeff[ii]*b->coeff[jj] * 
-                             (1.0 / (1.0 - (double) (ii-jj)*(ii-jj))
-                              + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj))));
-                }
-            }
-            for (size_t jj = ii; jj < N; jj++){
-                if ( ((ii+jj) % 2) == 0){
-                    out += (a->coeff[ii]*b->coeff[jj] * 
-                             (1.0 / (1.0 - (double) (jj-ii)*(jj-ii))
-                              + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj))));
-                }
-            }
-        }
-        double m = (a->upper_bound - a->lower_bound) / (a->p->upper - a->p->lower);
-        out *=  m;
-        return out;
+
+        struct OrthPolyExpansion * prod = orth_poly_expansion_prod(a, b);
+        double int_val = orth_poly_expansion_integrate(prod);
+        orth_poly_expansion_free(prod); prod = NULL;
+        return int_val;
+        /* // can possibly make this more efficient */
+        /* double out = 0.0; */
+        /* size_t N = a->num_poly < b->num_poly ? a->num_poly : b->num_poly; */
+        /* for (size_t ii = 0; ii < N; ii++){ */
+        /*     for (size_t jj = 0; jj < ii; jj++){ */
+        /*         if ( ((ii+jj) % 2) == 0){ */
+        /*             out += (a->coeff[ii]*b->coeff[jj] *  */
+        /*                      (1.0 / (1.0 - (double) (ii-jj)*(ii-jj)) */
+        /*                       + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj)))); */
+        /*         } */
+        /*     } */
+        /*     for (size_t jj = ii; jj < N; jj++){ */
+        /*         if ( ((ii+jj) % 2) == 0){ */
+        /*             out += (a->coeff[ii]*b->coeff[jj] *  */
+        /*                      (1.0 / (1.0 - (double) (jj-ii)*(jj-ii)) */
+        /*                       + 1.0 / (1.0 - (double) (ii+jj)*(ii+jj)))); */
+        /*         } */
+        /*     } */
+        /* } */
+        /* double m = (a->upper_bound - a->lower_bound) / (a->p->upper - a->p->lower); */
+        /* out *=  m; */
+        /* return out */;
     }
     else{
         if (a->p->ptype == CHEBYSHEV){
@@ -4657,6 +4933,184 @@ legendre_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
     return real_roots;
 }
 
+/********************************************************//**
+*   Obtain the real roots of a chebyshev polynomial expansion
+*
+*   \param[in]     p     - orthogonal polynomial expansion
+*   \param[in,out] nkeep - returns how many real roots tehre are
+*
+*   \return real_roots - real roots of an orthonormal polynomial expansion
+*
+*   \note
+*       Only roots within the bounds are returned
+*       Algorithm is based on eigenvalues of non-standard companion matrix from
+*       Roots of Polynomials Expressed in terms of orthogonal polynomials
+*       David Day and Louis Romero 2005
+*
+*       Multiplying by a factor of sqrt(2*N+1) because using orthonormal,
+*       rather than orthogonal polynomials
+*************************************************************/
+double * 
+chebyshev_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
+{
+    /* fprintf(stderr, "Chebyshev real_roots not finished yet\n"); */
+    /* exit(1); */
+    double * real_roots = NULL; // output
+    *nkeep = 0;
+
+    double m = (p->upper_bound - p->lower_bound) /  (p->p->upper - p->p->lower);
+    double off = p->upper_bound - m * p->p->upper;
+
+
+    /* printf("coeff pre truncate = "); dprint(p->num_, p->coeff); */
+    /* for (size_t ii = 0; ii < p->num_poly; ii++){ */
+    /*     if (fabs(p->coeff[ii]) < 1e-13){ */
+    /*         p->coeff[ii] = 0.0; */
+    /*     } */
+    /* } */
+    orth_poly_expansion_round(&p);
+    
+    size_t N = p->num_poly-1;
+    if (N == 0){
+        return real_roots;
+    }
+    else if (N == 1){
+        if (fabs(p->coeff[N]) <= ZEROTHRESH){
+            return real_roots;
+        }
+        else{
+            double root = -p->coeff[0] / p->coeff[1];
+            if ( (root >= -1.0-ZEROTHRESH) && (root <= 1.0 - ZEROTHRESH)){
+                if (root <-1.0){
+                    root = -1.0;
+                }
+                else if (root > 1.0){
+                    root = 1.0;
+                }
+                *nkeep = 1;
+                real_roots = calloc_double(1);
+                real_roots[0] = m*root+off;
+            }
+        }
+    }
+    else{
+        /* printf("I am heare\n"); */
+        /* dprint(N+1, p->coeff); */
+        double * nscompanion = calloc_double(N*N); // nonstandard companion
+        size_t ii;
+
+        double hnn1 = 0.5;
+        double gamma = p->coeff[N];
+        
+        nscompanion[1] = 1.0;
+        nscompanion[(N-1)*N] -= hnn1*p->coeff[0] / gamma;
+        for (ii = 1; ii < N-1; ii++){
+            assert (fabs(p->p->bn(ii)) < 1e-14);
+            
+            nscompanion[ii*N+ii-1] = 0.5; // ii-th column
+            nscompanion[ii*N+ii+1] = 0.5;
+
+            // update last column
+            nscompanion[(N-1)*N + ii] -= hnn1 * p->coeff[ii] / gamma;
+        }
+        nscompanion[N*N-2] += 0.5;
+        nscompanion[N*N-1] -= hnn1 * p->coeff[N-1] / gamma;
+        
+        //printf("good up to here!\n");
+        /* dprint2d_col(N,N,nscompanion); */
+
+        int info;
+        double * scale = calloc_double(N);
+        //*
+        //Balance
+        int ILO, IHI;
+        //printf("am I here? N=%zu \n",N);
+        //dprint(N*N,nscompanion);
+        dgebal_("S", (int*)&N, nscompanion, (int *)&N,&ILO,&IHI,scale,&info);
+        //printf("yep\n");
+        if (info < 0){
+            fprintf(stderr, "Calling dgebl had error in %d-th input in the chebyshev_expansion_real_roots function\n",info);
+            exit(1);
+        }
+
+        //printf("balanced!\n");
+        //dprint2d_col(N,N,nscompanion);
+
+        //IHI = M1;
+        //printf("M1=%zu\n",M1);
+        //printf("ilo=%zu\n",ILO);
+        //printf("IHI=%zu\n",IHI);
+        //*/
+
+        double * real = calloc_double(N);
+        double * img = calloc_double(N);
+        //printf("allocated eigs N = %zu\n",N);
+        int lwork = 8 * (int)N;
+        //printf("got lwork\n");
+        double * iwork = calloc_double(8*N);
+        //printf("go here");
+
+        //dgeev_("N","N", &N, nscompanion, &N, real, img, NULL, &N,
+        //        NULL, &N, iwork, &lwork, &info);
+        dhseqr_("E","N",(int*)&N,&ILO,&IHI,nscompanion,(int*)&N,real,img,NULL,(int*)&N,iwork,&lwork,&info);
+        //printf("done here");
+
+        if (info < 0){
+            fprintf(stderr, "Calling dhesqr had error in %d-th input in the legendre_expansion_real_roots function\n",info);
+            exit(1);
+        }
+        else if(info > 0){
+            //fprintf(stderr, "Eigenvalues are still uncovered in legendre_expansion_real_roots function\n");
+           // printf("coeffs are \n");
+           // dprint(p->num_poly, p->coeff);
+           // printf("last 2 = %G\n",p->coeff[p->num_poly-1]);
+           // exit(1);
+        }
+
+       /* printf("eigenvalues \n"); */
+        size_t * keep = calloc_size_t(N);
+        for (ii = 0; ii < N; ii++){
+            /* printf("(%3.15G, %3.15G)\n",real[ii],img[ii]); */
+            if ((fabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){
+            /* if ((real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){                 */
+                if (real[ii] < -1.0){
+                    real[ii] = -1.0;
+                }
+                else if (real[ii] > 1.0){
+                    real[ii] = 1.0;
+                }
+                keep[ii] = 1;
+                *nkeep = *nkeep + 1;
+            }
+        }
+
+        /* printf("nkeep = %zu\n", *nkeep); */
+        
+        if (*nkeep > 0){
+            real_roots = calloc_double(*nkeep);
+            size_t counter = 0;
+            for (ii = 0; ii < N; ii++){
+                if (keep[ii] == 1){
+                    real_roots[counter] = real[ii]*m+off;
+                    counter++;
+                }
+            }
+        }
+     
+
+        free(keep); keep = NULL;
+        free(iwork); iwork  = NULL;
+        free(real); real = NULL;
+        free(img); img = NULL;
+        free(nscompanion); nscompanion = NULL;
+        free(scale); scale = NULL;
+    }
+
+    if (*nkeep > 1){
+        qsort(real_roots, *nkeep, sizeof(double), dblcompare);
+    }
+    return real_roots;
+}
 
 /********************************************************//**
 *   Obtain the real roots of a orthogonal polynomial expansion
@@ -4678,13 +5132,14 @@ orth_poly_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
     case LEGENDRE:
         real_roots = legendre_expansion_real_roots(p,nkeep);   
         break;
-    case STANDARD:
+    case STANDARD:        
         assert (1 == 0);
         //x need to convert polynomial to standard polynomial first
         //real_roots = standard_poly_real_roots(sp,nkeep);
         //break;
     case CHEBYSHEV:
-        assert (1 == 0);
+        real_roots = chebyshev_expansion_real_roots(p,nkeep);
+        break;
     case HERMITE:
         assert (1 == 0);
     }

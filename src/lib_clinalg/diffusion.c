@@ -512,21 +512,39 @@ struct FunctionTrain * exact_laplace(struct FunctionTrain * f)
     size_t dim = f->dim;
 
     struct FunctionTrain * out = NULL;
-    struct FT1DArray * ft1d = function_train_gradient(f);
-    
+
+    /* /\* double pt[2] = {-5.0, 0.0}; *\/ */
+
+    /* struct FT1DArray * ft1d = function_train_gradient(f); */
+    /* for (size_t ii = 0; ii < dim; ii++){ */
+    /*     struct FT1DArray * temp = function_train_gradient(ft1d->ft[ii]); */
+    /*     if (ii == 0){ */
+    /*         out = function_train_copy(temp->ft[ii]); */
+    /*         /\* printf("eval within laplace1 = %3.15G\n", function_train_eval(out, pt)); *\/ */
+    /*     } */
+    /*     else{ */
+    /*         struct FunctionTrain * temp_ii = function_train_sum(out, temp->ft[ii]); */
+    /*         function_train_free(out); out = NULL; */
+    /*         out = function_train_copy(temp_ii); */
+    /*         function_train_free(temp_ii); temp_ii = NULL; */
+    /*         /\* double eval_temp_ii = function_train_eval(out, pt); *\/ */
+    /*         /\* printf("eval within laplace = %3.15G\n", eval_temp_ii); *\/ */
+    /*     } */
+        
+    /*     ft1d_array_free(temp); temp = NULL; */
+    /* } */
+
+    struct FT1DArray * ft1d = function_train_hessian_diag(f);
     for (size_t ii = 0; ii < dim; ii++){
-        struct FT1DArray * temp = function_train_gradient(ft1d->ft[ii]);
         if (ii == 0){
-            out = function_train_copy(temp->ft[ii]);
+            out = function_train_copy(ft1d->ft[ii]);
         }
         else{
-            struct FunctionTrain * temp_ii = function_train_sum(out, temp->ft[ii]);
+            struct FunctionTrain * temp_ii = function_train_sum(out, ft1d->ft[ii]);
             function_train_free(out); out = NULL;
             out = function_train_copy(temp_ii);
             function_train_free(temp_ii); temp_ii = NULL;
         }
-        
-        ft1d_array_free(temp); temp = NULL;
     }
     ft1d_array_free(ft1d);
     return out;

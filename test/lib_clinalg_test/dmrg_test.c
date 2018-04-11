@@ -676,10 +676,10 @@ void Test_diffusion_laplace(CuTest * tc)
     
     size_t dim = 2;
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_start(opts,7); /* order ? */
-    ope_opts_set_coeffs_check(opts,2); // keep 7th order
-    ope_opts_set_tol(opts,1e-20); /* cross approximation tolerance ? */
-    ope_opts_set_maxnum(opts,100); /* maximum number of polynomials */
+    ope_opts_set_start(opts,7); 
+    ope_opts_set_coeffs_check(opts,2); 
+    ope_opts_set_tol(opts,1e-20); 
+    ope_opts_set_maxnum(opts,100); 
     ope_opts_set_lb(opts,lb);
     ope_opts_set_ub(opts,ub);
 
@@ -714,6 +714,92 @@ void Test_diffusion_laplace(CuTest * tc)
             CuAssertDblEquals(tc, 0, diff, 1e-13);
         }
     }
+
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
+    struct FunctionTrain * ft_round =
+        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    
+    for (size_t ii = 0; ii < 20; ii++){
+        for (size_t jj = 0; jj < 20; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_lap, pt_test);
+            double eval_ftr = function_train_eval(ft_round, pt_test);
+            double eval_true = psi0ft_lap(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff, 1e-6);
+            double diff2 = eval_ftr - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff2, 1e-6);
+        }
+    }
+
+    function_train_free(ft_psir); ft_psir = NULL;
+    function_train_free(ft_lap); ft_lap = NULL;
+    function_train_free(ft_round); ft_round = NULL;
+    free(xt); xt = NULL;
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    function_train_free(ft_psir);
+}
+
+void Test_diffusion_laplace_cheb(CuTest * tc)
+{
+    printf("Testing Function: diffusion_laplace_cheb\n");
+
+    double lb = -4.;
+    double ub = -lb;
+    
+    size_t dim = 2;
+    struct OpeOpts * opts = ope_opts_alloc(CHEBYSHEV);
+    ope_opts_set_start(opts,20); 
+    ope_opts_set_coeffs_check(opts,2); 
+    ope_opts_set_tol(opts,1e-20); 
+    ope_opts_set_maxnum(opts,200); 
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    /* CROSS */
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+      c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+      start[ii] = linspace(-0.1,0.1,init_rank);
+    }
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_maxiter(c3a, 10);
+    c3approx_set_cross_tol(c3a,1e-20);
+    c3approx_set_round_tol(c3a,1e-20);
+
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,psi0ft,NULL);
+    struct FunctionTrain * ft_psir = c3approx_do_cross(c3a,fw,1);
+    /* printf("ranks of ft_psir = "); */
+    double * xt = linspace(lb, ub, 20);
+    double diff_num = 0.0;
+    double diff_den = 0.0;
+    for (size_t ii = 0; ii < 20; ii++){
+        for (size_t jj = 0; jj < 20; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_psir, pt_test);
+            double eval_true = psi0ft(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            diff_num += diff*diff;
+            diff_den += eval_true*eval_true;
+                
+            /* printf("(%3.15G, %3.15G), diff = %3.15G, %3.15G %3.15G\n", xt[ii], xt[jj], eval_ft, eval_true, eval_true / eval_ft); */
+            CuAssertDblEquals(tc, 0, diff, 1e-13);
+        }
+    }
+    /* printf("%3.15G %3.15G\n", diff_num, diff_den); */
+    /* exit(1); */
 
     struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
     struct FunctionTrain * ft_round =
@@ -836,6 +922,7 @@ CuSuite * CLinalgDiffusionGetSuite()
     SUITE_ADD_TEST(suite, Test_diffusion_op_struct);
     SUITE_ADD_TEST(suite, Test_diffusion_dmrg);
     SUITE_ADD_TEST(suite, Test_diffusion_laplace);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace_cheb);
     SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm);
     return suite;
 }

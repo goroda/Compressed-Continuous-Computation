@@ -54,11 +54,14 @@
 #include "quasimatrix.h"
 #include "qmarray.h"
 
-#define ZEROTHRESH 1e2*DBL_EPSILON
-#define ZERO 1e2*DBL_EPSILON
+/* #define ZEROTHRESH 1e2*DBL_EPSILON */
+/* #define ZERO 1e2*DBL_EPSILON */
 
 /* #define ZEROTHRESH 1e0*DBL_EPSILON */
 /* #define ZERO 1e0*DBL_EPSILON */
+
+#define ZEROTHRESH 1e2*DBL_EPSILON
+#define ZERO 1e2*DBL_EPSILON
 
 /* #define ZEROTHRESH 1e-200 */
 /* #define ZERO 1e-200 */
@@ -3190,6 +3193,24 @@ struct Qmarray * qmarray_deriv(struct Qmarray * a)
         //print_generic_function(a->funcs[ii],3,NULL);
         b->funcs[ii] = generic_function_deriv(a->funcs[ii]);
         //printf("got its deriv\n");
+    }
+    return b;
+}
+
+/***********************************************************//**
+    Compute the second derivative of every function in the qmarray
+
+    \param[in] a - qmarray
+
+    \return qmarray of functions representing the derivatives at all values x
+***************************************************************/
+struct Qmarray * qmarray_dderiv(struct Qmarray * a)
+{
+
+    struct Qmarray * b = qmarray_alloc(a->nrows, a->ncols);
+    size_t ii;
+    for (ii = 0; ii < a->nrows*a->ncols; ii++){
+        b->funcs[ii] = generic_function_dderiv(a->funcs[ii]);
     }
     return b;
 }

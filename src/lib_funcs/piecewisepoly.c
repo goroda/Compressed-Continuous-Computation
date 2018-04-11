@@ -1019,6 +1019,43 @@ piecewise_poly_deriv(const struct PiecewisePoly * p)
 }
 
 /********************************************************//**
+*   Differentiate a piecewise polynomial twice
+*   
+*   \param[in] p - pw poly to differentiate (from the left)
+*
+*   \return pnew - polynomial
+*************************************************************/
+struct PiecewisePoly * 
+piecewise_poly_dderiv(const struct PiecewisePoly * p)
+{
+
+    struct PiecewisePoly * pnew = NULL;
+    if (p == NULL){
+        return pnew;
+    }
+    else if (p->leaf == 1){
+        pnew = piecewise_poly_alloc();
+        assert (p->ope != NULL);
+        /* printf("p->ope->nalloc = %zu\n",p->ope->nalloc); */
+        /* print_orth_poly_expansion(p->ope,0,NULL); */
+        pnew->ope = orth_poly_expansion_dderiv(p->ope);
+        /* printf("got deriv\n"); */
+        pnew->leaf = 1;
+    }
+    else{
+        pnew = piecewise_poly_alloc();
+        pnew->leaf = 0;
+        pnew->nbranches = p->nbranches;
+        pnew->branches = piecewise_poly_array_alloc(p->nbranches);
+        size_t ii;
+        for (ii = 0; ii < p->nbranches; ii++){
+            pnew->branches[ii] = piecewise_poly_dderiv(p->branches[ii]);
+        }
+    }
+    return pnew;
+}
+
+/********************************************************//**
 *   Integrate a piecewise polynomial
 *
 *   \param[in] poly  - pw polynomial to integrate

@@ -679,6 +679,18 @@ struct ConstElemExp * const_elem_exp_deriv(const struct ConstElemExp * f)
     return le;
 }
 
+/********************************************************//**
+*   Take a second derivative same nodes
+*
+*   \param[in] f - function
+*************************************************************/
+struct ConstElemExp * const_elem_exp_dderiv(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_dderiv");
+    exit(1);
+}
+
 /********************************************************//*
 *   Evaluate the gradient of a constant element expansion 
 *   with respect to the coefficients of each basis

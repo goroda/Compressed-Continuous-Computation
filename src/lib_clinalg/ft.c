@@ -54,10 +54,12 @@
 #include "ft.h"
 
 #ifndef ZEROTHRESH
-    #define ZEROTHRESH 1e2*DBL_EPSILON
+    #define ZEROTHRESH 1e0* DBL_EPSILON
     /* #define ZEROTHRESH 1e0*DBL_EPSILON */
     /* #define ZEROTHRESH 1e-200 */
 #endif
+
+/* #define ZEROTHRESH 1e-3*DBL_EPSILON */
 
 #ifndef VPREPCORE
     #define VPREPCORE 0
@@ -2440,7 +2442,7 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
 {
     double normain = function_train_norm2(ain);
     /* printf("normain = %3.15G\n", normain); */
-    if (normain < 1e-20){
+    if (normain < ZEROTHRESH){
         return function_train_constant(0.0, aopts);
     }
     struct OneApproxOpts * o = NULL;
@@ -3053,7 +3055,7 @@ function_train_init_from_fibers(struct Fwrap * fw,
                                  left_ind,right_ind);
 
     }
-    struct FunctionTrain * ft2 = function_train_round(ft,1e-13,apargs);
+    struct FunctionTrain * ft2 = function_train_round(ft,ZEROTHRESH,apargs);
     function_train_free(ft); ft = NULL;
 
     return ft2;
@@ -3445,8 +3447,8 @@ ftapprox_cross(struct Fwrap * fw,
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        /* if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){ */
-        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+        if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){
+        /* if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){ */
         /* if ( diff < cargs->epsilon){ */
             done = 1;
             break;
@@ -3955,6 +3957,8 @@ struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
     return ftg;
 }
 
+
+
 /********************************************************//**
     Evaluate the gradient of a function train
 
@@ -4085,6 +4089,27 @@ struct FT1DArray * function_train_hessian(const struct FunctionTrain * fta)
         
     ft1d_array_free(ftg); ftg = NULL;
     return fth;
+}
+
+/********************************************************//**
+    Compute the diagnal of the hessian a function train
+
+    \param[in] ft - Function train
+
+    \return gradient
+***********************************************************/
+struct FT1DArray * function_train_hessian_diag(const struct FunctionTrain * ft)
+{
+    struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        ftg->ft[ii] = function_train_copy(ft);
+        qmarray_free(ftg->ft[ii]->cores[ii]);
+        ftg->ft[ii]->cores[ii] = NULL;
+        ftg->ft[ii]->cores[ii] = qmarray_dderiv(ft->cores[ii]);
+    }
+
+    return ftg;
 }
 
 /********************************************************//**
