@@ -809,6 +809,9 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
     return le;
 }
 
+#include <complex.h>
+#define I _Complex_I
+
 /********************************************************//**
 *   Take a second derivative same nodes,
 *
@@ -816,10 +819,55 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 *************************************************************/
 struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp * f)
 {
-    struct LinElemExp * temp = lin_elem_exp_deriv(f);
-    struct LinElemExp * out = lin_elem_exp_deriv(temp);
-    lin_elem_exp_free(temp); temp = NULL;
 
+    size_t nx = f->num_nodes;
+    double ub = f->nodes[nx-1];
+    double lb = f->nodes[0];
+    double * x = f->nodes;
+
+    /* printf("nodes = "); dprint(nx, x); */
+    double dx = x[1] - x[0];    // assumes constant dx for now.
+    double dp = 2.0 * M_PI / (ub - lb);
+    double * p = calloc_double(nx);
+    double * Lp = calloc_double(nx * nx);
+    for (size_t ii = 0; ii < nx; ii++){
+        for (size_t jj = 0; jj < nx; jj++){
+            Lp[ii*nx + jj] = 0.0;
+        }
+    }
+
+    for (size_t ii = 0; ii < nx; ii++){
+        p[ii] = dp * ii - dp * nx / 2.0;
+    }
+    
+    for (size_t l=0; l<nx; l++){
+        for (size_t j=0; j<nx; j++){
+            for (size_t k=0; k<nx; k++){
+                Lp[l*nx + j] = Lp[l*nx + j] -
+                    exp(I*(x[j]-x[l])*p[k])*pow(p[k],2)*dx*dp/(2*M_PI);
+            }
+        }
+    }
+
+    double * new_vals = calloc_double(nx);
+    
+    for (size_t jj = 0; jj < nx; jj++){
+        new_vals[jj] = 0.0;
+        for (size_t kk = 0; kk < nx; kk++){
+            new_vals[jj] += Lp[kk*nx + jj] * f->coeff[kk];
+        }
+    }
+
+    struct LinElemExp * out = lin_elem_exp_init(nx, f->nodes, new_vals);
+
+    free(new_vals); new_vals = NULL;
+    free(Lp); Lp = NULL;
+    free(p); p = NULL;
+    
+    /* struct LinElemExp * temp = lin_elem_exp_deriv(f); */
+    /* struct LinElemExp * out = lin_elem_exp_deriv(temp); */
+    /* lin_elem_exp_free(temp); temp = NULL; */
+    
     return out;
 }
 
