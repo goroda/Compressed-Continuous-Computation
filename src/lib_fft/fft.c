@@ -95,7 +95,7 @@ int fft_base(size_t N, const double complex * x, size_t sx,
              double complex * X, size_t sX)
 {
     // assumes N is a power of 2
-    if (N < BASESIZE){
+    if (N <= BASESIZE){
         int res = fft_slow(N,x,sx,X,sX);
         return res;
     }
@@ -103,8 +103,8 @@ int fft_base(size_t N, const double complex * x, size_t sx,
         fft_base(N/2,x,2*sx,X,2*sX);
         fft_base(N/2,x+sx,2*sx,X+sX,2*sX);
 
-        complex double * e = malloc(N/2 * sizeof(complex double));
-        complex double * o = malloc(N/2 * sizeof(complex double));
+        double complex * e = malloc(N/2 * sizeof(double complex));
+        double complex * o = malloc(N/2 * sizeof(double complex));
 
         for (size_t ii = 0; ii < N/2; ii++){
             e[ii] = X[ii*2*sX];
@@ -168,25 +168,14 @@ int fft(size_t N, const double complex * x, size_t sx,
 {
     assert (sx == 1);
     assert (sX == 1);
-    if (!isPowerOfTwo(N)){
-        fprintf(stderr, "fft_base can only be called with power of 2\n");
-        return 1;
+    int res = 1;
+    if (isPowerOfTwo(N)){
+        /* return 1; */
+        res = fft_base(N,x,sx,X,sX);
     }
-
-    /* size_t Nopts[] = {2,4,8,16,32,64,128,256,512,1024, // 10 options */
-    /*                   2048, 4096, 8192, 16384, 32768, 65536}; */
-    /* size_t Nin = N; */
-    /* /\* printf("is2=%d\n",is2(Nin)); *\/ */
-    /* if (is2(Nin) == 0){ */
-    /*     fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n"); */
-    /*     return 1; */
-    /*     /\* size_t nopt = 2; *\/ */
-    /*     /\* while (Nin > nopt){ *\/ */
-    /*     /\*     nopt *= 2; *\/ */
-    /*     /\* } *\/ */
-    /*     /\* Nin = nopt; *\/ */
-    /* } */
-    int res = fft_base(N,x,sx,X,sX);
+    else{
+        fprintf(stderr, "fft_base can only be called with power of 2\n");
+    }
     return res;
 }
 
@@ -195,19 +184,15 @@ int ifft(size_t N, double complex * x, size_t sx,
 {
     assert (sx == 1);
     assert (sX == 1);
-    size_t Nin = N;
-    if (is2(Nin) == 0){
-        fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n");
-        return 1;
-        /* assert (sx == 1); */
-        /* assert (sX == 1); */
-        /* size_t nopt = 2; */
-        /* while (Nin > nopt){ */
-        /*     nopt *= 2; */
-        /* } */
-        /* Nin = nopt; */
+    int res = 1;
+    if (isPowerOfTwo(N)){
+        /* return 1; */
+        res = ifft_base(N,x,sx,X,sX);
     }
-    int res = ifft_base(Nin,x,sx,X,sX);
+    else{
+        fprintf(stderr, "fft_base can only be called with power of 2\n");
+    }
+        
     return res;
 }
 
@@ -216,12 +201,13 @@ int cheb_vals_to_coeff(size_t nvals, const double * vals, double * coeff)
 {
     
     size_t Nin = nvals-1;
-    if (is2(Nin) == 0){
+    /* if (is2(Nin) == 0){ */
+    if (!isPowerOfTwo(Nin)){        
         fprintf(stderr,"Non-power of 2 cheb_coeff_to_vals is not yet implemented\n");
         return 1;
     }
-    double complex * xin = malloc(2*Nin * sizeof(complex double));
-    double complex * xout = malloc(2*Nin * sizeof(complex double));
+    double complex * xin = malloc(2*Nin * sizeof(double complex));
+    double complex * xout = malloc(2*Nin * sizeof(double complex));
     xin[0] = vals[0];
     xout[0] = 0.0;
     xout[Nin] = 0.0;
@@ -237,9 +223,9 @@ int cheb_vals_to_coeff(size_t nvals, const double * vals, double * coeff)
     
     int res = fft_base(2*Nin,xin,1,xout,1);
     
-    for (size_t ii = 0; ii < 2*Nin; ii++){
-        printf("X[%zu]=%G \n",ii,creal(xout[ii]));
-    }
+    /* for (size_t ii = 0; ii < 2*Nin; ii++){ */
+    /*     printf("X[%zu]=%G \n",ii,creal(xout[ii])); */
+    /* } */
     for (size_t ii = 0; ii < nvals; ii++){
         coeff[ii] = creal(xout[nvals-1-ii]) / (double) Nin;
         
