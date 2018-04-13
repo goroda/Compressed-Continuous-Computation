@@ -1056,9 +1056,20 @@ piecewise_poly_dderiv(const struct PiecewisePoly * p)
 }
 
 /********************************************************//**
+   Take a second derivative and enforce periodic bc
+**************************************************************/
+struct PiecewisePoly * piecewise_poly_dderiv_periodic(const struct PiecewisePoly * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_dderiv_periodic");
+    exit(1);
+}
+
+
+/********************************************************//**
 *   Integrate a piecewise polynomial
 *
-*   \param[in] poly  - pw polynomial to integrate
+*   \param[in] poly - pw polynomial to integrate
 *
 *   \return Integral of approximation
 *  

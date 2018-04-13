@@ -255,6 +255,7 @@ struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_dderiv(struct OrthPolyExpansion *);
+struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct OrthPolyExpansion * );
 
 void orth_poly_expansion_free(struct OrthPolyExpansion *);
 

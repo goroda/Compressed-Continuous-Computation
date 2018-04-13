@@ -4092,7 +4092,7 @@ struct FT1DArray * function_train_hessian(const struct FunctionTrain * fta)
 }
 
 /********************************************************//**
-    Compute the diagnal of the hessian a function train
+    Compute the diagpnal of the hessian a function train
 
     \param[in] ft - Function train
 
@@ -4107,6 +4107,28 @@ struct FT1DArray * function_train_hessian_diag(const struct FunctionTrain * ft)
         qmarray_free(ftg->ft[ii]->cores[ii]);
         ftg->ft[ii]->cores[ii] = NULL;
         ftg->ft[ii]->cores[ii] = qmarray_dderiv(ft->cores[ii]);
+    }
+
+    return ftg;
+}
+
+/********************************************************//**
+    Compute the diagpnal of the hessian a function train
+    enforce periodic boundary conditions
+
+    \param[in] ft - Function train
+
+    \return gradient
+***********************************************************/
+struct FT1DArray * function_train_hessian_diag_periodic(const struct FunctionTrain * ft)
+{
+    struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        ftg->ft[ii] = function_train_copy(ft);
+        qmarray_free(ftg->ft[ii]->cores[ii]);
+        ftg->ft[ii]->cores[ii] = NULL;
+        ftg->ft[ii]->cores[ii] = qmarray_dderiv_periodic(ft->cores[ii]);
     }
 
     return ftg;

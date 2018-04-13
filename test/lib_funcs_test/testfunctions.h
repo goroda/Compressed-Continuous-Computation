@@ -46,7 +46,10 @@ int Sin3xTx2(size_t, const double *, double *, void *);
 double funcderiv(double, void *);
 double funcdderiv(double, void *);
 int gaussbump(size_t, const double *, double *, void *);
-
+int gaussbump2(size_t, const double *, double *, void *);
+int gaussbump2dd(size_t, const double *, double *, void *);
+int sin_lift(size_t, const double *, double *, void *);
+int sin_liftdd(size_t, const double *, double *, void *);
 int powX2(size_t, const double *, double *, void *);
 int TwoPowX3(size_t, const double *, double *, void *);
 

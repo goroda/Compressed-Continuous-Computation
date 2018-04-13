@@ -320,6 +320,7 @@ void ft1d_array_free(struct FT1DArray *);
 struct FT1DArray * ft1d_array_jacobian(const struct FT1DArray *);
 struct FT1DArray * function_train_hessian(const struct FunctionTrain *);
 struct FT1DArray * function_train_hessian_diag(const struct FunctionTrain *);
+struct FT1DArray * function_train_hessian_diag_periodic(const struct FunctionTrain *);
 void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
 double * ft1d_array_eval(const struct FT1DArray *, const double *);
 void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);

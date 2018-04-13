@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <complex.h>
 #include <string.h>
 #include <float.h>
 #include <assert.h>
@@ -809,9 +810,6 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
     return le;
 }
 
-#include <complex.h>
-#define I _Complex_I
-
 /********************************************************//**
 *   Take a second derivative same nodes,
 *
@@ -820,13 +818,40 @@ struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp * f)
 struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp * f)
 {
 
+    struct LinElemExp * temp = lin_elem_exp_deriv(f);
+    struct LinElemExp * out = lin_elem_exp_deriv(temp);
+    lin_elem_exp_free(temp); temp = NULL;
+    return out;
+}
+
+/********************************************************//**
+*   Take a second derivative same nodes,
+*
+*   \param[in] f - function
+*************************************************************/
+struct LinElemExp * lin_elem_exp_dderiv_periodic(const struct LinElemExp * f)
+{
+    double dx = f->nodes[1] - f->nodes[0];    // assumes constant dx for now.
+    for (size_t ii = 1; ii < f->num_nodes-1; ii++){
+        double dx2 = f->nodes[ii+1] - f->nodes[ii];
+        if (fabs(dx2-dx) > 1e-15){
+            fprintf(stderr, "lin_elem_exp_dderiv_periodic only defined for uniform spacing\n");
+            fprintf(stderr, "%3.15G %3.15G\n", dx, dx2);
+            exit(1);
+        }
+            
+    }
+    
     size_t nx = f->num_nodes;
-    double ub = f->nodes[nx-1];
+    double ub = f->nodes[nx-1] + dx; // because periodic!
     double lb = f->nodes[0];
+    /* double ub = -lb; */
+        
     double * x = f->nodes;
 
     /* printf("nodes = "); dprint(nx, x); */
-    double dx = x[1] - x[0];    // assumes constant dx for now.
+
+    /* double dp = 2.0 * M_PI / (ub - lb); */
     double dp = 2.0 * M_PI / (ub - lb);
     double * p = calloc_double(nx);
     double * Lp = calloc_double(nx * nx);
@@ -839,16 +864,38 @@ struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp * f)
     for (size_t ii = 0; ii < nx; ii++){
         p[ii] = dp * ii - dp * nx / 2.0;
     }
-    
-    for (size_t l=0; l<nx; l++){
-        for (size_t j=0; j<nx; j++){
-            for (size_t k=0; k<nx; k++){
-                Lp[l*nx + j] = Lp[l*nx + j] -
-                    exp(I*(x[j]-x[l])*p[k])*pow(p[k],2)*dx*dp/(2*M_PI);
+
+    /* printf("coeffs = "); */
+    /* printf("x, xapp = \n"); */
+    /* for (size_t ii = 0; ii < nx; ii++){ */
+    /*     printf("(%3.5G, %3.5G)\n", x[ii], f->coeff[ii]); */
+    /* } */
+
+    /* dprint(nx, f->coeff); */
+    /* exit(1); */
+    for (size_t ll=0; ll<nx; ll++){
+        for (size_t jj=0; jj<nx; jj++){
+            for (size_t kk=0; kk<nx; kk++){
+                double update =  creal(cexp(I*(x[jj]-x[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
+                /* double update =  exp(I*(x[jj]-x[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI); */
+                /* printf("update = %3.15G\n", update); */
+                Lp[ll * nx + jj] = Lp[ll*nx + jj] - update;
+
             }
         }
     }
 
+    /* printf("Lp = \n"); */
+    /* for (size_t ii = 0; ii < nx; ii++){ */
+    /*     for (size_t jj = 0; jj < nx; jj++){ */
+    /*         printf("%3.5G ", Lp[ii * nx + jj]); */
+    /*     } */
+    /*     printf("\n"); */
+    /* } */
+    /* printf("\n"); */
+
+    /* for (size_t ii = 0; ii < ) */
+    
     double * new_vals = calloc_double(nx);
     
     for (size_t jj = 0; jj < nx; jj++){
@@ -857,18 +904,29 @@ struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp * f)
             new_vals[jj] += Lp[kk*nx + jj] * f->coeff[kk];
         }
     }
+    /* printf("new_vals = "); dprint(nx, new_vals); */
 
     struct LinElemExp * out = lin_elem_exp_init(nx, f->nodes, new_vals);
 
     free(new_vals); new_vals = NULL;
     free(Lp); Lp = NULL;
     free(p); p = NULL;
-    
+
     /* struct LinElemExp * temp = lin_elem_exp_deriv(f); */
-    /* struct LinElemExp * out = lin_elem_exp_deriv(temp); */
+    /* struct LinElemExp * out2 = lin_elem_exp_deriv(temp); */
+    /* printf("new_vals should = "); dprint(nx, out2->coeff); */
     /* lin_elem_exp_free(temp); temp = NULL; */
+
+    /* for (size_t ii = 0; ii < nx; ii++){ */
+    /*     printf("%3.8G, %3.8G, %3.8G, %3.8G, %3.8G\n", out->nodes[ii], */
+    /*            out2->nodes[ii], out->coeff[ii], out2->coeff[ii], */
+    /*            out->coeff[ii]/out2->coeff[ii]); */
+    /* } */
     
+    
+    /* exit(1); */
     return out;
+
 }
 
 

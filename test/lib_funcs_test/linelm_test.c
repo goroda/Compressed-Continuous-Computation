@@ -83,9 +83,12 @@ compute_error_vec(double lb,double ub, size_t N, le_t le,
     *abs_err = 0.0;
     *func_norm = 0.0;
     double val;
+    double vfunc;
     for (ii = 0; ii < N; ii++){
         func(1,xtest+ii,&val,arg);
-        *abs_err += pow(LINELEM_EVAL(le,xtest[ii]) - val,2);
+        vfunc = LINELEM_EVAL(le,xtest[ii]);
+        /* printf("val = %3.5G, vfunc = %3.5G\n", vfunc, val); */
+        *abs_err += pow(vfunc - val,2);
         *func_norm += pow(val,2);
     }
     free(xtest); xtest = NULL;
@@ -952,6 +955,90 @@ void Test_RLSD2_regress(CuTest * tc){
     generic_function_free(gf); gf = NULL;;
 }
 
+void Test_lin_elem_exp_dderiv(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_dderiv\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump2,NULL);
+
+    size_t N = 100;
+    double lb=-7.0,ub=7.0;
+    double * x = linspace(lb,ub,N);
+    double f[100];
+    fwrap_eval(N,x,f,fw);
+    le_t le = lin_elem_exp_init(N,x,f);
+
+    le_t ledd = lin_elem_exp_dderiv(le);
+    
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,100,ledd,gaussbump2dd,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-5);
+    
+    free(x);
+    LINELEM_FREE(le);
+    fwrap_destroy(fw);
+}
+
+void Test_lin_elem_exp_dderiv_periodic(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_dderiv_periodic (1/2)\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump2,NULL);
+
+    size_t N = 100;
+    double lb=-7.0,ub=7.0;
+    double * x = linspace(lb,ub,N);
+    double f[100];
+    fwrap_eval(N,x,f,fw);
+    le_t le = lin_elem_exp_init(N,x,f);
+
+    le_t ledd = lin_elem_exp_dderiv_periodic(le);
+    
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,100,ledd,gaussbump2dd,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-16);
+    
+    free(x);
+    LINELEM_FREE(le);
+    fwrap_destroy(fw);
+}
+
+void Test_lin_elem_exp_dderiv_periodic2(CuTest * tc){
+
+    printf("DOESNT WORK DONT RUN YET Testing function: lin_elem_exp_dderiv_periodic (2/2)\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,sin_lift,NULL);
+
+    size_t N = 20;
+    double lb=0.0,ub=2.0*M_PI;
+    double * x = linspace(lb,ub,N);
+    double f[100];
+    fwrap_eval(N,x,f,fw);
+    le_t le = lin_elem_exp_init(N-1,x,f);
+
+    le_t ledd = lin_elem_exp_dderiv_periodic(le);
+    
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,x[N-2],N-1,ledd,sin_liftdd,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-14);
+    
+    free(x);
+    LINELEM_FREE(le);
+    fwrap_destroy(fw);
+}
+
 
 CuSuite * LelmGetSuite(){
 
@@ -978,5 +1065,11 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_LS_regress);
     SUITE_ADD_TEST(suite, Test_RLS2_regress);
     SUITE_ADD_TEST(suite, Test_RLSD2_regress);
+
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv_periodic);
+
+    // doesnt work yet
+    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv_periodic2); */
     return suite;
 }

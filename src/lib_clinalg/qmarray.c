@@ -3216,6 +3216,24 @@ struct Qmarray * qmarray_dderiv(struct Qmarray * a)
 }
 
 /***********************************************************//**
+    Compute the second derivative of every function in the qmarray enforcing periodic boundaries
+
+    \param[in] a - qmarray
+
+    \return qmarray of functions representing the derivatives at all values x
+***************************************************************/
+struct Qmarray * qmarray_dderiv_periodic(struct Qmarray * a)
+{
+
+    struct Qmarray * b = qmarray_alloc(a->nrows, a->ncols);
+    size_t ii;
+    for (ii = 0; ii < a->nrows*a->ncols; ii++){
+        b->funcs[ii] = generic_function_dderiv_periodic(a->funcs[ii]);
+    }
+    return b;
+}
+
+/***********************************************************//**
     Evaluate the derivative of every function in the qmarray
 
     \param[in]     a   - qmarray

@@ -769,7 +769,8 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 
 /* Take the derivative of a generic function */
 GF_IN_OUT(deriv)
-GF_IN_OUT(dderiv) 
+GF_IN_OUT(dderiv)
+GF_IN_OUT(dderiv_periodic) 
 
 
  /********************************************************//**

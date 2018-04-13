@@ -200,8 +200,8 @@ generic_function_array_orth(size_t n,
         break;
     case POLYNOMIAL:
         pp = malloc(n * sizeof(struct OrthPolyExpansion *));
-        for (size_t ii = 0; ii < n; ii++){
-            pp[ii] = NULL;
+        for (size_t zz = 0; zz < n; zz++){
+            pp[zz] = NULL;
         }
         orth_poly_expansion_orth_basis(n, pp, args);
         

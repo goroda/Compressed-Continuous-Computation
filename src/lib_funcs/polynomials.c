@@ -46,6 +46,7 @@
 #include <string.h>
 #include <float.h>
 #include <assert.h>
+#include "futil.h"
 
 //#define ZEROTHRESH 1e-20
 /* #define ZEROTHRESH  1e0 * DBL_EPSILON */
@@ -2248,6 +2249,16 @@ orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
 
     orth_poly_expansion_round(&out);
     return out;
+}
+
+/********************************************************//**
+   Take a second derivative and enforce periodic bc
+**************************************************************/
+struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct OrthPolyExpansion * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("orth_poly_expansion_dderiv_periodic");
+    exit(1);
 }
 
 /********************************************************//**

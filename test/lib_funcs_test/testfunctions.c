@@ -78,6 +78,49 @@ int gaussbump(size_t N, const double * x, double * out, void * args)
     return 0;
 }
 
+int gaussbump2(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        /* out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]); */
+        out[ii] = exp(-0.5*pow(x[ii],2))/pow(M_PI,0.25);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
+int gaussbump2dd(size_t N, const double * x, double * out, void * args)
+{
+    (void) args;
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = (pow(x[ii],2)-1.0)*exp(-0.5*pow(x[ii],2))/pow(M_PI,0.25);
+    }
+    return 0;
+}
+
+int sin_lift(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        /* out[ii] = 2.0 + sin(x[ii]); */
+        out[ii] = 1.0 - cos(x[ii]);
+        /* out[ii] = sin(x[ii]); */
+    }
+    return 0;
+}
+
+int sin_liftdd(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        /* out[ii] =  -sin(x[ii]); */
+        out[ii] =  -cos(x[ii]);
+    }
+    return 0;
+}
+
 // second function
 int powX2(size_t N, const double * x, double * out, void * args)
 {

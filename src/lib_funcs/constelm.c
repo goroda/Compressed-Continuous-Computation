@@ -691,6 +691,18 @@ struct ConstElemExp * const_elem_exp_dderiv(const struct ConstElemExp * f)
     exit(1);
 }
 
+/********************************************************//**
+*   Take a second derivative and enforce periodic bc
+*
+*   \param[in] f - function
+*************************************************************/
+struct ConstElemExp * const_elem_exp_dderiv_periodic(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_dderiv_periodic");
+    exit(1);
+}
+
 /********************************************************//*
 *   Evaluate the gradient of a constant element expansion 
 *   with respect to the coefficients of each basis

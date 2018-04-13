@@ -1169,6 +1169,16 @@ struct KernelExpansion * kernel_expansion_dderiv(const struct KernelExpansion * 
 }
 
 /********************************************************//**
+*   Obtain the second derivative of a kernel with periodic boundary conditions
+*************************************************************/
+struct KernelExpansion * kernel_expansion_dderiv_periodic(const struct KernelExpansion * ke)
+{
+    (void) (ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_dderiv_periodic")
+    exit(1);
+}
+
+/********************************************************//**
 *   Evaluate the derivative of a kernel expansion (useful for gradients)
 *************************************************************/
 double kernel_expansion_deriv_eval(const struct KernelExpansion * kern, double x)    

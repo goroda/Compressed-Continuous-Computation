@@ -189,6 +189,7 @@ struct Qmarray * qmarray_stackv(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_deriv(struct Qmarray *);
 struct Qmarray * qmarray_dderiv(struct Qmarray *);
+struct Qmarray * qmarray_dderiv_periodic(struct Qmarray *);
 void qmarray_deriv_eval(const struct Qmarray *, double, double *);
 void qmarray_roundt(struct Qmarray **, double);
 
