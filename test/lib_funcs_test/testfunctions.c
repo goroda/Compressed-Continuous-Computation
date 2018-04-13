@@ -43,6 +43,10 @@
 #include <assert.h>
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327
+#endif
+
 int Sin3xTx2(size_t N, const double * x, double * out, void * args)
 {
     for (size_t ii = 0; ii < N; ii++ ){

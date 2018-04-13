@@ -980,6 +980,7 @@ void Test_lin_elem_exp_dderiv(CuTest * tc){
     
     free(x);
     LINELEM_FREE(le);
+    LINELEM_FREE(ledd);
     fwrap_destroy(fw);
 }
 
@@ -1008,6 +1009,7 @@ void Test_lin_elem_exp_dderiv_periodic(CuTest * tc){
     
     free(x);
     LINELEM_FREE(le);
+    LINELEM_FREE(ledd);
     fwrap_destroy(fw);
 }
 

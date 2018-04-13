@@ -85,6 +85,9 @@ int ifft_slow(size_t N, const double complex * xin, size_t sx,
     return 0;
 }
 
+
+
+
 /***********************************************************//**
    FFT                                                            
 ***************************************************************/
@@ -143,6 +146,16 @@ int ifft_base(size_t N, double complex * x, size_t sx,
     return res;
 }
 
+/***********************************************************//**
+   Check if a number is power of two.
+
+   Algorithm #10 from FFT   
+   http://www.exploringbinary.com/ten-ways-to-check-if-an-integer-is-a-power-of-two-in-c/                                        ***************************************************************/
+static int isPowerOfTwo (size_t x)
+{
+  return ((x != 0) && ((x & (~x + 1)) == x));
+}
+
 int is2(size_t x)
 {
     while (((x % 2) == 0) && x > 1) 
@@ -155,21 +168,25 @@ int fft(size_t N, const double complex * x, size_t sx,
 {
     assert (sx == 1);
     assert (sX == 1);
+    if (!isPowerOfTwo(N)){
+        fprintf(stderr, "fft_base can only be called with power of 2\n");
+        return 1;
+    }
+
     /* size_t Nopts[] = {2,4,8,16,32,64,128,256,512,1024, // 10 options */
     /*                   2048, 4096, 8192, 16384, 32768, 65536}; */
-
-    size_t Nin = N;
-    /* printf("is2=%d\n",is2(Nin)); */
-    if (is2(Nin) == 0){
-        fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n");
-        return 1;
-        /* size_t nopt = 2; */
-        /* while (Nin > nopt){ */
-        /*     nopt *= 2; */
-        /* } */
-        /* Nin = nopt; */
-    }
-    int res = fft_base(Nin,x,sx,X,sX);
+    /* size_t Nin = N; */
+    /* /\* printf("is2=%d\n",is2(Nin)); *\/ */
+    /* if (is2(Nin) == 0){ */
+    /*     fprintf(stderr,"Non-power of 2 fft is not yet implemeneted\n"); */
+    /*     return 1; */
+    /*     /\* size_t nopt = 2; *\/ */
+    /*     /\* while (Nin > nopt){ *\/ */
+    /*     /\*     nopt *= 2; *\/ */
+    /*     /\* } *\/ */
+    /*     /\* Nin = nopt; *\/ */
+    /* } */
+    int res = fft_base(N,x,sx,X,sX);
     return res;
 }
 

@@ -228,9 +228,9 @@ void Test_cheb_vals_to_coeff(CuTest * tc){
 CuSuite * FFTGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_fft_slow); */
-    /* SUITE_ADD_TEST(suite, Test_fft_base); */
-    /* SUITE_ADD_TEST(suite, Test_fft); */
+    SUITE_ADD_TEST(suite, Test_fft_slow);
+    SUITE_ADD_TEST(suite, Test_fft_base);
+    SUITE_ADD_TEST(suite, Test_fft);
     /* SUITE_ADD_TEST(suite, Test_fft2); */
     /* SUITE_ADD_TEST(suite, Test_fft_base_big); */
  
