@@ -57,4 +57,9 @@ int fourier_expansion_approx_vec(struct OrthPolyExpansion *,
                                  struct Fwrap *,
                                  const struct OpeOpts *);
 
+double fourier_integrate(const struct OrthPolyExpansion *);
+struct OrthPolyExpansion *
+fourier_expansion_prod(const struct OrthPolyExpansion *,
+                       const struct OrthPolyExpansion *);
+
 #endif

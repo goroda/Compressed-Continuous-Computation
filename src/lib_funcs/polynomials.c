@@ -261,7 +261,7 @@ double space_mapping_map_inverse(struct SpaceMapping * map, double x)
     }
 }
 
-static double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double x)
+double space_mapping_map_inverse_deriv(struct SpaceMapping * map, double x)
 {
     (void)(x);
     if (map->map == SM_LINEAR){
@@ -2349,9 +2349,13 @@ struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct Orth
 *************************************************************/
 void orth_poly_expansion_free(struct OrthPolyExpansion * p){
     if (p != NULL){
+        if (p->p->ptype == FOURIER){
+            free(p->ccoeff); p->ccoeff = NULL;
+        }
         free_orth_poly(p->p); p->p = NULL;
         space_mapping_free(p->space_transform); p->space_transform = NULL;
         free(p->coeff); p->coeff = NULL;
+
         free(p); p = NULL;
     }
 }
@@ -2455,6 +2459,11 @@ void orth_poly_expansion_savetxt(const struct OrthPolyExpansion * f,
                                  FILE * stream, size_t prec)
 {
     assert (f != NULL);
+    if (f->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot savetxt fourier polynomials yet\n");
+        exit(1);
+    }
+    
     fprintf(stream,"%d ",f->p->ptype);
     fprintf(stream,"%3.*G ",(int)prec,f->lower_bound);
     fprintf(stream,"%3.*G ",(int)prec,f->upper_bound);
@@ -2617,7 +2626,7 @@ int orth_poly_expansion_arr_eval(size_t n,
         }
     }
 
-    if ((all_same == 0) || (ptype == CHEBYSHEV)){
+    if ((all_same == 0) || (ptype == CHEBYSHEV) || (ptype == FOURIER)){
         for (size_t ii = 0; ii < n; ii++){
             out[ii] = orth_poly_expansion_eval(parr[ii],x);
         }
@@ -2833,6 +2842,12 @@ double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 *************************************************************/
 double orth_poly_expansion_get_kristoffel_weight(const struct OrthPolyExpansion * poly, double x)
 {
+    assert (poly != NULL);
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr,
+                "Cannot get kristoffel_weight for fourier basis\n");
+        exit(1);
+    }
     size_t iter = 0;
     double p [2];
     double pnew;
@@ -3426,10 +3441,7 @@ void
 orth_poly_expansion_approx(double (*A)(double,void *), void *args, 
                            struct OrthPolyExpansion * poly)
 {
-    if (poly->p->ptype == FOURIER){
-        fprintf(stderr, "Cannot perform rkhs_squared_norm with fourier basis\n");
-        exit(1);
-    }    
+
     size_t ii, jj;
     double p[2];
     double pnew;
@@ -3445,6 +3457,9 @@ orth_poly_expansion_approx(double (*A)(double,void *), void *args,
     size_t nquad = poly->num_poly+1;
 
     switch (poly->p->ptype) {
+        case FOURIER:
+            fprintf(stderr, "Cannot perform orth_poly_expansion_approx with Fourier basis\n");
+            exit(1);
         case CHEBYSHEV:
             /* m = (poly->upper_bound - poly->lower_bound) /  */
             /*     (poly->p->upper - poly->p->lower); */
@@ -3595,9 +3610,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
 {    
     assert (poly != NULL);
     assert (f != NULL);
-    if (poly->p->ptype == FOURIER){
-        return fourier_expansion_approx_vec(poly, f, opts);
-    }
+
     enum quad_rule qrule = C3_GAUSS_QUAD;
     size_t nquad = poly->num_poly+1;
     if (opts != NULL){
@@ -3607,7 +3620,7 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
         }
     }
 
-    if (nquad < 1 || nquad > 200){
+    if ((nquad < 1 || nquad > 200) && (poly->p->ptype != FOURIER)){
         return 1;
     }
 
@@ -3620,7 +3633,9 @@ orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
     double * quadwt = NULL;
 
     int return_val = 0;
-    switch (poly->p->ptype) { 
+    switch (poly->p->ptype) {
+    case FOURIER:
+        return fourier_expansion_approx_vec(poly, f, opts);
     case CHEBYSHEV:
         assert (qrule == C3_GAUSS_QUAD);        
         return_val = cheb_gauss(nquad,qpt,wt);
@@ -3899,6 +3914,11 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
     double ub = a->upper_bound;
 
     enum poly_type p = a->p->ptype;
+    if (p == FOURIER){
+        assert (b->p->ptype == FOURIER);
+        assert (fabs(lb - ub) < ZEROTHRESH);
+        return fourier_expansion_prod(a, b);
+    }
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
         //printf("in special prod\n");
         //double lb = a->lower_bound;
@@ -4127,9 +4147,18 @@ orth_poly_expansion_lin_comb(size_t n, size_t ldx,
     space_mapping_free(out->space_transform);
     out->space_transform = space_mapping_copy(x[0]->space_transform);
     size_t kk;
-    for (kk = 0; kk < n; kk++){
-        for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
-            out->coeff[ii] +=  c[kk*ldc]*x[kk*ldx]->coeff[ii];
+    if (ptype != FOURIER){
+        for (kk = 0; kk < n; kk++){
+            for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
+                out->coeff[ii] +=  c[kk*ldc]*x[kk*ldx]->coeff[ii];
+            }
+        }
+    }
+    else{
+        for (kk = 0; kk < n; kk++){
+            for (ii = 0; ii < x[kk*ldx]->num_poly; ii++){
+                out->ccoeff[ii] +=  c[kk*ldc]*x[kk*ldx]->ccoeff[ii];
+            }
         }
     }
     orth_poly_expansion_round(&out);
@@ -4157,6 +4186,7 @@ orth_poly_expansion_integrate(const struct OrthPolyExpansion * poly)
     case LEGENDRE:  out = legendre_integrate(poly); break;
     case HERMITE:   out = hermite_integrate(poly);  break;
     case CHEBYSHEV: out = cheb_integrate2(poly);    break;
+    case FOURIER:   out = fourier_integrate(poly);  break;        
     case STANDARD:  fprintf(stderr, "Cannot integrate STANDARD type\n"); break;
     }
     return out;
@@ -4184,6 +4214,7 @@ orth_poly_expansion_integrate_weighted(const struct OrthPolyExpansion * poly)
     case LEGENDRE:  out = poly->coeff[0];  break;
     case HERMITE:   out = poly->coeff[0];  break;
     case CHEBYSHEV: out = poly->coeff[0];  break;
+    case FOURIER:   out = creal(poly->ccoeff[0]); break;
     case STANDARD:  fprintf(stderr, "Cannot integrate STANDARD type\n"); break;
     }
 
@@ -4209,7 +4240,7 @@ orth_poly_expansion_inner_w(const struct OrthPolyExpansion * a,
                             const struct OrthPolyExpansion * b)
 {
     assert(a->p->ptype == b->p->ptype);
-    
+    assert (a->p->ptype != FOURIER);
     double out = 0.0;
     size_t N = a->num_poly < b->num_poly ? a->num_poly : b->num_poly;
     size_t ii;
@@ -4275,6 +4306,12 @@ orth_poly_expansion_inner(const struct OrthPolyExpansion * a,
         /* double m = (a->upper_bound - a->lower_bound) / (a->p->upper - a->p->lower); */
         /* out *=  m; */
         /* return out */;
+    }
+    else if ((a->p->ptype == FOURIER) && (b->p->ptype == FOURIER)){
+        struct OrthPolyExpansion * prod = orth_poly_expansion_prod(a, b);
+        double int_val = orth_poly_expansion_integrate(prod);
+        orth_poly_expansion_free(prod); prod = NULL;
+        return int_val;
     }
     else{
         if (a->p->ptype == CHEBYSHEV){
@@ -4367,9 +4404,16 @@ double orth_poly_expansion_norm(const struct OrthPolyExpansion * p){
 void 
 orth_poly_expansion_flip_sign(struct OrthPolyExpansion * p)
 {   
-    size_t ii;
-    for (ii = 0; ii < p->num_poly; ii++){
-        p->coeff[ii] *= -1.0;
+
+    if (p->p->ptype != FOURIER){
+        for (size_t ii = 0; ii < p->num_poly; ii++){
+            p->coeff[ii] *= -1.0;
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < p->num_poly; ii++){
+            p->ccoeff[ii] *= -1.0;
+        }
     }
 }
 
@@ -4383,8 +4427,15 @@ void orth_poly_expansion_scale(double a, struct OrthPolyExpansion * x)
 {
     
     size_t ii;
-    for (ii = 0; ii < x->num_poly; ii++){
-        x->coeff[ii] *= a;
+    if (x->p->ptype != FOURIER){
+        for (ii = 0; ii < x->num_poly; ii++){
+            x->coeff[ii] *= a;
+        }
+    }
+    else{
+        for (ii = 0; ii < x->num_poly; ii++){
+            x->ccoeff[ii] *= a;
+        }
     }
     orth_poly_expansion_round(&x);
 }
@@ -4407,10 +4458,11 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 {
     assert (x->p->ptype == y->p->ptype);
     assert (y->p->ptype == z->p->ptype);
-    
     assert ( x != NULL );
     assert ( y != NULL );
     assert ( z != NULL );
+    
+    assert (x->p->ptype != FOURIER);
     
     size_t ii;
     if ( (z->num_poly >= x->num_poly) && (z->num_poly >= y->num_poly) ){
@@ -4540,7 +4592,7 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
                              struct OrthPolyExpansion * y)
 {
-        
+    ON HERE
     assert (y != NULL);
     assert (x != NULL);
     assert (x->p->ptype == y->p->ptype);

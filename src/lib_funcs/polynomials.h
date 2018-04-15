@@ -60,7 +60,8 @@ struct SpaceMapping;
 double space_mapping_map(struct SpaceMapping *, double);
 double space_mapping_map_inverse(struct SpaceMapping *, double);
 double space_mapping_map_deriv(struct SpaceMapping *, double);
-
+double space_mapping_map_inverse_deriv(struct SpaceMapping *, double);
+    
 enum coeff_decay_type {NONE,ALGEBRAIC,EXPONENTIAL};
 
 /** \enum poly_type

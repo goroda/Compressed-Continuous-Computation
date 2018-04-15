@@ -230,10 +230,10 @@ int main(int argc, char * argv[])
     struct OrthPolyExpansion * fourier =
         orth_poly_expansion_init_from_opts(opts, N);
 
-    int res = fourier_expansion_approx_vec(fourier, fw, opts);
+    int res = orth_poly_expansion_approx_vec(fourier, fw, opts);
     printf("Result is %d\n", res);
-    struct OrthPolyExpansion * fourierd = fourier_expansion_deriv(fourier);
-    struct OrthPolyExpansion * fourierdd = fourier_expansion_dderiv(fourier);
+    struct OrthPolyExpansion * fourierd = orth_poly_expansion_deriv(fourier);
+    struct OrthPolyExpansion * fourierdd = orth_poly_expansion_dderiv(fourier);
     
 
     size_t Ntest = 100;
