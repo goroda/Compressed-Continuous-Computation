@@ -5,6 +5,7 @@ file(GLOB SRC_FILES
     polynomials.c
     piecewisepoly.c
     hpoly.c
+    fourier.c
     linelm.c
     kernels.c
     fapprox.c

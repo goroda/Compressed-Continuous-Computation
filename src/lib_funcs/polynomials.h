@@ -50,19 +50,23 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <complex.h>
 
 #include "fwrap.h"
 #include "quadrature.h"
 
+
 struct SpaceMapping;
-double space_mapping_map(struct SpaceMapping * map, double x);
+double space_mapping_map(struct SpaceMapping *, double);
+double space_mapping_map_inverse(struct SpaceMapping *, double);
+double space_mapping_map_deriv(struct SpaceMapping *, double);
 
 enum coeff_decay_type {NONE,ALGEBRAIC,EXPONENTIAL};
 
 /** \enum poly_type
  * contains LEGENDRE, CHEBYSHEV, STANDARD, HERMITE
  */
-enum poly_type {LEGENDRE, CHEBYSHEV, HERMITE, STANDARD};
+enum poly_type {LEGENDRE, CHEBYSHEV, HERMITE, STANDARD, FOURIER};
 
 struct OpeOpts;
 struct OpeOpts * ope_opts_alloc(enum poly_type);
@@ -196,6 +200,8 @@ struct OrthPolyExpansion{
     double upper_bound; 
     double * coeff;
 
+    double complex * ccoeff;
+    
     size_t nalloc; // number of coefficients allocated for efficiency
 
     struct SpaceMapping * space_transform;
@@ -222,8 +228,7 @@ int
 orth_poly_expansion_update_params(struct OrthPolyExpansion *,
                                   size_t, const double *);
 
-struct OrthPolyExpansion * 
-orth_poly_expansion_copy(struct OrthPolyExpansion *);
+struct OrthPolyExpansion * orth_poly_expansion_copy(const struct OrthPolyExpansion *);
 
 enum poly_type 
 orth_poly_expansion_get_ptype(const struct OrthPolyExpansion *);
@@ -252,9 +257,9 @@ double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
 
 
 struct OrthPolyExpansion *
-orth_poly_expansion_deriv(struct OrthPolyExpansion *);
+orth_poly_expansion_deriv(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
-orth_poly_expansion_dderiv(struct OrthPolyExpansion *);
+orth_poly_expansion_dderiv(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct OrthPolyExpansion * );
 
 void orth_poly_expansion_free(struct OrthPolyExpansion *);

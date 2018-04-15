@@ -65,7 +65,7 @@
 #include "lib_quadrature.h"
 #include "linalg.h"
 #include "legtens.h"
-
+#include "fourier.h"
 
 enum SPACE_MAP {SM_LINEAR,SM_ROSENBLATT};
 
@@ -237,7 +237,7 @@ double space_mapping_map(struct SpaceMapping * map, double x)
     }
 }
 
-static double space_mapping_map_deriv(struct SpaceMapping * map, double x)
+double space_mapping_map_deriv(struct SpaceMapping * map, double x)
 {
     (void)(x);
     if (map->map == SM_LINEAR){
@@ -250,7 +250,7 @@ static double space_mapping_map_deriv(struct SpaceMapping * map, double x)
 }
 
 // normalized space to original space
-static double space_mapping_map_inverse(struct SpaceMapping * map, double x)
+double space_mapping_map_inverse(struct SpaceMapping * map, double x)
 {
     if (map->map == SM_LINEAR){
         return map->inv_lin_slope * x + map->inv_lin_offset;
@@ -840,24 +840,30 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
 {
     struct OpeOpts * ao;
     if ( NULL == (ao = malloc(sizeof(struct OpeOpts)))){
-        fprintf(stderr, "failed to allocate memory for poly exp.\n");
+        fprintf(stderr, "failed to allocate memory for struct OpeOpts in ope_opts_alloc.\n");
         exit(1);
     }
+
+    ao->start_num = 5;
+    ao->coeffs_check = 2;
+    ao->tol = 1e-10;
+    ao->max_num = 100;
 
     ao->ptype = ptype;
     if (ptype == HERMITE){
         ao->lb = -DBL_MAX;
         ao->ub = DBL_MAX;
     }
+    else if (ptype == FOURIER){
+        ao->lb = 0.0;
+        ao->ub = 2.0*M_PI;
+        ao->start_num = 8;
+    }
     else{
         ao->lb = -1.0;
         ao->ub = 1.0;
     }
     
-    ao->start_num = 5;
-    ao->coeffs_check = 2;
-    ao->tol = 1e-10;
-    ao->max_num = 100;
 
     // for hermite
     ao->mean = 0.0;
@@ -1108,7 +1114,6 @@ struct OrthPoly * init_cheb_poly(){
 
     return p;
 }
-
 
 inline static double legortho(size_t n){
     (void) n;
@@ -1504,6 +1509,14 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
         fprintf(stderr, "failed to allocate memory for poly exp.\n");
         exit(1);
     }
+
+    p->num_poly = num_poly;
+
+    //p->coeff = calloc_double(num_poly);
+    p->lower_bound = lb;
+    p->upper_bound = ub;
+    p->kristoffel_eval = 0;
+    
     double m, off;
     switch (ptype) {
         case LEGENDRE:
@@ -1528,6 +1541,17 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
             p->space_transform->inv_lin_slope = 1.0/m;
             p->space_transform->inv_lin_offset = -off/m;
             break;
+        case FOURIER:
+            p->p = init_fourier_poly();
+            p->space_transform = space_mapping_create(SM_LINEAR);
+            m = (p->p->upper - p->p->lower) /  (ub - lb);
+            off = p->p->upper - m * ub;
+            p->space_transform->set = 1;
+            p->space_transform->lin_slope = m;
+            p->space_transform->lin_offset = off;
+            p->space_transform->inv_lin_slope = 1.0/m;
+            p->space_transform->inv_lin_offset = -off/m;
+            break;            
         case HERMITE:
             p->p = init_hermite_poly();
             p->space_transform = space_mapping_create(SM_LINEAR);;
@@ -1539,13 +1563,15 @@ orth_poly_expansion_init(enum poly_type ptype, size_t num_poly,
         //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
     }
 
-    p->num_poly = num_poly;
     p->nalloc = num_poly+OPECALLOC;
     p->coeff = calloc_double(p->nalloc);
-    //p->coeff = calloc_double(num_poly);
-    p->lower_bound = lb;
-    p->upper_bound = ub;
-    p->kristoffel_eval = 0;
+    p->ccoeff = NULL;
+    if (ptype == FOURIER){
+        p->ccoeff = malloc(p->nalloc * sizeof(double complex));
+        for (size_t ii = 0; ii < p->nalloc; ii++){
+            p->ccoeff[ii] = 0.0;
+        }
+    }
 
     return p;
 }
@@ -1562,7 +1588,8 @@ struct OrthPolyExpansion *
 orth_poly_expansion_init_from_opts(const struct OpeOpts * opts, size_t num_poly)
 {
 
-    struct OrthPolyExpansion * p = orth_poly_expansion_init(opts->ptype,num_poly,opts->lb,opts->ub);
+    struct OrthPolyExpansion * p =
+        orth_poly_expansion_init(opts->ptype,num_poly,opts->lb,opts->ub);
     if (opts->ptype == HERMITE)
     {
         p->space_transform->set = 1;
@@ -1670,8 +1697,7 @@ orth_poly_expansion_update_params(struct OrthPolyExpansion * ope,
 *
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
-struct OrthPolyExpansion * 
-orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
+struct OrthPolyExpansion * orth_poly_expansion_copy(const struct OrthPolyExpansion * pin)
 {
     struct OrthPolyExpansion * p = NULL;
     if (pin != NULL){
@@ -1681,23 +1707,6 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
             fprintf(stderr, "failed to allocate memory for poly exp.\n");
             exit(1);
         }
-    
-        switch (pin->p->ptype) {
-        case LEGENDRE:
-            p->p = init_leg_poly();
-            break;
-        case CHEBYSHEV:
-            p->p = init_cheb_poly();
-            break;
-        case HERMITE:
-            p->p = init_hermite_poly();
-            break;
-        case STANDARD:
-            break;
-            //default:
-            //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
-        }
-    
         //   printf("copying polynomial\n");
         //printf("pin->num_poly = %zu, pin->nalloc = %zu\n",pin->num_poly,pin->nalloc);
         p->num_poly = pin->num_poly;
@@ -1708,7 +1717,36 @@ orth_poly_expansion_copy(struct OrthPolyExpansion * pin)
         p->lower_bound = pin->lower_bound;
         p->upper_bound = pin->upper_bound;
         p->space_transform = space_mapping_copy(pin->space_transform);
+        p->ccoeff = NULL;
         p->kristoffel_eval = pin->kristoffel_eval;
+        
+        switch (pin->p->ptype) {
+        case LEGENDRE:
+            p->p = init_leg_poly();
+            break;
+        case CHEBYSHEV:
+            p->p = init_cheb_poly();
+            break;
+        case HERMITE:
+            p->p = init_hermite_poly();
+            break;
+        case FOURIER:
+            p->p = init_fourier_poly();
+            p->ccoeff = malloc(p->nalloc * sizeof(double complex));
+            for (size_t ii = 0; ii < p->nalloc; ii++){
+                p->ccoeff[ii] = 0.0;
+            }
+            for (size_t ii = 0; ii < p->num_poly; ii++){
+                p->ccoeff[ii] = pin->ccoeff[ii];
+            }
+            break;            
+        case STANDARD:
+            break;
+            //default:
+            //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
+        }
+    
+
     }
     return p;
 }
@@ -1792,10 +1830,17 @@ orth_poly_expansion_linear(double a, double offset, struct OpeOpts * opts)
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
-    struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts,2);
+    if (opts->ptype == FOURIER){
+        fprintf(stderr,
+                "Cannot initialize linear function for fourier basis\n");
+        return NULL;
+    }
+    struct OrthPolyExpansion * p =
+        orth_poly_expansion_init_from_opts(opts,2);
     p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
     p->coeff[0] = (offset - p->p->lin_const -
-                   p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
+                   p->coeff[1] * p->p->lin_coeff *
+                   p->space_transform->lin_offset) /
                    p->p->const_term;
 
     return p;
@@ -1819,6 +1864,12 @@ orth_poly_expansion_linear_update(struct OrthPolyExpansion * p, double a, double
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
+    if (p->p->ptype == FOURIER){
+        fprintf(stderr,
+                "Cannot update linear function for fourier basis\n");
+        return 1;
+    }
+    
     p->coeff[1] = a / (p->p->lin_coeff * p->space_transform->lin_slope);
     p->coeff[0] = (offset - p->p->lin_const -
                    p->coeff[1] * p->p->lin_coeff * p->space_transform->lin_offset) /
@@ -1845,7 +1896,12 @@ orth_poly_expansion_quadratic(double a, double offset, struct OpeOpts * opts)
     assert (isinf(a) == 0);
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
-
+    
+    if (opts->ptype == FOURIER){
+        fprintf(stderr, "Cannot initialize quadratic function for fourier basis\n");
+        return NULL;
+    }
+    
     struct OrthPolyExpansion * p = orth_poly_expansion_init_from_opts(opts, 3);
 
     struct quad_func qf;
@@ -1891,7 +1947,9 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         /* fprintf(stderr,"order for CHEBYSHEV type\n;"); */
         /* exit(1); */
         break;
-
+    case FOURIER:
+        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
+        break;
     case STANDARD:
         fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
         fprintf(stderr,"order for STANDARD type\n;");
@@ -1916,7 +1974,8 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
     Each function f[ii] must have the same nodes
 *************************************************************/
 void
-orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f, struct OpeOpts * opts)
+orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
+                               struct OpeOpts * opts)
 {
 
     if (opts->ptype == CHEBYSHEV){
@@ -1968,6 +2027,10 @@ double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion * poly, dou
     assert (poly != NULL);
     assert (poly->kristoffel_eval == 0);
 
+    if (poly->p->ptype == FOURIER){
+        return fourier_expansion_deriv_eval(poly, x);
+    }
+    
     double x_normalized = space_mapping_map(poly->space_transform,x);
 
     //values
@@ -2076,7 +2139,7 @@ static inline double cheb_expansion_deriv_eval_for_approx(double x, void* poly){
 /********************************************************//**
 *   Evaluate the derivative of an orth poly expansion
 *
-*   \param[in] p - orthogonal polynomial expansion
+*   \param[in] pin - orthogonal polynomial expansion
 *   
 *   \return derivative
 *
@@ -2085,11 +2148,16 @@ static inline double cheb_expansion_deriv_eval_for_approx(double x, void* poly){
 *       to keep track of sum of coefficients
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
+orth_poly_expansion_deriv(const struct OrthPolyExpansion * pin)
 {
-    if (p == NULL) return NULL;
-    assert (p->kristoffel_eval == 0);
+    if (pin == NULL) return NULL;
+    assert (pin->kristoffel_eval == 0);
 
+    if (pin->p->ptype == FOURIER){
+        return fourier_expansion_deriv(pin);
+    }
+
+    struct OrthPolyExpansion * p = orth_poly_expansion_copy(pin);
     orth_poly_expansion_round(&p);
             
     struct OrthPolyExpansion * out = NULL;
@@ -2100,6 +2168,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
     }
     if (p->num_poly == 1){
         orth_poly_expansion_round(&out);
+        orth_poly_expansion_free(p); p = NULL;
         return out;
     }
 
@@ -2125,6 +2194,7 @@ orth_poly_expansion_deriv(struct OrthPolyExpansion * p)
     }
 
     orth_poly_expansion_round(&out);
+    orth_poly_expansion_free(p); p = NULL;
     return out;
 }
 
@@ -2204,7 +2274,7 @@ static inline double cheb_expansion_dderiv_eval_for_approx(double x, void* poly)
 /********************************************************//**
 *   Evaluate the second derivative of an orth poly expansion
 *
-*   \param[in] p - orthogonal polynomial expansion
+*   \param[in] pin - orthogonal polynomial expansion
 *   
 *   \return derivative
 *
@@ -2213,11 +2283,16 @@ static inline double cheb_expansion_dderiv_eval_for_approx(double x, void* poly)
 *       to keep track of sum of coefficients
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
+orth_poly_expansion_dderiv(const struct OrthPolyExpansion * pin)
 {
-    if (p == NULL) return NULL;
-    assert (p->kristoffel_eval == 0);
+    if (pin == NULL) return NULL;
+    assert (pin->kristoffel_eval == 0);
 
+    if (pin->p->ptype == FOURIER){
+        return fourier_expansion_dderiv(pin);
+    }
+
+    struct OrthPolyExpansion * p = orth_poly_expansion_copy(pin);
     orth_poly_expansion_round(&p);
             
     struct OrthPolyExpansion * out = NULL;
@@ -2227,6 +2302,7 @@ orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
         out->coeff[ii] = 0.0;
     }
     if (p->num_poly < 2){
+        orth_poly_expansion_free(p); p = NULL;
         return out;
     }
 
@@ -2248,6 +2324,7 @@ orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
     }
 
     orth_poly_expansion_round(&out);
+    orth_poly_expansion_free(p); p = NULL;
     return out;
 }
 
@@ -2256,9 +2333,13 @@ orth_poly_expansion_dderiv(struct OrthPolyExpansion * p)
 **************************************************************/
 struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct OrthPolyExpansion * f)
 {
-    (void)(f);
-    NOT_IMPLEMENTED_MSG("orth_poly_expansion_dderiv_periodic");
-    exit(1);
+    if (f->p->ptype == FOURIER){
+        return orth_poly_expansion_dderiv(f);
+    }
+    else{
+        NOT_IMPLEMENTED_MSG("orth_poly_expansion_dderiv_periodic");
+        exit(1);
+    }
 }
 
 /********************************************************//**
@@ -2292,7 +2373,10 @@ serialize_orth_poly_expansion(unsigned char * ser,
 {
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
     
-    
+    if (p->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot serialized fourier polynomials yet\n");
+        exit(1);
+    }
     size_t totsize = sizeof(int) + 2*sizeof(double) + 
                        p->num_poly * sizeof(double) + sizeof(size_t);
 
@@ -2440,6 +2524,10 @@ orth_poly_expansion_loadtxt(FILE * stream)//l, size_t prec)
 struct StandardPoly * 
 orth_poly_expansion_to_standard_poly(struct OrthPolyExpansion * p)
 {
+    if (p->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot convert fourier poly to a standard poly");
+        exit(1);
+    }
     struct StandardPoly * sp = 
         standard_poly_init(p->num_poly,p->lower_bound,p->upper_bound);
     
@@ -2687,8 +2775,10 @@ double chebyshev_poly_expansion_eval(const struct OrthPolyExpansion * poly, doub
 double orth_poly_expansion_eval(const struct OrthPolyExpansion * poly, double x)
 {
     double out = 0.0;
-
-    if (poly->p->ptype != CHEBYSHEV){
+    if (poly->p->ptype == FOURIER){
+        out = fourier_expansion_eval(poly,x);
+    }
+    else if (poly->p->ptype != CHEBYSHEV){
         size_t iter = 0;
         double p [2];
         double pnew;
@@ -2812,6 +2902,10 @@ void orth_poly_expansion_evalN(const struct OrthPolyExpansion * poly, size_t N,
 int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion * poly, size_t nx, const double * x, double * grad)
 {
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform param_grad_eval with fourier basis\n");
+        exit(1);
+    }
     size_t nparam = orth_poly_expansion_get_num_params(poly);
     for (size_t ii = 0; ii < nx; ii++){
 
@@ -2867,6 +2961,11 @@ int orth_poly_expansion_param_grad_eval(
 double orth_poly_expansion_param_grad_eval2(
     const struct OrthPolyExpansion * poly, double x, double * grad)
 {
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform param_grad_eval with fourier basis\n");
+        exit(1);
+    }
+    
     double out = 0.0;
 
     double p[2];
@@ -2926,7 +3025,11 @@ int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion * poly,
                                             double scale, double * grad)
 {
-
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform squared_norm_param_grad with fourier basis\n");
+        exit(1);
+    }
+    
     assert (poly->kristoffel_eval == 0);
     int res = 1;
 
@@ -2998,6 +3101,10 @@ orth_poly_expansion_rkhs_squared_norm(const struct OrthPolyExpansion * poly,
 {
 
     assert (poly->kristoffel_eval == 0);
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform rkhs_squared_norm with fourier basis\n");
+        exit(1);
+    }
     
     // assuming linear transformation
     double m = space_mapping_map_deriv(poly->space_transform,0.0);
@@ -3101,6 +3208,10 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
                                                  double decay_param, double * grad)
 {
     assert (poly->kristoffel_eval == 0);
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform rkhs_squared_norm with fourier basis\n");
+        exit(1);
+    }    
     int res = 1;
     if ((poly->p->ptype == LEGENDRE) || (poly->p->ptype == HERMITE)){
         if (decay_type == ALGEBRAIC){
@@ -3315,6 +3426,10 @@ void
 orth_poly_expansion_approx(double (*A)(double,void *), void *args, 
                            struct OrthPolyExpansion * poly)
 {
+    if (poly->p->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform rkhs_squared_norm with fourier basis\n");
+        exit(1);
+    }    
     size_t ii, jj;
     double p[2];
     double pnew;
@@ -3427,8 +3542,9 @@ static void
 orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
                               size_t num_nodes, double * fvals,
                               double * nodes)
-
 {
+    assert (poly->p->ptype != FOURIER);
+
     double p[2];
     double pnew;
     size_t ii,jj;
@@ -3475,11 +3591,13 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
 int
 orth_poly_expansion_approx_vec(struct OrthPolyExpansion * poly,
                                struct Fwrap * f,
-                               const struct OpeOpts * opts)
-{
+                               const struct OpeOpts * opts)    
+{    
     assert (poly != NULL);
     assert (f != NULL);
-
+    if (poly->p->ptype == FOURIER){
+        return fourier_expansion_approx_vec(poly, f, opts);
+    }
     enum quad_rule qrule = C3_GAUSS_QUAD;
     size_t nquad = poly->num_poly+1;
     if (opts != NULL){
@@ -3587,7 +3705,11 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
 {
     assert (aopts != NULL);
     assert (fw != NULL);
-
+    if (aopts->ptype == FOURIER){
+        fprintf(stderr, "Cannot perform approx_adapt with fourier basis\n");
+        exit(1);
+    }
+    
     size_t ii;
     size_t N = aopts->start_num;
     struct OrthPolyExpansion * poly = NULL;
@@ -5364,6 +5486,9 @@ char * convert_ptype_to_char(enum poly_type ptype)
         case STANDARD:
             out =  "Standard";
             break;
+        case FOURIER:
+            out =  "Fourier";
+            break;            
         //default:
         //    fprintf(stderr, "Polynomial type does not exist: %d\n ", ptype);
     }

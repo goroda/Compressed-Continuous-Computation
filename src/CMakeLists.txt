@@ -51,6 +51,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_funcs/functions.h
            lib_funcs/fwrap.h
            lib_funcs/hpoly.h
+           lib_funcs/fourier.h
            lib_funcs/legtens.h
            lib_funcs/lib_funcs.h
            lib_funcs/linelm.h
@@ -103,6 +104,7 @@ set(src lib_array/array.c
         lib_funcs/functions.c
         lib_funcs/fwrap.c
         lib_funcs/hpoly.c
+        lib_funcs/fourier.c        
         lib_funcs/constelm.c
         lib_funcs/kernels.c
         lib_funcs/monitoring.c

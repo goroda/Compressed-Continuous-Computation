@@ -876,7 +876,7 @@ struct LinElemExp * lin_elem_exp_dderiv_periodic(const struct LinElemExp * f)
     for (size_t ll=0; ll<nx; ll++){
         for (size_t jj=0; jj<nx; jj++){
             for (size_t kk=0; kk<nx; kk++){
-                double update =  creal(cexp(I*(x[jj]-x[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
+                double update =  creal(cexp((double _Complex)I*(x[jj]-x[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
                 /* double update =  exp(I*(x[jj]-x[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI); */
                 /* printf("update = %3.15G\n", update); */
                 Lp[ll * nx + jj] = Lp[ll*nx + jj] - update;
