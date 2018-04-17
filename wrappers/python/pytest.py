@@ -159,7 +159,8 @@ ft_sgd = c3py.FunctionTrain(dim)
 ft_sgd.set_ranks(ranks)
 for ii in range(dim):
     ft_sgd.set_dim_opts(ii,"legendre",lb,ub,nparam)
-opt_sgd = ft_sgd.build_data_model(ndata, x, y1, alg="AIO", obj="LS", opt_type="SGD", opt_sgd_learn_rate=1e-4,
+opt_sgd = ft_sgd.build_data_model(ndata, x, y1, alg="AIO", obj="LS",
+                                  opt_type="SGD", opt_sgd_learn_rate=1e-4,
                                   adaptrank=0, verbose=0, opt_maxiter=100, store_opt_info=True)
 
 ft_als = c3py.FunctionTrain(dim)
