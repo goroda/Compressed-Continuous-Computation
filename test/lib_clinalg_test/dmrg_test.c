@@ -1074,9 +1074,6 @@ void Test_exact_laplace_op_linelm(CuTest * tc)
     struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,xt);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
 
-
-    
-
     
     /* CROSS */
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
@@ -1165,16 +1162,16 @@ void Test_exact_laplace_op_linelm(CuTest * tc)
 CuSuite * CLinalgDiffusionGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_diffusion_midleft); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_lastleft); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_midright); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_firstright); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_op_struct); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_dmrg); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace_cheb); */
-    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm); */
-    /* SUITE_ADD_TEST(suite, Test_exact_laplace_periodic_linelm); */
+    SUITE_ADD_TEST(suite, Test_diffusion_midleft);
+    SUITE_ADD_TEST(suite, Test_diffusion_lastleft);
+    SUITE_ADD_TEST(suite, Test_diffusion_midright);
+    SUITE_ADD_TEST(suite, Test_diffusion_firstright);
+    SUITE_ADD_TEST(suite, Test_diffusion_op_struct);
+    SUITE_ADD_TEST(suite, Test_diffusion_dmrg);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace_cheb);
+    SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm);
+    SUITE_ADD_TEST(suite, Test_exact_laplace_periodic_linelm);
     SUITE_ADD_TEST(suite, Test_exact_laplace_op_linelm);
     return suite;
 }
