@@ -246,6 +246,23 @@ void function_train_free(struct FunctionTrain * ft)
     /* printf("\t\tDone Freeing Function Train\n"); */
 }
 
+struct FunctionTrain *
+function_train_operate(const struct FunctionTrain * ft,
+                       struct Operator ** op)
+{
+
+    struct FunctionTrain * ft_out = function_train_alloc(ft->dim);
+    ft_out->ranks[1] = ft->ranks[1];
+    for (size_t ii = 0; ii < ft_out->dim; ii++){
+        ft_out->cores[ii] = qmarray_operate_elements(ft->cores[ii],
+                                                     op[ii]);
+        ft_out->ranks[ii+1] = ft->ranks[ii+1];
+    }
+
+    return ft_out;
+}
+
+
 /***********************************************************//**
     Serialize a function_train
 

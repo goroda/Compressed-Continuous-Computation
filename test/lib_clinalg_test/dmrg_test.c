@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <complex.h>
 #include <assert.h>
 #include <time.h>
 
@@ -715,9 +716,10 @@ void Test_diffusion_laplace(CuTest * tc)
         }
     }
 
-    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
-    struct FunctionTrain * ft_round =
-        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir, fopts);
+    struct FunctionTrain * ft_round = function_train_round(ft_lap, 1e-10, fopts);
+    
     
     for (size_t ii = 0; ii < 20; ii++){
         for (size_t jj = 0; jj < 20; jj++){
@@ -801,9 +803,10 @@ void Test_diffusion_laplace_cheb(CuTest * tc)
     /* printf("%3.15G %3.15G\n", diff_num, diff_den); */
     /* exit(1); */
 
-    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
-    struct FunctionTrain * ft_round =
-        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir, fopts);
+    struct FunctionTrain * ft_round = function_train_round(ft_lap, 1e-10, fopts);
+
     
     for (size_t ii = 0; ii < 20; ii++){
         for (size_t jj = 0; jj < 20; jj++){
@@ -874,9 +877,9 @@ void Test_diffusion_laplace_linelm(CuTest * tc)
         }
     }
 
-    struct FunctionTrain * ft_lap = exact_laplace(ft_psir);
-    struct FunctionTrain * ft_round =
-        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
+    struct FunctionTrain * ft_lap = exact_laplace(ft_psir, fopts);
+    struct FunctionTrain * ft_round = function_train_round(ft_lap, 1e-10, fopts);
     /* printf("lap ranks = "); iprint_sz(3, function_train_get_ranks(ft_lap)); */
     /* printf("rounded ranks = "); iprint_sz(3, function_train_get_ranks(ft_round)); */
     double dx = xt[1] - xt[0];
@@ -954,9 +957,10 @@ void Test_exact_laplace_periodic_linelm(CuTest * tc)
         }
     }
 
-    struct FunctionTrain * ft_lap = exact_laplace_periodic(ft_psir);
-    struct FunctionTrain * ft_round =
-        function_train_round(ft_lap, 1e-10, c3approx_get_approx_args(c3a));
+    struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
+    struct FunctionTrain * ft_lap = exact_laplace_periodic(ft_psir, fopts);
+    struct FunctionTrain * ft_round = function_train_round(ft_lap, 1e-10, fopts);
+
     /* printf("lap ranks = "); iprint_sz(3, function_train_get_ranks(ft_lap)); */
     /* printf("rounded ranks = "); iprint_sz(3, function_train_get_ranks(ft_round)); */
     double dx = xt[1] - xt[0];
@@ -992,18 +996,185 @@ void Test_exact_laplace_periodic_linelm(CuTest * tc)
 }
 
 
+static double * compute_Lp(size_t nx, double * nodes)
+{
+    double dx = nodes[1] - nodes[0];    // assumes constant dx for now.
+    for (size_t ii = 1; ii < nx-1; ii++){
+        double dx2 = nodes[ii+1] - nodes[ii];
+        if (fabs(dx2-dx) > 1e-15){
+            fprintf(stderr, "Lp only works for uniform spacing\n");
+            fprintf(stderr, "%3.15G %3.15G\n", dx, dx2);
+            exit(1);
+        }
+            
+    }
+    
+    double ub = nodes[nx-1] + dx; // because periodic!
+    double lb = nodes[0];
+        
+    /* printf("nodes = "); dprint(nx, x); */
+
+    double * Lp =calloc_double(nx  * nx);
+    double dp = 2.0 * M_PI / (ub - lb);
+    double * p = calloc_double(nx);
+    for (size_t ii = 0; ii < nx; ii++){
+        for (size_t jj = 0; jj < nx; jj++){
+            Lp[ii*nx + jj] = 0.0;
+        }
+    }
+
+    for (size_t ii = 0; ii < nx; ii++){
+        p[ii] = dp * ii - dp * nx / 2.0;
+    }
+
+    for (size_t ll=0; ll<nx; ll++){
+        for (size_t jj=0; jj<nx; jj++){
+            for (size_t kk=0; kk<nx; kk++){
+                double update =  creal(cexp(I*(nodes[jj]-nodes[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
+                Lp[ll * nx + jj] = Lp[ll*nx + jj] - update;
+            }
+        }
+    }
+    free(p); p = NULL;
+
+    return Lp;
+}
+
+struct GenericFunction * Lp_apply(const struct GenericFunction * f, void * args)
+{
+    double * Lp = args;
+    assert (f->fc == LINELM);
+    struct LinElemExp * ff = f->f;
+    
+    struct GenericFunction * g = generic_function_alloc(1, LINELM);
+
+    size_t nx = ff->num_nodes;
+    double * new_vals = calloc_double(nx);
+    for (size_t jj = 0; jj < nx; jj++){
+        new_vals[jj] = 0.0;
+        for (size_t kk = 0; kk < nx; kk++){
+            new_vals[jj] += Lp[kk*nx + jj] * ff->coeff[kk];
+        }
+    }
+    g->f = lin_elem_exp_init(nx, ff->nodes, new_vals);
+    free(new_vals); new_vals = NULL;
+    return g;
+}
+
+void Test_exact_laplace_op_linelm(CuTest * tc)
+{
+    printf("Testing Function: exact_laplace_op\n");
+
+    double lb = -4.;
+    double ub = -lb;
+    
+    size_t dim = 2;
+    size_t N = 256;
+    double * xt = linspace(lb, ub, N);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,xt);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
+
+
+    
+
+    
+    /* CROSS */
+    struct C3Approx * c3a = c3approx_create(CROSS,dim);
+    int verbose = 0;
+    size_t init_rank = 2;
+    double ** start = malloc_dd(dim);
+    struct Operator ** op = malloc(dim * sizeof(struct Operator *));
+    assert (op != NULL);
+    double * Lp[dim];
+    for (size_t ii = 0; ii < dim; ii++){
+      c3approx_set_approx_opts_dim(c3a,ii,qmopts);
+      start[ii] = linspace(lb,ub,init_rank);
+
+      // setup laplace operator
+      Lp[ii] = compute_Lp(N, xt);
+      op[ii] = malloc(sizeof(struct Operator));
+      op[ii]->f = Lp_apply;
+      op[ii]->opts = Lp[ii];
+    }
+    
+    c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_cross_maxiter(c3a, 10);
+    c3approx_set_cross_tol(c3a,1e-19);
+    c3approx_set_round_tol(c3a,1e-10);
+
+    struct Fwrap * fw = fwrap_create(dim,"general");
+    fwrap_set_f(fw,psi0ft,NULL);
+    struct FunctionTrain * ft_psir = c3approx_do_cross(c3a,fw,1);
+    /* printf("ranks of ft_psir = "); */
+
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_psir, pt_test);
+            double eval_true = psi0ft(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            CuAssertDblEquals(tc, 0, diff, 1e-13);
+        }
+    }
+
+    struct MultiApproxOpts * fopts = c3approx_get_approx_args(c3a);
+    /* struct FunctionTrain * ft_lap = exact_laplace_periodic(ft_psir, fopts); */
+    struct FunctionTrain * ft_lap = exact_laplace_op(ft_psir, op, fopts);
+    struct FunctionTrain * ft_round = function_train_round(ft_lap, 1e-10, fopts);
+
+    /* printf("lap ranks = "); iprint_sz(3, function_train_get_ranks(ft_lap)); */
+    /* printf("rounded ranks = "); iprint_sz(3, function_train_get_ranks(ft_round)); */
+    double dx = xt[1] - xt[0];
+    /* printf("dx = %G\n", dx); */
+    for (size_t ii = 0; ii < N; ii++){
+        for (size_t jj = 0; jj < N; jj++){
+            double pt_test[2] = {xt[ii], xt[jj]};
+            double eval_ft = function_train_eval(ft_lap, pt_test);
+            double eval_true = psi0ft_lap(pt_test, NULL);
+            double diff = eval_ft - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            /* CuAssertDblEquals(tc, 0, diff, 1e-4); */
+            CuAssertDblEquals(tc, 0, diff, dx);
+
+            double eval_ftr = function_train_eval(ft_round, pt_test);
+            double diff2 = eval_ftr - eval_true;
+            /* printf("(%3.15G, %3.15G) %3.15G\n", xt[ii], xt[jj], diff); */
+            /* CuAssertDblEquals(tc, 0, diff2, 1e-6); */
+            CuAssertDblEquals(tc, 0, diff2, dx);
+        }
+    }
+    function_train_free(ft_round); ft_round = NULL;
+    function_train_free(ft_lap); ft_lap = NULL;
+
+    function_train_free(ft_psir); ft_psir = NULL;
+
+    for (size_t ii = 0; ii < dim; ii++){
+        free(op[ii]); op[ii] = NULL;
+        free(Lp[ii]); Lp[ii] = NULL;
+    }
+    free(op); op = NULL;
+    free(xt); xt = NULL;
+    fwrap_destroy(fw);
+    c3approx_destroy(c3a);
+    one_approx_opts_free_deep(&qmopts);
+    free_dd(dim,start);
+    function_train_free(ft_psir);
+}
+
 CuSuite * CLinalgDiffusionGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_diffusion_midleft);
-    SUITE_ADD_TEST(suite, Test_diffusion_lastleft);
-    SUITE_ADD_TEST(suite, Test_diffusion_midright);
-    SUITE_ADD_TEST(suite, Test_diffusion_firstright);
-    SUITE_ADD_TEST(suite, Test_diffusion_op_struct);
-    SUITE_ADD_TEST(suite, Test_diffusion_dmrg);
-    SUITE_ADD_TEST(suite, Test_diffusion_laplace);
-    SUITE_ADD_TEST(suite, Test_diffusion_laplace_cheb);
-    SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm);
-    SUITE_ADD_TEST(suite, Test_exact_laplace_periodic_linelm);
+    /* SUITE_ADD_TEST(suite, Test_diffusion_midleft); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_lastleft); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_midright); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_firstright); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_op_struct); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_dmrg); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace_cheb); */
+    /* SUITE_ADD_TEST(suite, Test_diffusion_laplace_linelm); */
+    /* SUITE_ADD_TEST(suite, Test_exact_laplace_periodic_linelm); */
+    SUITE_ADD_TEST(suite, Test_exact_laplace_op_linelm);
     return suite;
 }
