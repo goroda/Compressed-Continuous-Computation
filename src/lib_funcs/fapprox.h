@@ -98,5 +98,12 @@ struct FiberOptArgs * fiber_opt_args_bf_same(size_t,struct c3Vector *);
 void * fiber_opt_args_get_opts(const struct FiberOptArgs *, size_t);
 void fiber_opt_args_free(struct FiberOptArgs *);
 
+struct Operator
+{
+    struct GenericFunction * (*f)(const struct GenericFunction *,
+                                  void * opts);
+    void * opts;
+};
+
 
 #endif

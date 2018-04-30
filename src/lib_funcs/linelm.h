@@ -99,6 +99,9 @@ struct LinElemExp{
     double * coeff;
     double * diff;
     double * inner;
+
+    // FFT-based periodic boundary condition information
+    double * Lp;
 };
 
 size_t lin_elem_exp_get_num_nodes(const struct LinElemExp *);
@@ -127,7 +130,7 @@ void lin_elem_exp_evalN(const struct LinElemExp *, size_t,
 double lin_elem_exp_get_nodal_val(const struct LinElemExp *, size_t);
 struct LinElemExp * lin_elem_exp_deriv(const struct LinElemExp *);
 struct LinElemExp * lin_elem_exp_dderiv(const struct LinElemExp *);
-struct LinElemExp * lin_elem_exp_dderiv_periodic(const struct LinElemExp *);
+struct LinElemExp * lin_elem_exp_dderiv_periodic(struct LinElemExp *);
 int lin_elem_exp_param_grad_eval(
     struct LinElemExp *, size_t, const double *, double *);
 double lin_elem_exp_param_grad_eval2(struct LinElemExp *, double, double *);

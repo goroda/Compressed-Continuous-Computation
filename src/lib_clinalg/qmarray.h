@@ -67,6 +67,8 @@ struct Qmarray {
 struct Qmarray * qmarray_alloc(size_t, size_t); 
 void qmarray_free(struct Qmarray *); 
 struct Qmarray * qmarray_copy(const struct Qmarray *);
+struct Qmarray * qmarray_operate_elements(const struct Qmarray *,
+                                          const struct Operator *);
 unsigned char * 
 qmarray_serialize(unsigned char *,const struct Qmarray *, size_t *);
 unsigned char * 

@@ -142,6 +142,26 @@ struct Qmarray * qmarray_copy(const struct Qmarray * qm)
 }
 
 /***********************************************************//**
+    Perform an elementwise operator on a qmarray
+
+    \param[in] qm - qmarray
+    \param[in] op - operator
+
+    \return qmo  
+***************************************************************/
+struct Qmarray * qmarray_operate_elements(const struct Qmarray * qm,
+                                          const struct Operator * op)
+{
+    struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
+    size_t ii;
+    for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
+        qmo->funcs[ii] = op->f(qm->funcs[ii], op->opts);
+    }
+
+    return qmo;
+}
+
+/***********************************************************//**
     Serialize a qmarray
 
     \param[in,out] ser       - stream to serialize to
