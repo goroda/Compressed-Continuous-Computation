@@ -634,7 +634,7 @@ exact_laplace_periodic(struct FunctionTrain * f,
 
     \param[in] f    - input to diffusion operator
     \param[in] op   - (dim, ) array of operators that compute the second derivative in each dimension
-    \parma[in] opts - approximation options
+    \param[in] opts - approximation options
 
     \return out - exact application of laplace operator 
     

@@ -7,9 +7,6 @@ def func(x):
         + x[:,0] * x[:,-1] + x[:, -1]**2.0 * np.cos(x[:, 0])
 
 
-
-
-
 LB = -1.0                              # lower bounds of features
 UB = 1.0                               # upper bounds of features
 DIM = 20                               # number of features

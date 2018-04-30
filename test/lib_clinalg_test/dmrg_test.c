@@ -1030,7 +1030,7 @@ static double * compute_Lp(size_t nx, double * nodes)
     for (size_t ll=0; ll<nx; ll++){
         for (size_t jj=0; jj<nx; jj++){
             for (size_t kk=0; kk<nx; kk++){
-                double update =  creal(cexp(I*(nodes[jj]-nodes[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
+                double update =  creal(cexp((_Complex double)I*(nodes[jj]-nodes[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
                 Lp[ll * nx + jj] = Lp[ll*nx + jj] - update;
             }
         }
@@ -1082,7 +1082,7 @@ void Test_exact_laplace_op_linelm(CuTest * tc)
     double ** start = malloc_dd(dim);
     struct Operator ** op = malloc(dim * sizeof(struct Operator *));
     assert (op != NULL);
-    double * Lp[dim];
+    double * Lp[2];
     for (size_t ii = 0; ii < dim; ii++){
       c3approx_set_approx_opts_dim(c3a,ii,qmopts);
       start[ii] = linspace(lb,ub,init_rank);
