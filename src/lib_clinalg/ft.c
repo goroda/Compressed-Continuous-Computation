@@ -858,7 +858,17 @@ size_t function_train_core_get_params(const struct FunctionTrain * ft,
 void * function_train_get_uni(const struct FunctionTrain * ft,
                               size_t core, size_t row, size_t col)
 {
-    return  qmarray_get_func_base(ft->cores[core], row, col);
+    return qmarray_get_func_base(ft->cores[core], row, col);
+}
+
+/***********************************************************//**
+   Get function paramaters
+***************************************************************/
+struct GenericFunction *
+function_train_get_gfuni(const struct FunctionTrain * ft,
+                         size_t core, size_t row, size_t col)
+{
+    return qmarray_get_func(ft->cores[core], row, col);
 }
 
 /***********************************************************//**
