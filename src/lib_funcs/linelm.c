@@ -1263,6 +1263,24 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     /*              (g[ii] * f[ii+1]) / dx2 * mixed + */
     /*              (f[ii+1] * g[ii+1]) / dx2 * right; */
     /* } */
+
+    /* printf("nodes are "); */
+    /* dprint(N, x); */
+    double value1 = 0.0;
+    for (size_t ii = 0; ii < N-1; ii++){
+        double m1 = (f[ii+1] - f[ii]) / (x[ii+1] - x[ii]);
+        double m2 = (g[ii+1] - g[ii]) / (x[ii+1] - x[ii]);
+        double d1 = (f[ii+1] - m1 * x[ii+1]);
+        double d2 = (g[ii+1] - m2 * x[ii+1]);
+
+        double t1 = d1*d2 * (x[ii+1] - x[ii]);
+        double t2 = 0.5 * (d1 * m2 + m1 * d2) * (x[ii+1] * x[ii+1] - x[ii] * x[ii]);
+        double t3 = m1 * m2 / 3.0 * (x[ii+1] * x[ii+1] * x[ii+1] - x[ii] * x[ii] * x[ii]);
+        value1 += (t1 + t2 + t3);
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value1); */
+    }
+
+    /* printf("\n\n"); */
     double dx = x[1]-x[0];
     double value = f[0]*g[0]*dx * 0.5;
     /* printf("0: integrand(%3.15g) = %3.15G\n", x[0], value); */
@@ -1270,12 +1288,14 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
         dx = x[ii+1]-x[ii-1];
         /* dx = x[ii+1]-x[ii]; */
         /* double new_val = f[ii]*g[ii]*0.5*dx; */
-        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], new_val); */
         value += f[ii]*g[ii]*0.5*dx;
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value); */
     }
     dx = x[N-1] - x[N-2];
     value += f[N-1]*g[N-1]*dx*0.5;
-    return value;
+
+    /* printf("diff values is  = %3.15G\n", value1 - value); */
+    return value1;
 }
 
 /********************************************************//**
@@ -1858,10 +1878,10 @@ void lin_elem_adapt(struct Fwrap * f,
         double mid = (xl+xr)/2.0;
         double fmid;
         fwrap_eval(1,&mid,&fmid,f);
-        printf("xl = %3.15G, xr = %3.15G, fl = %3.15G, fr = %3.15G, fmid = %3.15G\n", xl, xr, fl, fr, fmid);
-        printf("adapt! diff=%3.15G, delta=%3.15G\n", (fl+fr)/2.0-fmid, delta);
-        /* if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){ */
-        if (fabs( (fl+fr)/2.0 - fmid  ) < delta){
+        /* printf("xl = %3.15G, xr = %3.15G, fl = %3.15G, fr = %3.15G, fmid = %3.15G\n", xl, xr, fl, fr, fmid); */
+        /* printf("adapt! diff=%3.15G, delta=%3.15G\n", (fl+fr)/2.0-fmid, delta); */
+        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
+        /* if (fabs( (fl+fr)/2.0 - fmid  ) < delta){ */
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */
@@ -1873,7 +1893,7 @@ void lin_elem_adapt(struct Fwrap * f,
             /* printf("added the right %G,%G\n",xr,fr); */
         }
         else{
-            printf("adapt further\n");
+            /* printf("adapt further\n"); */
             lin_elem_adapt(f,xl,fl,mid,fmid,delta,hmin,xy);
             struct LinElemXY * last = NULL;//xy_last(*xy);
             lin_elem_adapt(f,mid,fmid,xr,fr,delta,hmin,&last);
