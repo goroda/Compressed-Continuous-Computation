@@ -386,13 +386,13 @@ void Test_lin_elem_exp_inner2(CuTest * tc){
     integral /= (double) ntest;
     integral *= (ub - lb);
     double intshould = integral;
-    double inttrue = 0.00520833333333333;
-    printf("int mc %3.15G, int true %3.15G\n", intshould, inttrue);
+    /* double inttrue = 0.00520833333333333; */
+    /* printf("int mc %3.15G, int true %3.15G\n", intshould, inttrue); */
     double diff = fabs(intshould-intis)/fabs(intshould);
-    double difftrue = fabs(inttrue - intis)/ fabs(inttrue);
-    printf("\n");
-    printf("diff = %3.15G\n", diff);
-    printf("difftrue = %3.15G\n", difftrue);
+    /* double difftrue = fabs(inttrue - intis)/ fabs(inttrue); */
+    /* printf("\n"); */
+    /* printf("diff = %3.15G\n", diff); */
+    /* printf("difftrue = %3.15G\n", difftrue); */
     
     /* printf("\n\n\n\n\n\n\n"); */
     CuAssertDblEquals(tc, 0.0, diff, 3e-4);
@@ -421,7 +421,7 @@ void Test_lin_elem_exp_inner3(CuTest * tc){
 
     size_t N = 20; double lb=0.0,ub=0.5;
     double * x = linspace(lb,ub,N);
-    printf("x = "); dprint(N, x);
+    /* printf("x = "); dprint(N, x); */
     double f[20], g[20];
     fwrap_eval(N,x,f,fw1);
     fwrap_eval(N,x,g,fw2);
@@ -435,16 +435,16 @@ void Test_lin_elem_exp_inner3(CuTest * tc){
 
     /* printf("\n\n\n"); */
     /* printf("integrating inner:\n"); */
-    double inttrue = 0.00520833333333333;
+    /* double inttrue = 0.00520833333333333; */
     double intis = lin_elem_exp_inner(fa,fb);
     double diff = fabs(intshould-intis)/fabs(intshould);
-    /* CuAssertDblEquals(tc, 0.0, diff, 1e-10); */
+    CuAssertDblEquals(tc, 0.0, diff, 1e-10);
 
-    printf("int integrate %3.15G, int true %3.15G\n", intshould, inttrue);
-    printf("int is %3.15G\n", intis);
+    /* printf("int integrate %3.15G, int true %3.15G\n", intshould, inttrue); */
+    /* printf("int is %3.15G\n", intis); */
 
-    double difftrue = fabs(inttrue-intis)/fabs(inttrue);
-    printf("difftrue = %3.15G\n", difftrue);
+    /* double difftrue = fabs(inttrue-intis)/fabs(inttrue); */
+    /* printf("difftrue = %3.15G\n", difftrue); */
 
     LINELEM_FREE(fa);
     LINELEM_FREE(fb);
@@ -1100,32 +1100,32 @@ void Test_lin_elem_exp_dderiv_periodic2(CuTest * tc){
 CuSuite * LelmGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_derivative); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate); */
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_approx_adapt2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_prod);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_derivative);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner3);
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy2); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_constant); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt); */
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_constant);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_flipsign);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_scale);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_orth_basis);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_serialize);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_savetxt);
 
-    /* SUITE_ADD_TEST(suite, Test_LS_regress); */
-    /* SUITE_ADD_TEST(suite, Test_RLS2_regress); */
-    /* SUITE_ADD_TEST(suite, Test_RLSD2_regress); */
+    SUITE_ADD_TEST(suite, Test_LS_regress);
+    SUITE_ADD_TEST(suite, Test_RLS2_regress);
+    SUITE_ADD_TEST(suite, Test_RLSD2_regress);
 
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv); */
-    /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv_periodic); */
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv_periodic);
 
     // doesnt work yet
     /* SUITE_ADD_TEST(suite, Test_lin_elem_exp_dderiv_periodic2); */

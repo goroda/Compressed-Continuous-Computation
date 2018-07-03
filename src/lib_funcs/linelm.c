@@ -1145,22 +1145,22 @@ static int lin_elem_sdiscp(const struct LinElemExp * f,
 *   \param[in,out] mixed - second integral
 *   \param[in,out] right - third integral
 *************************************************************/
-static void lin_elem_exp_inner_element(
-    double x1, double x2, double * left, double * mixed, 
-    double * right)
-{
-    double dx = (x2-x1);
-    double x2sq = x2*x2;
-    double x1sq = x1*x1;
-    double x2cu = x2sq * x2;
-    double x1cu = x1sq * x1;
-    double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2);
-    double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0;
+/* static void lin_elem_exp_inner_element( */
+/*     double x1, double x2, double * left, double * mixed,  */
+/*     double * right) */
+/* { */
+/*     double dx = (x2-x1); */
+/*     double x2sq = x2*x2; */
+/*     double x1sq = x1*x1; */
+/*     double x2cu = x2sq * x2; */
+/*     double x1cu = x1sq * x1; */
+/*     double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2); */
+/*     double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0; */
           
-    *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3;
-    *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3;
-    *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx;
-}
+/*     *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3; */
+/*     *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3; */
+/*     *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx; */
+/* } */
 
 /********************************************************//**
 *   Interpolate two linear element expansions onto the same grid
@@ -1266,19 +1266,20 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
 
     /* printf("nodes are "); */
     /* dprint(N, x); */
-    double value1 = 0.0;
-    for (size_t ii = 0; ii < N-1; ii++){
-        double m1 = (f[ii+1] - f[ii]) / (x[ii+1] - x[ii]);
-        double m2 = (g[ii+1] - g[ii]) / (x[ii+1] - x[ii]);
-        double d1 = (f[ii+1] - m1 * x[ii+1]);
-        double d2 = (g[ii+1] - m2 * x[ii+1]);
+    // assuming quadratic not accurate when spacing is too large
+    /* double value1 = 0.0; */
+    /* for (size_t ii = 0; ii < N-1; ii++){ */
+    /*     double m1 = (f[ii+1] - f[ii]) / (x[ii+1] - x[ii]); */
+    /*     double m2 = (g[ii+1] - g[ii]) / (x[ii+1] - x[ii]); */
+    /*     double d1 = (f[ii+1] - m1 * x[ii+1]); */
+    /*     double d2 = (g[ii+1] - m2 * x[ii+1]); */
 
-        double t1 = d1*d2 * (x[ii+1] - x[ii]);
-        double t2 = 0.5 * (d1 * m2 + m1 * d2) * (x[ii+1] * x[ii+1] - x[ii] * x[ii]);
-        double t3 = m1 * m2 / 3.0 * (x[ii+1] * x[ii+1] * x[ii+1] - x[ii] * x[ii] * x[ii]);
-        value1 += (t1 + t2 + t3);
-        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value1); */
-    }
+    /*     double t1 = d1*d2 * (x[ii+1] - x[ii]); */
+    /*     double t2 = 0.5 * (d1 * m2 + m1 * d2) * (x[ii+1] * x[ii+1] - x[ii] * x[ii]); */
+    /*     double t3 = m1 * m2 / 3.0 * (x[ii+1] * x[ii+1] * x[ii+1] - x[ii] * x[ii] * x[ii]); */
+    /*     value1 += (t1 + t2 + t3); */
+    /*     /\* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value1); *\/ */
+    /* } */
 
     /* printf("\n\n"); */
     double dx = x[1]-x[0];
@@ -1295,7 +1296,7 @@ static double lin_elem_exp_inner_same(size_t N, double * x,
     value += f[N-1]*g[N-1]*dx*0.5;
 
     /* printf("diff values is  = %3.15G\n", value1 - value); */
-    return value1;
+    return value;
 }
 
 /********************************************************//**

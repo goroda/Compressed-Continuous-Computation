@@ -2458,7 +2458,7 @@ void Test_ftapprox_cross_linelm2(CuTest * tc)
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 10;
+    size_t init_rank = 3;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
@@ -2530,14 +2530,14 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     fwrap_set_fvec(fw,func_not_all,NULL);
     // set function monitor
 
-    size_t N = 85;
+    size_t N = 150;
     double * x = linspace(-1.0,1.0,N);
     struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 5;
+    size_t init_rank = 4;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
@@ -2551,7 +2551,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     //printf("finished !\n");
     double pt[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     double eval = function_train_eval(ft,pt);
-    CuAssertDblEquals(tc,0.0,eval,1e-14);
+    CuAssertDblEquals(tc,0.0,eval,1e-13);
     
     // make sure serialization works
     unsigned char * text = NULL;
@@ -2767,47 +2767,47 @@ void Test_sin1000dint(CuTest * tc)
 CuSuite * CLinalgFuncTrainGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_function_train_grad_eval); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_grad_eval2); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_grad_eval3); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_initsum); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_linear); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_quadratic2); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_scale); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_product); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_product_cheb); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate_cheb); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_inner); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_inner_cheb); */
-    /* SUITE_ADD_TEST(suite, Test_function_train_inner_linelm); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_cheby); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross2_cheby); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross3); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross3_cheby); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross4); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross4_cheby); */
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval);
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval2);
+    SUITE_ADD_TEST(suite, Test_function_train_grad_eval3);
+    SUITE_ADD_TEST(suite, Test_function_train_initsum);
+    SUITE_ADD_TEST(suite, Test_function_train_linear);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic);
+    SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
+    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
+    SUITE_ADD_TEST(suite, Test_function_train_scale);
+    SUITE_ADD_TEST(suite, Test_function_train_product);
+    SUITE_ADD_TEST(suite, Test_function_train_product_cheb);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_cheb);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted);
+    SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset);
+    SUITE_ADD_TEST(suite, Test_function_train_inner);
+    SUITE_ADD_TEST(suite, Test_function_train_inner_cheb);
+    SUITE_ADD_TEST(suite, Test_function_train_inner_linelm);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_cheby);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross2_cheby);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross3);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross3_cheby);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross4);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross4_cheby);
 
-    /* SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1_eval_fiber); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm2); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm3); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1); */
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber); */
+    SUITE_ADD_TEST(suite, Test_function_train_eval_co_peruturb);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_hermite2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm1_eval_fiber);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm2);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_constelm3);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1);
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm1_eval_fiber);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm2);
-    /* SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3); */
-    /* SUITE_ADD_TEST(suite, Test_sin10dint); */
-    /* SUITE_ADD_TEST(suite, Test_sin10dint_savetxt); */
-    /* SUITE_ADD_TEST(suite, Test_sin100dint); */
+    SUITE_ADD_TEST(suite, Test_ftapprox_cross_linelm3);
+    SUITE_ADD_TEST(suite, Test_sin10dint);
+    SUITE_ADD_TEST(suite, Test_sin10dint_savetxt);
+    SUITE_ADD_TEST(suite, Test_sin100dint);
     
     /* SUITE_ADD_TEST(suite, Test_sin1000dint); */
     return suite;
