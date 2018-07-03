@@ -1084,9 +1084,12 @@ double lin_elem_exp_integrate(const struct LinElemExp * f)
     assert (f->num_nodes>1 );
     double dx = f->nodes[1]-f->nodes[0];
     double integral = f->coeff[0] * dx * 0.5;
+    /* printf("0: integrand(%3.15g) = %3.15G\n", f->nodes[0], integral); */
     for (size_t ii = 1; ii < f->num_nodes-1;ii++){
         dx = f->nodes[ii+1]-f->nodes[ii-1];
         integral += f->coeff[ii] * dx * 0.5;
+        /* double newval = f->coeff[ii]*dx*0.5; */
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, f->nodes[ii], newval); */
     }
     dx = f->nodes[f->num_nodes-1]-f->nodes[f->num_nodes-2];
     integral += f->coeff[f->num_nodes-1] * dx * 0.5;
@@ -1241,16 +1244,37 @@ static size_t lin_elem_exp_inner_same_grid(
 static double lin_elem_exp_inner_same(size_t N, double * x,
                                       double * f, double * g)
 {
-    double value = 0.0;
-    double left,mixed,right,dx2;
-    for (size_t ii = 0; ii < N-1; ii++){
-        dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
-        lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
-        value += (f[ii] * g[ii]) / dx2 * left +
-                 (f[ii] * g[ii+1]) / dx2 * mixed +
-                 (g[ii] * f[ii+1]) / dx2 * mixed +
-                 (f[ii+1] * g[ii+1]) / dx2 * right;
-    }    
+
+    // This first part is a high accuracy scheme, but assumes higher
+    // order structure than piecewise linear
+    /* double value = 0.0; */
+    /* double left,mixed,right,dx2; */
+    /* for (size_t ii = 0; ii < N-1; ii++){ */
+    /*     dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
+    /*     lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right); */
+    /*     /\* double new_val = (f[ii] * g[ii]) / dx2 * left + *\/ */
+    /*     /\*     (f[ii] * g[ii+1]) / dx2 * mixed + *\/ */
+    /*     /\*     (g[ii] * f[ii+1]) / dx2 * mixed + *\/ */
+    /*     /\*     (f[ii+1] * g[ii+1]) / dx2 * right; *\/ */
+    /*     /\* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], new_val); *\/ */
+    /*     /\* value += new_val; *\/ */
+    /*     value += (f[ii] * g[ii]) / dx2 * left + */
+    /*              (f[ii] * g[ii+1]) / dx2 * mixed + */
+    /*              (g[ii] * f[ii+1]) / dx2 * mixed + */
+    /*              (f[ii+1] * g[ii+1]) / dx2 * right; */
+    /* } */
+    double dx = x[1]-x[0];
+    double value = f[0]*g[0]*dx * 0.5;
+    /* printf("0: integrand(%3.15g) = %3.15G\n", x[0], value); */
+    for (size_t ii = 1; ii < N-1; ii++){
+        dx = x[ii+1]-x[ii-1];
+        /* dx = x[ii+1]-x[ii]; */
+        /* double new_val = f[ii]*g[ii]*0.5*dx; */
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], new_val); */
+        value += f[ii]*g[ii]*0.5*dx;
+    }
+    dx = x[N-1] - x[N-2];
+    value += f[N-1]*g[N-1]*dx*0.5;
     return value;
 }
 
@@ -1834,9 +1858,10 @@ void lin_elem_adapt(struct Fwrap * f,
         double mid = (xl+xr)/2.0;
         double fmid;
         fwrap_eval(1,&mid,&fmid,f);
-
-        if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
-        /* if (fabs( (fl+fr)/2.0 - fmid  ) < delta){ */
+        printf("xl = %3.15G, xr = %3.15G, fl = %3.15G, fr = %3.15G, fmid = %3.15G\n", xl, xr, fl, fr, fmid);
+        printf("adapt! diff=%3.15G, delta=%3.15G\n", (fl+fr)/2.0-fmid, delta);
+        /* if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){ */
+        if (fabs( (fl+fr)/2.0 - fmid  ) < delta){
             // maybe should add the midpoint since evaluated
             /* printf("finish again! xy==null?=%d\n\n",xy==NULL); */
             /* printf("adding the left %G,%G\n",xl,fl); */
@@ -1848,7 +1873,7 @@ void lin_elem_adapt(struct Fwrap * f,
             /* printf("added the right %G,%G\n",xr,fr); */
         }
         else{
-            /* printf("adapt further\n"); */
+            printf("adapt further\n");
             lin_elem_adapt(f,xl,fl,mid,fmid,delta,hmin,xy);
             struct LinElemXY * last = NULL;//xy_last(*xy);
             lin_elem_adapt(f,mid,fmid,xr,fr,delta,hmin,&last);
@@ -1903,6 +1928,7 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         /* printf("cannot evaluate them"); */
     }
     else{
+        /* printf("adapting!\n"); */
         /* printf("not here!\n"); */
         // adapt
         struct LinElemXY * xy = NULL;
