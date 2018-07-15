@@ -88,7 +88,6 @@ static struct SpaceMapping * space_mapping_create(enum SPACE_MAP map_type)
         exit(1);
     }
 
-
     map->map = map_type;
     map->set = 0;
     if (map_type == SM_LINEAR){
@@ -3912,11 +3911,11 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
     struct OrthPolyExpansion * c = NULL;
     double lb = a->lower_bound;
     double ub = a->upper_bound;
-
+    assert ( fabs(a->lower_bound - b->lower_bound) < DBL_EPSILON );
+    assert ( fabs(a->upper_bound - b->upper_bound) < DBL_EPSILON );
+    
     enum poly_type p = a->p->ptype;
     if (p == FOURIER){
-        assert (b->p->ptype == FOURIER);
-        assert (fabs(lb - ub) < ZEROTHRESH);
         return fourier_expansion_prod(a, b);
     }
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
@@ -4592,13 +4591,17 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
                              struct OrthPolyExpansion * y)
 {
-    ON HERE
     assert (y != NULL);
     assert (x != NULL);
     assert (x->p->ptype == y->p->ptype);
+    
     assert ( fabs(x->lower_bound - y->lower_bound) < DBL_EPSILON );
     assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON );
-    
+
+    if (x->p->ptype == FOURIER){
+        return fourier_expansion_axpy(a, x, y);
+    }
+        
     if (x->num_poly < y->num_poly){
         // shouldnt need rounding here
         size_t ii;
@@ -5321,12 +5324,16 @@ orth_poly_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         assert (1 == 0);
         //x need to convert polynomial to standard polynomial first
         //real_roots = standard_poly_real_roots(sp,nkeep);
-        //break;
+        break;
     case CHEBYSHEV:
         real_roots = chebyshev_expansion_real_roots(p,nkeep);
         break;
     case HERMITE:
         assert (1 == 0);
+        break;
+    case FOURIER:
+        assert (1 == 0);
+        break;
     }
     return real_roots;
 }
@@ -5348,6 +5355,7 @@ double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
     double maxval;
     double tempval;
 
+    assert(p->p->ptype != FOURIER);
     maxval = orth_poly_expansion_eval(p,p->lower_bound);
     *x = p->lower_bound;
 
@@ -5388,7 +5396,8 @@ double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
 *************************************************************/
 double orth_poly_expansion_min(struct OrthPolyExpansion * p, double * x)
 {
-
+    assert(p->p->ptype != FOURIER);
+    
     double minval;
     double tempval;
 
@@ -5470,7 +5479,7 @@ double orth_poly_expansion_absmax(
 //        printf("optloc=%G .... cval = %G\n",*x,cval);
         return cval;
     }
-    else if (ptype == HERMITE){
+    else if ((ptype == HERMITE) || (ptype == FOURIER)){
         fprintf(stderr,"Must specify optimizatino arguments\n");
         fprintf(stderr,"In the form of candidate points for \n");
         fprintf(stderr,"finding the absmax of hermite expansion\n");
