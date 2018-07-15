@@ -120,7 +120,8 @@ size_t function_train_core_get_params(const struct FunctionTrain *,
 size_t function_train_get_params(const struct FunctionTrain *,
                                  double *);
 void * function_train_get_uni(const struct FunctionTrain *, size_t, size_t, size_t);
-
+struct GenericFunction * function_train_get_gfuni(const struct FunctionTrain *,
+                                                  size_t, size_t, size_t);
 
 void function_train_uni_update_params(struct FunctionTrain *, size_t, size_t, size_t, size_t, const double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
