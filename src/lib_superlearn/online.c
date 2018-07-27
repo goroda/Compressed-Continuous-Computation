@@ -56,5 +56,73 @@
 struct StochasticUpdater
 {
     double eta;
+    struct SLMemManager * mem;
+    struct ObjectiveFunction * obj;
 };
 
+
+struct PP
+{
+    struct FTparam * ftp;
+    struct RegressOpts * opts;
+};
+
+int setup_least_squares_online_learning(struct StochasticUpdater * su, struct FTparam * ftp, struct RegressOpts * ropts)
+{
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim, 1, ftp->nparams, NONE_ST);
+    struct LeastSquaresArgs * ls = malloc(sizeof(struct LeastSquaresArgs));
+
+    struct PP ls_args;
+    ls_args.ftp = ftp;
+    ls_args.opts = ropts;
+
+    ls->mapping = ft_param_learning_interface;
+    ls->args = &ls_args;
+
+    struct ObjectiveFunction * obj = NULL;
+    objective_function_add(&obj, 1.0, c3_objective_function_least_squares, ls);
+    
+    su->mem = mem;
+    su->obj = obj;
+    
+    return 0;
+}
+    
+
+/***********************************************************//**
+    Perform an update of the parameters
+
+    \param[in] su         - stochastic updater
+    \param[in] nparam     - number of parameters
+    \param[in,out] param  - parameters
+    \param[in,out] grad   - gradient
+    \param[in] data       - data point
+    \param[in] obj        - objective function
+
+***************************************************************/
+void stochastic_update_step(const struct StochasticUpdater * su,
+                            size_t nparam,
+                            double * param,
+                            double * grad,
+                            const struct Data * data,
+                            const struct ObjectiveFunction * obj
+                            struct SLMemManager * mem)
+{
+
+    if (grad != NULL){
+        for (size_t ii = 0; ii < nparam; ii++){
+            grad[ii] = 0.0;
+        }
+    }
+
+    double out = 0.0;
+    while (obj != NULL){
+        out += obj->weight * obj->func(nparam, param, grad, 1, 0, data, mem, obj->arg);
+        obj = obj->next;
+    }
+
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] -= su->eta * grad[ii];
+    }
+}
+    
