@@ -47,7 +47,7 @@ struct C3SobolSensitivity *
 c3_sobol_sensitivity_calculate(const struct FunctionTrain *,size_t);
 void c3_sobol_sensitivity_free(struct C3SobolSensitivity *);
 double c3_sobol_sensitivity_get_interaction(const struct C3SobolSensitivity *,
-                                            size_t, const size_t *);
+                                            size_t leni, const size_t * xi);
 double c3_sobol_sensitivity_get_total(const struct C3SobolSensitivity *, size_t);
 double c3_sobol_sensitivity_get_main(const struct C3SobolSensitivity *, size_t);
 double c3_sobol_sensitivity_get_variance(const struct C3SobolSensitivity *);
@@ -125,9 +125,9 @@ double * probability_density_log_hessian_eval(
                 struct ProbabilityDensity *, 
                 double *);
 
-double * probability_density_mean(struct ProbabilityDensity *);
-double * probability_density_cov(struct ProbabilityDensity *);
-double * probability_density_var(struct ProbabilityDensity *);
+/* double * probability_density_mean(struct ProbabilityDensity *); */
+/* double * probability_density_cov(struct ProbabilityDensity *); */
+/* double * probability_density_var(struct ProbabilityDensity *); */
 
 double * probability_density_lb_base(struct ProbabilityDensity *);
 double * probability_density_ub_base(struct ProbabilityDensity *);
@@ -156,17 +156,17 @@ struct Likelihood{
     double logextra; // 0 if loglike 0, otherwise additional 
 };
 
-struct Likelihood *
-likelihood_alloc(size_t, double *, size_t, 
-                 double *, size_t, 
-                 double, double, enum likelihood_type);
+/* struct Likelihood * */
+/* likelihood_alloc(size_t, double *, size_t,  */
+/*                  double *, size_t,  */
+/*                  double, double, enum likelihood_type); */
 
-struct Likelihood * likelihood_gaussian(int, size_t,
-    size_t, double *, size_t, double *,
-    size_t, struct FT1DArray *);
+/* struct Likelihood * likelihood_gaussian(int, size_t, */
+/*     size_t, double *, size_t, double *, */
+/*     size_t, struct FT1DArray *); */
 
-struct Likelihood * likelihood_linear_regression(size_t, size_t, 
-    double *, double *, double, struct BoundingBox *);
+/* struct Likelihood * likelihood_linear_regression(size_t, size_t,  */
+/*     double *, double *, double, struct BoundingBox *); */
 
 void likelihood_free(struct Likelihood *);
 
@@ -176,12 +176,12 @@ struct BayesRule{
     struct ProbabilityDensity * prior;
 };
 
-double * bayes_rule_gradient(double *, void *);
-double * bayes_rule_log_gradient_negative(double *, void *);
-double * bayes_rule_log_hessian(double *, void *);
-double * bayes_rule_log_hessian_negative(double *, void *);
+/* double * bayes_rule_gradient(double *, void *); */
+/* double * bayes_rule_log_gradient_negative(double *, void *); */
+/* double * bayes_rule_log_hessian(double *, void *); */
+/* double * bayes_rule_log_hessian_negative(double *, void *); */
 
-struct ProbabilityDensity * bayes_rule_laplace(struct BayesRule *);
-struct ProbabilityDensity * bayes_rule_compute(struct BayesRule *);
+/* struct ProbabilityDensity * bayes_rule_laplace(struct BayesRule *); */
+/* struct ProbabilityDensity * bayes_rule_compute(struct BayesRule *); */
 
 #endif
