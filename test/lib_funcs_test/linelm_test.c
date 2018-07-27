@@ -360,12 +360,12 @@ void Test_lin_elem_exp_inner2(CuTest * tc){
 
     double lb=-2.0,ub=3.0;
     
-    size_t N1 = 10;
+    size_t N1 = 230;
     double * p1 = linspace(lb,0.5,N1);
     double f[1000];
     fwrap_eval(N1,p1,f,fw1);
 
-    size_t N2 = 20;
+    size_t N2 = 349;
     double * p2 = linspace(0.0,ub,N2);
     double g[1000];
     fwrap_eval(N2,p2,g,fw2);
@@ -376,7 +376,7 @@ void Test_lin_elem_exp_inner2(CuTest * tc){
     double intis = lin_elem_exp_inner(fa,fb);
     double intis2 = lin_elem_exp_inner(fb,fa);
 
-    size_t ntest = 10000000;
+    size_t ntest = 1000000;
     double * xtest = linspace(lb,ub,ntest);
     double integral = 0.0;
     for (size_t ii = 0; ii < ntest; ii++){
@@ -386,8 +386,16 @@ void Test_lin_elem_exp_inner2(CuTest * tc){
     integral /= (double) ntest;
     integral *= (ub - lb);
     double intshould = integral;
+    /* double inttrue = 0.00520833333333333; */
+    /* printf("int mc %3.15G, int true %3.15G\n", intshould, inttrue); */
     double diff = fabs(intshould-intis)/fabs(intshould);
-    CuAssertDblEquals(tc, 0.0, diff, 1e-6);
+    /* double difftrue = fabs(inttrue - intis)/ fabs(inttrue); */
+    /* printf("\n"); */
+    /* printf("diff = %3.15G\n", diff); */
+    /* printf("difftrue = %3.15G\n", difftrue); */
+    
+    /* printf("\n\n\n\n\n\n\n"); */
+    CuAssertDblEquals(tc, 0.0, diff, 3e-4);
     CuAssertDblEquals(tc,intis,intis2,1e-15);
     free(xtest);
 
@@ -395,6 +403,53 @@ void Test_lin_elem_exp_inner2(CuTest * tc){
     LINELEM_FREE(fb);
     free(p1);
     free(p2);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
+    
+}
+
+void Test_lin_elem_exp_inner3(CuTest * tc){
+
+    printf("Testing function: lin_elem_exp_inner (3) \n");
+
+    // function
+    struct Fwrap * fw1 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw1,powX2,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw2,TwoPowX3,NULL);
+
+    size_t N = 20; double lb=0.0,ub=0.5;
+    double * x = linspace(lb,ub,N);
+    /* printf("x = "); dprint(N, x); */
+    double f[20], g[20];
+    fwrap_eval(N,x,f,fw1);
+    fwrap_eval(N,x,g,fw2);
+    
+    le_t fa = lin_elem_exp_init(N,x,f);
+    le_t fb = lin_elem_exp_init(N,x,g);
+    le_t fc = lin_elem_exp_prod(fa, fb);
+
+    /* printf("integrating product:\n"); */
+    double intshould = lin_elem_exp_integrate(fc);
+
+    /* printf("\n\n\n"); */
+    /* printf("integrating inner:\n"); */
+    /* double inttrue = 0.00520833333333333; */
+    double intis = lin_elem_exp_inner(fa,fb);
+    double diff = fabs(intshould-intis)/fabs(intshould);
+    CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+
+    /* printf("int integrate %3.15G, int true %3.15G\n", intshould, inttrue); */
+    /* printf("int is %3.15G\n", intis); */
+
+    /* double difftrue = fabs(inttrue-intis)/fabs(inttrue); */
+    /* printf("difftrue = %3.15G\n", difftrue); */
+
+    LINELEM_FREE(fa);
+    LINELEM_FREE(fb);
+    LINELEM_FREE(fc);
+    free(x);
     fwrap_destroy(fw1);
     fwrap_destroy(fw2);
     
@@ -419,7 +474,7 @@ void Test_lin_elem_exp_norm(CuTest * tc){
     double intshould = (pow(ub,5) - pow(lb,5))/5;
     double intis = lin_elem_exp_norm(fa);
     double diff = fabs(sqrt(intshould) - intis)/fabs(sqrt(intshould));
-    CuAssertDblEquals(tc, 0.0, diff, 1e-6);
+    CuAssertDblEquals(tc, 0.0, diff, 3e-6);
 
     free(x); x = NULL;
     LINELEM_FREE(fa);
@@ -1054,6 +1109,7 @@ CuSuite * LelmGetSuite(){
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_integrate);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner2);
+    SUITE_ADD_TEST(suite, Test_lin_elem_exp_inner3);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_norm);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy);
     SUITE_ADD_TEST(suite, Test_lin_elem_exp_axpy2);

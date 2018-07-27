@@ -1156,6 +1156,53 @@ void Test_function_train_inner_cheb(CuTest * tc)
     all_opts_free(fw,opts,qmopts,fopts);
 }
 
+void Test_function_train_inner_linelm(CuTest * tc)
+{
+    printf("Testing Function: function_train_inner with linelm \n");
+    size_t dim = 4;
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw2,4);
+    fwrap_set_func_array(fw2,0,func6,NULL);
+    fwrap_set_func_array(fw2,1,func5,NULL);
+    fwrap_set_func_array(fw2,2,func4,NULL);
+    fwrap_set_func_array(fw2,3,func3,NULL);
+
+    size_t N = 10;
+    double * x = linspace(-1.0,1.0,N);
+    struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+
+    struct FunctionTrain * ft = function_train_initsum(fopts,fw);
+    struct FunctionTrain * gt = function_train_initsum(fopts,fw2);
+    struct FunctionTrain * ft2 =  function_train_product(gt,ft);
+    
+    double int1 = function_train_integrate(ft2);
+    double int2 = function_train_inner(gt,ft);
+    
+    double relerr = pow(int1-int2,2)/pow(int1,2);
+    CuAssertDblEquals(tc,0.0,relerr,1e-13);
+    free(x); x = NULL;
+    function_train_free(ft);
+    function_train_free(ft2);
+    function_train_free(gt);
+    fwrap_destroy(fw2);
+    fwrap_destroy(fw);
+    lin_elem_exp_aopts_free(opts);
+    one_approx_opts_free(qmopts);
+    multi_approx_opts_free(fopts);
+}
+
 void Test_ftapprox_cross(CuTest * tc)
 {
     printf("Testing Function: ftapprox_cross  (1/4)\n");
@@ -2401,25 +2448,30 @@ void Test_ftapprox_cross_linelm2(CuTest * tc)
     fwrap_set_fvec(fw,funcnd2,NULL);
     // set function monitor
 
+    double lb = -3.0;
+    double ub = 2.0;
     double delta = 1e-2;
     double hmin = 1e-2;
     struct LinElemExpAopts * opts = NULL;
-    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,-1.0,1.0,delta,hmin);
+    opts = lin_elem_exp_aopts_alloc_adapt(0,NULL,lb,ub,delta,hmin);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 5;
+    size_t init_rank = 3;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
-        start[ii] = linspace(-1.0,1.0,init_rank);
+        start[ii] = linspace(lb,ub,init_rank);
     }
     c3approx_init_cross(c3a,init_rank,verbose,start);
+    c3approx_set_round_tol(c3a, 1e-8);
+    /* c3approx_set_cross_tol(c3a, 1e-10); */
+    c3approx_set_cross_maxiter(c3a, 5);
     struct FunctionTrain * ft = c3approx_do_cross(c3a,fw,1);
 
-    size_t N = 10;
-    double * xtest = linspace(-1.0,1.0,N);
+    size_t N = 40;
+    double * xtest = linspace(lb,ub,N);
     double err = 0.0;
     double den = 0.0;
     double val;
@@ -2433,7 +2485,10 @@ void Test_ftapprox_cross_linelm2(CuTest * tc)
                     pt[2] = xtest[kk]; pt[3] = xtest[ll];
                     funcnd2(1,pt,&val,NULL);
                     den += pow(val,2.0);
-                    err += pow(val-function_train_eval(ft,pt),2.0);
+                    double diff = pow(val-function_train_eval(ft,pt),2.0);
+                    /* printf("%3.5g, %3.5g, %3.5g, %3.5g = %3.5E\n", */
+                    /*        pt[0], pt[1], pt[2], pt[3], diff); */
+                    err += diff;
                 }
             }
         }
@@ -2475,14 +2530,14 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     fwrap_set_fvec(fw,func_not_all,NULL);
     // set function monitor
 
-    size_t N = 80;
+    size_t N = 150;
     double * x = linspace(-1.0,1.0,N);
     struct LinElemExpAopts * opts = lin_elem_exp_aopts_alloc(N,x);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(LINELM,opts);    
     struct C3Approx * c3a = c3approx_create(CROSS,dim);
     
     int verbose = 0;
-    size_t init_rank = 5;
+    size_t init_rank = 4;
     double ** start = malloc_dd(dim);
     for (size_t ii = 0; ii < dim; ii++){
         c3approx_set_approx_opts_dim(c3a,ii,qmopts);
@@ -2496,7 +2551,7 @@ void Test_ftapprox_cross_linelm3(CuTest * tc)
     //printf("finished !\n");
     double pt[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     double eval = function_train_eval(ft,pt);
-    CuAssertDblEquals(tc,0.0,eval,1e-14);
+    CuAssertDblEquals(tc,0.0,eval,1e-13);
     
     // make sure serialization works
     unsigned char * text = NULL;
@@ -2729,6 +2784,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset);
     SUITE_ADD_TEST(suite, Test_function_train_inner);
     SUITE_ADD_TEST(suite, Test_function_train_inner_cheb);
+    SUITE_ADD_TEST(suite, Test_function_train_inner_linelm);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_cheby);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross2);

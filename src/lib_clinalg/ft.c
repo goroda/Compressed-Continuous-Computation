@@ -858,7 +858,17 @@ size_t function_train_core_get_params(const struct FunctionTrain * ft,
 void * function_train_get_uni(const struct FunctionTrain * ft,
                               size_t core, size_t row, size_t col)
 {
-    return  qmarray_get_func_base(ft->cores[core], row, col);
+    return qmarray_get_func_base(ft->cores[core], row, col);
+}
+
+/***********************************************************//**
+   Get function paramaters
+***************************************************************/
+struct GenericFunction *
+function_train_get_gfuni(const struct FunctionTrain * ft,
+                         size_t core, size_t row, size_t col)
+{
+    return qmarray_get_func(ft->cores[core], row, col);
 }
 
 /***********************************************************//**
@@ -2203,7 +2213,7 @@ function_train_integrate_weighted(const struct FunctionTrain * ft)
     \param[in] ndim_contract - number of dimensions to contract
     \param[in] dims_contract - dimensions over which to contract (increasing order)
     
-    \return Evaluates \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
+    \return Evaluates \f$ g(x_{\neq c}) = \int f(x_c) w(x_c) dx_c \f$
     
     \note w(x) depends on underlying parameterization
     for example, it is 1/2 for legendre (and default for others),

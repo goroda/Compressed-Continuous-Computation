@@ -34,7 +34,7 @@ The dependencies for this code are
    2) LAPACK
    3) SWIG (if building non-C interfaces)
 
-``` shell
+```shell
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
 cd c3
 mkdir build
@@ -75,7 +75,7 @@ Default: `OFF'
 
 Using this option can toggle whether or not static or shared libraries should be built.
 
-** Note: This option cannot be set to ON if building the python wrapper **
+**Note: This option cannot be set to ON if building the python wrapper**
 
 #### BUILD_SUB_LIBS
 Default: `OFF'
@@ -104,11 +104,11 @@ make PyWrapper
 ### Error: Unable to find 'python.swg'
 
 On Mac OS X, if SWIG is installed with macports using
-``` shell
+```shell
 sudo port install swig
 ```
 then the above error might occur. To remedy this error install the swig-python package
-``` shell
+```shell
 sudo port install swig-python
 ```
 

@@ -562,6 +562,9 @@ class FunctionTrain(object):
         second_moment = c3.function_train_inner_weighted(self.ft, self.ft)
         return second_moment - mean_val*mean_val
 
+    def get_uni_func(self, dim, row, col):
+        return GenericFunction(c3.function_train_get_gfuni(self.ft, dim, row, col))
+    
     def __del__(self):
         self.close()
 
@@ -571,3 +574,27 @@ class FunctionTrain(object):
             c3.function_train_free(self.ft)
             self.ft = None
 
+
+class GenericFunction(object):
+    """ Univariate Functions """
+
+    gf = None
+    def __init__(self, gf):
+        self.gf = c3.generic_function_copy(gf)
+
+    def eval(self, x):
+        if type(x) == list:
+            return [c3.generic_function_1d_eval(self.gf, xx) for xx in x]
+        elif type(x) == np.ndarray:
+            assert x.ndim == 1, "Only 1d arrays handled"
+            return np.array([c3.generic_function_1d_eval(self.gf, xx) for xx in x])
+        else:
+            return c3.generic_function_1d_eval(self.gf, x)
+        
+    def __del__(self):
+        self.close()
+        
+    def close(self):
+        if self.gf is not None:
+            c3.generic_function_free(self.gf)
+            self.gf = None

@@ -1084,9 +1084,12 @@ double lin_elem_exp_integrate(const struct LinElemExp * f)
     assert (f->num_nodes>1 );
     double dx = f->nodes[1]-f->nodes[0];
     double integral = f->coeff[0] * dx * 0.5;
+    /* printf("0: integrand(%3.15g) = %3.15G\n", f->nodes[0], integral); */
     for (size_t ii = 1; ii < f->num_nodes-1;ii++){
         dx = f->nodes[ii+1]-f->nodes[ii-1];
         integral += f->coeff[ii] * dx * 0.5;
+        /* double newval = f->coeff[ii]*dx*0.5; */
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, f->nodes[ii], newval); */
     }
     dx = f->nodes[f->num_nodes-1]-f->nodes[f->num_nodes-2];
     integral += f->coeff[f->num_nodes-1] * dx * 0.5;
@@ -1142,22 +1145,22 @@ static int lin_elem_sdiscp(const struct LinElemExp * f,
 *   \param[in,out] mixed - second integral
 *   \param[in,out] right - third integral
 *************************************************************/
-static void lin_elem_exp_inner_element(
-    double x1, double x2, double * left, double * mixed, 
-    double * right)
-{
-    double dx = (x2-x1);
-    double x2sq = x2*x2;
-    double x1sq = x1*x1;
-    double x2cu = x2sq * x2;
-    double x1cu = x1sq * x1;
-    double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2);
-    double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0;
+/* static void lin_elem_exp_inner_element( */
+/*     double x1, double x2, double * left, double * mixed,  */
+/*     double * right) */
+/* { */
+/*     double dx = (x2-x1); */
+/*     double x2sq = x2*x2; */
+/*     double x1sq = x1*x1; */
+/*     double x2cu = x2sq * x2; */
+/*     double x1cu = x1sq * x1; */
+/*     double dx2 = x2sq - x1sq; //pow(x2,2)-pow(x1,2); */
+/*     double dx3 = (x2cu - x1cu)/3.0; //(pow(x2,3)-pow(x1,3))/3.0; */
           
-    *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3;
-    *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3;
-    *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx;
-}
+/*     *left = x2sq*dx - x2*dx2 + dx3; // pow(x2,2)*dx - x2*dx2 + dx3; */
+/*     *mixed = (x2+x1) * dx2/2.0 - x1*x2*dx - dx3; */
+/*     *right = dx3 - x1*dx2 + x1sq * dx; //pow(x1,2)*dx; */
+/* } */
 
 /********************************************************//**
 *   Interpolate two linear element expansions onto the same grid
@@ -1241,16 +1244,58 @@ static size_t lin_elem_exp_inner_same_grid(
 static double lin_elem_exp_inner_same(size_t N, double * x,
                                       double * f, double * g)
 {
-    double value = 0.0;
-    double left,mixed,right,dx2;
-    for (size_t ii = 0; ii < N-1; ii++){
-        dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]);
-        lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right);
-        value += (f[ii] * g[ii]) / dx2 * left +
-                 (f[ii] * g[ii+1]) / dx2 * mixed +
-                 (g[ii] * f[ii+1]) / dx2 * mixed +
-                 (f[ii+1] * g[ii+1]) / dx2 * right;
-    }    
+
+    // This first part is a high accuracy scheme, but assumes higher
+    // order structure than piecewise linear
+    /* double value = 0.0; */
+    /* double left,mixed,right,dx2; */
+    /* for (size_t ii = 0; ii < N-1; ii++){ */
+    /*     dx2 = (x[ii+1]-x[ii])*(x[ii+1] - x[ii]); */
+    /*     lin_elem_exp_inner_element(x[ii],x[ii+1],&left,&mixed,&right); */
+    /*     /\* double new_val = (f[ii] * g[ii]) / dx2 * left + *\/ */
+    /*     /\*     (f[ii] * g[ii+1]) / dx2 * mixed + *\/ */
+    /*     /\*     (g[ii] * f[ii+1]) / dx2 * mixed + *\/ */
+    /*     /\*     (f[ii+1] * g[ii+1]) / dx2 * right; *\/ */
+    /*     /\* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], new_val); *\/ */
+    /*     /\* value += new_val; *\/ */
+    /*     value += (f[ii] * g[ii]) / dx2 * left + */
+    /*              (f[ii] * g[ii+1]) / dx2 * mixed + */
+    /*              (g[ii] * f[ii+1]) / dx2 * mixed + */
+    /*              (f[ii+1] * g[ii+1]) / dx2 * right; */
+    /* } */
+
+    /* printf("nodes are "); */
+    /* dprint(N, x); */
+    // assuming quadratic not accurate when spacing is too large
+    /* double value1 = 0.0; */
+    /* for (size_t ii = 0; ii < N-1; ii++){ */
+    /*     double m1 = (f[ii+1] - f[ii]) / (x[ii+1] - x[ii]); */
+    /*     double m2 = (g[ii+1] - g[ii]) / (x[ii+1] - x[ii]); */
+    /*     double d1 = (f[ii+1] - m1 * x[ii+1]); */
+    /*     double d2 = (g[ii+1] - m2 * x[ii+1]); */
+
+    /*     double t1 = d1*d2 * (x[ii+1] - x[ii]); */
+    /*     double t2 = 0.5 * (d1 * m2 + m1 * d2) * (x[ii+1] * x[ii+1] - x[ii] * x[ii]); */
+    /*     double t3 = m1 * m2 / 3.0 * (x[ii+1] * x[ii+1] * x[ii+1] - x[ii] * x[ii] * x[ii]); */
+    /*     value1 += (t1 + t2 + t3); */
+    /*     /\* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value1); *\/ */
+    /* } */
+
+    /* printf("\n\n"); */
+    double dx = x[1]-x[0];
+    double value = f[0]*g[0]*dx * 0.5;
+    /* printf("0: integrand(%3.15g) = %3.15G\n", x[0], value); */
+    for (size_t ii = 1; ii < N-1; ii++){
+        dx = x[ii+1]-x[ii-1];
+        /* dx = x[ii+1]-x[ii]; */
+        /* double new_val = f[ii]*g[ii]*0.5*dx; */
+        value += f[ii]*g[ii]*0.5*dx;
+        /* printf("%zu: integrand(%3.15g) = %3.15G\n", ii, x[ii], value); */
+    }
+    dx = x[N-1] - x[N-2];
+    value += f[N-1]*g[N-1]*dx*0.5;
+
+    /* printf("diff values is  = %3.15G\n", value1 - value); */
     return value;
 }
 
@@ -1834,7 +1879,8 @@ void lin_elem_adapt(struct Fwrap * f,
         double mid = (xl+xr)/2.0;
         double fmid;
         fwrap_eval(1,&mid,&fmid,f);
-
+        /* printf("xl = %3.15G, xr = %3.15G, fl = %3.15G, fr = %3.15G, fmid = %3.15G\n", xl, xr, fl, fr, fmid); */
+        /* printf("adapt! diff=%3.15G, delta=%3.15G\n", (fl+fr)/2.0-fmid, delta); */
         if (fabs( (fl+fr)/2.0 - fmid  )/fabs(fmid) < delta){
         /* if (fabs( (fl+fr)/2.0 - fmid  ) < delta){ */
             // maybe should add the midpoint since evaluated
@@ -1903,6 +1949,7 @@ lin_elem_exp_approx(struct LinElemExpAopts * opts, struct Fwrap * f)
         /* printf("cannot evaluate them"); */
     }
     else{
+        /* printf("adapting!\n"); */
         /* printf("not here!\n"); */
         // adapt
         struct LinElemXY * xy = NULL;
