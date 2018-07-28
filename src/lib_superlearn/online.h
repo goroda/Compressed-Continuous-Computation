@@ -1,5 +1,4 @@
-// Copyright (c) 2015-2016, Massachusetts Institute of Technology
-// Copyright (c) 2016-2017 Sandia Corporation
+// Copyright (c) 2018, University of Michigan
 
 // This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
@@ -35,43 +34,42 @@
 //Code
 
 
+/** \file online.h
+ * header files for online learning
+ */
 
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
+#include "regress.h"
+#include "objective_functions.h"
 
-#include "CuTest.h"
-#include "suptest.h"
 
-void RunAllTests(void) {
-    
-    printf("Running Test Suite: lib_superlearn\n");
-    srand(time(NULL));
+/** \struct StochasticUpdater
+ * \brief Interface to online learning
+ * \var StochasticUpdater::eta
+ * Learning Rate
+ */
 
-    CuString * output = CuStringNew();
-    CuSuite * suite = CuSuiteNew();
-    
-    CuSuite * regress = CLinalgRegressGetSuite();
-    CuSuite * online = OnlineGetSuite();
-    
-    /* CuSuiteAddSuite(suite, regress); */
-    CuSuiteAddSuite(suite, online);
-    
-    CuSuiteRun(suite);
-    CuSuiteSummary(suite, output);
-    CuSuiteDetails(suite, output);
-    printf("%s \n", output->buffer);
 
-    CuSuiteDelete(regress);
-    CuSuiteDelete(online);
-    
-    CuStringDelete(output);
-    free(suite);
-}
 
-int main(void) {
-    RunAllTests();
-}
+struct StochasticUpdater
+{
+    double eta;
+
+    size_t nparams;
+    struct SLMemManager * mem;
+    struct ObjectiveFunction * obj;
+};
+
+int
+setup_least_squares_online_learning(
+    struct StochasticUpdater * su,
+    struct FTparam * ftp,
+    struct RegressOpts * ropts);
+
+
+double
+stochastic_update_step(const struct StochasticUpdater *,
+                       double *,
+                       double *,
+                       const struct Data *);

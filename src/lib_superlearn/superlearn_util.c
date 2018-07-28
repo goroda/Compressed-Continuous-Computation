@@ -412,7 +412,7 @@ void data_set_xy(struct Data * data, const double * x, const double * y)
 
     \return pointer to training samples
 ***************************************************************/
-const double * data_get_subset_ref(struct Data * data, size_t Nsub, size_t * indsub)
+const double * data_get_subset_ref(const struct Data * data, size_t Nsub, size_t * indsub)
 {
     assert (data != NULL);
     assert (Nsub <= data->N);

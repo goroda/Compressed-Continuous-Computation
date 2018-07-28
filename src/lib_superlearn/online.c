@@ -43,23 +43,8 @@
 #include <assert.h>
 #include <math.h>
 
-#include "lib_linalg.h"
-#include "lib_optimization.h"
-#include "regress.h"
-#include "objective_functions.h"
-
-/** \struct StochasticUpdater
- * \brief Interface to online learning
- * \var StochasticUpdater::eta
- * Learning Rate
- */ 
-struct StochasticUpdater
-{
-    double eta;
-    struct SLMemManager * mem;
-    struct ObjectiveFunction * obj;
-};
-
+/* #include "lib_linalg.h" */
+#include "online.h"
 
 struct PP
 {
@@ -67,16 +52,71 @@ struct PP
     struct RegressOpts * opts;
 };
 
-int setup_least_squares_online_learning(struct StochasticUpdater * su, struct FTparam * ftp, struct RegressOpts * ropts)
+
+static int
+online_learning_interface(size_t nparam, const double * param,
+                          size_t N, size_t * ind,
+                          struct SLMemManager * mem,
+                          const struct Data * data,
+                          double ** evals, double ** grads, void * args)
 {
-    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim, 1, ftp->nparams, NONE_ST);
-    struct LeastSquaresArgs * ls = malloc(sizeof(struct LeastSquaresArgs));
+    printf("in the learning interface\n");
+    (void) nparam;
+    struct PP * mem_opts = args;
+    struct FTparam      * ftp   = mem_opts->ftp;
+    /* struct RegressOpts  * ropts = mem_opts->opts; */
+    const double * x = data_get_subset_ref(data,N,ind);
+
+    printf("update params = \n");
+    printf("ftp dim = %zu\n", ftp->dim);
+    printf("ftp nparam = %zu\n", ftp->nparams);
+
+    ft_param_update_params(ftp, param);
+
+    printf("cool!\n");
+    if (grads == NULL)
+    {
+        for (size_t ii = 0; ii < N; ii++){
+            mem->evals->vals[ii] = function_train_eval(ftp->ft,x + ii * ftp->dim);
+        }
+        *evals = mem->evals->vals;
+    }
+    else{
+        for (size_t ii = 0; ii < N; ii++){
+            mem->evals->vals[ii] =
+                ft_param_gradeval(ftp, x + ii * ftp->dim,
+                                  mem->grad->vals + ii*ftp->nparams,
+                                  mem->lin_structure_vals,
+                                  mem->running_eval,
+                                  mem->running_grad);
+        }
+        *evals = mem->evals->vals;
+        *grads = mem->grad->vals;
+    }
+    
+    return 0;
+}
+
+int
+setup_least_squares_online_learning(
+    struct StochasticUpdater * su,
+    struct FTparam * ftp,
+    struct RegressOpts * ropts)
+{
+
+    printf("in setup\n");
+    size_t ndata = 1;
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim, ndata, ftp->nparams, NONE_ST);
+    sl_mem_manager_check_structure(mem, ftp, NULL);
+
 
     struct PP ls_args;
     ls_args.ftp = ftp;
     ls_args.opts = ropts;
 
-    ls->mapping = ft_param_learning_interface;
+    struct LeastSquaresArgs * ls = malloc(sizeof(struct LeastSquaresArgs));
+    printf("\t nparams in here = %zu\n", ftp->nparams);
+    ls->mapping = online_learning_interface;
     ls->args = &ls_args;
 
     struct ObjectiveFunction * obj = NULL;
@@ -84,45 +124,40 @@ int setup_least_squares_online_learning(struct StochasticUpdater * su, struct FT
     
     su->mem = mem;
     su->obj = obj;
+    su->nparams = ftp->nparams;
     
     return 0;
 }
-    
 
 /***********************************************************//**
     Perform an update of the parameters
 
-    \param[in] su         - stochastic updater
-    \param[in] nparam     - number of parameters
-    \param[in,out] param  - parameters
-    \param[in,out] grad   - gradient
-    \param[in] data       - data point
-    \param[in] obj        - objective function
+    \param[in]     su    - stochastic updater
+    \param[in,out] param - parameters
+    \param[in,out] grad  - gradient
+    \param[in]     data  - data point
 
 ***************************************************************/
-void stochastic_update_step(const struct StochasticUpdater * su,
-                            size_t nparam,
-                            double * param,
-                            double * grad,
-                            const struct Data * data,
-                            const struct ObjectiveFunction * obj
-                            struct SLMemManager * mem)
+double stochastic_update_step(const struct StochasticUpdater * su,
+                              double * param,
+                              double * grad,
+                              const struct Data * data)
 {
-
-    if (grad != NULL){
-        for (size_t ii = 0; ii < nparam; ii++){
-            grad[ii] = 0.0;
-        }
-    }
-
-    double out = 0.0;
-    while (obj != NULL){
-        out += obj->weight * obj->func(nparam, param, grad, 1, 0, data, mem, obj->arg);
-        obj = obj->next;
-    }
+    printf("in stoch update step\n");
+    struct ObjectiveFunction * obj  = su->obj;
+    printf("\t get mem manager\n");
+    struct SLMemManager      * mem  = su->mem;
+    printf("\t got it\n");
+    size_t nparam = su->nparams;
+    printf("\t nparam = %zu\n", nparam);
+    printf("\t objective eval = ");
+    double eval = objective_eval_data(nparam, param, grad, data, obj, mem);
+    printf("\t done!\n");
 
     for (size_t ii = 0; ii < nparam; ii++){
         param[ii] -= su->eta * grad[ii];
     }
+
+    return eval;
 }
     

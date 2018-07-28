@@ -90,7 +90,6 @@ struct RegressOpts * regress_opts_alloc(size_t dim)
     ropts->nepochs = 0;
     ropts->stored_fvals = NULL;
 
-
     ropts->sample_weights = NULL;
     
     return ropts;

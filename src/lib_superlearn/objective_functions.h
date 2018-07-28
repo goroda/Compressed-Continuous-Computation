@@ -52,9 +52,13 @@ struct ObjectiveFunction;
 void objective_function_add(struct ObjectiveFunction ** obj, double weight,
                             double (*func)(size_t nparam, const double * param, double * grad,
                                            size_t N, size_t * ind,
-                                           struct Data * data, struct SLMemManager * ,void * arg),
+                                           const struct Data * data, struct SLMemManager * ,void * arg),
                             void * arg);
 void objective_function_free(struct ObjectiveFunction ** obj);
+double objective_eval_data(size_t, const double *, double *,
+                           const struct Data *,
+                           const struct ObjectiveFunction *,
+                           struct SLMemManager *);
 double objective_eval(size_t, const double *, double *,
                       size_t, size_t *, void *);
 
@@ -65,12 +69,13 @@ double objective_eval(size_t, const double *, double *,
 struct LeastSquaresArgs
 {
     int (*mapping)(size_t nparam, const double * param, size_t N,size_t * ind,
-                   struct SLMemManager * mem, struct Data * data,
+                   struct SLMemManager * mem, const struct Data * data,
                    double ** evals, double ** grads, void * args);
     void * args;
 };
 
 double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
-                                           size_t Ndata, size_t * data_index, struct Data * data,
+                                           size_t Ndata, size_t * data_index,
+                                           const struct Data * data,
                                            struct SLMemManager * mem, void * args);
 #endif

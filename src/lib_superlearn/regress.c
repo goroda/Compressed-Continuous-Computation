@@ -96,8 +96,11 @@ struct PP
     struct RegressOpts * opts;
 };
 
-static int ft_param_eval_grad(size_t N,const double * x, double ** evals,
-                              double ** grads,  struct SLMemManager * mem, void * arg)
+static int ft_param_eval_grad(size_t N, const double * x,
+                              double ** evals,
+                              double ** grads,
+                              struct SLMemManager * mem,
+                              void * arg)
 {
 
     struct PP * mem_opts = arg;
@@ -329,7 +332,7 @@ static size_t create_initial_guess(struct RegressOpts * ropts,struct FTparam * f
 static int ft_param_learning_interface(size_t nparam, const double * param,
                                        size_t N, size_t * ind,
                                        struct SLMemManager * mem,
-                                       struct Data * data,
+                                       const struct Data * data,
                                        double ** evals, double ** grads, void * args)
 {
     /* printf("ft_param_learning_interface\n"); */
@@ -362,7 +365,7 @@ static int ft_param_learning_interface(size_t nparam, const double * param,
 static double ft_param_grad_sqnorm_learning_interface(size_t nparam, const double * param,
                                                       double * grad,
                                                       size_t Ndata, size_t * data_index,
-                                                      struct Data * data,
+                                                      const struct Data * data,
                                                       struct SLMemManager * mem, void * arg)
 {
 

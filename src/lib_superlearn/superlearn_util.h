@@ -128,6 +128,6 @@ struct Data * data_alloc(size_t, size_t);
 size_t data_get_N(const struct Data *);
 void data_set_xy(struct Data *, const double *, const double *);
 void data_free(struct Data *);
-const double * data_get_subset_ref(struct Data *, size_t, size_t *);
+const double * data_get_subset_ref(const struct Data *, size_t, size_t *);
 double data_subtract_from_y(const struct Data *, size_t, double);
 #endif

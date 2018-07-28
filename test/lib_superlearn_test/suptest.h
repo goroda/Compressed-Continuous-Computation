@@ -41,5 +41,6 @@
 #include "CuTest.h"
 
 CuSuite * CLinalgRegressGetSuite(void);
+CuSuite * OnlineGetSuite(void);
 
 #endif

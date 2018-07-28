@@ -54,7 +54,7 @@ struct ObjectiveFunction
 {
     double weight;
     double (*func)(size_t nparam, const double * param,
-                   double * grad, size_t N, size_t * ind,struct Data * data,
+                   double * grad, size_t N, size_t * ind, const struct Data * data,
                    struct SLMemManager *, void * args);
     void * arg;
     struct ObjectiveFunction * next;
@@ -63,7 +63,7 @@ struct ObjectiveFunction
 struct ObjectiveFunction * objective_function_alloc(
     double weight,
     double (*func)(size_t nparam, const double * param, double * grad, size_t N, size_t * ind,
-                   struct Data * data,
+                   const struct Data * data,
                    struct SLMemManager *, void * args),
     void * arg)
 {
@@ -90,7 +90,7 @@ void objective_function_free(struct ObjectiveFunction ** obj)
 
 void objective_function_add(struct ObjectiveFunction ** obj, double weight,
                             double (*func)(size_t nparam, const double * param, double * grad,
-                                           size_t N, size_t * ind,struct Data * data,
+                                           size_t N, size_t * ind, const struct Data * data,
                                            struct SLMemManager *, void * args),
                             void * arg)
 {
@@ -108,6 +108,31 @@ void objective_function_add(struct ObjectiveFunction ** obj, double weight,
     }
 }
 
+
+double objective_eval_data(size_t nparam, const double * param, double * grad,
+                           const struct Data * data,
+                           const struct ObjectiveFunction * obj,
+                           struct SLMemManager * mem)
+{
+    if (grad != NULL){
+        for (size_t ii = 0; ii < nparam; ii++){
+            grad[ii] = 0.0;
+        }
+    }
+
+    
+    printf("lets go!\n");
+
+    double out = 0.0;
+    size_t ndata = 1;
+    size_t ind[1] = {0};
+    while (obj != NULL){
+        out += obj->weight * obj->func(nparam, param, grad, ndata, ind, data, mem, obj->arg);
+        obj = obj->next;
+    }
+
+    return out;
+}
 
 double objective_eval(size_t nparam, const double * param, double * grad,
                       size_t N, size_t * ind,
@@ -141,14 +166,18 @@ struct PP
 };
 
 double c3_objective_function_least_squares(size_t nparam, const double * param, double * grad,
-                                           size_t Ndata, size_t * data_index, struct Data * data,
+                                           size_t Ndata, size_t * data_index, const struct Data * data,
                                            struct SLMemManager * mem, void * args)
 {
 
     struct LeastSquaresArgs * ls = args;
     struct PP * pp =  ls->args;
     struct RegressOpts * opts = pp->opts;
-    
+
+    printf("in least squares\n");
+    struct FTparam * ftp = pp->ftp;
+    printf("\t dim = %zu\n", ftp->dim);
+    printf("\t rdim = %zu\n", opts->dim);
     double * evals = NULL;
     double * grads = NULL; 
 

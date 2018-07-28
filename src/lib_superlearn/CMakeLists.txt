@@ -7,6 +7,7 @@ file(GLOB SRC_FILES
   parameterization.c
   objective_functions.c
   regress.c
+  online.c
   )
 
 if ( ${static_libs} )
