@@ -157,8 +157,13 @@ double stochastic_update_step(const struct StochasticUpdater * su,
     double eval = objective_eval_data(nparam, param, grad, data, obj, mem);
     /* printf("\t done!\n"); */
 
-    /* printf("grad = "); dprint(nparam, grad); */
+    printf("grad = "); dprint(nparam, grad);
     /* printf("param pre = "); dprint(nparam, param); */
+    /* for (size_t ii = 0; ii < 10; ii++){ */
+    /*     size_t ind_update = (size_t) rand() % nparam; */
+    /*     param[ind_update] -= su->eta * grad[ind_update]; */
+    /* } */
+    
     for (size_t ii = 0; ii < nparam; ii++){
         param[ii] -= su->eta * grad[ii];
     }
