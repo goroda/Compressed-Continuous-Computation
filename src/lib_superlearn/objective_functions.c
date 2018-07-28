@@ -121,7 +121,7 @@ double objective_eval_data(size_t nparam, const double * param, double * grad,
     }
 
     
-    printf("lets go!\n");
+    /* printf("lets go!\n"); */
 
     double out = 0.0;
     size_t ndata = 1;
@@ -174,11 +174,12 @@ double c3_objective_function_least_squares(size_t nparam, const double * param, 
     struct PP * pp =  ls->args;
     struct RegressOpts * opts = pp->opts;
 
-    printf("in least squares\n");
-    struct FTparam * ftp = pp->ftp;
-    printf("\t dim = %zu\n", ftp->dim);
-    printf("\t rdim = %zu\n", opts->dim);
-    exit(1);
+
+    /* struct FTparam * ftp = pp->ftp; */
+    /* printf("in least squares\n"); */
+    /* printf("\t dim = %zu\n", ftp->dim); */
+    /* printf("\t rdim = %zu\n", opts->dim); */
+
     double * evals = NULL;
     double * grads = NULL; 
 

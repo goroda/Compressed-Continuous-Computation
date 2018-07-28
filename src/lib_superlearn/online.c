@@ -60,21 +60,21 @@ online_learning_interface(size_t nparam, const double * param,
                           const struct Data * data,
                           double ** evals, double ** grads, void * args)
 {
-    printf("in the learning interface\n");
+    /* printf("in the learning interface\n"); */
     (void) nparam;
     struct PP * mem_opts = args;
     struct FTparam      * ftp   = mem_opts->ftp;
-    struct RegressOpts  * ropts = mem_opts->opts; 
+    /* struct RegressOpts  * ropts = mem_opts->opts;  */
     const double * x = data_get_subset_ref(data,N,ind);
 
-    printf("update params = \n");
-    printf("ftp dim = %zu\n", ftp->dim);
-    printf("ropts dim = %zu\n", ropts->dim);
-    printf("ftp nparam = %zu\n", ftp->nparams);
-    exit(1);
+    /* printf("update params = \n"); */
+    /* printf("ftp dim = %zu\n", ftp->dim); */
+    /* printf("ropts dim = %zu\n", ropts->dim); */
+    /* printf("ftp nparam = %zu\n", ftp->nparams); */
+
     ft_param_update_params(ftp, param);
 
-    printf("cool!\n");
+    /* printf("cool!\n"); */
     if (grads == NULL)
     {
         for (size_t ii = 0; ii < N; ii++){
@@ -105,7 +105,7 @@ setup_least_squares_online_learning(
     struct RegressOpts * ropts)
 {
 
-    printf("in setup\n");
+    /* printf("in setup\n"); */
     size_t ndata = 1;
     struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim, ndata, ftp->nparams, NONE_ST);
     sl_mem_manager_check_structure(mem, ftp, NULL);
@@ -116,9 +116,9 @@ setup_least_squares_online_learning(
     ls_args->opts = ropts;
 
     struct LeastSquaresArgs * ls = malloc(sizeof(struct LeastSquaresArgs));
-    printf("\t nparams in here = %zu\n", ftp->nparams);
-    printf("\t dim in here = %zu\n", ftp->dim);
-    printf("\t dim2 in here = %zu\n", ropts->dim);
+    /* printf("\t nparams in here = %zu\n", ftp->nparams); */
+    /* printf("\t dim in here = %zu\n", ftp->dim); */
+    /* printf("\t dim2 in here = %zu\n", ropts->dim); */
     ls->mapping = online_learning_interface;
     ls->args = ls_args;
 
@@ -146,20 +146,23 @@ double stochastic_update_step(const struct StochasticUpdater * su,
                               double * grad,
                               const struct Data * data)
 {
-    printf("in stoch update step\n");
+    /* printf("in stoch update step\n"); */
     struct ObjectiveFunction * obj  = su->obj;
-    printf("\t get mem manager\n");
+    /* printf("\t get mem manager\n"); */
     struct SLMemManager      * mem  = su->mem;
-    printf("\t got it\n");
+    /* printf("\t got it\n"); */
     size_t nparam = su->nparams;
-    printf("\t nparam = %zu\n", nparam);
-    printf("\t objective eval = ");
+    /* printf("\t nparam = %zu\n", nparam); */
+    /* printf("\t objective eval = "); */
     double eval = objective_eval_data(nparam, param, grad, data, obj, mem);
-    printf("\t done!\n");
+    /* printf("\t done!\n"); */
 
+    /* printf("grad = "); dprint(nparam, grad); */
+    /* printf("param pre = "); dprint(nparam, param); */
     for (size_t ii = 0; ii < nparam; ii++){
         param[ii] -= su->eta * grad[ii];
     }
+    /* printf("param post = "); dprint(nparam, param); */
 
     return eval;
 }
