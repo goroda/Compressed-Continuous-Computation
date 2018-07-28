@@ -440,7 +440,7 @@ struct FunctionTrain * function_train_load(char * filename)
     FILE *fp;
     fp =  fopen(filename, "r");
     if (fp == NULL){
-        fprintf(stderr, "cat: can't open %s\n", filename);
+        fprintf(stderr, "function_train_load: can't open %s\n", filename);
         return NULL;
     }
 
