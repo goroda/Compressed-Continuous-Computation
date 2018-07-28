@@ -53,7 +53,8 @@
 struct ObjectiveFunction
 {
     double weight;
-    double (*func)(size_t nparam, const double * param, double * grad, size_t N, size_t * ind,struct Data * data,
+    double (*func)(size_t nparam, const double * param,
+                   double * grad, size_t N, size_t * ind,struct Data * data,
                    struct SLMemManager *, void * args);
     void * arg;
     struct ObjectiveFunction * next;
@@ -61,7 +62,8 @@ struct ObjectiveFunction
 
 struct ObjectiveFunction * objective_function_alloc(
     double weight,
-    double (*func)(size_t nparam, const double * param, double * grad, size_t N, size_t * ind,struct Data * data,
+    double (*func)(size_t nparam, const double * param, double * grad, size_t N, size_t * ind,
+                   struct Data * data,
                    struct SLMemManager *, void * args),
     void * arg)
 {

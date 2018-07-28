@@ -456,9 +456,8 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
                       size_t N, const double * x, const double * y)
 {
 
-
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
-    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,structure);
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim, N, ftp->nparams, structure);
     sl_mem_manager_check_structure(mem,ftp,x);
     struct Data * data = data_alloc(N,ftp->dim);
     data_set_xy(data,x,y);
