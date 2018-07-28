@@ -178,6 +178,7 @@ double c3_objective_function_least_squares(size_t nparam, const double * param, 
     struct FTparam * ftp = pp->ftp;
     printf("\t dim = %zu\n", ftp->dim);
     printf("\t rdim = %zu\n", opts->dim);
+    exit(1);
     double * evals = NULL;
     double * grads = NULL; 
 

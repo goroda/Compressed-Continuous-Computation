@@ -64,13 +64,14 @@ online_learning_interface(size_t nparam, const double * param,
     (void) nparam;
     struct PP * mem_opts = args;
     struct FTparam      * ftp   = mem_opts->ftp;
-    /* struct RegressOpts  * ropts = mem_opts->opts; */
+    struct RegressOpts  * ropts = mem_opts->opts; 
     const double * x = data_get_subset_ref(data,N,ind);
 
     printf("update params = \n");
     printf("ftp dim = %zu\n", ftp->dim);
+    printf("ropts dim = %zu\n", ropts->dim);
     printf("ftp nparam = %zu\n", ftp->nparams);
-
+    exit(1);
     ft_param_update_params(ftp, param);
 
     printf("cool!\n");
@@ -110,14 +111,16 @@ setup_least_squares_online_learning(
     sl_mem_manager_check_structure(mem, ftp, NULL);
 
 
-    struct PP ls_args;
-    ls_args.ftp = ftp;
-    ls_args.opts = ropts;
+    struct PP * ls_args = malloc(sizeof(struct PP));
+    ls_args->ftp = ftp;
+    ls_args->opts = ropts;
 
     struct LeastSquaresArgs * ls = malloc(sizeof(struct LeastSquaresArgs));
     printf("\t nparams in here = %zu\n", ftp->nparams);
+    printf("\t dim in here = %zu\n", ftp->dim);
+    printf("\t dim2 in here = %zu\n", ropts->dim);
     ls->mapping = online_learning_interface;
-    ls->args = &ls_args;
+    ls->args = ls_args;
 
     struct ObjectiveFunction * obj = NULL;
     objective_function_add(&obj, 1.0, c3_objective_function_least_squares, ls);

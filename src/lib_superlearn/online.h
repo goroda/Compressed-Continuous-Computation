@@ -49,9 +49,6 @@
  * \var StochasticUpdater::eta
  * Learning Rate
  */
-
-
-
 struct StochasticUpdater
 {
     double eta;

@@ -46,6 +46,7 @@
 #include "CuTest.h"
 #include "regress.h"
 #include "online.h"
+#include "objective_functions.h"
 
 static unsigned int seed = 3;
 
@@ -104,7 +105,6 @@ void Test_online1(CuTest * tc)
     printf("num_params = %zu\n", su.nparams);
     CuAssertIntEquals(tc, nunknown, su.nparams);
 
-    
     // create data
     size_t ndata = 1;
     /* printf("\t ndata = %zu\n",ndata); */
