@@ -106,7 +106,7 @@ void Test_online1(CuTest * tc)
 
     
     // create data
-    size_t ndata = 350;
+    size_t ndata = 1;
     /* printf("\t ndata = %zu\n",ndata); */
     /* size_t ndata = 200; */
     double x[5];
@@ -114,6 +114,7 @@ void Test_online1(CuTest * tc)
 
     // // add noise
     struct Data * data = data_alloc(1, dim);
+    exit(1);
     for (size_t ii = 0 ; ii < ndata; ii++){
         printf("ii = %zu\n", ii);
         for (size_t jj = 0; jj < dim; jj++){
