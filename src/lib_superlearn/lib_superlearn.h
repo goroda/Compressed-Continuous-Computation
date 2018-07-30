@@ -1,4 +1,6 @@
-// Copyright (c) 2018, University of Michigan
+// Copyright (c) 2015-2016, Massachusetts Institute of Technology
+// Copyright (c) 2016-2017 Sandia Corporation
+// Copyright (c) 2017 NTESS, LLC.
 
 // This file is part of the Compressed Continuous Computation (C3) Library
 // Author: Alex A. Gorodetsky 
@@ -34,64 +36,19 @@
 //Code
 
 
-/** \file online.h
- * header files for online learning
+/** \file lib_superlearn.h
+ * Groups header files of lib_superlearn.h library together
  */
 
+#ifndef LIB_SUPERLEARN_H
+#define LIB_SUPERLEARN_H
 
-#ifndef ONLINE_H
-#define ONLINE_H
-
-#include <stdlib.h>
-#include "regress.h"
+#include "learning_options.h"
 #include "objective_functions.h"
-
-
-
-enum SU_ALGS {SU_SGD, SU_MOMENTUM, SU_ADAGRAD, SU_ADADELTA};
-
-/** \struct StochasticUpdater
- * \brief Interface to online learning
- * \var StochasticUpdater::eta
- * Learning Rate
- */
-struct StochasticUpdater
-{
-    enum SU_ALGS alg;
-    
-    double eta;
-    size_t nparams;
-    struct SLMemManager * mem;
-    struct ObjectiveFunction * obj;
-
-    double * mem1;
-    double * mem2;
-
-    void * aux_args;
-    void * aux_obj;
-
-    
-    double epsilon; // for ADADELTA
-
-};
-
-
-struct StochasticUpdater * stochastic_updater_alloc(enum SU_ALGS);
-void stochastic_updater_free(struct StochasticUpdater *);
-void stochastic_updater_reset(struct StochasticUpdater *);
-
-int
-setup_least_squares_online_learning(
-    struct StochasticUpdater * su,
-    double eta,
-    struct FTparam * ftp,
-    struct RegressOpts * ropts);
-
-
-double
-stochastic_update_step(const struct StochasticUpdater *,
-                       double *,
-                       double *,
-                       const struct Data *);
+#include "online.h"
+#include "parameterization.h"
+#include "regress.h"
+#include "superlearn.h"
+#include "superlearn_util.h"
 
 #endif

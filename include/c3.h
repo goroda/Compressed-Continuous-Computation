@@ -9,6 +9,7 @@
 #include "lib_funcs.h"
 #include "lib_clinalg.h"
 #include "lib_probability.h"
+#include "lib_superlearn.h"
 #include "regress.h"
 #include "c3_interface.h"
 

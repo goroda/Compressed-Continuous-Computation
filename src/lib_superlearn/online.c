@@ -69,6 +69,8 @@ struct StochasticUpdater * stochastic_updater_alloc(enum SU_ALGS alg)
 
     su->aux_args = NULL;
     su->aux_obj = NULL;
+
+    su->epsilon = 1e-8;
     return su;
 }
 
@@ -220,7 +222,7 @@ double stochastic_update_step(const struct StochasticUpdater * su,
 
 
     double alpha = 0.7;
-    double epsilon = 1e-8;
+    double epsilon = su->epsilon;
     for (size_t ii = 0; ii < nparam; ii++){
         if (su->alg == SU_SGD){
             param[ii] -= su->eta * grad[ii];

@@ -121,6 +121,7 @@ void Test_online1(CuTest * tc)
         double eval = stochastic_update_step(su, param, grad, data);
         (void) eval;
         ft_param_update_params(ftp, param);
+        /* printf("grad = %3.5G\n", cblas_ddot(nunknown, grad, 1, grad, 1)); */
         /* printf("pt = "); dprint(dim, x); */
         /* printf("\t y = %3.5G\n", y); */
         /* printf("\t pred y = %3.5G\n", function_train_eval(ftp->ft, x)); */
@@ -267,7 +268,7 @@ CuSuite * OnlineGetSuite()
     CuSuite * suite = CuSuiteNew();
 
     SUITE_ADD_TEST(suite, Test_online1);
-    SUITE_ADD_TEST(suite, Test_online2);
+    /* SUITE_ADD_TEST(suite, Test_online2); */
 
     return suite;
 }
