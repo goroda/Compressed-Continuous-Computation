@@ -69,4 +69,5 @@ double
 stochastic_update_step(const struct StochasticUpdater *,
                        double *,
                        double *,
+                       double *,
                        const struct Data *);

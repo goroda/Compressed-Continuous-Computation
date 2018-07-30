@@ -144,6 +144,7 @@ setup_least_squares_online_learning(
 double stochastic_update_step(const struct StochasticUpdater * su,
                               double * param,
                               double * grad,
+                              double * prev_update,
                               const struct Data * data)
 {
     /* printf("in stoch update step\n"); */
@@ -157,15 +158,26 @@ double stochastic_update_step(const struct StochasticUpdater * su,
     double eval = objective_eval_data(nparam, param, grad, data, obj, mem);
     /* printf("\t done!\n"); */
 
-    printf("grad = "); dprint(nparam, grad);
+    /* printf("grad = "); dprint(nparam, grad); */
     /* printf("param pre = "); dprint(nparam, param); */
     /* for (size_t ii = 0; ii < 10; ii++){ */
     /*     size_t ind_update = (size_t) rand() % nparam; */
     /*     param[ind_update] -= su->eta * grad[ind_update]; */
     /* } */
-    
+
+
+    double alpha = 0.7;
+    double next_update;
     for (size_t ii = 0; ii < nparam; ii++){
-        param[ii] -= su->eta * grad[ii];
+        // momentum 
+        /* prev_update[ii] = alpha * prev_update[ii] - su->eta * grad[ii]; */
+        /* param[ii] += prev_update[ii]; */
+
+        // adagrad
+        prev_update[ii] += grad[ii]*grad[ii];
+        param[ii] -= su->eta / sqrt(prev_update[ii]) * grad[ii];
+        
+
     }
     /* printf("param post = "); dprint(nparam, param); */
 
