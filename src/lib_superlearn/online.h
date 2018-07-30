@@ -44,6 +44,8 @@
 #include "objective_functions.h"
 
 
+enum SU_ALGS {SU_SGD, SU_MOMENTUM, SU_ADAGRAD, SU_ADADELTA};
+
 /** \struct StochasticUpdater
  * \brief Interface to online learning
  * \var StochasticUpdater::eta
@@ -51,23 +53,36 @@
  */
 struct StochasticUpdater
 {
+    enum SU_ALGS alg;
+    
     double eta;
-
     size_t nparams;
     struct SLMemManager * mem;
     struct ObjectiveFunction * obj;
+
+    double * mem1;
+    double * mem2;
+
+    void * aux_args;
+    void * aux_obj;
+    
 };
+
+
+struct StochasticUpdater * stochastic_updater_alloc(enum SU_ALGS);
+void stochastic_updater_free(struct StochasticUpdater *);
+void stochastic_updater_reset(struct StochasticUpdater *);
 
 int
 setup_least_squares_online_learning(
     struct StochasticUpdater * su,
+    double eta,
     struct FTparam * ftp,
     struct RegressOpts * ropts);
 
 
 double
 stochastic_update_step(const struct StochasticUpdater *,
-                       double *,
                        double *,
                        double *,
                        const struct Data *);

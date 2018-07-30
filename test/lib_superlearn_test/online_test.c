@@ -53,7 +53,7 @@ static unsigned int seed = 3;
 void Test_online1(CuTest * tc)
 {
     srand(seed);
-    printf("\nLS_AIO: Testing online learning on a randomly generated low rank function \n");
+    printf("\n Testing online learning on a randomly generated low rank function \n");
     printf("\t  Dimensions: 5\n");
     printf("\t  Ranks:      [1 2 3 2 3 1]\n");
     printf("\t  LPOLY order: 3\n");
@@ -62,14 +62,12 @@ void Test_online1(CuTest * tc)
 
     size_t dim = 5;
 
-    /* size_t ranks[6] = {1,2,3,2,3,1}; */
     size_t ranks[6] = {1,2,3,2,3,1};
     double lb = -1.0;
     double ub = 1.0;
     size_t maxorder = 3;
     struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
     struct FunctionTrain * a = function_train_poly_randu(LEGENDRE,bds,ranks,maxorder);
-
 
     // Initialize Approximation Structure
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
@@ -80,64 +78,48 @@ void Test_online1(CuTest * tc)
     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
     size_t nunknown = 0;
     for (size_t ii = 0; ii < dim; ii++){
-        /* printf("ii = %zu\n",ii); */
         multi_approx_opts_set_dim(fapp,ii,qmopts);
-        /* nunknown += (maxorder+1)*ranks[ii]*ranks[ii+1]; */
         nunknown += (maxorder+1)*ranks[ii]*ranks[ii+1];
     }
 
-    printf("nunknown = %zu\n", nunknown);
     double * param = calloc_double(nunknown);
     double * grad = calloc_double(nunknown);
     for (size_t ii = 0; ii < nunknown; ii++){
-        /* param[ii] = randu()*2.0-1.0; */
-        param[ii] = randn();
+        param[ii] = randu()*2.0-1.0;
+        /* param[ii] = randn(); */
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param,ranks);
-
-    printf("ftp nparam start = %zu\n", ftp->nparams);
-    /* ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-3); */
-    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    
-    
-    struct StochasticUpdater su;    
-    su.eta = 3e-1;
-    int res = setup_least_squares_online_learning(&su, ftp, ropts);
+    struct RegressOpts* ropts = regress_opts_alloc(dim);
+    struct StochasticUpdater * su = stochastic_updater_alloc(SU_ADADELTA);
+    int res = setup_least_squares_online_learning(su, 0.9, ftp, ropts);
     CuAssertIntEquals(tc, 0, res);
-    printf("num_params = %zu\n", su.nparams);
-    /* CuAssertIntEquals(tc, nunknown, su.nparams); */
+    CuAssertIntEquals(tc, nunknown, su->nparams);
 
     // create data
-    size_t ndata = 100000;
-    /* printf("\t ndata = %zu\n",ndata); */
-    /* size_t ndata = 200; */
+    size_t ndata = 1000000;
     double x[5];
     double y;
 
     double diffs = function_train_relnorm2diff(ftp->ft,a);
     printf("\n\t Relative Error Start: ||f - f_approx||/||f|| = %G\n",diffs);
-    // // add noise
     struct Data * data = data_alloc(1, dim);
     for (size_t jj = 0; jj < dim; jj++){
         x[jj] = randu()*(ub-lb) + lb;
     }
-    double * prev_update = calloc_double(nunknown);
     for (size_t ii = 0 ; ii < ndata; ii++){
         /* printf("ii = %zu\n", ii); */
-        if (ii % 1 == 0){
-            for (size_t jj = 0; jj < dim; jj++){
-                x[jj] = randu()*(ub-lb) + lb;
-            }
+        for (size_t jj = 0; jj < dim; jj++){
+            x[jj] = randu()*(ub-lb) + lb;
         }
-        // no noise!
-        
+
         y = function_train_eval(a,x);
-        /* y = x[0] * x[1]; */
 
         data_set_xy(data, x, &y);
 
-        double eval = stochastic_update_step(&su, param, grad, prev_update, data);
+        /* printf("update\n"); */
+        double eval = stochastic_update_step(su, param, grad, data);
+        (void) eval;
         ft_param_update_params(ftp, param);
         /* printf("pt = "); dprint(dim, x); */
         /* printf("\t y = %3.5G\n", y); */
@@ -148,15 +130,14 @@ void Test_online1(CuTest * tc)
 
     ft_param_update_params(ftp, param);
 
-    free(prev_update); prev_update = NULL;
-
     double diff = function_train_relnorm2diff(ftp->ft,a);
     printf("\n\t Relative Error: ||f - f_approx||/||f|| = %G\n",diff);
-    CuAssertDblEquals(tc,0.0,diff,1e-8);
-    
+    /* CuAssertDblEquals(tc,0.0,diff,1e-2); */
+
+    data_free(data); data = NULL;
+    stochastic_updater_free(su); su = NULL;
     ft_param_free(ftp);            ftp      = NULL;
     regress_opts_free(ropts);      ropts    = NULL;
-    /* function_train_free(ft_final); ft_final = NULL; */
     bounding_box_free(bds);        bds      = NULL;
     function_train_free(a);        a        = NULL;
 
@@ -168,9 +149,7 @@ void Test_online1(CuTest * tc)
 
 static double ff_reg(double * x)
 {
-
     return sin(x[0]*2.0) + x[1] + x[2] + x[3]*x[4] + x[3]*x[2]*x[2];
-           
 }
 
 void Test_online2(CuTest * tc)
@@ -193,7 +172,6 @@ void Test_online2(CuTest * tc)
     double scale = 1.0;
     double width = pow(nparams,-0.2)*2.0/12.0;
     width *= 10;
-    /* printf("\t width = %G\n",width); */
 
     struct KernelApproxOpts * opts = kernel_approx_opts_gauss(nparams,centers,scale,width);
     struct OneApproxOpts * qmopts = one_approx_opts_alloc(KERNEL,opts);
@@ -205,7 +183,6 @@ void Test_online2(CuTest * tc)
         nunknown += nparams*ranks[ii]*ranks[ii+1];
     }
 
-    printf("nunknown = %zu\n", nunknown);
     double * param = calloc_double(nunknown);
     double * grad = calloc_double(nunknown);
     for (size_t ii = 0; ii < nunknown; ii++){
@@ -215,22 +192,15 @@ void Test_online2(CuTest * tc)
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,param,ranks);
 
-    printf("ftp nparam start = %zu\n", ftp->nparams);
     /* ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-3); */
-    struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
-    
-    
-    struct StochasticUpdater su;    
-    su.eta = 3e-1;
-    int res = setup_least_squares_online_learning(&su, ftp, ropts);
+    struct RegressOpts* ropts = regress_opts_alloc(dim);
+    struct StochasticUpdater * su = stochastic_updater_alloc(SU_ADADELTA);
+    int res = setup_least_squares_online_learning(su, 9.99e-1, ftp, ropts);       
     CuAssertIntEquals(tc, 0, res);
-    printf("num_params = %zu\n", su.nparams);
-    /* CuAssertIntEquals(tc, nunknown, su.nparams); */
+    CuAssertIntEquals(tc, nunknown, su->nparams);
 
     // create data
-    size_t ndata = 1000;
-    /* printf("\t ndata = %zu\n",ndata); */
-    /* size_t ndata = 200; */
+    size_t ndata = 100000;
     double x[5];
     double y;
 
@@ -239,7 +209,6 @@ void Test_online2(CuTest * tc)
     for (size_t jj = 0; jj < dim; jj++){
         x[jj] = randu()*(ub-lb) + lb;
     }
-    double * prev_update = calloc_double(nunknown);
     for (size_t ii = 0 ; ii < ndata; ii++){
         /* printf("ii = %zu\n", ii); */
         if (ii % 1 == 0){
@@ -247,26 +216,41 @@ void Test_online2(CuTest * tc)
                 x[jj] = randu()*(ub-lb) + lb;
             }
         }
-        // no noise!
         
         y = ff_reg(x);
-        /* y = x[0] * x[1]; */
-
         data_set_xy(data, x, &y);
 
-        double eval = stochastic_update_step(&su, param, grad, prev_update, data);
+        double eval = stochastic_update_step(su, param, grad, data);
+        (void) eval;
         ft_param_update_params(ftp, param);
         /* printf("pt = "); dprint(dim, x); */
-        printf("\t y = %3.5G\n", y);
-        printf("\t pred y = %3.5G\n", function_train_eval(ftp->ft, x));
-        /* printf("\t param = "); dprint(nunknown, param); */
-        printf("\t\t obj = %3.15G\n", eval);
+        /* printf("\t y = %3.5G\n", y); */
+        /* printf("\t pred y = %3.5G\n", function_train_eval(ftp->ft, x)); */
+        /* /\* printf("\t param = "); dprint(nunknown, param); *\/ */
+        /* printf("\t\t obj = %3.15G\n", eval); */
     }
 
     ft_param_update_params(ftp, param);
-    free(prev_update); prev_update = NULL;
+
+    double diff = 0.0;
+    double norm = 0.0;
+    for (size_t ii = 0; ii < 1000; ii++){
+        double pt[5];
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+        double v1 = ff_reg(pt);
+        double v2 = function_train_eval(ftp->ft,pt);
+
+        diff += pow(v1-v2,2);
+        norm += pow(v1,2);
+    }
+    printf("\n\t Error = %G, norm = %G, rat = %G\n",diff,norm,diff/norm);
+    CuAssertDblEquals(tc,0.0,diff/norm,1e-1);
+
     
-    /* CuAssertDblEquals(tc,0.0,diff,1e-3); */
+    data_free(data); data = NULL;
+    stochastic_updater_free(su); su = NULL;
     
     ft_param_free(ftp);            ftp      = NULL;
     regress_opts_free(ropts);      ropts    = NULL;
@@ -282,7 +266,7 @@ CuSuite * OnlineGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
 
-    /* SUITE_ADD_TEST(suite, Test_online1); */
+    SUITE_ADD_TEST(suite, Test_online1);
     SUITE_ADD_TEST(suite, Test_online2);
 
     return suite;
