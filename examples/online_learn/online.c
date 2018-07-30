@@ -77,7 +77,7 @@ int main(int argc, char * argv[])
     size_t ndata = data_frame_get_nrows(data);
 
     
-    size_t fixed_rank = 3;
+    size_t fixed_rank = 6;
     size_t * ranks = calloc_size_t(dim+1);
     ranks[0] = 1;
     ranks[dim] = 1;
@@ -85,17 +85,23 @@ int main(int argc, char * argv[])
         ranks[ii] = fixed_rank;
     }
 
+    
+    
     double lb = -30;
     double ub = 50;
 
-    /* size_t N = 40; */
+    /* size_t adapt_kernel = 1; */
+    /* size_t N = 10; */
     /* double width = pow(N,-0.2)/sqrt(12.0); */
     /* width *= 0.5; */
     /* double * x1 = linspace(lb, ub, N); */
-    /* struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(N,x1,1.0,width); */
+    
+    /* struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(N, x1, 10.0, width); */
+    /* kernel_approx_opts_set_center_adapt(kopts, adapt_kernel); */
     /* struct OneApproxOpts * ko = one_approx_opts_alloc(KERNEL,kopts); */
 
-    size_t N = 4;
+    size_t N = 6;
+    size_t adapt_kernel = 0;
     struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
     ope_opts_set_nparams(opts,N);
     ope_opts_set_lb(opts,lb);
@@ -107,7 +113,12 @@ int main(int argc, char * argv[])
     size_t nparam = 0;
     for (size_t ii = 0; ii < dim; ii++){
         multi_approx_opts_set_dim(fapp,ii,ko);
-        nparam += N * ranks[ii]*ranks[ii+1];
+        if (adapt_kernel == 0){
+            nparam += N * ranks[ii]*ranks[ii+1];
+        }
+        else{
+            nparam += 2 * N * ranks[ii]*ranks[ii+1];
+        }
     }
 
     printf("num params = %zu\n", nparam);

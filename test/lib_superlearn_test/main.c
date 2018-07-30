@@ -57,7 +57,7 @@ void RunAllTests(void) {
     CuSuite * regress = CLinalgRegressGetSuite();
     CuSuite * online = OnlineGetSuite();
     
-    /* CuSuiteAddSuite(suite, regress); */
+    CuSuiteAddSuite(suite, regress);
     CuSuiteAddSuite(suite, online);
     
     CuSuiteRun(suite);
