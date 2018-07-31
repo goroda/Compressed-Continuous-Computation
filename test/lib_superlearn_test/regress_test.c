@@ -1152,7 +1152,7 @@ void Test_LS_AIO_new_weighted(CuTest * tc)
     double diff1 = fabs(y[1] - eval1);
     printf("\t Error on heavily weighted sample = %3.5G\n", diff0);
     printf("\t Error on next sample = %3.5G\n", diff1);
-    CuAssertDblEquals(tc, 0.0, diff0, 1e-10);
+    CuAssertDblEquals(tc, 0.0, diff0, 1e-9);
     CuAssertIntEquals(tc, 1, diff0 < diff1);
 
     struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
@@ -3190,9 +3190,254 @@ void Test_LS_AIO_new_sgd(CuTest * tc)
 
     one_approx_opts_free_deep(&qmopts);
     multi_approx_opts_free(fapp);
+}
+
+
+static double hess_fd_ij(struct FTparam * ftp, double * param, double * x,
+                         double h,size_t ii, size_t jj)
+{
+    size_t nparam = ftp->nparams;
+    double * y = calloc_double(nparam);
+    memmove(y,param,nparam*sizeof(double));
+
+    /* printf("here %zu\n",nparam); */
+    
+    y[ii] += h;
+    y[jj] += h;
+    ft_param_update_params(ftp,y);
+    double v1 = function_train_eval(ftp->ft,x);
+    /* printf("v1 = %G ",v1); */
+    y[ii] -= h;
+    y[jj] -= h;
+
+
+    y[ii] += h;
+    y[jj] -= h;
+    ft_param_update_params(ftp,y);
+    double v2 = function_train_eval(ftp->ft,x);
+    /* printf("v2 = %G ",v2); */
+    y[ii] -= h;
+    y[jj] += h;
+
+    y[ii] -= h;
+    y[jj] += h;
+    ft_param_update_params(ftp,y);
+    double v3 = function_train_eval(ftp->ft,x);
+    /* printf("v3 = %G ",v3); */
+    y[ii] += h;
+    y[jj] -= h;
+
+
+    y[ii] -= h;
+    y[jj] -= h;
+    ft_param_update_params(ftp,y);
+    double v4 = function_train_eval(ftp->ft,x);
+    y[ii] += h;
+    y[jj] += h;
+
+    double num = v1 - v2 - v3 + v4;
+    double den = 4.0 * h * h;
+
+    double res = num / den;
+    ft_param_update_params(ftp,param);
+    free(y); y = NULL;
+    return res;
+
+}
+
+void Test_ft_param_hess_vec(CuTest * tc)
+{
+    srand(seed);
+    printf("\nft_param_hess_vec: Testing ft_param_hess_vec (1)\n");
+    printf("\t  Dimensions: 2\n");
+    printf("\t  Ranks:      [1 2 1]\n");
+    printf("\t  LPOLY order: 3\n");
+
+    size_t dim = 2;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    size_t ranks[3] = {1,2,1};
+
+    // create data
+    size_t ndata = 1;
+    double * x = calloc_double(ndata*dim);
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+    }
+
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    /* printf("nunknowns = %zu\n",nunknowns); */
+    double param[16];
+    
+    // first core / first function
+    param[0] = 1.0;
+    param[1] = 2.0;
+    param[2] = 3.0;
+    param[3] = 4.0;
+
+    // first core / second function
+    param[4] = 1.5;
+    param[5] = 2.5;
+    param[6] = 3.5;
+    param[7] = 4.5;
+
+    // second core / first function
+    param[8] = -0.3;
+    param[9] = -0.6;
+    param[10] = -0.9;
+    param[11] = -1.2;
+
+    // second core / second function
+    param[12] = 0.50;
+    param[13] = 0.75;
+    param[14] = 1.00;
+    param[15] = 1.25;
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param,ranks);
+    /* printf("nunknowns = %zu\n",ftp->nparams); */
+    /* iprint_sz(4,ftp->nparams_per_uni); */
+
+    double vec[16] = {1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                      0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+
+    double vec_out[16] = {1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                          0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+    
+
+    double h = 1e-5;
+    for (size_t ii = 0; ii < 16; ii++){
+        vec[ii] = 1.0;
+        /* printf("what!\n"); */
+        ft_param_hessvec(ftp,x,vec,vec_out);
+        /* printf("ok!\n"); */
+        for (size_t jj = 0; jj < 16; jj++){
+
+            /* printf("%3.5G ",vec_out[jj]); */
+            double should = hess_fd_ij(ftp,param,x,h,ii,jj);
+            /* printf("%3.5G %3.5G\n",vec_out[jj],should); */
+            double err = should - vec_out[jj];
+            CuAssertDblEquals(tc,0.0,err,1e-5);
+        }
+        /* printf("\n"); */
+        vec[ii] = 0.0;
+    }
+
+    /* printf("\n\n"); */
+    /* for (size_t ii = 0; ii < 16; ii++){ */
+    /*     for (size_t jj = 0; jj < 16; jj++){ */
+    /*         double should = hess_fd_ij(ftp,param,x,h,ii,jj); */
+    /*         printf("%3.5G ",should); */
+    /*     } */
+    /*     printf("\n"); */
+    /* } */
+    /* dprint(16,vec_out); */
 
     
+    free(x); x = NULL;
+
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_param_free(ftp);
 }
+
+
+void Test_ft_param_hess_vec2(CuTest * tc)
+{
+    srand(seed);
+    printf("\nft_param_hess_vec: Testing ft_param_hess_vec (2)\n");
+    printf("\t  Dimensions: 6\n");
+    printf("\t  Ranks:      [1 3 4 2 8 5 1]\n");
+    printf("\t  LPOLY order: 3\n");
+
+    size_t dim = 6;
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 3;
+    size_t ranks[7] = {1,3,4,2,8,5,1};
+
+    // create data
+    size_t ndata = 1;
+    double * x = calloc_double(ndata*dim);
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){ nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];}
+    
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    printf("\t  nunknowns = %zu\n",nunknowns);
+    double * param = calloc_double(nunknowns);
+    for (size_t ii = 0; ii < nunknowns; ii++){
+        param[ii] = randn();
+    }
+
+    struct FTparam* ftp = ft_param_alloc(dim,fapp,param,ranks);
+    /* printf("nunknowns = %zu\n",ftp->nparams); */
+    /* iprint_sz(4,ftp->nparams_per_uni); */
+
+    double * vec = calloc_double(nunknowns);
+    double * vec_out = calloc_double(nunknowns);
+
+    double h = 1e-4;
+    for (size_t ii = 0; ii < nunknowns; ii++){
+        vec[ii] = 1.0;
+        /* printf("what!\n"); */
+        ft_param_hessvec(ftp,x,vec,vec_out);
+        /* printf("ok!\n"); */
+        for (size_t jj = 0; jj < nunknowns; jj++){
+
+            double should = hess_fd_ij(ftp,param,x,h,ii,jj);
+            /* printf("%3.5G ",vec_out[jj]); */
+
+            double err = (should - vec_out[jj]);
+            /* printf("%3.5G %3.5G %3.5G\n",vec_out[jj],should,err); */
+            CuAssertDblEquals(tc,0.0,err,1e-3);
+        }
+        /* printf("\n"); */
+        vec[ii] = 0.0;
+    }
+
+    free(vec); vec = NULL;
+    free(vec_out); vec_out = NULL;
+    free(x); x = NULL;
+    free(param); param = NULL;
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_param_free(ftp);
+}
+
+
+
 
 
 CuSuite * CLinalgRegressGetSuite()
@@ -3213,6 +3458,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
     SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
+
     /* next 4 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_new);
     SUITE_ADD_TEST(suite, Test_LS_AIO_new_weighted);
@@ -3229,7 +3475,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
     SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
-    /* Next 3 are good */
+    /* /\* Next 3 are good *\/ */
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
     
@@ -3239,14 +3485,14 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
 
-
     SUITE_ADD_TEST(suite, Test_kristoffel);
     SUITE_ADD_TEST(suite, Test_LS_AIO_kristoffel);
-    
 
     SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
     SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
-        
+
+    SUITE_ADD_TEST(suite,Test_ft_param_hess_vec);
+    SUITE_ADD_TEST(suite,Test_ft_param_hess_vec2);
 
     return suite;
 }
