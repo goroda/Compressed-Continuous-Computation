@@ -1424,12 +1424,18 @@ static double hess_ij(size_t dim,
 }
 
 /***********************************************************//**
-    Evaluate the gradient of the ft with respect to each parameter
+    Evaluate the hessian times vector
 
-    \param[in,out] ftp        - parameterized FTP
-    \param[in]     x          - location at which to evaluate
+    \param[in,out] ftp      - parameterized FTP
+    \param[in]     x        - location at which to evaluate
+    \param[in]     vec      - vector by which to right-multiply the hessian
+    \param[in,out] hess_vec - final result, must be allocated on entrance
 
     \return evaluation
+
+    \note 
+    This algorithm may not be fully optimized to take advantage of
+    all available structure. It needs to be reviewed
 ***************************************************************/
 double ft_param_hessvec(struct FTparam * ftp, const double * x,
                         const double * vec,
@@ -1445,7 +1451,6 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
             maxrank = ranks[ii];
         }
     }
-
 
     size_t r1,r2;
     size_t onuni = 0;

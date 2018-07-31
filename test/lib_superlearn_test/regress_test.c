@@ -1152,7 +1152,7 @@ void Test_LS_AIO_new_weighted(CuTest * tc)
     double diff1 = fabs(y[1] - eval1);
     printf("\t Error on heavily weighted sample = %3.5G\n", diff0);
     printf("\t Error on next sample = %3.5G\n", diff1);
-    CuAssertDblEquals(tc, 0.0, diff0, 1e-10);
+    CuAssertDblEquals(tc, 0.0, diff0, 1e-9);
     CuAssertIntEquals(tc, 1, diff0 < diff1);
 
     struct FTRegress * reg = ft_regress_alloc(dim,fapp,ranks);
@@ -3444,65 +3444,55 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
 
-    /* /\* next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
+    /* next 3 are good */
+    SUITE_ADD_TEST(suite, Test_LS_ALS);
+    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
-    /* /\* next 5 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_gradeval); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_eval_lin); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    /* next 5 are good */
+    SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_eval_lin);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin);
+    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
-<<<<<<< HEAD
+
     /* next 4 are good */
     SUITE_ADD_TEST(suite, Test_LS_AIO_new);
     SUITE_ADD_TEST(suite, Test_LS_AIO_new_weighted);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
-=======
-    /* /\* next 4 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
-    /* /\* SUITE_ADD_TEST(suite, Test_LS_cross_validation); *\/ */
->>>>>>> ccdb5525207f97c87fb774e7a6d8dcda908dbdc6
     
 
-    /* /\* Next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    /* Next 2 are good */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
-    /* /\* next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    /* next 2 are good */
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
     /* /\* Next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
     
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rounding); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
 
+    SUITE_ADD_TEST(suite, Test_kristoffel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kristoffel);
 
-    /* SUITE_ADD_TEST(suite, Test_kristoffel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kristoffel); */
-    
-
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
 
     SUITE_ADD_TEST(suite,Test_ft_param_hess_vec);
     SUITE_ADD_TEST(suite,Test_ft_param_hess_vec2);
-    
 
     return suite;
 }
