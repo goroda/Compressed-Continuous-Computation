@@ -282,8 +282,8 @@ CuSuite * OnlineGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
 
-    /* SUITE_ADD_TEST(suite, Test_online1); */
-    SUITE_ADD_TEST(suite, Test_online2);
+    SUITE_ADD_TEST(suite, Test_online1);
+    /* SUITE_ADD_TEST(suite, Test_online2); */
 
     return suite;
 }
