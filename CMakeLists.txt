@@ -16,8 +16,7 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)
 
     option(USE_CLANG "build application with clang" ON)
-    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual
--fcomment-block-commands=private")
+    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command")
     set(CMAKE_C_COMPILER "clang")
 
     include_directories(/opt/local/include)
