@@ -178,41 +178,85 @@ void Test_fft2(CuTest * tc){
 
 void Test_fft_base_big(CuTest * tc){
 
-    printf("Testing function: fft_base for timing purposes \n");
+    printf("Testing function: fft for timing purposes \n");
 
     // 2^20
-    complex double x[2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 *
-                     2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 ];
-    complex double X[2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 *
-                     2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 ];
 
-    FILE * fp = fopen("fft_scaling.txt","w+");
-    assert (fp != NULL);
+    /* FILE * fp = fopen("fft_scaling.txt","w+"); */
+    /* assert (fp != NULL); */
     size_t N = 1;
     for (size_t ll = 0; ll < 18; ll++){
+    /* for (size_t ll = 0; ll < 1; ll++){ */
     /* size_t N = 1024*16; */
         N = N * 2;
+        printf("ll = %zu, N = %zu\n", ll, N);
+
+        double complex *x = malloc(N * sizeof(double complex));
+        double complex *X = malloc(N * sizeof(double complex));
+        
         size_t nrand = 100;
         clock_t tic = clock();
         for (size_t jj = 0; jj < nrand; jj++){
             for (size_t ii = 0; ii < N; ii++){
                 x[ii] = randn();
             }
-            int res = fft_base(N,x,1,X,1);
+            int res = fft(N, x, 1, X, 1);
+            /* int res = fft_base(N,x,1,X,1); */
             CuAssertIntEquals(tc,0,res);
         }
         clock_t toc = clock();
         double avg = (double)(toc - tic) / CLOCKS_PER_SEC / (double) nrand;
         printf("Average (over %zu) time to perform size %zu DFT is %G seconds \n",nrand,N,avg);
         printf("N = %zu, time = %G\n",N,avg);
-        fprintf(fp,"%zu %G\n",N,avg);
+        /* fprintf(fp,"%zu %G\n",N,avg); */
+        free(x); x = NULL;
+        free(X); X = NULL;
     }
-    fclose(fp);
+    /* fclose(fp); */
+}
+
+void Test_fft_ifft(CuTest * tc){
+
+    printf("Testing function: fft and ifft \n");
+
+    // 2^20
+
+    size_t N = 1;
+    for (size_t ll = 0; ll < 10; ll++){
+        N = N * 2;
+        /* printf("ll = %zu, N = %zu\n", ll, N); */
+
+        double complex *x = malloc(N * sizeof(double complex));
+        double complex *xout = malloc(N * sizeof(double complex));
+        double complex *X = malloc(N * sizeof(double complex));
+        
+        size_t nrand = 100;
+        for (size_t jj = 0; jj < nrand; jj++){
+            for (size_t ii = 0; ii < N; ii++){
+                x[ii] = randn();
+            }
+            int res = fft(N, x, 1, X, 1);
+            /* int res = fft_base(N,x,1,X,1); */
+            CuAssertIntEquals(tc,0,res);
+            res = ifft(N, X, 1, xout, 1);
+
+            for (size_t ii = 0; ii < N; ii++){
+                double diff = cabs(xout[ii] - x[ii]);
+                /* printf("diff = %3.5G\n", diff); */
+                CuAssertDblEquals(tc, 0.0, diff, 1e-14);
+            }
+                
+        }
+
+        free(x); x = NULL;
+        free(xout); xout = NULL;
+        free(X); X = NULL;
+    }
 }
 
 void Test_cheb_vals_to_coeff(CuTest * tc){
 
-    printf("Testing function: vaks_to_coeff \n");
+    printf("Testing function: vals_to_coeff \n");
 
     double vals[3] = {6.0, 2.0, 2.0};
     size_t nvals = 3;
@@ -221,20 +265,21 @@ void Test_cheb_vals_to_coeff(CuTest * tc){
     int res = cheb_vals_to_coeff(nvals,vals,coeff);
     CuAssertIntEquals(tc,0,res);
     
-    dprint(nvals,coeff);
+    /* dprint(nvals,coeff); */
 
 }
 
 CuSuite * FFTGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_fft_slow); */
-    /* SUITE_ADD_TEST(suite, Test_fft_base); */
-    /* SUITE_ADD_TEST(suite, Test_fft); */
-    /* SUITE_ADD_TEST(suite, Test_fft2); */
-    /* SUITE_ADD_TEST(suite, Test_fft_base_big); */
+    SUITE_ADD_TEST(suite, Test_fft_slow);
+    SUITE_ADD_TEST(suite, Test_fft_base);
+    SUITE_ADD_TEST(suite, Test_fft);
+    SUITE_ADD_TEST(suite, Test_fft2);
+    SUITE_ADD_TEST(suite, Test_fft_base_big);
+    SUITE_ADD_TEST(suite, Test_fft_ifft);
  
-    SUITE_ADD_TEST(suite, Test_cheb_vals_to_coeff);
+    /* SUITE_ADD_TEST(suite, Test_cheb_vals_to_coeff); */
 
     return suite;
 }

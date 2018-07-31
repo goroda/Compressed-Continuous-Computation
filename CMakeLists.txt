@@ -79,7 +79,8 @@ if (MAKE_PYTHON_WRAPPERS)
   set(python_lib ${PYTHON_LIBRARIES})
 
   # Add some more compiler flags
-  set(compiler_flags "${compiler_flags} -Wunused-function -Wno-reserved-id-macro -Wno-unused-function -Wno-duplicate-enum -Wno-unknown-warning-option")
+  # set(compiler_flags "${compiler_flags} -Wunused-function -Wno-reserved-id-macro -Wno-unused-function -Wno-duplicate-enum -Wno-unknown-warning-option")
+  set(compiler_flags "${compiler_flags} -Wunused-function -Wno-unused-function")
 endif()
 
 option(BUILD_STATIC_LIB "Build a static library" OFF)

@@ -23,9 +23,8 @@ In addition to the above capabilities, which are unique to the C3 package, I als
 * Stochastic Gradient with ADAM 
 
 
-For more details see the website at 
-
-http://www.alexgorodetsky.com/c3/html/
+Documentation of most functions is provided by Doxygen here: 
+http://alexgorodetsky.com/c3doc/html/
 
 ## Installation / Getting started
 
@@ -34,7 +33,7 @@ The dependencies for this code are
    2) LAPACK
    3) SWIG (if building non-C interfaces)
 
-``` shell
+```shell
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
 cd c3
 mkdir build
@@ -75,7 +74,7 @@ Default: `OFF'
 
 Using this option can toggle whether or not static or shared libraries should be built.
 
-** Note: This option cannot be set to ON if building the python wrapper **
+**Note: This option cannot be set to ON if building the python wrapper**
 
 #### BUILD_SUB_LIBS
 Default: `OFF'
@@ -98,6 +97,20 @@ make PyWrapper
 1) Mac OS X with clang version 8.0  
 2) Ubuntu with gcc version 5.0
 
+
+## Solutions to some possible problems
+
+### Error: Unable to find 'python.swg'
+
+On Mac OS X, if SWIG is installed with macports using
+```shell
+sudo port install swig
+```
+then the above error might occur. To remedy this error install the swig-python package
+```shell
+sudo port install swig-python
+```
+
 ## Coding practices
 
 I aim to document (with Doxygen) every function available to the user and provide a unit test. Furthermore, I won't push code to the master branch that has memory leaks. I am constantly looking for more suggestions for improving the robustness of the code if any issues are encountered. 
@@ -107,9 +120,10 @@ I aim to document (with Doxygen) every function available to the user and provid
 Please open a Github issue to ask a question, report a bug, or to request features.
 To contribute, fork the repository and setup a branch.
 
-Author: Alex A. Gorodetsky  
-Contact: alex@alexgorodetsky.com  
+Author: [Alex A. Gorodetsky](https://www.alexgorodetsky.com)  
+Contact: [goroda@umich.edu](mailto:goroda@umich.edu)  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
+Copyright (c) 2018, University of Michigan  
 License: BSD
 

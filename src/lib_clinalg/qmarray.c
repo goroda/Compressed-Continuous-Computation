@@ -54,6 +54,12 @@
 #include "quasimatrix.h"
 #include "qmarray.h"
 
+/* #define ZEROTHRESH 1e2*DBL_EPSILON */
+/* #define ZERO 1e2*DBL_EPSILON */
+
+/* #define ZEROTHRESH 1e0*DBL_EPSILON */
+/* #define ZERO 1e0*DBL_EPSILON */
+
 #define ZEROTHRESH 1e2*DBL_EPSILON
 #define ZERO 1e2*DBL_EPSILON
 
@@ -130,6 +136,26 @@ struct Qmarray * qmarray_copy(const struct Qmarray * qm)
     size_t ii;
     for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
         qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
+    }
+
+    return qmo;
+}
+
+/***********************************************************//**
+    Perform an elementwise operator on a qmarray
+
+    \param[in] qm - qmarray
+    \param[in] op - operator
+
+    \return qmo  
+***************************************************************/
+struct Qmarray * qmarray_operate_elements(const struct Qmarray * qm,
+                                          const struct Operator * op)
+{
+    struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
+    size_t ii;
+    for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
+        qmo->funcs[ii] = op->f(qm->funcs[ii], op->opts);
     }
 
     return qmo;
@@ -356,16 +382,31 @@ qmarray_orth1d_rows(size_t nrows, size_t ncols, struct OneApproxOpts * opts)
     for (ii = 0; ii < nrows; ii++){
         funcs[ii] = NULL;
     }
-    //printf("wwwhat\n");
+    /* printf("wwwhat\n"); */
     generic_function_array_orth(nrows, funcs, opts->fc, opts->aopts);
-    //printf("wwwhere\n");
+    /* printf("wwwhere\n"); */
+    /* for (size_t ii = 0; ii < nrows; ii++){ */
+    /*     printf("after array_orth ii = %zu\n", ii); */
+    /*     print_generic_function(funcs[ii], 4, NULL, stdout);         */
+    /* } */
     
     struct GenericFunction * zero = generic_function_constant(0.0,opts->fc,opts->aopts);
     
     size_t onnon = 0;
     size_t onorder = 0;
     for (jj = 0; jj < nrows; jj++){
+        assert (onorder < nrows);
         qm->funcs[onnon*nrows+jj] = generic_function_copy(funcs[onorder]);
+        double normfunc = generic_function_norm(qm->funcs[onnon*nrows+jj]);
+        /* printf("normfunc rows = %3.15G\n", normfunc); */
+        if (isnan(normfunc)){
+            printf("normfunc rows = %3.15G\n", normfunc);
+            printf("num_rows = %zu\n", nrows);
+            printf("num_cols = %zu\n", ncols);
+            printf("onorder = %zu\n", onorder);
+            print_generic_function(qm->funcs[onnon*nrows+jj], 4, NULL, stdout);
+            exit(1);
+        }
         for (kk = 0; kk < onnon; kk++){
             qm->funcs[kk*nrows+jj] = generic_function_copy(zero);
         }
@@ -479,6 +520,19 @@ qmarray_orth1d_columns(size_t nrows,size_t ncols,struct OneApproxOpts * opts)
         size_t onorder = 0;
         for (size_t jj = 0; jj < ncols; jj++){
             qm->funcs[jj*nrows+onnon] = generic_function_copy(funcs[onorder]);
+            double normfunc = generic_function_norm(qm->funcs[jj*nrows+onnon]);
+            /* printf("normfunc cols = %3.15G %d \n", normfunc, isnan(normfunc)); */
+            if (isnan(normfunc)){
+                printf("normfunc cols = %3.15G\n", normfunc);
+                printf("num_rows = %zu\n", nrows);
+                printf("num_cols = %zu\n", ncols);
+                print_generic_function(qm->funcs[jj*nrows+onnon], 4, NULL, stdout);
+
+                generic_function_free(qm->funcs[jj*nrows+onnon]);
+                qm->funcs[jj*nrows+onnon] = generic_function_copy(zero);
+                exit(1);
+            }
+
             for (size_t kk = 0; kk < onnon; kk++){
                 qm->funcs[jj*nrows+kk] = generic_function_copy(zero);
             }
@@ -563,6 +617,19 @@ qmarray_poly_randu(enum poly_type ptype,
 
 
 // getters and setters
+/**********************************************************//**
+    Return a typed function                                                           
+**************************************************************/
+void *
+qmarray_get_func_base(const struct Qmarray * qma, size_t row, size_t col)
+{
+    assert (qma != NULL);
+    assert (row < qma->nrows);
+    assert (col < qma->ncols);
+
+    return qma->funcs[col*qma->nrows+row]->f;
+}
+
 /**********************************************************//**
     Return a function                                                           
 **************************************************************/
@@ -2836,7 +2903,9 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
         }
     }
     else if (strcmp(dir, "LQ") == 0){
+        /* printf("lets go LQ!\n"); */
         Q = qmarray_orth1d_rows(A->nrows,ncols,app);
+        /* printf("got orth1d_rows!\n"); */
         if (app->fc != PIECEWISE){
             //free(R); R = NULL;
             int out = qmarray_lq(A,&Q,&R,app);
@@ -3149,6 +3218,42 @@ struct Qmarray * qmarray_deriv(struct Qmarray * a)
 }
 
 /***********************************************************//**
+    Compute the second derivative of every function in the qmarray
+
+    \param[in] a - qmarray
+
+    \return qmarray of functions representing the derivatives at all values x
+***************************************************************/
+struct Qmarray * qmarray_dderiv(struct Qmarray * a)
+{
+
+    struct Qmarray * b = qmarray_alloc(a->nrows, a->ncols);
+    size_t ii;
+    for (ii = 0; ii < a->nrows*a->ncols; ii++){
+        b->funcs[ii] = generic_function_dderiv(a->funcs[ii]);
+    }
+    return b;
+}
+
+/***********************************************************//**
+    Compute the second derivative of every function in the qmarray enforcing periodic boundaries
+
+    \param[in] a - qmarray
+
+    \return qmarray of functions representing the derivatives at all values x
+***************************************************************/
+struct Qmarray * qmarray_dderiv_periodic(struct Qmarray * a)
+{
+
+    struct Qmarray * b = qmarray_alloc(a->nrows, a->ncols);
+    size_t ii;
+    for (ii = 0; ii < a->nrows*a->ncols; ii++){
+        b->funcs[ii] = generic_function_dderiv_periodic(a->funcs[ii]);
+    }
+    return b;
+}
+
+/***********************************************************//**
     Evaluate the derivative of every function in the qmarray
 
     \param[in]     a   - qmarray
@@ -3269,6 +3374,30 @@ size_t qmarray_get_params(struct Qmarray * qma, double * param)
          onind += nparam;
      }
      return onind;
+}
+
+/***********************************************************//**
+    Update parameters of a single generic function
+
+    \param[in,out]  qma    - quasimatrix array whose parameters to update
+    \param[in]      row    - row of the function to update
+    \param[in]      col    - column of the function
+    \param[in]      nparam - total number of parameters
+    \param[in]      param  - parameters with which to update
+***************************************************************/
+void qmarray_uni_update_params(struct Qmarray * qma, size_t row, size_t col,
+                           size_t nparam, const double * param)
+{
+
+
+     size_t ind = col * qma->nrows + row;
+     size_t nparam_expect = generic_function_get_num_params(qma->funcs[ind]);
+     if (nparam_expect != nparam){
+         fprintf(stderr, "Trying to update a univariate function in\n");
+         fprintf(stderr, "qmarray_uni_update_params with the wrong number of parameters\n");
+         exit(1);
+     }
+     generic_function_update_params(qma->funcs[ind],nparam,param);
 }
 
 /***********************************************************//**

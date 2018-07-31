@@ -58,6 +58,7 @@ int main(int argc, char * argv[])
         {
             case 'h': 
                 print_usage2(stdout, 0);
+                break;
             case 'o':
                 output_filename = optarg;
                 break;
@@ -80,11 +81,13 @@ int main(int argc, char * argv[])
                     printf("Unknown type %c\n",*optarg);
                     exit(1);
                 }
+                break;
             case 'v':
                 verbose = 1;
                 break;
             case '?':  // invalid option
                 print_usage2 (stderr,1);
+                break;
             case -1: //done with options
                 break;
             default:

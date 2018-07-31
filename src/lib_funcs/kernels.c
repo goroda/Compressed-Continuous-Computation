@@ -614,12 +614,28 @@ void kernel_approx_opts_set_lb(struct KernelApproxOpts * opts, double lb)
 }
 
 /********************************************************//**
+*   Get lower bounds
+*************************************************************/
+double  kernel_approx_opts_get_lb(struct KernelApproxOpts * opts)
+{
+    return opts->lb;
+}
+
+/********************************************************//**
 *   Set upper bounds
 *************************************************************/
 void kernel_approx_opts_set_ub(struct KernelApproxOpts * opts, double ub)
 {
     opts->ub = ub;
     opts->prac_ub = ub;
+}
+
+/********************************************************//**
+*   Get upper bounds
+*************************************************************/
+double  kernel_approx_opts_get_ub(struct KernelApproxOpts * opts)
+{
+    return opts->ub;
 }
 
 struct KernelExpansion
@@ -1139,6 +1155,26 @@ struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion * k
 {
     (void) (ke);
     NOT_IMPLEMENTED_MSG("kernel_expansion_deriv")
+    exit(1);
+}
+
+/********************************************************//**
+*   Obtain the second derivative of a kernel
+*************************************************************/
+struct KernelExpansion * kernel_expansion_dderiv(const struct KernelExpansion * ke)
+{
+    (void) (ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_dderiv")
+    exit(1);
+}
+
+/********************************************************//**
+*   Obtain the second derivative of a kernel with periodic boundary conditions
+*************************************************************/
+struct KernelExpansion * kernel_expansion_dderiv_periodic(const struct KernelExpansion * ke)
+{
+    (void) (ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_dderiv_periodic")
     exit(1);
 }
 

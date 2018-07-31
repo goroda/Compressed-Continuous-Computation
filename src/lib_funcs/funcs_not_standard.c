@@ -185,6 +185,7 @@ generic_function_array_orth(size_t n,
 {
     size_t ii;
     /* double lb, ub; */
+    struct OrthPolyExpansion ** pp = NULL;
     struct LinElemExp ** b = NULL;
     struct ConstElemExp ** ce = NULL;    
     struct KernelExpansion ** ke = NULL;
@@ -198,12 +199,20 @@ generic_function_array_orth(size_t n,
         }
         break;
     case POLYNOMIAL:
+        pp = malloc(n * sizeof(struct OrthPolyExpansion *));
+        for (size_t zz = 0; zz < n; zz++){
+            pp[zz] = NULL;
+        }
+        orth_poly_expansion_orth_basis(n, pp, args);
+        
         for (ii = 0; ii < n; ii++){
             /* printf("on ii = %zu, fc=%d\n",ii,fc); */
             gfarray[ii] = generic_function_alloc(1,fc);
-            gfarray[ii]->f = orth_poly_expansion_genorder(ii,args);
+            /* gfarray[ii]->f = orth_poly_expansion_genorder(ii,args); */
+            gfarray[ii]->f = pp[ii]; /* orth_poly_expansion_genorder(ii,args); */
             gfarray[ii]->fargs = NULL;
         }
+        free(pp); pp = NULL;
         break;
     case LINELM:
         b = malloc(n * sizeof(struct LinElemExp *));

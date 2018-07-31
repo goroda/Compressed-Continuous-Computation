@@ -134,6 +134,8 @@ void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
                           const double *, size_t, double *, size_t);
 void piecewise_poly_scale(double, struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_deriv(const struct PiecewisePoly *);
+struct PiecewisePoly * piecewise_poly_dderiv(const struct PiecewisePoly *);
+struct PiecewisePoly * piecewise_poly_dderiv_periodic(const struct PiecewisePoly *);
 double piecewise_poly_integrate(const struct PiecewisePoly *);
 double piecewise_poly_integrate_weighted(const struct PiecewisePoly *);
 double * piecewise_poly_real_roots(const struct PiecewisePoly *, size_t *);

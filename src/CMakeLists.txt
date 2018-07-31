@@ -160,11 +160,11 @@ if (${static_libs} )
 #   -lm
 #   )
 
-target_include_directories(c3 PUBLIC 
-                     $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
-                     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-                     $<INSTALL_INTERFACE:${include_dest}>
-                     $<INSTALL_INTERFACE:${lib_dest}>)
+target_include_directories(c3 PUBLIC
+  $<BUILD_INTERFACE:${C3_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  $<INSTALL_INTERFACE:${include_dest}>
+  $<INSTALL_INTERFACE:${lib_dest}>)
 
 # install(TARGETS c3 EXPORT c3 DESTINATION "${lib_dest}")
 # install(FILES ${header} DESTINATION "${include_dest}")

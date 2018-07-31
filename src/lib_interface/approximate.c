@@ -237,7 +237,7 @@ void c3approx_set_opt_opts_dim(struct C3Approx * c3a, size_t ii,
     each array of 1 dimensional must have >= *init_rank* nodes
 ***************************************************************/
 void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
-                         double ** start)
+                         double ** startin)    
 {
     assert (c3a != NULL);
     assert (c3a->type == CROSS);
@@ -246,6 +246,20 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
         fprintf(stdout," destroying previous options\n");
         ft_cross_args_free(c3a->fca); c3a->fca = NULL;
     }
+
+    double ** start = NULL;
+    if (startin != NULL){
+        start = startin;
+    }
+    else{
+        start = malloc_dd(c3a->dim);
+        for (size_t ii = 0; ii < c3a->dim; ii++){
+            double lb = multi_approx_opts_get_dim_lb(c3a->fapp, ii);
+            double ub = multi_approx_opts_get_dim_ub(c3a->fapp, ii);
+            start[ii] = linspace(lb, ub, init_rank);
+        }
+    }
+    
     c3a->fca = ft_cross_args_alloc(c3a->dim,init_rank);
     ft_cross_args_set_verbose(c3a->fca,verbose);
     ft_cross_args_set_round_tol(c3a->fca,1e-14);
@@ -259,6 +273,10 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
     c3a->ftref = function_train_constant(1.0,c3a->fapp);
     /* exit(1); */
      /* function_train_get_lb(c3a->ftref); */
+
+    if (startin == NULL){
+        free_dd(c3a->dim, start);
+    }
 }
 
 /***********************************************************//**

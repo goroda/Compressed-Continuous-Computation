@@ -43,6 +43,10 @@
 #include <assert.h>
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327
+#endif
+
 int Sin3xTx2(size_t N, const double * x, double * out, void * args)
 {
     for (size_t ii = 0; ii < N; ii++ ){
@@ -58,6 +62,67 @@ int Sin3xTx2(size_t N, const double * x, double * out, void * args)
 double funcderiv(double x, void * args){
     assert ( args == NULL );
     return 3.0 * cos(3.0 * x) + 2.0 * x;
+}
+
+double funcdderiv(double x, void * args){
+    assert ( args == NULL );
+    return -9.0 * sin(3.0 * x) + 2.0;
+}
+
+int gaussbump(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        /* out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]); */
+        out[ii] = exp(-pow(x[ii],2)/0.1);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
+int gaussbump2(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        /* out[ii] = pow(x[ii],2)+1.0*sin(3.0 * x[ii]); */
+        out[ii] = exp(-0.5*pow(x[ii],2))/pow(M_PI,0.25);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
+int gaussbump2dd(size_t N, const double * x, double * out, void * args)
+{
+    (void) args;
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = (pow(x[ii],2)-1.0)*exp(-0.5*pow(x[ii],2))/pow(M_PI,0.25);
+    }
+    return 0;
+}
+
+int sin_lift(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        /* out[ii] = 2.0 + sin(x[ii]); */
+        out[ii] = 1.0 - cos(x[ii]);
+        /* out[ii] = sin(x[ii]); */
+    }
+    return 0;
+}
+
+int sin_liftdd(size_t N, const double * x, double * out, void * args)
+{
+    (void)(args);
+    for (size_t ii = 0; ii < N; ii++){
+        /* out[ii] =  -sin(x[ii]); */
+        out[ii] =  -cos(x[ii]);
+    }
+    return 0;
 }
 
 // second function
@@ -87,6 +152,8 @@ int polyroots(size_t N, const double * x, double * out, void * args)
     for (size_t ii = 0; ii < N; ii++){
         out[ii] = (x[ii] - 2.0) * (x[ii] - 1.0) * x[ii] *
                   (x[ii] + 3.0) * (x[ii] - 1.0);
+        /* out[ii] = (x[ii] - 0.2) * (x[ii] - 0.1) * x[ii] * */
+        /*           (x[ii] + 0.2) * (x[ii] - 0.1); */
     }
     return 0;
 }
@@ -109,4 +176,16 @@ int x3minusx(size_t N, const double * x, double * out, void * args)
         out[ii] = 3*x[ii]*x[ii]*x[ii] - x[ii];
     }
     return 0;
+}
+
+double x3minusxd(double x, void * args)
+{
+    (void)(args);
+    return 9.0*x*x - 1.0;
+}
+
+double x3minusxdd(double x, void * args)
+{
+    (void)(args);
+    return 18.0*x;
 }

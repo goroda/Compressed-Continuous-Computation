@@ -64,7 +64,9 @@ int kernel_approx_opts_linear_p(const struct KernelApproxOpts *);
 size_t kernel_approx_opts_get_nparams(struct KernelApproxOpts *);
 void kernel_approx_opts_set_nparams(struct KernelApproxOpts *, size_t);
 void kernel_approx_opts_set_lb(struct KernelApproxOpts *, double);
+double  kernel_approx_opts_get_lb(struct KernelApproxOpts *);
 void kernel_approx_opts_set_ub(struct KernelApproxOpts *, double);
+double  kernel_approx_opts_get_ub(struct KernelApproxOpts *);
 
 struct KernelExpansion;
 struct KernelExpansion * kernel_expansion_alloc(size_t);
@@ -97,6 +99,8 @@ double kernel_expansion_eval(const struct KernelExpansion *, double);
 void kernel_expansion_evalN(const struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
 struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion *);
+struct KernelExpansion * kernel_expansion_dderiv(const struct KernelExpansion *);
+struct KernelExpansion * kernel_expansion_dderiv_periodic(const struct KernelExpansion *);
 double kernel_expansion_deriv_eval(const struct KernelExpansion *, double);
 int kernel_expansion_axpy(double, struct KernelExpansion *, struct KernelExpansion *);
 double kernel_expansion_integrate(struct KernelExpansion *);

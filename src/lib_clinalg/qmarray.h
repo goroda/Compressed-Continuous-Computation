@@ -67,6 +67,8 @@ struct Qmarray {
 struct Qmarray * qmarray_alloc(size_t, size_t); 
 void qmarray_free(struct Qmarray *); 
 struct Qmarray * qmarray_copy(const struct Qmarray *);
+struct Qmarray * qmarray_operate_elements(const struct Qmarray *,
+                                          const struct Operator *);
 unsigned char * 
 qmarray_serialize(unsigned char *,const struct Qmarray *, size_t *);
 unsigned char * 
@@ -99,6 +101,7 @@ struct Qmarray *
 qmarray_poly_randu(enum poly_type, size_t, size_t, size_t, double, double);
 
 // getters and setters
+void * qmarray_get_func_base(const struct Qmarray *, size_t, size_t);
 struct GenericFunction *
 qmarray_get_func(const struct Qmarray *, size_t, size_t);
 
@@ -187,6 +190,8 @@ struct Qmarray * qmarray_stackh(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_stackv(const struct Qmarray *,const struct Qmarray *);
 struct Qmarray * qmarray_blockdiag(struct Qmarray *, struct Qmarray *);
 struct Qmarray * qmarray_deriv(struct Qmarray *);
+struct Qmarray * qmarray_dderiv(struct Qmarray *);
+struct Qmarray * qmarray_dderiv_periodic(struct Qmarray *);
 void qmarray_deriv_eval(const struct Qmarray *, double, double *);
 void qmarray_roundt(struct Qmarray **, double);
 
@@ -195,6 +200,8 @@ size_t qmarray_func_get_nparams(const struct Qmarray *,
                                 size_t, size_t);
 size_t qmarray_get_nparams(const struct Qmarray *,size_t *);
 size_t qmarray_get_params(struct Qmarray *,double *);
+void qmarray_uni_update_params(struct Qmarray *, size_t, size_t,
+                               size_t, const double *);
 void qmarray_update_params(struct Qmarray *, size_t, const double *);
 void qmarray_param_grad_eval(struct Qmarray *, size_t,
                              const double *, size_t,

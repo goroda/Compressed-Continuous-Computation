@@ -497,6 +497,209 @@ struct FunctionTrain * exact_diffusion(
 }
 
 
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ \nabla f(x) \right] \f] exactly
+
+    \param[in] f    - input to diffusion operator
+    \param[in] opts - approximation options
+
+    \return out - exact application of laplace operator 
+    
+    \note 
+    Result is not rounded. Might want to perform rounding afterwards
+***************************************************************/
+struct FunctionTrain * exact_laplace(struct FunctionTrain * f,
+                                     struct MultiApproxOpts * opts)
+{
+    size_t dim = f->dim;
+    struct FunctionTrain * out = function_train_alloc(dim);
+    out->ranks[0] = f->ranks[0];
+    out->ranks[dim] = f->ranks[dim];
+
+    struct Qmarray ** ddf = malloc(dim * sizeof(struct Qmarray *));
+    
+    if (ddf == NULL){
+        fprintf(stderr,
+                "Could not allocate memory in exact_laplace_periodic\n");
+        return NULL;
+    }
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        ddf[ii] = qmarray_dderiv(f->cores[ii]);
+    }
+
+    out->cores[0] = qmarray_stackh(ddf[0], f->cores[0]);
+    out->ranks[1] = out->cores[0]->ncols;
+
+    struct OneApproxOpts * o = NULL; 
+    for (ii = 1; ii < dim-1; ii++){
+        o = multi_approx_opts_get_aopts(opts,ii);
+        // dimensions of blocks
+        size_t nrows = f->cores[ii]->nrows;
+        size_t ncols = f->cores[ii]->ncols;
+        struct Qmarray * zer = qmarray_zeros(nrows,ncols,o);
+        struct Qmarray * first_col = qmarray_stackv(f->cores[ii], ddf[ii]);
+        struct Qmarray * second_col = qmarray_stackv(zer, f->cores[ii]);
+
+        out->cores[ii] = qmarray_stackh(first_col, second_col);
+        out->ranks[ii+1] = out->cores[ii]->ncols;
+
+        qmarray_free(zer); zer = NULL;
+        qmarray_free(first_col); first_col = NULL;
+        qmarray_free(second_col); second_col = NULL;
+
+    }
+    ii = dim-1;
+    out->cores[ii] = qmarray_stackv(f->cores[ii],ddf[ii]);
+    out->ranks[ii+1] = out->cores[ii]->ncols;
+
+    for (ii = 0; ii < dim; ii++){
+        qmarray_free(ddf[ii]); ddf[ii] = NULL;
+    }
+    free(ddf); ddf = NULL;
+    return out;
+}
+
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ \nabla f(x) \right] \f] exactly
+    enforce boundary conditions
+
+    \param[in] f    - input to diffusion operator
+    \param[in] opts - approximation options
+
+    \return out - exact application of diffusion operator 
+    
+    \note 
+        Result is not rounded. Might want to perform rounding afterwards
+***************************************************************/
+struct FunctionTrain *
+exact_laplace_periodic(struct FunctionTrain * f,
+                       struct MultiApproxOpts * opts)
+{
+    size_t dim = f->dim;
+    struct FunctionTrain * out = function_train_alloc(dim);
+    out->ranks[0] = f->ranks[0];
+    out->ranks[dim] = f->ranks[dim];
+
+    struct Qmarray ** ddf = malloc(dim * sizeof(struct Qmarray *));
+    
+    if (ddf == NULL){
+        fprintf(stderr,
+                "Could not allocate memory in exact_laplace_periodic\n");
+        return NULL;
+    }
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        ddf[ii] = qmarray_dderiv_periodic(f->cores[ii]);
+    }
+
+    out->cores[0] = qmarray_stackh(ddf[0], f->cores[0]);
+    out->ranks[1] = out->cores[0]->ncols;
+
+    struct OneApproxOpts * o = NULL; 
+    for (ii = 1; ii < dim-1; ii++){
+        o = multi_approx_opts_get_aopts(opts,ii);
+        // dimensions of blocks
+        size_t nrows = f->cores[ii]->nrows;
+        size_t ncols = f->cores[ii]->ncols;
+        struct Qmarray * zer = qmarray_zeros(nrows,ncols,o);
+        struct Qmarray * first_col = qmarray_stackv(f->cores[ii], ddf[ii]);
+        struct Qmarray * second_col = qmarray_stackv(zer, f->cores[ii]);
+
+        out->cores[ii] = qmarray_stackh(first_col, second_col);
+        out->ranks[ii+1] = out->cores[ii]->ncols;
+
+        qmarray_free(zer); zer = NULL;
+        qmarray_free(first_col); first_col = NULL;
+        qmarray_free(second_col); second_col = NULL;
+
+    }
+    ii = dim-1;
+    out->cores[ii] = qmarray_stackv(f->cores[ii],ddf[ii]);
+    out->ranks[ii+1] = out->cores[ii]->ncols;
+
+    for (ii = 0; ii < dim; ii++){
+        qmarray_free(ddf[ii]); ddf[ii] = NULL;
+    }
+    free(ddf); ddf = NULL;
+
+    return out;
+}
+
+/***********************************************************//**
+    Compute \f[ z(x) = \nabla \cdot \left[ \nabla f(x) \right] \f] 
+    Takes an operator that computes the laplacian of each univariate generic function
+
+    \param[in] f    - input to diffusion operator
+    \param[in] op   - (dim, ) array of operators that compute the second derivative in each dimension
+    \param[in] opts - approximation options
+
+    \return out - exact application of laplace operator 
+    
+    \note 
+    Result is not rounded. Might want to perform rounding afterwards
+***************************************************************/
+struct FunctionTrain *
+exact_laplace_op(struct FunctionTrain * f,
+                 struct Operator ** op,
+                 struct MultiApproxOpts * opts)
+{
+    if (op == NULL){
+        return exact_laplace(f, opts);
+    }
+    size_t dim = f->dim;
+    struct FunctionTrain * out = function_train_alloc(dim);
+    out->ranks[0] = f->ranks[0];
+    out->ranks[dim] = f->ranks[dim];
+
+    struct Qmarray ** ddf = malloc(dim * sizeof(struct Qmarray *));
+    
+    if (ddf == NULL){
+        fprintf(stderr,
+                "Could not allocate memory in exact_laplace_periodic\n");
+        return NULL;
+    }
+
+    size_t ii;
+    for (ii = 0; ii < dim; ii++){
+        ddf[ii] = qmarray_operate_elements(f->cores[ii], op[ii]);
+    }
+
+    out->cores[0] = qmarray_stackh(ddf[0], f->cores[0]);
+    out->ranks[1] = out->cores[0]->ncols;
+
+    struct OneApproxOpts * o = NULL; 
+    for (ii = 1; ii < dim-1; ii++){
+        o = multi_approx_opts_get_aopts(opts,ii);
+        // dimensions of blocks
+        size_t nrows = f->cores[ii]->nrows;
+        size_t ncols = f->cores[ii]->ncols;
+        struct Qmarray * zer = qmarray_zeros(nrows,ncols,o);
+        struct Qmarray * first_col = qmarray_stackv(f->cores[ii], ddf[ii]);
+        struct Qmarray * second_col = qmarray_stackv(zer, f->cores[ii]);
+
+        out->cores[ii] = qmarray_stackh(first_col, second_col);
+        out->ranks[ii+1] = out->cores[ii]->ncols;
+
+        qmarray_free(zer); zer = NULL;
+        qmarray_free(first_col); first_col = NULL;
+        qmarray_free(second_col); second_col = NULL;
+
+    }
+    ii = dim-1;
+    out->cores[ii] = qmarray_stackv(f->cores[ii],ddf[ii]);
+    out->ranks[ii+1] = out->cores[ii]->ncols;
+
+    for (ii = 0; ii < dim; ii++){
+        qmarray_free(ddf[ii]); ddf[ii] = NULL;
+    }
+    free(ddf); ddf = NULL;
+    return out;
+}
+
+
 
 
 

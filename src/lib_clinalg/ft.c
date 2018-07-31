@@ -54,9 +54,12 @@
 #include "ft.h"
 
 #ifndef ZEROTHRESH
-    #define ZEROTHRESH 1e2*DBL_EPSILON
+    #define ZEROTHRESH 1e0* DBL_EPSILON
+    /* #define ZEROTHRESH 1e0*DBL_EPSILON */
     /* #define ZEROTHRESH 1e-200 */
 #endif
+
+/* #define ZEROTHRESH 1e-3*DBL_EPSILON */
 
 #ifndef VPREPCORE
     #define VPREPCORE 0
@@ -242,6 +245,23 @@ void function_train_free(struct FunctionTrain * ft)
     }
     /* printf("\t\tDone Freeing Function Train\n"); */
 }
+
+struct FunctionTrain *
+function_train_operate(const struct FunctionTrain * ft,
+                       struct Operator ** op)
+{
+
+    struct FunctionTrain * ft_out = function_train_alloc(ft->dim);
+    ft_out->ranks[1] = ft->ranks[1];
+    for (size_t ii = 0; ii < ft_out->dim; ii++){
+        ft_out->cores[ii] = qmarray_operate_elements(ft->cores[ii],
+                                                     op[ii]);
+        ft_out->ranks[ii+1] = ft->ranks[ii+1];
+    }
+
+    return ft_out;
+}
+
 
 /***********************************************************//**
     Serialize a function_train
@@ -454,6 +474,27 @@ size_t function_train_get_dim(const struct FunctionTrain * ft)
 {
     assert(ft != NULL);
     return ft->dim;
+}
+
+/***********************************************************//**
+    Get core
+***************************************************************/
+struct Qmarray* function_train_get_core(const struct FunctionTrain * ft, size_t ind)
+{
+    assert(ft != NULL);
+    assert (ind < ft->dim);
+    return ft->cores[ind];
+}
+
+/***********************************************************//**
+    Get rank
+***************************************************************/
+size_t function_train_get_rank(const struct FunctionTrain * ft, size_t index)
+{
+    assert (ft != NULL);
+    assert (ft->ranks != NULL);
+    assert (index < ft->dim+1);
+    return ft->ranks[index];
 }
 
 /***********************************************************//**
@@ -812,6 +853,25 @@ size_t function_train_core_get_params(const struct FunctionTrain * ft,
 }
 
 /***********************************************************//**
+   Get function paramaters
+***************************************************************/
+void * function_train_get_uni(const struct FunctionTrain * ft,
+                              size_t core, size_t row, size_t col)
+{
+    return qmarray_get_func_base(ft->cores[core], row, col);
+}
+
+/***********************************************************//**
+   Get function paramaters
+***************************************************************/
+struct GenericFunction *
+function_train_get_gfuni(const struct FunctionTrain * ft,
+                         size_t core, size_t row, size_t col)
+{
+    return qmarray_get_func(ft->cores[core], row, col);
+}
+
+/***********************************************************//**
    Get parameters
 ***************************************************************/
 size_t function_train_get_params(const struct FunctionTrain * ft,
@@ -823,6 +883,20 @@ size_t function_train_get_params(const struct FunctionTrain * ft,
         running += nparam;
     }
     return running;
+}
+
+
+/***********************************************************//**
+   Update the parameters of a single univariate function
+***************************************************************/
+void function_train_uni_update_params(struct FunctionTrain * ft,
+                                       size_t core,
+                                       size_t row,
+                                       size_t col,
+                                       size_t nparam,
+                                       const double * param)
+{
+    qmarray_uni_update_params(ft->cores[core], row, col, nparam, param);
 }
 
 /***********************************************************//**
@@ -2139,7 +2213,7 @@ function_train_integrate_weighted(const struct FunctionTrain * ft)
     \param[in] ndim_contract - number of dimensions to contract
     \param[in] dims_contract - dimensions over which to contract (increasing order)
     
-    \return Evaluates \f$ g(x_{\neq c})\int f(x_c) w(x_c) dx_c \f$
+    \return Evaluates \f$ g(x_{\neq c}) = \int f(x_c) w(x_c) dx_c \f$
     
     \note w(x) depends on underlying parameterization
     for example, it is 1/2 for legendre (and default for others),
@@ -2361,7 +2435,9 @@ function_train_orthor(struct FunctionTrain * a,
     // update last core
 //    printf("dim = %zu\n",a->dim);
     o = multi_approx_opts_get_aopts(aopts,core);
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core])); */
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L,o);
+    /* printf("done with LQ\n"); */
     for (ii = 2; ii < a->dim; ii++){
         core = a->dim-ii;
         //printf("on core %zu\n",core);
@@ -2391,6 +2467,11 @@ struct FunctionTrain *
 function_train_round(struct FunctionTrain * ain, double epsilon,
                      struct MultiApproxOpts * aopts)
 {
+    double normain = function_train_norm2(ain);
+    /* printf("normain = %3.15G\n", normain); */
+    if (normain < ZEROTHRESH){
+        return function_train_constant(0.0, aopts);
+    }
     struct OneApproxOpts * o = NULL;
     struct FunctionTrain * a = function_train_copy(ain);
 //    size_t ii;
@@ -2471,6 +2552,19 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
 
     function_train_free(a); a = NULL;
     return ft;
+}
+
+/********************************************************//**
+    Truncate functions in FT
+
+    \param[in,out] ft - FT
+    \param[in] epsilon - threshold
+***********************************************************/
+void function_train_truncate(struct FunctionTrain * ft, double epsilon)
+{
+    for (size_t ii = 0; ii < ft->dim; ii++){
+        qmarray_roundt(&ft->cores[ii], epsilon);
+    }    
 }
 
 /********************************************************//**
@@ -2988,7 +3082,7 @@ function_train_init_from_fibers(struct Fwrap * fw,
                                  left_ind,right_ind);
 
     }
-    struct FunctionTrain * ft2 = function_train_round(ft,1e-13,apargs);
+    struct FunctionTrain * ft2 = function_train_round(ft,ZEROTHRESH,apargs);
     function_train_free(ft); ft = NULL;
 
     return ft2;
@@ -3213,7 +3307,7 @@ ftapprox_cross(struct Fwrap * fw,
         /* den = function_train_norm2(ft); */
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm L/R Sweep = %E\n",den);
+            printf("...... New FT norm L/R Sweep = %3.15E\n",den);
             printf("...... Error L/R Sweep = %E\n",diff);
         }
         
@@ -3376,12 +3470,12 @@ ftapprox_cross(struct Fwrap * fw,
 
         if (cargs->verbose > 0){
             den = function_train_norm2(ft);
-            printf("...... New FT norm R/L Sweep = %3.9E\n",den);
+            printf("...... New FT norm R/L Sweep = %3.15E\n",den);
             printf("...... Error R/L Sweep = %E,%E\n",diff,diff2);
         }
 
-        /* if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){ */
-        if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){
+        if ( (diff2 < cargs->epsilon) && (diff < cargs->epsilon)){
+        /* if ( (diff2 < cargs->epsilon) || (diff < cargs->epsilon)){ */
         /* if ( diff < cargs->epsilon){ */
             done = 1;
             break;
@@ -3890,6 +3984,8 @@ struct FT1DArray * function_train_gradient(const struct FunctionTrain * ft)
     return ftg;
 }
 
+
+
 /********************************************************//**
     Evaluate the gradient of a function train
 
@@ -4020,6 +4116,49 @@ struct FT1DArray * function_train_hessian(const struct FunctionTrain * fta)
         
     ft1d_array_free(ftg); ftg = NULL;
     return fth;
+}
+
+/********************************************************//**
+    Compute the diagpnal of the hessian a function train
+
+    \param[in] ft - Function train
+
+    \return gradient
+***********************************************************/
+struct FT1DArray * function_train_hessian_diag(const struct FunctionTrain * ft)
+{
+    struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        ftg->ft[ii] = function_train_copy(ft);
+        qmarray_free(ftg->ft[ii]->cores[ii]);
+        ftg->ft[ii]->cores[ii] = NULL;
+        ftg->ft[ii]->cores[ii] = qmarray_dderiv(ft->cores[ii]);
+    }
+
+    return ftg;
+}
+
+/********************************************************//**
+    Compute the diagpnal of the hessian a function train
+    enforce periodic boundary conditions
+
+    \param[in] ft - Function train
+
+    \return gradient
+***********************************************************/
+struct FT1DArray * function_train_hessian_diag_periodic(const struct FunctionTrain * ft)
+{
+    struct FT1DArray * ftg = ft1d_array_alloc(ft->dim);
+    size_t ii;
+    for (ii = 0; ii < ft->dim; ii++){
+        ftg->ft[ii] = function_train_copy(ft);
+        qmarray_free(ftg->ft[ii]->cores[ii]);
+        ftg->ft[ii]->cores[ii] = NULL;
+        ftg->ft[ii]->cores[ii] = qmarray_dderiv_periodic(ft->cores[ii]);
+    }
+
+    return ftg;
 }
 
 /********************************************************//**

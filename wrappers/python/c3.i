@@ -42,6 +42,8 @@
     #include "linalg.h"
     #include "matrix_util.h"
     #include "lib_optimization.h"
+    #include "probability.h"
+    #include "lib_probability.h"
     #include "optimization.h"
     #include "quadrature.h"
 
@@ -77,6 +79,10 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 
 %apply (int DIM1, double* INPLACE_ARRAY1) {
     (size_t len2, double * evalnd_out)
+};
+
+%apply (int DIM1, size_t* IN_ARRAY1) {
+    (size_t leni, const size_t * xi) 
 };
 
 
@@ -328,6 +334,8 @@ void function_train_free(struct FunctionTrain *);
 %include "../../src/lib_linalg/matrix_util.h"
 %include "../../src/lib_optimization/lib_optimization.h"
 %include "../../src/lib_optimization/optimization.h"
+%include "../../src/lib_probability/lib_probability.h"
+%include "../../src/lib_probability/probability.h"
 %include "../../src/lib_quadrature/quadrature.h"
 
 

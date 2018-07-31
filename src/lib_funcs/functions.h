@@ -144,6 +144,10 @@ generic_function_lin_comb2(size_t, size_t, struct GenericFunction **, size_t, co
 struct GenericFunction *
 generic_function_deriv(const struct GenericFunction *);
 struct GenericFunction *
+generic_function_dderiv(const struct GenericFunction *);
+struct GenericFunction *
+generic_function_dderiv_periodic(const struct GenericFunction *);
+struct GenericFunction *
 generic_function_create_nodal(struct GenericFunction *,size_t, double *);
 struct GenericFunction *
 generic_function_sum_prod(size_t, size_t,  struct GenericFunction **, 

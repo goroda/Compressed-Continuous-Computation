@@ -203,7 +203,7 @@ struct OrthPolyExpansion{
 
 };
 
-#define OPECALLOC 50;
+#define OPECALLOC 50
 
 size_t orth_poly_expansion_get_num_poly(const struct OrthPolyExpansion *);
 size_t orth_poly_expansion_get_num_params(const struct OrthPolyExpansion *);
@@ -245,12 +245,17 @@ orth_poly_expansion_quadratic(double, double, struct OpeOpts *);
 
 struct OrthPolyExpansion * 
 orth_poly_expansion_genorder(size_t,struct OpeOpts*);
+void
+orth_poly_expansion_orth_basis(size_t, struct OrthPolyExpansion **, struct OpeOpts *);
 
 double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
 
 
 struct OrthPolyExpansion *
 orth_poly_expansion_deriv(struct OrthPolyExpansion *);
+struct OrthPolyExpansion *
+orth_poly_expansion_dderiv(struct OrthPolyExpansion *);
+struct OrthPolyExpansion * orth_poly_expansion_dderiv_periodic(const struct OrthPolyExpansion * );
 
 void orth_poly_expansion_free(struct OrthPolyExpansion *);
 

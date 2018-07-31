@@ -44,8 +44,8 @@ class FunctionTrain(object):
             self.opts.append(None)
             self.ranks.append(1)
 
-        if ft is not None:
-            self.ft = ft
+
+        self.ft = ft
         # atexit.register(self.cleanup)
 
     def copy(self):
@@ -68,8 +68,10 @@ class FunctionTrain(object):
         self.ft = ft
 
     def set_dim_opts(self, dim, ftype, lb=-1, ub=1, nparam=4,
-                     kernel_height_scale=1.0, kernel_width_scale=1.0, kernel_adapt_center=0,
-                     lin_elem_nodes=None, kernel_nodes=None, maxnum=np.inf, coeff_check=2, tol=1e-10,
+                     kernel_height_scale=1.0, kernel_width_scale=1.0,
+                     kernel_adapt_center=0,
+                     lin_elem_nodes=None, kernel_nodes=None,
+                     maxnum=np.inf, coeff_check=2, tol=1e-10,
                      nregions=5):
         """ Set approximation options per dimension """
 
@@ -542,17 +544,27 @@ class FunctionTrain(object):
         else:
             return ft_out
 
+    def get_ranks(self):
+        dim = c3.function_train_get_dim(self.ft)
+        ranks = [1]*(dim+1)
+        for ii in range(dim+1):
+            ranks[ii] = c3.function_train_get_rank(self.ft, ii)
+        return np.array(ranks)
+        
     def norm2(self):
         return c3.function_train_norm2(self.ft)
 
     def expectation(self):
         return c3.function_train_integrate_weighted(self.ft)
-
+    
     def variance(self):
         mean_val = self.expectation()
         second_moment = c3.function_train_inner_weighted(self.ft, self.ft)
         return second_moment - mean_val*mean_val
 
+    def get_uni_func(self, dim, row, col):
+        return GenericFunction(c3.function_train_get_gfuni(self.ft, dim, row, col))
+    
     def __del__(self):
         self.close()
 
@@ -561,3 +573,62 @@ class FunctionTrain(object):
         if self.ft is not None:
             c3.function_train_free(self.ft)
             self.ft = None
+
+
+class GenericFunction(object):
+    """ Univariate Functions """
+
+    gf = None
+    def __init__(self, gf):
+        self.gf = c3.generic_function_copy(gf)
+
+    def eval(self, x):
+        if type(x) == list:
+            return [c3.generic_function_1d_eval(self.gf, xx) for xx in x]
+        elif type(x) == np.ndarray:
+            assert x.ndim == 1, "Only 1d arrays handled"
+            return np.array([c3.generic_function_1d_eval(self.gf, xx) for xx in x])
+        else:
+            return c3.generic_function_1d_eval(self.gf, x)
+        
+    def __del__(self):
+        self.close()
+        
+    def close(self):
+        if self.gf is not None:
+            c3.generic_function_free(self.gf)
+            self.gf = None
+
+class SobolIndices(object):
+    """ Sobol Sensitivity Indices """
+
+    si = None
+    def __init__(self, ft):
+        order = ft.dim
+        self.si = c3.c3_sobol_sensitivity_calculate(ft.ft, order)
+
+    def get_total_sensitivity(self, index):
+        return c3.c3_sobol_sensitivity_get_total(self.si, index)
+
+    def get_main_sensitivity(self, index):
+        return c3.c3_sobol_sensitivity_get_main(self.si, index)
+
+    def get_variance(self):
+        return c3.c3_sobol_sensitivity_get_variance(self.si)
+    
+    def get_interaction(self, variables):
+        # assert len(variables) == 2, "Only effects between two variables is currently supported"
+        for ii in range(len(variables)-1):
+            assert variables[ii] < variables[ii+1], \
+                "Sobol index variables must be ordered with v[i] < V[j] for i < j"
+        
+        ret = c3.c3_sobol_sensitivity_get_interaction(self.si, variables)
+        return ret
+        
+    def __del__(self):
+        self.close()
+        
+    def close(self):
+        if self.si is not None:
+            c3.c3_sobol_sensitivity_free(self.si)
+            self.si = None

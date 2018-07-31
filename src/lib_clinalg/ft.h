@@ -103,6 +103,7 @@ size_t * function_train_get_ranks(const struct FunctionTrain *);
 size_t function_train_get_maxrank(const struct FunctionTrain *);
 double function_train_get_avgrank(const struct FunctionTrain *);
 
+struct Qmarray* function_train_get_core(const struct FunctionTrain *, size_t);
 // evaluators
 void function_train_eval_up_to_core(struct FunctionTrain *,
                                     size_t, const double *,
@@ -110,7 +111,7 @@ void function_train_eval_up_to_core(struct FunctionTrain *,
 double function_train_eval(struct FunctionTrain *, const double * evalnd_pt);
 
 size_t function_train_func_get_nparams(const struct FunctionTrain *,
-                                     size_t, size_t, size_t);
+                                       size_t, size_t, size_t);
 size_t function_train_core_get_nparams(const struct FunctionTrain *,
                                        size_t,size_t *);
 size_t function_train_get_nparams(const struct FunctionTrain *);
@@ -118,6 +119,11 @@ size_t function_train_core_get_params(const struct FunctionTrain *,
                                       size_t,double *);
 size_t function_train_get_params(const struct FunctionTrain *,
                                  double *);
+void * function_train_get_uni(const struct FunctionTrain *, size_t, size_t, size_t);
+struct GenericFunction * function_train_get_gfuni(const struct FunctionTrain *,
+                                                  size_t, size_t, size_t);
+
+void function_train_uni_update_params(struct FunctionTrain *, size_t, size_t, size_t, size_t, const double *);
 void function_train_core_update_params(struct FunctionTrain *, size_t,
                                        size_t, const double *);
 size_t function_train_update_params(struct FunctionTrain *, const double *);
@@ -190,6 +196,8 @@ function_train_orthor(struct FunctionTrain *,
 struct FunctionTrain *
 function_train_round(struct FunctionTrain *, double,
                          struct MultiApproxOpts *);
+void function_train_truncate(struct FunctionTrain *, double);
+
 struct FunctionTrain * 
 function_train_sum(const struct FunctionTrain *,
                        const struct FunctionTrain *);
@@ -239,6 +247,7 @@ void ft_cross_args_set_maxrank_ind(struct FtCrossArgs *, size_t, size_t);
 void ft_cross_args_set_cross_tol(struct FtCrossArgs *, double);
 void ft_cross_args_set_verbose(struct FtCrossArgs *, int);
 size_t * ft_cross_args_get_ranks(const struct FtCrossArgs *);
+size_t function_train_get_rank(const struct FunctionTrain *, size_t);
 struct FtCrossArgs * ft_cross_args_copy(const struct FtCrossArgs *);
 void ft_cross_args_free(struct FtCrossArgs *);
 
@@ -311,6 +320,8 @@ struct FT1DArray * ft1d_array_copy(const struct FT1DArray *);
 void ft1d_array_free(struct FT1DArray *);
 struct FT1DArray * ft1d_array_jacobian(const struct FT1DArray *);
 struct FT1DArray * function_train_hessian(const struct FunctionTrain *);
+struct FT1DArray * function_train_hessian_diag(const struct FunctionTrain *);
+struct FT1DArray * function_train_hessian_diag_periodic(const struct FunctionTrain *);
 void ft1d_array_scale(struct FT1DArray *, size_t, size_t, double);
 double * ft1d_array_eval(const struct FT1DArray *, const double *);
 void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);

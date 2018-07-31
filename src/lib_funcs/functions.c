@@ -768,7 +768,9 @@ generic_function_lin_comb2(size_t n, size_t ldgf,
 
 
 /* Take the derivative of a generic function */
-GF_IN_OUT(deriv) 
+GF_IN_OUT(deriv)
+GF_IN_OUT(dderiv)
+GF_IN_OUT(dderiv_periodic) 
 
 
  /********************************************************//**
@@ -1671,6 +1673,8 @@ double generic_function_norm(const struct GenericFunction * f)
     if (out < 0.0){
         fprintf(stderr, "Norm of a function cannot be negative %G\n",out);
         exit(1);
+        /* generic_function_scale(0.0, f); */
+        /* out = 0.0; */
     }
     //assert (out > -1e-15);
     return sqrt(out);

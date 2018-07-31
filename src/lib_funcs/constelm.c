@@ -187,6 +187,25 @@ void const_elem_exp_aopts_free_deep(struct ConstElemExpAopts ** aopts)
     }
 }
 
+
+/********************************************************//**
+    Get the lower bound
+*************************************************************/
+double const_elem_exp_aopts_get_lb(const struct ConstElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->lb;
+}
+
+/********************************************************//**
+    Get the upper bound
+*************************************************************/
+double const_elem_exp_aopts_get_ub(const struct ConstElemExpAopts * aopts)
+{
+    assert (aopts != NULL);
+    return aopts->ub;
+}
+
 /********************************************************//**
     Get number of nodes
 *************************************************************/
@@ -195,7 +214,6 @@ size_t const_elem_exp_aopts_get_num_nodes(const struct ConstElemExpAopts * aopts
     assert (aopts != NULL);
     return aopts->num_nodes;
 }
-
 
 /********************************************************//**
     Sets new nodes (by reference) for approximation options.
@@ -296,7 +314,7 @@ void const_elem_exp_aopts_set_nparams(struct ConstElemExpAopts* lexp, size_t num
 {
     assert (lexp != NULL);
     lexp->num_nodes = num;
-    fprintf(stderr,"Warning: setting new nparams in linelem aopts. Do I need to adjust the node locations?\n");
+    fprintf(stderr,"Warning: setting new nparams in constelem aopts. Do I need to adjust the node locations?\n");
 }
 
 
@@ -649,11 +667,40 @@ struct ConstElemExp * const_elem_exp_deriv(const struct ConstElemExp * f)
 
     struct ConstElemExp * le = const_elem_exp_init(f->num_nodes,
                                                    f->nodes,f->coeff);
-    for (size_t ii = 0; ii < le->num_nodes; ii++){
-        le->coeff[ii] = 0.0;
+
+
+    le->coeff[0] = (le->coeff[1] - le->coeff[0]) / (le->nodes[1] - le->nodes[0]);
+    for (size_t ii = 1; ii < le->num_nodes-1; ii++){
+        le->coeff[ii] = (le->coeff[ii+1] - le->coeff[ii]) / (le->nodes[ii+1] - le->nodes[ii]);
     }
+    le->coeff[le->num_nodes-1] = (le->coeff[le->num_nodes-1] - le->coeff[le->num_nodes-2]) /
+        (le->nodes[le->num_nodes-1] - le->nodes[le->num_nodes-2]);
 
     return le;
+}
+
+/********************************************************//**
+*   Take a second derivative same nodes
+*
+*   \param[in] f - function
+*************************************************************/
+struct ConstElemExp * const_elem_exp_dderiv(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_dderiv");
+    exit(1);
+}
+
+/********************************************************//**
+*   Take a second derivative and enforce periodic bc
+*
+*   \param[in] f - function
+*************************************************************/
+struct ConstElemExp * const_elem_exp_dderiv_periodic(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_dderiv_periodic");
+    exit(1);
 }
 
 /********************************************************//*
@@ -1383,25 +1430,39 @@ void const_elem_exp_orth_basis(size_t n, struct ConstElemExp ** f,
 
     if (opts->adapt == 0){
         assert (opts->nodes != NULL);
-        assert (n <= opts->num_nodes);
+        /* assert (n <= opts->num_nodes); */
         double * zeros = calloc_double(opts->num_nodes);
+        /* printf("n = %zu\n", n); */
+        /* printf("num_nodes = %zu\n", opts->num_nodes); */
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = const_elem_exp_init(opts->num_nodes,opts->nodes,zeros);
-            f[ii]->coeff[ii] = 1.0;
+            if (ii < opts->num_nodes){
+                f[ii]->coeff[ii] = 1.0;
 
-            if (ii == 0){
-                f[ii]->coeff[ii] /= ((opts->nodes[1]-opts->nodes[0])/2);
-            }
-            else if (ii == n-1){
-                f[ii]->coeff[ii] /= ((opts->nodes[n-1]-opts->nodes[n-2])/2);
+                if (ii == 0){
+                    f[ii]->coeff[ii] /= ((opts->nodes[1]-opts->nodes[0])/2);
+                }
+                /* else if (ii == n-1){ */
+                else if (ii == (opts->num_nodes-1)){                    
+                    /* f[ii]->coeff[ii] /= ((opts->nodes[n-1]-opts->nodes[n-2])/2); */
+                    f[ii]->coeff[ii] /= ((opts->nodes[ii]-opts->nodes[ii-1])/2);
+                }
+                else{
+                    double dx1 = (opts->nodes[ii] - opts->nodes[ii-1])/2;
+                    double dx2 = (opts->nodes[ii+1] - opts->nodes[ii])/2; 
+                    f[ii]->coeff[ii] /= (dx1+dx2);
+                }
+                f[ii]->coeff[ii] = sqrt(f[ii]->coeff[ii]);
             }
             else{
-                double dx1 = (opts->nodes[ii] - opts->nodes[ii-1])/2;
-                double dx2 = (opts->nodes[ii+1] - opts->nodes[ii])/2;                
-                f[ii]->coeff[ii] /= (dx1+dx2);
-            }
-            f[ii]->coeff[ii] = sqrt(f[ii]->coeff[ii]);
+                f[ii]->coeff[0] = 1e-20;
+            }                
         }
+        /* for (size_t ii = 0; ii < n; ii++){ */
+        /*     printf("Orth Function %zu = \n", ii); */
+        /*     printf("\t"); dprint(f[ii]->num_nodes, f[ii]->nodes); */
+        /*     printf("\t"); dprint(f[ii]->num_nodes, f[ii]->coeff); */
+        /* } */
         free(zeros); zeros = NULL;
     }
     else{

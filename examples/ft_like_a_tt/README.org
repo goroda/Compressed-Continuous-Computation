@@ -1,0 +1,7 @@
+If a multidimensional function is discretized onto a regular grid, it becomes a tensor. One can then use a tensor-train decomposition to decompose this function.
+
+This can also be done with a function-train decomposition by assuming a piecewise-constant reconstruction of the tensor.
+
+In this directory I show a simple example of using cross-approximation in piecewise-constant format.
+
+ 
