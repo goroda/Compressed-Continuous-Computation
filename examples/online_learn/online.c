@@ -19,7 +19,8 @@ void print_code_usage (FILE * stream, int exit_code)
     fprintf(stream, "Usage: %s options \n", program_name);
     fprintf(stream,
             " -h --help       Display this usage information.\n"
-            " -l --learn_rate Learning Rate.\n"
+            " -l --learn_rate Learning Rate. (default 9.99e-1)\n"
+            " -b --basis      Basis. (default 0 [Polynomial])\n"
             " -v --verbose    Output words (default 0)\n"
             " \n\n"
             /* " Outputs four files\n" */
@@ -31,21 +32,54 @@ void print_code_usage (FILE * stream, int exit_code)
     exit (exit_code);
 }
 
+static double lin_func(double * x){
+    double w[5] = {0.2, -0.2, 0.4, 0.3, -0.1};
+
+    double out = 0.0;
+    for (size_t ii = 0; ii < 5; ii++){
+        out += w[ii]*x[ii];
+    }
+    return out;
+}
+
+void create_initial_guess(struct FTparam * ftp)
+{
+    size_t nsamp = 500;
+    size_t dim = 3;
+    double * x = calloc_double(nsamp * dim);
+    double * y = calloc_double(nsamp);
+    double lb = -30;
+    double ub = 50;
+
+    for (size_t ii = 0 ; ii < nsamp; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+        }
+        y[ii] = lin_func(x+ii*dim);
+    }
+
+    ft_param_create_from_lin_ls(ftp,nsamp,x,y,1e-8);
+    free(x); x = NULL;
+    free(y); y = NULL;
+}
+
 
 int main(int argc, char * argv[])
 {
     int next_option;
-    const char * const short_options = "hl:v:";
+    const char * const short_options = "hl:b:v:";
     const struct option long_options[] = {
         { "help"      , 0, NULL, 'h' },
         { "learn_rate", 1, NULL, 'l' },
+        { "basis"     , 1, NULL, 'b' },
         { "verbose"   , 1, NULL, 'v' },
-        { NULL        ,  0, NULL, 0   }
+        { NULL        , 0, NULL, 0   }
     };
 
     program_name = argv[0];
     size_t verbose = 0;
-    // learn_rate 9.99e-1 good for adadelta
+    size_t basis = 0;
+    // learn_rate 9.99e-1 good for adadelta with polynomials
     double learn_rate = 9.99e-1; 
     do {
         next_option = getopt_long (argc, argv, short_options, long_options, NULL);
@@ -58,6 +92,9 @@ int main(int argc, char * argv[])
                 break;
             case 'l':
                 learn_rate = strtod(optarg,NULL);
+                break;
+            case 'b':
+                basis = strtoul(optarg,NULL, 10);
                 break;
             case '?': // The user specified an invalid option 
                 print_code_usage (stderr, 1);
@@ -87,32 +124,45 @@ int main(int argc, char * argv[])
 
     
     
-    double lb = -30;
-    double ub = 50;
+    double lb[3] = {-20, -30, 0};
+    double ub[3] = {20, 30, 50};
 
-    /* size_t adapt_kernel = 1; */
-    /* size_t N = 10; */
-    /* double width = pow(N,-0.2)/sqrt(12.0); */
-    /* width *= 0.5; */
-    /* double * x1 = linspace(lb, ub, N); */
-    
-    /* struct KernelApproxOpts * kopts = kernel_approx_opts_gauss(N, x1, 10.0, width); */
-    /* kernel_approx_opts_set_center_adapt(kopts, adapt_kernel); */
-    /* struct OneApproxOpts * ko = one_approx_opts_alloc(KERNEL,kopts); */
+    size_t N;
+    size_t adapt_kernel;
+    double * x1[3] = {NULL, NULL, NULL};
 
-    size_t N = 6;
-    size_t adapt_kernel = 0;
-    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
-    ope_opts_set_nparams(opts,N);
-    ope_opts_set_lb(opts,lb);
-    ope_opts_set_ub(opts,ub);
-    struct OneApproxOpts * ko = one_approx_opts_alloc(POLYNOMIAL, opts);
+    struct OneApproxOpts * ko[3]; 
+    if (basis == 1){
+        adapt_kernel = 1;
+        N = 7;
+        double width = pow(N,-0.2)/sqrt(12.0);
+        double wscale[3] = {40,50,70};
 
-    
+        struct KernelApproxOpts * kopts[3];
+        for (size_t ii = 0; ii < 3; ii++){
+            x1[ii] = linspace(lb[ii], ub[ii], N);
+            kopts[ii] = kernel_approx_opts_gauss(N, x1[ii], 10.0, width * wscale[ii]);
+            kernel_approx_opts_set_center_adapt(kopts[ii], adapt_kernel);
+            ko[ii] = one_approx_opts_alloc(KERNEL,kopts[ii]);
+        }
+    }
+    else{
+        N = 6;
+        adapt_kernel = 0;
+        struct OpeOpts * opts[3];
+        for (size_t ii = 0; ii < 3; ii ++){
+            opts[ii] = ope_opts_alloc(LEGENDRE);
+            ope_opts_set_nparams(opts[ii],N);
+            ope_opts_set_lb(opts[ii],lb[ii]);
+            ope_opts_set_ub(opts[ii],ub[ii]);
+            ko[ii] = one_approx_opts_alloc(POLYNOMIAL, opts);
+        }
+    }
+
     struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
     size_t nparam = 0;
     for (size_t ii = 0; ii < dim; ii++){
-        multi_approx_opts_set_dim(fapp,ii,ko);
+        multi_approx_opts_set_dim(fapp,ii,ko[ii]);
         if (adapt_kernel == 0){
             nparam += N * ranks[ii]*ranks[ii+1];
         }
@@ -133,11 +183,19 @@ int main(int argc, char * argv[])
     for (size_t kk = 0; kk < dim; kk++){
         grad[kk] = calloc_double(nparam);
         param_start[kk] = calloc_double(nparam);
+
+        ftp[kk]= ft_param_alloc(dim, fapp, NULL, ranks);
+        create_initial_guess(ftp[kk]);
         for (size_t ii = 0; ii < nparam; ii++){
-            param_start[kk][ii] = randu()*2.0-1.0;
+            param_start[kk][ii] = ft_param_get_param(ftp[kk], ii);
         }
+
+        /* for (size_t ii = 0; ii < nparam; ii++){ */
+        /*     param_start[kk][ii] = randu()*2.0-1.0; */
+        /* } */
+        /* ftp[kk]= ft_param_alloc(dim, fapp, param_start[kk], ranks); */
+
         
-        ftp[kk]= ft_param_alloc(dim, fapp, param_start[kk], ranks);
         su[kk] = stochastic_updater_alloc(SU_ADADELTA);
         /* su[kk] = stochastic_updater_alloc(SU_ADAGRAD); */
         /* su[kk] = stochastic_updater_alloc(SU_MOMENTUM); */
@@ -156,7 +214,13 @@ int main(int argc, char * argv[])
     char fileout[256] = "out.dat";
     FILE * fp = fopen(fileout, "w");
     assert (fp != NULL);
+    
+    char fileout2[256] = "out_grad_1.dat";
+    FILE * fp2 = fopen(fileout2, "w");
+    assert (fp2 != NULL);
+    
     size_t nouter = 1;
+    double deriv[3];
     for (size_t jj = 0; jj < nouter; jj++){
         for (size_t ii = 1; ii < ndata; ii++){
             data_frame_get_feature(data, curr_pt, ii, start_col, dim);
@@ -177,7 +241,8 @@ int main(int argc, char * argv[])
             printf("dt = %3.5G\n", dt);
             printf("pt = "); dprint(dim, prev_x);
 
-            fprintf(fp, "%3.5G", t);
+            fprintf(fp, "%3.5G ", pt);
+            fprintf(fp2, "%3.5G ", pt);
             for (size_t kk = 0; kk < dim; kk++){
                 data_set_y(prev_pt, curr_x+kk); // kth output
 
@@ -194,12 +259,19 @@ int main(int argc, char * argv[])
 
                 fprintf(fp, " %3.5G %3.5G", curr_x[kk], eval);
 
+                if (kk == 0){
+                    function_train_gradient_eval(ftp[kk]->ft, curr_x, deriv);
+                    fprintf(fp2, "%3.5G %3.5G %3.5G\n", deriv[0], deriv[1], deriv[2]);
+                }
+
             }
             fprintf(fp, "\n");
 
         }
     }
     fclose(fp);
+    fclose(fp2);
+
 
     free(ranks); ranks = NULL;
     
@@ -210,11 +282,13 @@ int main(int argc, char * argv[])
     data_free(prev_t); prev_t = NULL;
 
     data_frame_free(data);              data        = NULL;
-    one_approx_opts_free_deep(&ko);     ko          = NULL;
+
     multi_approx_opts_free(fapp);       fapp        = NULL;
     regress_opts_free(ropts);           ropts       = NULL;
 
     for (size_t kk = 0; kk < dim; kk++){
+        free(x1[kk]); x1[kk] = NULL;
+        one_approx_opts_free_deep(&ko[kk]);     ko[kk]          = NULL;
         free(param_start[kk]);                  param_start[kk] = NULL;
         free(grad[kk]);                         grad[kk]        = NULL;
         ft_param_free(ftp[kk]);                 ftp[kk]         = NULL;
