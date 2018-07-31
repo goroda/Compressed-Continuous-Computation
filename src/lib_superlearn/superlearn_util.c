@@ -321,7 +321,7 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
 // Data management
 ////////////////////////////////////////////////////////////////////////////
 
-/** \struct Data structure
+/** \struct Data
  * \brief Stores data
  * \var Data::N
  * number of data points for which to store objects

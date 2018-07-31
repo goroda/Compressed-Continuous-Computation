@@ -1737,6 +1737,7 @@ double lin_elem_exp_err_est(struct LinElemExp * f, double * errs, short dir, sho
     return value;
 }
 
+/// @private
 struct LinElemXY
 {
     double x;
@@ -1744,6 +1745,7 @@ struct LinElemXY
     struct LinElemXY * next;
 };
 
+/// @private
 struct LinElemXY * xy_init(double x, double y)
 {
     struct LinElemXY * xy = malloc(sizeof(struct LinElemXY));
@@ -1758,6 +1760,7 @@ struct LinElemXY * xy_init(double x, double y)
     return xy;
 }
 
+/// @private
 void xy_append(struct LinElemXY ** xy, double x, double y)
 {
 
@@ -1791,6 +1794,7 @@ void xy_append(struct LinElemXY ** xy, double x, double y)
     }
 }
 
+/// @private
 void xy_concat(struct LinElemXY ** xy,struct LinElemXY * r)
 {
 
@@ -1802,6 +1806,7 @@ void xy_concat(struct LinElemXY ** xy,struct LinElemXY * r)
     }
 }
 
+/// @private
 struct LinElemXY * xy_last(struct LinElemXY * xy)
 {
     if (xy == NULL){
@@ -1814,19 +1819,25 @@ struct LinElemXY * xy_last(struct LinElemXY * xy)
     return temp;
 }
 
+/// @private
 double lin_elem_xy_get_x(struct LinElemXY * xy)
 {
     return xy->x;
 }
+
+/// @private
 double lin_elem_xy_get_y(struct LinElemXY * xy)
 {
     return xy->y;
 }
+
+/// @private
 struct LinElemXY * lin_elem_xy_next(struct LinElemXY * xy)
 {
     return xy->next;
 }
 
+/// @private
 size_t lin_elem_xy_length(struct LinElemXY * xy)
 {
     size_t count = 0;
@@ -1841,6 +1852,7 @@ size_t lin_elem_xy_length(struct LinElemXY * xy)
     return count;
 }
 
+/// @private
 void lin_elem_xy_free(struct LinElemXY * xy)
 {
     if (xy != NULL){
