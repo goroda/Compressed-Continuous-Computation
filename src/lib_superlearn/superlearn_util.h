@@ -123,11 +123,27 @@ struct SLMemManager * sl_mem_manager_alloc(size_t, size_t, size_t,enum FTPARAM_S
 void sl_mem_manager_free(struct SLMemManager *);
 
 
+
+
 struct Data;
 struct Data * data_alloc(size_t, size_t);
 size_t data_get_N(const struct Data *);
 void data_set_xy(struct Data *, const double *, const double *);
+void data_set_x(struct Data *, const double *);
+void data_set_y(struct Data *, const double *);
 void data_free(struct Data *);
 const double * data_get_subset_ref(const struct Data *, size_t, size_t *);
 double data_subtract_from_y(const struct Data *, size_t, double);
+
+
+struct DataFrame;
+struct DataFrame * data_frame_alloc(size_t, size_t);
+void data_frame_free(struct DataFrame *);
+struct DataFrame * data_frame_load(char *);
+size_t data_frame_get_nrows(const struct DataFrame *);
+int data_frame_get_feature(const struct DataFrame *,
+                           struct Data *,
+                           size_t,
+                           size_t,
+                           size_t);
 #endif

@@ -46,6 +46,7 @@
 #include <math.h>
 
 #include "superlearn_util.h"
+#include "stringmanip.h"
 #include "ft.h"
 
 /***********************************************************//**
@@ -321,6 +322,8 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
 // Data management
 ////////////////////////////////////////////////////////////////////////////
 
+
+
 /** \struct Data structure
  * \brief Stores data
  * \var Data::N
@@ -382,6 +385,8 @@ void data_free(struct Data * data)
     }
 }
 
+
+
 /***********************************************************//**
     Get the number of data points
 ***************************************************************/
@@ -400,6 +405,28 @@ size_t data_get_N(const struct Data * data)
 void data_set_xy(struct Data * data, const double * x, const double * y)
 {
     data->x = x;
+    data->y = y;
+}
+
+/***********************************************************//**
+    Set the data (just the feature)
+
+    \param[in,out] data - data structure
+    \param[in]     x    - training samples (N * dim)
+***************************************************************/
+void data_set_x(struct Data * data, const double * x)
+{
+    data->x = x;
+}
+
+/***********************************************************//**
+    Set the data (just the label)
+
+    \param[in,out] data - data structure
+    \param[in]     y   - training label (N)
+***************************************************************/
+void data_set_y(struct Data * data, const double * y)
+{
     data->y = y;
 }
 
@@ -441,4 +468,132 @@ const double * data_get_subset_ref(const struct Data * data, size_t Nsub, size_t
 double data_subtract_from_y(const struct Data * data, size_t ind, double val)
 {
     return data->y[ind]-val;
+}
+
+
+struct DataFrame
+{
+    size_t nrows;
+    size_t ncols;
+    double * data;
+};
+
+struct DataFrame * data_frame_alloc(size_t nrows, size_t ncols)
+{
+    struct DataFrame * data = malloc(sizeof(struct DataFrame));
+    if (data == NULL){
+        fprintf(stderr,"Failure to allocate memory for DataFrame\n");
+        exit(1);
+    }
+
+    data->nrows = nrows;
+    data->ncols = ncols;
+    data->data = calloc_double(nrows * ncols);
+    return data;
+}
+
+void data_frame_free(struct DataFrame * data)
+{
+    if (data != NULL){
+        free(data->data);
+        free(data); data = NULL;
+    }
+}
+
+
+/***********************************************************//**
+    Load data from file
+
+    \param[in] filename
+
+    \returns Data data structure
+
+    \note
+    Warning: This is very bare bones. There are no checks for too much data per line (max 2048 characters) All the data are interpreted as doubles
+***************************************************************/
+struct DataFrame * data_frame_load(char * filename)
+{
+
+    FILE * file = fopen(filename, "r");
+    if (file == NULL) {
+         fprintf(stderr, "Could not open file %s\n", filename);
+         exit(8);
+    }
+
+    char mystring[2048];
+    size_t length = 0;
+    size_t dim = 0;
+    size_t N;
+    if (fgets(mystring, 2048, file) != NULL){
+        length = strlen(mystring);
+
+        strip_blank_ends(mystring);
+        char ** strings = parse_string(mystring, ' ', &N);
+        for (size_t ii = 0; ii < N; ii++){
+            if (strlen(strings[ii]) > 0){
+                dim += 1;
+            }
+            free(strings[ii]); strings[ii] = NULL;
+        }
+        free(strings); strings = NULL;
+    }
+    size_t ndata = 1;
+    while (fgets(mystring, 2048, file) != NULL){
+        /* printf("nlines = %zu\n", strlen(mystring)); */
+        if (strlen(mystring) > 1){
+            if (strlen(mystring) != length){
+                fprintf(stderr, "Input file doesn't have equal text each row\n");
+                exit(1);
+            }
+            ndata += 1;
+        }
+    }
+    
+    struct DataFrame * data = data_frame_alloc(ndata, dim);
+    
+    rewind(file);
+    size_t ondata = 0;
+    while (fgets(mystring, 2048, file) != NULL){
+        strip_blank_ends(mystring);
+        char ** strings = parse_string(mystring, ' ', &N);
+        size_t ind = 0;
+        for (size_t ii= 0; ii < N; ii++){
+            if (strlen(strings[ii]) > 1){
+                /* printf("%s, ", strings[ii]); */
+                data->data[ondata * dim + ind] = atof(strings[ii]);
+                ind++;
+            }
+            free(strings[ii]); strings[ii] = NULL;
+        }
+        /* printf("\n"); */
+        free(strings); strings = NULL;
+        ondata++;
+        if (ondata == ndata){
+            break;
+        }
+    }
+
+    fclose(file);
+
+    return data;
+}
+
+size_t data_frame_get_nrows(const struct DataFrame * data)
+{
+    assert (data != NULL);
+    return data->nrows;
+}
+
+int data_frame_get_feature(const struct DataFrame * data,
+                           struct Data * data_pt,
+                           size_t row,
+                           size_t start_col,
+                           size_t nfeatures)
+{
+    assert (data_pt->dim  == nfeatures);
+    data_set_x(data_pt,
+               data->data + row * data->ncols +
+               start_col);
+
+    return 0;
 }

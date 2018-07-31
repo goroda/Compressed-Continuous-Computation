@@ -53,6 +53,51 @@ struct PP
 };
 
 
+struct StochasticUpdater * stochastic_updater_alloc(enum SU_ALGS alg)
+{
+    struct StochasticUpdater * su = malloc(sizeof(struct StochasticUpdater));
+    if (su == NULL){
+        fprintf(stderr, "Failure To allocate Stochastic Updater\n");
+        exit(1);
+    }
+    su->alg = alg;
+
+    su->mem = NULL;
+    su->obj = NULL;
+    su->mem1 = NULL;
+    su->mem2 = NULL;
+
+    su->aux_args = NULL;
+    su->aux_obj = NULL;
+
+    su->epsilon = 1e-8;
+    return su;
+}
+
+void stochastic_updater_free(struct StochasticUpdater * su)
+{
+    if (su != NULL){
+        sl_mem_manager_free(su->mem); su->mem = NULL;
+        objective_function_free(&(su->obj)); su->obj = NULL;
+        free(su->mem1); su->mem1 = NULL;
+        free(su->mem2); su->mem2 = NULL;
+        free(su->aux_args); su->aux_args = NULL;
+        free(su->aux_obj); su->aux_obj = NULL;
+        free(su); su = NULL;
+    }
+}
+
+void stochastic_updater_reset(struct StochasticUpdater * su)
+{
+    if (su != NULL){
+        free(su->mem1); su->mem1 = NULL;
+        free(su->mem2); su->mem2 = NULL;
+        su->mem1 = calloc_double(su->nparams);
+        su->mem2 = calloc_double(su->nparams);
+    }
+}
+
+
 static int
 online_learning_interface(size_t nparam, const double * param,
                           size_t N, size_t * ind,
@@ -101,9 +146,12 @@ online_learning_interface(size_t nparam, const double * param,
 int
 setup_least_squares_online_learning(
     struct StochasticUpdater * su,
+    double eta,
     struct FTparam * ftp,
     struct RegressOpts * ropts)
 {
+
+
 
     /* printf("in setup\n"); */
     size_t ndata = 1;
@@ -128,6 +176,14 @@ setup_least_squares_online_learning(
     su->mem = mem;
     su->obj = obj;
     su->nparams = ftp->nparams;
+
+    su->eta = eta;
+    su->mem1 = calloc_double(ftp->nparams);
+    su->mem2 = calloc_double(ftp->nparams);
+
+    su->aux_obj = ls;
+    su->aux_args = ls_args;
+
     
     return 0;
 }
@@ -144,7 +200,6 @@ setup_least_squares_online_learning(
 double stochastic_update_step(const struct StochasticUpdater * su,
                               double * param,
                               double * grad,
-                              double * prev_update,
                               const struct Data * data)
 {
     /* printf("in stoch update step\n"); */
@@ -167,16 +222,31 @@ double stochastic_update_step(const struct StochasticUpdater * su,
 
 
     double alpha = 0.7;
-    double next_update;
+    double epsilon = su->epsilon;
     for (size_t ii = 0; ii < nparam; ii++){
-        // momentum 
-        /* prev_update[ii] = alpha * prev_update[ii] - su->eta * grad[ii]; */
-        /* param[ii] += prev_update[ii]; */
+        if (su->alg == SU_SGD){
+            param[ii] -= su->eta * grad[ii];
+        }
+        else if (su->alg == SU_MOMENTUM){
+            // momentum 
+            su->mem1[ii] = alpha * su->mem1[ii] - su->eta * grad[ii];
+            param[ii] += su->mem1[ii];
+        }
+        else if (su->alg == SU_ADAGRAD){
+            su->mem1[ii] += grad[ii]*grad[ii];
+            param[ii] -= su->eta / sqrt(su->mem1[ii]) * grad[ii];
+        }
+        else if (su->alg == SU_ADADELTA){
 
-        // adagrad
-        prev_update[ii] += grad[ii]*grad[ii];
-        param[ii] -= su->eta / sqrt(prev_update[ii]) * grad[ii];
-        
+            su->mem1[ii] = su->eta * su->mem1[ii] + (1 - su->eta) * grad[ii]*grad[ii];
+            double delta =  - sqrt(su->mem2[ii] + epsilon) / sqrt(su->mem1[ii] + epsilon) * grad[ii];
+            su->mem2[ii] = su->eta * su->mem2[ii] + (1 - su->eta) * delta * delta;
+            param[ii] += delta;
+        }
+        else{
+            fprintf(stderr, "Stochastic Updater Algorithm Type doesnt exist\n");
+            exit(1);
+        }
 
     }
     /* printf("param post = "); dprint(nparam, param); */
