@@ -121,7 +121,6 @@ int main(int argc, char * argv[])
     for (size_t ii = 1; ii < dim; ii++){
         ranks[ii] = fixed_rank;
     }
-
     
     
     double lb[3] = {-20, -30, 0};
@@ -155,7 +154,7 @@ int main(int argc, char * argv[])
             ope_opts_set_nparams(opts[ii],N);
             ope_opts_set_lb(opts[ii],lb[ii]);
             ope_opts_set_ub(opts[ii],ub[ii]);
-            ko[ii] = one_approx_opts_alloc(POLYNOMIAL, opts);
+            ko[ii] = one_approx_opts_alloc(POLYNOMIAL, opts[ii]);
         }
     }
 
