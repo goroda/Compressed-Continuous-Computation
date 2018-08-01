@@ -260,7 +260,16 @@ int main(int argc, char * argv[])
 
                 if (kk == 0){
                     function_train_gradient_eval(ftp[kk]->ft, curr_x, deriv);
-                    fprintf(fp2, "%3.5G %3.5G %3.5G\n", deriv[0], deriv[1], deriv[2]);
+
+                    /* struct FunctionTrain * ft_copy = function_train_copy(ftp[kk]->ft); */
+                    /* struct FunctionTrain * ftr = function_train_round(ft_copy, 1e-3, fapp); */
+                    /* printf("ranks = "); iprint_sz(dim+1, function_train_get_ranks(ftr)); */
+                    
+                    /* function_train_gradient_eval(ftr, curr_x, deriv); */
+                    /* function_train_free(ft_copy); */
+                    /* function_train_free(ftr); */
+
+                    fprintf(fp2, "%3.5G %3.5G %3.5G %3.5G %3.5G %3.5G %3.5G\n", deriv[0], deriv[1], deriv[2], curr_x[0], curr_x[1], curr_x[2], eval_post);
                 }
 
             }
