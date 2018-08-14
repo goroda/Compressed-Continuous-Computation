@@ -65,7 +65,7 @@ struct DblMemArray
 
 size_t dbl_mem_array_get_data_inc(const struct DblMemArray *);
 
-/** \struct Supervised Learning Memory Manager
+/** \struct SLMemManager
  * \brief Manages all memory for supervised learning
  * \var SLMemManager::dim
  * size of feature space

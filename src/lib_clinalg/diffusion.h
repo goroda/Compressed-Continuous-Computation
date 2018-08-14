@@ -48,22 +48,24 @@
 
 #include "dmrg.h"
 
+/// @private
 void dmrg_diffusion_midleft(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
 
+/// @private
 void dmrg_diffusion_lastleft(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
-
+/// @private
 void dmrg_diffusion_midright(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
-
+/// @private
 void dmrg_diffusion_firstright(struct Qmarray *, struct Qmarray *,
                  struct Qmarray *, struct Qmarray *, struct Qmarray *,
                  double *, size_t, struct Qmarray *);
-
+/// @private
 struct DmDiff
 {
     struct FunctionTrain * A;

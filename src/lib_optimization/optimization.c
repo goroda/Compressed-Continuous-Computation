@@ -52,6 +52,7 @@
 #include "optimization.h"
 
 // Line search parameters
+/// @private
 struct c3LS
 {
     enum c3opt_ls_alg alg;
@@ -2212,6 +2213,7 @@ int c3_opt_damp_bfgs(struct c3Opt * opt,
 
 
 // circular list storing lbfgs vectors
+/// @private
 struct c3opt_lbfgs_data
 {
     size_t iter;

@@ -54,6 +54,7 @@
 #include "ft.h"
 
 #ifndef ZEROTHRESH
+/// @private
     #define ZEROTHRESH 1e0* DBL_EPSILON
     /* #define ZEROTHRESH 1e0*DBL_EPSILON */
     /* #define ZEROTHRESH 1e-200 */
@@ -62,14 +63,17 @@
 /* #define ZEROTHRESH 1e-3*DBL_EPSILON */
 
 #ifndef VPREPCORE
+/// @private
     #define VPREPCORE 0
 #endif
 
 #ifndef VFTCROSS
+/// @private
     #define VFTCROSS 0
 #endif
 
 
+/// @private
 struct FTMemSpace
 {
     size_t num_spaces;
@@ -77,6 +81,7 @@ struct FTMemSpace
     double * vals; // num_spaces x space_size
 };
 
+/// @private
 struct FTMemSpace * ft_mem_space_alloc(size_t num_spaces, size_t space_size)
 {
     struct FTMemSpace * ftmem = malloc(sizeof(struct FTMemSpace));
@@ -92,6 +97,7 @@ struct FTMemSpace * ft_mem_space_alloc(size_t num_spaces, size_t space_size)
     return ftmem;
 }
 
+/// @private
 struct FTMemSpace ** ft_mem_space_arr_alloc(size_t dim, size_t num_spaces, size_t space_size)
 {
     struct FTMemSpace ** ftmem = malloc(dim * sizeof(struct FTMemSpace * ));
@@ -106,6 +112,7 @@ struct FTMemSpace ** ft_mem_space_arr_alloc(size_t dim, size_t num_spaces, size_
     return ftmem;
 }
 
+/// @private
 void ft_mem_space_free(struct FTMemSpace * ftmem)
 {
     if (ftmem != NULL){
@@ -114,6 +121,7 @@ void ft_mem_space_free(struct FTMemSpace * ftmem)
     }
 }
 
+/// @private
 void ft_mem_space_arr_free(size_t dim, struct FTMemSpace ** ftmem)
 {
     if (ftmem != NULL){
@@ -125,7 +133,7 @@ void ft_mem_space_arr_free(size_t dim, struct FTMemSpace ** ftmem)
     }
 }
 
-
+/// @private
 int ft_mem_space_check(struct FTMemSpace * ftmem,
                        size_t num_spaces,
                        size_t space_size)
@@ -145,7 +153,8 @@ int ft_mem_space_check(struct FTMemSpace * ftmem,
     return 0;
     
 }
-    
+
+/// @private
 size_t ft_mem_space_get_incr(struct FTMemSpace * ftmem)
 {
     return ftmem->space_size;

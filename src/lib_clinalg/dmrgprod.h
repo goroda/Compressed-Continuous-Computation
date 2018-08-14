@@ -48,6 +48,7 @@
 
 #include "dmrg.h"
 
+/// @private
 struct DmProd
 {
     struct FunctionTrain * a;
