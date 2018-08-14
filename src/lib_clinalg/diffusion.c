@@ -48,6 +48,7 @@
 
 #include "diffusion.h"
 
+/// @private
 void dmrg_diffusion_midleft(struct Qmarray * dA, struct Qmarray * A,
                  struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
                  double * mat, size_t r, struct Qmarray * out)
@@ -90,7 +91,7 @@ void dmrg_diffusion_midleft(struct Qmarray * dA, struct Qmarray * A,
     generic_function_array_free(temp2,width); temp2 = NULL;
 }
 
-
+/// @private
 void dmrg_diffusion_lastleft(struct Qmarray * dA, struct Qmarray * A,
                  struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
                  double * mat, size_t r, struct Qmarray * out)
@@ -206,6 +207,7 @@ void dmrg_diffusion_midright(struct Qmarray * dA, struct Qmarray * A,
     free(mat2); mat2 = NULL;
 }
 
+/// @private
 void dmrg_diffusion_firstright(struct Qmarray * dA, struct Qmarray * A,
                      struct Qmarray * ddF, struct Qmarray * dF, struct Qmarray * F,
                      double * mat, size_t r, struct Qmarray * out)
@@ -269,6 +271,7 @@ void dmrg_diffusion_firstright(struct Qmarray * dA, struct Qmarray * A,
 
 }
 
+/// @private
 void dmrg_diffusion_support(char type, size_t core, size_t r, double * mat,
                         struct Qmarray ** out, void * args)
 {

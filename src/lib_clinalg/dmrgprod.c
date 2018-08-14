@@ -48,6 +48,7 @@
 #include "dmrgprod.h"
 #include "lib_clinalg.h"
 
+/// @private
 void dmrg_prod_support(char type, size_t core, size_t r, double * mat,
                         struct Qmarray ** out, void * args)
 {
