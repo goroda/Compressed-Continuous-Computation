@@ -20,8 +20,6 @@ Xtest = np.random.rand(Ntest, 2)
 Ytest = func(Xtest)
 
 
-
-
 def build_ft_regress(xdata, ydata, nparam=2, init_rank=5, adaptrank=1, verbose=0):
     dim = xdata.shape[1]
     ndata = xdata.shape[0]
