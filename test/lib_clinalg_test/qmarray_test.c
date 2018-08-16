@@ -571,7 +571,7 @@ void Test_qmarray_householder2_fourier2(CuTest * tc){
     struct Qmarray * Ah= qmam(Q, R, 2);
     diff = qmarray_norm2diff(Ah, B);
     printf("diff = %3.5G\n", diff);
-    /* CuAssertDblEquals(tc, 0, diff, 1e-14); */
+    CuAssertDblEquals(tc, 0, diff, 1e-14);
     /* printf("diff = %3.5G\n", diff); */
 
     printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q));
@@ -596,6 +596,8 @@ void Test_qmarray_householder2_fourier2(CuTest * tc){
     inner = generic_function_inner(f1, f1) + generic_function_inner(f2, f2);
     CuAssertDblEquals(tc, 1, inner, 1e-15);
     printf("inner = %3.5G\n", inner);
+
+    ADD SECOND COLUMN AND RESOLVE DIFF;
 
 
 
