@@ -477,7 +477,7 @@ void Test_qmarray_householder2(CuTest * tc){
 
 void Test_qmarray_householder2_fourier(CuTest * tc){
 
-    printf("Testing function: qmarray_householder_fourier (2/4)\n");
+    printf("Testing function: qmarray_householder_fourier (1/2)\n");
 
    // functions
     struct Fwrap * fw = fwrap_create(1,"array-vec");
@@ -495,11 +495,20 @@ void Test_qmarray_householder2_fourier(CuTest * tc){
 
     struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
     struct Qmarray * B = qmarray_copy(A);
+
+    double diff = qmarray_norm2diff(A, B);
+
+    CuAssertDblEquals(tc, 0, diff, 1e-14);
     double * R = calloc_double(4*4);
     struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
-    dprint2d_col(4, 4, R);
+    /* dprint2d_col(4, 4, R); */
 
-    printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q));
+    struct Qmarray * Ah= qmam(Q, R, 1);
+    diff = qmarray_norm2diff(Ah, B);
+    CuAssertDblEquals(tc, 0, diff, 1e-14);
+    /* printf("diff = %3.5G\n", diff); */
+
+    /* printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q)); */
     double inner;
     struct GenericFunction *f1,*f2;
 
@@ -518,23 +527,86 @@ void Test_qmarray_householder2_fourier(CuTest * tc){
     }
 
 
+    qmarray_free(A);
+    qmarray_free(B);
+    qmarray_free(Ah);
+    qmarray_free(Q);
+    free(R);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
+}
+
+void Test_qmarray_householder2_fourier2(CuTest * tc){
+
+    printf("Testing function: qmarray_householder_fourier (2/2)\n");
+
+   // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,funcp,NULL);
+    fwrap_set_func_array(fw,2,func2p,NULL);
+    fwrap_set_func_array(fw,3,func3p,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, 0-1);
+    ope_opts_set_ub(opts, 1);
+    ope_opts_set_start(opts, 65);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(2,2,qmopts,fw);
+    struct Qmarray * B = qmarray_copy(A);
+
+    double diff = qmarray_norm2diff(A, B);
+    CuAssertDblEquals(tc, 0, diff, 1e-14);
     
+    double * R = calloc_double(2*2);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
 
-    /* f2 = quasimatrix_get_func(Q2,3); */
-    /* temp = generic_function_daxpby(1,f1,-1.0,f2); */
-    /* diff = generic_function_norm(temp); */
-    /* CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
-    /* generic_function_free(temp); */
+    printf("Qmarray rows = %zu\n", Q->nrows);
+    printf("Qmarray cols = %zu\n", Q->ncols);
+    dprint2d_col(2, 2, R);
 
-    /* qmarray_free(A); */
-    /* qmarray_free(Q); */
-    /* quasimatrix_free(A2); */
-    /* quasimatrix_free(Q2); */
-    /* free(R); */
-    /* free(R2); */
-    /* fwrap_destroy(fw); */
-    /* ope_opts_free(opts); */
-    /* one_approx_opts_free(qmopts); */
+    struct Qmarray * Ah= qmam(Q, R, 2);
+    diff = qmarray_norm2diff(Ah, B);
+    printf("diff = %3.5G\n", diff);
+    /* CuAssertDblEquals(tc, 0, diff, 1e-14); */
+    /* printf("diff = %3.5G\n", diff); */
+
+    printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q));
+    double inner;
+    struct GenericFunction *f1,*f2;
+
+
+    f1 = qmarray_get_func(Q, 0, 0);
+    f2 = qmarray_get_func(Q, 0, 1);
+    inner = generic_function_inner(f1, f2);
+    CuAssertDblEquals(tc, 0, inner, 1e-15);
+
+    f1 = qmarray_get_func(Q, 1, 0);
+    f2 = qmarray_get_func(Q, 1, 1);
+    inner = generic_function_inner(f1, f2);
+    CuAssertDblEquals(tc, 0, inner, 1e-15);
+
+
+    f1 = qmarray_get_func(Q, 0, 0);
+    f2 = qmarray_get_func(Q, 1, 0);
+
+    inner = generic_function_inner(f1, f1) + generic_function_inner(f2, f2);
+    CuAssertDblEquals(tc, 1, inner, 1e-15);
+    printf("inner = %3.5G\n", inner);
+
+
+
+    qmarray_free(A);
+    qmarray_free(B);
+    qmarray_free(Ah);
+    qmarray_free(Q);
+    free(R);
+    fwrap_destroy(fw);
+    ope_opts_free(opts);
+    one_approx_opts_free(qmopts);
 }
 
 
@@ -2181,11 +2253,13 @@ CuSuite * CLinalgQmarrayGetSuite(){
     
     /* // a bunch of QR tests */
     /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns); */
-    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns_fourier);
-    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_rows_fourier);
+    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns_fourier); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_rows_fourier); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier); */
+    SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier2);
+    
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder2); */
-    SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier);    
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder3); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder4); */
     /* SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1); */
