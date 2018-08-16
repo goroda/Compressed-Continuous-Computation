@@ -82,6 +82,31 @@ int gaussbump(size_t N, const double * x, double * out, void * args)
     return 0;
 }
 
+int gaussbump_deriv(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        out[ii] = exp(-pow(x[ii],2)/0.1) * (-2.0/0.1 * x[ii]);
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
+int gaussbump_dderiv(size_t N, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < N; ii++ ){
+        out[ii] = exp(-pow(x[ii],2)/0.1) * (400 * x[ii] * x[ii] - 20);
+     
+    }
+    if (args != NULL){
+        int * count = args;
+        *count += N;
+    }
+    return 0;
+}
+
 int gaussbump2(size_t N, const double * x, double * out, void * args)
 {
     for (size_t ii = 0; ii < N; ii++ ){

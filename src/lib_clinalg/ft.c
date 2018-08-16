@@ -2444,8 +2444,10 @@ function_train_orthor(struct FunctionTrain * a,
     // update last core
 //    printf("dim = %zu\n",a->dim);
     o = multi_approx_opts_get_aopts(aopts,core);
-    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core])); */
+    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core]));
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L,o);
+    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));
+    /* ftrl->cores[core] = mqma(L, ftrl->cores[core], ftrl->cores[core]->nrows); */
     /* printf("done with LQ\n"); */
     for (ii = 2; ii < a->dim; ii++){
         core = a->dim-ii;
@@ -2455,10 +2457,13 @@ function_train_orthor(struct FunctionTrain * a,
         L = calloc_double(ftrl->ranks[core]*ftrl->ranks[core]);
         o = multi_approx_opts_get_aopts(aopts,core);
         ftrl->cores[core] = qmarray_householder_simple("LQ",temp,L,o);
+        printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));
         qmarray_free(temp); temp = NULL;
         
     }
     ftrl->cores[0] = qmam(a->cores[0],L,ftrl->ranks[1]);
+    /* ftrl->cores[0] = qmarray_copy(a->cores[0]); */
+    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));    
     free(L); L = NULL;
     return ftrl;
 }
@@ -2491,11 +2496,11 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
     delta = delta * epsilon / sqrt(a->dim-1);
     //double delta = epsilon;
 
-    /* printf("Rounding Starting norm = %G\n",function_train_norm2(a)); */
+    printf("Rounding Starting norm = %G\n",function_train_norm2(a));
 //    printf("begin orho\n");
     struct FunctionTrain * ftrl = function_train_orthor(a,aopts);
 
-    /* printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl)); */
+    printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl));
 //    printf("ortho gonalized\n");
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);
@@ -3303,6 +3308,7 @@ ftapprox_cross(struct Fwrap * fw,
        /*     diff /= den; */
        /* } */
 
+        /* printf("compute norm\n"); */
 
         diff = function_train_norm2diff(ft,fti);
         den = function_train_norm2(ft);

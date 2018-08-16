@@ -42,6 +42,7 @@
 
 CuSuite * ChebGetSuite(void);
 CuSuite * LegGetSuite(void);
+CuSuite * FourierGetSuite(void);
 CuSuite * HermGetSuite(void);
 CuSuite * LelmGetSuite(void);
 CuSuite * CelmGetSuite(void);

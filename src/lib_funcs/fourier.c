@@ -364,16 +364,22 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
     ope_opts_set_lb(opts, lb);
     ope_opts_set_ub(opts, ub);
     size_t n = a->num_poly-1;
+    ope_opts_set_start(opts, 2*n+1);
+
+    /* printf("n = %zu\n", n); */
     struct OrthPolyExpansion * fourier =
         orth_poly_expansion_init_from_opts(opts, 2*n+1);
+    /* struct OrthPolyExpansion * fourier = */
+    /*     orth_poly_expansion_init_from_opts(opts, n+1); */
 
-    struct Fwrap * fw = fwrap_create(1, "general-vec");
-    pair_t pairs = {a, b};
-    fwrap_set_fvec(fw, prod_eval, &pairs);
-    int res = orth_poly_expansion_approx_vec(fourier, fw, opts);
-
-    assert (res == 0);
-    fwrap_destroy(fw); fw = NULL;
+    if (n > 0){
+        struct Fwrap * fw = fwrap_create(1, "general-vec");
+        pair_t pairs = {a, b};
+        fwrap_set_fvec(fw, prod_eval, &pairs);
+        int res = orth_poly_expansion_approx_vec(fourier, fw, opts);
+        assert (res == 0);
+        fwrap_destroy(fw); fw = NULL;
+    }
     ope_opts_free(opts); opts = NULL;
     return fourier;
 }
@@ -397,7 +403,7 @@ int fourier_expansion_axpy(double a, const struct OrthPolyExpansion * x,
                            struct OrthPolyExpansion * y)
 {
 
-    if (x->num_poly < y->num_poly){
+    if (x->num_poly <= y->num_poly){
         for (size_t ii = 0; ii < x->num_poly; ii++){
             y->ccoeff[ii] += a * x->ccoeff[ii];
             if (cabs(y->ccoeff[ii]) < ZEROTHRESH){

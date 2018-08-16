@@ -1289,6 +1289,320 @@ CuSuite * LegGetSuite(){
     return suite;
 }
 
+
+void Test_fourier_approx(CuTest * tc){
+
+    printf("Testing function: fourier_approx\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump,NULL);
+
+    // approximation
+    size_t N = 2*2*2*2*2*2*2*2 + 1;
+    double lb=-5.0,ub=5.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+
+    struct OrthPolyExpansion * fourier =
+        orth_poly_expansion_init_from_opts(opts, N);
+
+    int res = orth_poly_expansion_approx_vec(fourier,fw,NULL);
+    CuAssertIntEquals(tc,0,res);
+
+    // compute error
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,1000,fourier,gaussbump,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-13);
+
+    fwrap_destroy(fw);
+    ope_opts_free(opts); opts = NULL;
+    POLY_FREE(fourier);
+}
+
+void Test_fourier_orth_basis(CuTest * tc){
+
+    printf("Testing function: fourier_orth_basis\n");
+    // function
+
+    // approximation
+    double lb = -2.0, ub = 3.0;
+    size_t n = 32;
+    size_t N = n+1;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_start(opts,N);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    struct OrthPolyExpansion *f[32];
+
+    orth_poly_expansion_orth_basis(32, f, opts);
+
+    for (size_t ii = 0; ii < n; ii++){
+        for (size_t jj = 0; jj < n; jj++){
+            double inner = orth_poly_expansion_inner(f[ii], f[jj]);
+            if (ii == jj){
+                CuAssertDblEquals(tc, 1, inner, 1e-10);
+            }
+            else{
+                CuAssertDblEquals(tc, 0, inner, 1e-10);
+            }
+            /* printf("ii = %zu, jj = %zu\n", ii, jj); */
+            /* printf("\t inner=%3.5G\n", inner); */
+        }
+    }
+
+    ope_opts_free(opts);
+}
+
+
+void Test_fourier_derivative(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_deriv: fourier\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump,NULL);
+
+    double lb = -8.0, ub = 8.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+    size_t N = 512+1;
+    struct OrthPolyExpansion * cpoly =
+        orth_poly_expansion_init_from_opts(opts, N);
+    int res = orth_poly_expansion_approx_vec(cpoly, fw, NULL);
+    CuAssertIntEquals(tc,0,res);
+    
+    opoly_t der = orth_poly_expansion_deriv(cpoly);
+    
+    // error
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,1000,der,gaussbump_deriv,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-13);
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(der);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+    
+}
+
+void Test_fourier_dderivative(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_dderiv: fourier\n");
+
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump,NULL);
+
+    double lb = -8.0, ub = 8.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+    size_t N = 512+1;
+    struct OrthPolyExpansion * cpoly =
+        orth_poly_expansion_init_from_opts(opts, N);
+    int res = orth_poly_expansion_approx_vec(cpoly, fw, NULL);
+    CuAssertIntEquals(tc,0,res);
+    
+    opoly_t der = orth_poly_expansion_dderiv(cpoly);
+    
+    // error
+    double abs_err;
+    double func_norm;
+    compute_error_vec(lb,ub,1000,der,gaussbump_dderiv,NULL,&abs_err,&func_norm);
+    double err = abs_err / func_norm;
+    CuAssertDblEquals(tc, 0.0, err, 1e-13);
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(der);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+    
+}
+
+
+void Test_fourier_integrate(CuTest * tc){
+
+    printf("Testing function: fourier_integrate\n");
+    // function
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,powX2,NULL);
+
+    // approximation
+    double lb = -8.0, ub = 8.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+    size_t N = 512+1;
+    struct OrthPolyExpansion * cpoly =
+        orth_poly_expansion_init_from_opts(opts, N);
+    int res = orth_poly_expansion_approx_vec(cpoly, fw, NULL);
+    CuAssertIntEquals(tc,0,res);
+
+    double intshould = (pow(ub,3) - pow(lb,3))/3;
+    double intis = orth_poly_expansion_integrate(cpoly);
+    CuAssertDblEquals(tc, intshould, intis, 1e-3);
+    
+    POLY_FREE(cpoly);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+}
+
+
+void Test_fourier_inner(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_inner with fourier poly \n");
+
+    // function
+    struct Fwrap * fw1 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw1,powX2,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw2,powX2,NULL);
+
+    double lb = -8.0, ub = 8.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+    size_t N = 512+1;
+
+    struct OrthPolyExpansion * cpoly = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly, fw1, NULL);
+
+    struct OrthPolyExpansion * cpoly2 = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly2, fw2, NULL);
+    
+    double intshould = (pow(ub,5) - pow(lb,5))/5;
+    double intis = orth_poly_expansion_inner(cpoly,cpoly2);
+    double relerr = fabs(intshould - intis) / fabs(intshould);
+    CuAssertDblEquals(tc, 0, relerr, 1e-5);
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(cpoly2);
+    ope_opts_free(opts);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
+}
+
+void Test_fourier_product(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_product with fourier poly \n");
+    
+    // function
+    struct Fwrap * fw1 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw1,powX2,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw2,TwoPowX3,NULL);
+
+    // approximation
+    double lb = -3.0, ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+
+    size_t N = 512+1;
+    struct OrthPolyExpansion * cpoly = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly, fw1, NULL);
+
+    struct OrthPolyExpansion * cpoly2 = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly, fw2, NULL);
+
+    struct OrthPolyExpansion * cpoly3 = orth_poly_expansion_prod(cpoly, cpoly2);
+ 
+    N = 100;
+    double * pts = linspace(lb,ub,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = POLY_EVAL(cpoly3,pts[ii]);
+        double eval2 = POLY_EVAL(cpoly,pts[ii]) *
+                        POLY_EVAL(cpoly2,pts[ii]);
+        double diff= fabs(eval1-eval2);
+        CuAssertDblEquals(tc, 0.0, diff, 1e-10);
+    }
+    free(pts); pts = NULL;
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(cpoly2);
+    POLY_FREE(cpoly3);
+    ope_opts_free(opts);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
+}
+
+
+void Test_fourier_axpy(CuTest * tc){
+
+    printf("Testing function: orth_poly_expansion_axpy with fourier poly \n");
+
+    // function
+    struct Fwrap * fw1 = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw1,powX2,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"general-vec");
+    /* fwrap_set_fvec(fw2,TwoPowX3,NULL); */
+    fwrap_set_fvec(fw2,powX2,NULL);
+
+    // approximation
+    double lb = -8.0, ub = 8.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+
+    size_t N = 4096+1;
+
+    struct OrthPolyExpansion * cpoly = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly, fw1, NULL);
+
+    struct OrthPolyExpansion * cpoly2 = orth_poly_expansion_init_from_opts(opts, N);
+    orth_poly_expansion_approx_vec(cpoly2, fw2, NULL);
+              
+    int success = orth_poly_expansion_axpy(2.0,cpoly2,cpoly);
+    CuAssertIntEquals(tc,0,success);
+    
+    N = 100;
+    double * pts = linspace(lb,ub,N);
+    size_t ii;
+    for (ii = 0; ii < N; ii++){
+        double eval1 = POLY_EVAL(cpoly,pts[ii]);
+        double eval2a,eval2b;
+        /* TwoPowX3(1,pts+ii,&eval2a,NULL); */
+        powX2(1,pts+ii,&eval2a,NULL);        
+        powX2(1,pts+ii,&eval2b,NULL);
+        double eval2 = 2.0 * eval2a + eval2b;
+        double diff= fabs(eval1-eval2);
+        /* printf("eval2 = %3.15G %3.15G\n", eval2, diff); */
+        CuAssertDblEquals(tc, 0.0, diff/fabs(eval2), 1e-1);
+    }
+    free(pts); pts = NULL;
+    
+    POLY_FREE(cpoly);
+    POLY_FREE(cpoly2);
+    ope_opts_free(opts);
+    fwrap_destroy(fw1);
+    fwrap_destroy(fw2);
+}
+
+CuSuite * FourierGetSuite(){
+    CuSuite * suite = CuSuiteNew();
+    SUITE_ADD_TEST(suite, Test_fourier_approx);
+    SUITE_ADD_TEST(suite, Test_fourier_orth_basis);
+    SUITE_ADD_TEST(suite, Test_fourier_derivative);
+    SUITE_ADD_TEST(suite, Test_fourier_dderivative);
+    SUITE_ADD_TEST(suite, Test_fourier_integrate);
+    SUITE_ADD_TEST(suite, Test_fourier_inner);
+    SUITE_ADD_TEST(suite, Test_fourier_product);
+    SUITE_ADD_TEST(suite, Test_fourier_axpy);
+    
+    return suite;
+}
+
 int fherm1(size_t N, const double * x, double * out, void * arg)
 {
     (void)(arg);

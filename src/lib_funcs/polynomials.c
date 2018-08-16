@@ -895,6 +895,13 @@ void ope_opts_set_start(struct OpeOpts * ope, size_t start)
     assert (ope != NULL);
     ope->start_num = start;
 }
+
+size_t ope_opts_get_start(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->start_num;
+}
+
 void ope_opts_set_maxnum(struct OpeOpts * ope, size_t maxnum)
 {
     assert (ope != NULL);
@@ -1770,9 +1777,15 @@ orth_poly_expansion_get_ptype(const struct OrthPolyExpansion * ope)
 struct OrthPolyExpansion * 
 orth_poly_expansion_zero(struct OpeOpts * opts, int force_nparam)
 {
-
     assert (opts != NULL);
     struct OrthPolyExpansion * p = NULL;
+    
+    if (opts->ptype == FOURIER){
+        p = orth_poly_expansion_init_from_opts(opts, ope_opts_get_start(opts));
+        return p;
+    }
+    
+
     if (force_nparam == 0){
         p = orth_poly_expansion_init_from_opts(opts,1);
         p->coeff[0] = 0.0;
@@ -1803,11 +1816,24 @@ orth_poly_expansion_constant(double a, struct OpeOpts * opts)
     assert (isnan(a) == 0);
     assert (isinf(a) == 0);
     assert (fabs(a) < 1e100);
+    if (fabs(a) < ZEROTHRESH){
+        return orth_poly_expansion_zero(opts, 0);
+    }
 
     assert (opts != NULL);
+  
+  
     struct OrthPolyExpansion * p = NULL;
-    p = orth_poly_expansion_init_from_opts(opts,1);
-    p->coeff[0] = a / p->p->const_term;
+    if (opts->ptype != FOURIER){
+        p = orth_poly_expansion_init_from_opts(opts,1);
+        p->coeff[0] = a / p->p->const_term;
+    }
+    else{
+        p = orth_poly_expansion_init_from_opts(opts,ope_opts_get_start(opts));
+        p->ccoeff[0] = a;
+    }
+
+
 
     return p;
 }
@@ -1947,8 +1973,11 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         /* exit(1); */
         break;
     case FOURIER:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
-        break;
+        /* p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m); */
+        /* break; */
+        fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
+        fprintf(stderr,"order for FOURIER type\n;");
+        exit(1);
     case STANDARD:
         fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
         fprintf(stderr,"order for STANDARD type\n;");
@@ -2005,8 +2034,39 @@ orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
             }
         }
     }
+    else if (opts->ptype == FOURIER) {
+        size_t N = ope_opts_get_start(opts);
+        /* printf("N = %zu\n", N); */
+        if (n > N){
+            fprintf(stderr, "Cannot look for a rank so large for fourier\n");
+        }
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = orth_poly_expansion_init_from_opts(opts, N);
+            f[ii]->ccoeff[ii] = 1.0;
+        }
+        // now gram schmidt
+        double norm, proj;
+        for (size_t ii = 0; ii < n; ii++){
+            /* printf("ii = %zu %zu\n", ii, f[ii]->num_poly); */
+            norm = sqrt(orth_poly_expansion_inner(f[ii], f[ii])); 
+            if (norm > 1e-200){
+                orth_poly_expansion_scale(1.0/norm, f[ii]);
+                for (size_t jj = ii+1; jj < n; jj++){
+                    /* printf("jj = %zu before %zu\n", jj, f[jj]->num_poly); */
+                    proj = orth_poly_expansion_inner(f[ii],f[jj]);
+                    /* printf("jj = %zu after 1 %zu\n", jj, f[jj]->num_poly); */
+                    orth_poly_expansion_axpy(-proj,f[ii],f[jj]);
+                    /* printf("jj = %zu after  2%zu\n", jj, f[jj]->num_poly); */
+                    /* if (f[jj]->num_poly != 33){ */
+                    /*     printf("WARNING\n"); */
+                    /*     exit(1); */
+                    /* } */
+                }
+            }
+        }
+    }
     else{
-        fprintf(stderr, "Cannot generate an orthonormal basis for polytype %d", opts->ptype);
+        fprintf(stderr, "Cannot generate an orthonormal basis for polytype %d\n", opts->ptype);
         exit(1);
     }
 }
@@ -3720,8 +3780,14 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
     assert (aopts != NULL);
     assert (fw != NULL);
     if (aopts->ptype == FOURIER){
-        fprintf(stderr, "Cannot perform approx_adapt with fourier basis\n");
-        exit(1);
+
+        size_t N = ope_opts_get_start(aopts);
+        struct OrthPolyExpansion * poly = orth_poly_expansion_init_from_opts(aopts, N);
+        orth_poly_expansion_approx_vec(poly, fw, NULL);
+
+        return poly;
+        /* fprintf(stderr, "Cannot perform approx_adapt with fourier basis\n"); */
+        /* exit(1); */
     }
     
     size_t ii;
@@ -5482,7 +5548,7 @@ double orth_poly_expansion_absmax(
     else if ((ptype == HERMITE) || (ptype == FOURIER)){
         fprintf(stderr,"Must specify optimizatino arguments\n");
         fprintf(stderr,"In the form of candidate points for \n");
-        fprintf(stderr,"finding the absmax of hermite expansion\n");
+        fprintf(stderr,"finding the absmax of hermite or fourier expansion\n");
         exit(1);
         
     }

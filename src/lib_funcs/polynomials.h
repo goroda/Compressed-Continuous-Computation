@@ -74,6 +74,7 @@ struct OpeOpts * ope_opts_alloc(enum poly_type);
 void ope_opts_free(struct OpeOpts *);
 void ope_opts_free_deep(struct OpeOpts **);
 void ope_opts_set_start(struct OpeOpts *, size_t);
+size_t ope_opts_get_start(const struct OpeOpts *);
 void ope_opts_set_maxnum(struct OpeOpts *, size_t);
 size_t ope_opts_get_maxnum(const struct OpeOpts *);
 void ope_opts_set_coeffs_check(struct OpeOpts *, size_t);

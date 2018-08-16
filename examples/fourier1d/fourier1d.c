@@ -158,7 +158,7 @@ int main(int argc, char * argv[])
 
     char * dirout = ".";
     size_t function = 0;
-    size_t N = 8;
+    size_t N = 9;
     double lb = 0.0;
     double ub = 2.0*M_PI;
     int verbose = 0;
