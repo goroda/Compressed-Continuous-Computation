@@ -4745,98 +4745,26 @@ struct OrthPolyExpansion *
 orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
                            double b, struct OrthPolyExpansion * y)
 {
-    /*
-    printf("a=%G b=%G \n",a,b);
-    printf("x=\n");
-    print_orth_poly_expansion(x,0,NULL);
-    printf("y=\n");
-    print_orth_poly_expansion(y,0,NULL);
-    */
-    
-    //double diffa = fabs(a-ZEROTHRESH);
-    //double diffb = fabs(b-ZEROTHRESH);
-    size_t ii;
+    /* assert (x->p->ptype != FOURIER); */
     struct OrthPolyExpansion * p ;
-    //if ( (x == NULL && y != NULL) || ((diffa <= ZEROTHRESH) && (y != NULL))){
-    if ( (x == NULL && y != NULL)){
-        //printf("b = %G\n",b);
-        //if (diffb <= ZEROTHRESH){
-        //    p = orth_poly_expansion_init(y->p->ptype,1,y->lower_bound, y->upper_bound);
-       // }
-       // else{    
-            p = orth_poly_expansion_init(y->p->ptype,
-                        y->num_poly, y->lower_bound, y->upper_bound);
-            space_mapping_free(p->space_transform);
-            p->space_transform = space_mapping_copy(y->space_transform);
-            for (ii = 0; ii < y->num_poly; ii++){
-                p->coeff[ii] = y->coeff[ii] * b;
-            }
-        //}
-        orth_poly_expansion_round(&p);
-        return p;
+    if (x != NULL && y != NULL){
+        p = orth_poly_expansion_copy(y);
+        orth_poly_expansion_scale(b, p);
+        orth_poly_expansion_axpy(a, x, p);
     }
-    //if ( (y == NULL && x != NULL) || ((diffb <= ZEROTHRESH) && (x != NULL))){
-    if ( (y == NULL && x != NULL)){
-        //if (a <= ZEROTHRESH){
-        //    p = orth_poly_expansion_init(x->p->ptype,1, x->lower_bound, x->upper_bound);
-       // }
-        //else{
-            p = orth_poly_expansion_init(x->p->ptype,
-                        x->num_poly, x->lower_bound, x->upper_bound);
-            space_mapping_free(p->space_transform);
-            p->space_transform = space_mapping_copy(x->space_transform);
-            for (ii = 0; ii < x->num_poly; ii++){
-                p->coeff[ii] = x->coeff[ii] * a;
-            }
-        //}
-        orth_poly_expansion_round(&p);
-        return p;
+    else if (x != NULL){
+        p = orth_poly_expansion_copy(x);
+        orth_poly_expansion_scale(a, p);
     }
-
-    size_t N = x->num_poly > y->num_poly ? x->num_poly : y->num_poly;
-
-    p = orth_poly_expansion_init(x->p->ptype,
-                    N, x->lower_bound, x->upper_bound);
-    space_mapping_free(p->space_transform);
-    p->space_transform = space_mapping_copy(x->space_transform);
-    
-    size_t xN = x->num_poly;
-    size_t yN = y->num_poly;
-
-    //printf("diffa = %G, x==NULL %d\n",diffa,x==NULL);
-    //printf("diffb = %G, y==NULL %d\n",diffb,y==NULL);
-   // assert(diffa > ZEROTHRESH);
-   // assert(diffb > ZEROTHRESH);
-    if (xN > yN){
-        for (ii = 0; ii < yN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
-        for (ii = yN; ii < xN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a;
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
+    else if (y != NULL){
+        p = orth_poly_expansion_copy(y);
+        orth_poly_expansion_scale(b, p);
     }
     else{
-        for (ii = 0; ii < xN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
-        for (ii = xN; ii < yN; ii++){
-            p->coeff[ii] = y->coeff[ii]*b;
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-            //}
-        }
+        fprintf(stderr, "Error in orth_poly_expansion_daxpby\n");
+        fprintf(stderr, "trying to run with all NULL arguments\n");
+        exit(1);
     }
-
-    orth_poly_expansion_round(&p);
     return p;
 }
 

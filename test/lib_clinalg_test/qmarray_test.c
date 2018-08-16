@@ -35,8 +35,6 @@
 //Code
 
 
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -564,42 +562,45 @@ void Test_qmarray_householder2_fourier2(CuTest * tc){
     double * R = calloc_double(2*2);
     struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
 
-    printf("Qmarray rows = %zu\n", Q->nrows);
-    printf("Qmarray cols = %zu\n", Q->ncols);
-    dprint2d_col(2, 2, R);
+    /* printf("Qmarray rows = %zu\n", Q->nrows); */
+    /* printf("Qmarray cols = %zu\n", Q->ncols); */
+    /* printf("\n\n"); */
+    /* dprint2d_col(2, 2, R); */
 
     struct Qmarray * Ah= qmam(Q, R, 2);
     diff = qmarray_norm2diff(Ah, B);
-    printf("diff = %3.5G\n", diff);
+
     CuAssertDblEquals(tc, 0, diff, 1e-14);
-    /* printf("diff = %3.5G\n", diff); */
 
-    printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q));
-    double inner;
+
     struct GenericFunction *f1,*f2;
+    f1 = qmarray_get_func(Ah, 0, 1);
+    f2 = qmarray_get_func(B, 0, 1);    
 
+    diff = generic_function_norm2diff(f1, f2);
+    CuAssertDblEquals(tc, 0, diff, 1e-14);
 
+    double inner;
+    
     f1 = qmarray_get_func(Q, 0, 0);
     f2 = qmarray_get_func(Q, 0, 1);
     inner = generic_function_inner(f1, f2);
-    CuAssertDblEquals(tc, 0, inner, 1e-15);
 
     f1 = qmarray_get_func(Q, 1, 0);
     f2 = qmarray_get_func(Q, 1, 1);
-    inner = generic_function_inner(f1, f2);
+    inner += generic_function_inner(f1, f2);
     CuAssertDblEquals(tc, 0, inner, 1e-15);
 
 
     f1 = qmarray_get_func(Q, 0, 0);
     f2 = qmarray_get_func(Q, 1, 0);
-
     inner = generic_function_inner(f1, f1) + generic_function_inner(f2, f2);
     CuAssertDblEquals(tc, 1, inner, 1e-15);
-    printf("inner = %3.5G\n", inner);
 
-    ADD SECOND COLUMN AND RESOLVE DIFF;
-
-
+    f1 = qmarray_get_func(Q, 0, 1);
+    f2 = qmarray_get_func(Q, 1, 1);
+    inner = generic_function_inner(f1, f1) + generic_function_inner(f2, f2);
+    CuAssertDblEquals(tc, 1, inner, 1e-15);
 
     qmarray_free(A);
     qmarray_free(B);
