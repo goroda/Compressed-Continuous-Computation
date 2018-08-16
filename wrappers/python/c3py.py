@@ -477,10 +477,13 @@ class FunctionTrain(object):
 
         c3a, onedopts, low_opts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
-        c3.function_train_round(self.ft, eps, multiopts)
+        ftc = c3.function_train_round(self.ft, eps, multiopts)
+        c3.function_train_free(self.ft)
+        # c3.function_train_free(self.ft)
+        self.ft = ftc
         self._free_approx_params(c3a, onedopts, low_opts)
 
-    def __add__(self, other, eps=1e-14):
+    def __add__(self, other, eps=0):
         """ Add two function trains """
 
         out = FunctionTrain(self.dim)
@@ -489,7 +492,7 @@ class FunctionTrain(object):
         out.round(eps)
         return out
 
-    def __sub__(self, other, eps=1e-14):
+    def __sub__(self, other, eps=0):
         """ Subtract two function trains """
 
         # print("subtracting!")
@@ -504,7 +507,7 @@ class FunctionTrain(object):
         c3.function_train_free(temp1)
         return out_ft
 
-    def __mul__(self, other, eps=1e-14):
+    def __mul__(self, other, eps=0):
         out = FunctionTrain(self.dim)
         out.ft = c3.function_train_product(self.ft, other.ft)
         out.opts = copy.deepcopy(self.opts)
@@ -514,11 +517,14 @@ class FunctionTrain(object):
     def integrate(self):
         return c3.function_train_integrate(self.ft)
 
-    def scale(self, a, eps=1e-14):
+    def inner(self, other):
+        return c3.function_train_inner(self.ft, other.ft)
+    
+    def scale(self, a, eps=0):
         """ f <- a*f"""
         c3.function_train_scale(self.ft, a)
 
-    def scale_and_shift(self, scale, shift, eps=1e-14, c3_pointer=False):
+    def scale_and_shift(self, scale, shift, eps=0, c3_pointer=False):
 
         c3a, onedopts, low_opts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
