@@ -3367,7 +3367,7 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
 *************************************************************/
 void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
-    if (0 == 0){
+    if ((0 == 0) && ((*p)->p->ptype != FOURIER)){
         /* double thresh = 1e-3*ZEROTHRESH; */
         double thresh = ZEROTHRESH;
         /* double thresh = 1e-30; */

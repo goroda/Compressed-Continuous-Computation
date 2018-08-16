@@ -308,6 +308,50 @@ void Test_qmarray_orth1d_columns(CuTest * tc)
     ope_opts_free(opts);
 }
 
+void Test_qmarray_orth1d_columns_fourier(CuTest * tc)
+{
+    printf("Testing function: qmarray_orth1d_columns with fourier\n");
+    
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_start(opts, 65);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * Q = qmarray_orth1d_columns(2,2,qmopts);
+    
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc, 2, nrows);
+    CuAssertIntEquals(tc, 2, ncols);
+
+    qmarray_test_col_orth(tc,Q,1e-14);
+
+    qmarray_free(Q); Q = NULL;
+    one_approx_opts_free(qmopts);
+    ope_opts_free(opts);
+}
+
+void Test_qmarray_orth1d_rows_fourier(CuTest * tc)
+{
+    printf("Testing function: qmarray_orth1d_rows with fourier\n");
+    
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_start(opts, 65);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * Q = qmarray_orth1d_rows(2,2,qmopts);
+    
+    size_t nrows = qmarray_get_nrows(Q);
+    size_t ncols = qmarray_get_ncols(Q);
+    CuAssertIntEquals(tc, 2, nrows);
+    CuAssertIntEquals(tc, 2, ncols);
+
+    qmarray_test_row_orth(tc,Q,1e-14);
+
+    qmarray_free(Q); Q = NULL;
+    one_approx_opts_free(qmopts);
+    ope_opts_free(opts);
+}
+
 void Test_qmarray_householder(CuTest * tc){
 
     printf("Testing function: qmarray_householder (1/4)\n");
@@ -430,6 +474,69 @@ void Test_qmarray_householder2(CuTest * tc){
     ope_opts_free(opts);
     one_approx_opts_free(qmopts);
 }
+
+void Test_qmarray_householder2_fourier(CuTest * tc){
+
+    printf("Testing function: qmarray_householder_fourier (2/4)\n");
+
+   // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,funcp,NULL);
+    fwrap_set_func_array(fw,2,func2p,NULL);
+    fwrap_set_func_array(fw,3,func3p,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, 0-1);
+    ope_opts_set_ub(opts, 1);
+    ope_opts_set_start(opts, 65);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+
+    struct Qmarray * A = qmarray_approx1d(1,4,qmopts,fw);
+    struct Qmarray * B = qmarray_copy(A);
+    double * R = calloc_double(4*4);
+    struct Qmarray * Q = qmarray_householder_simple("QR",A,R,qmopts);
+    dprint2d_col(4, 4, R);
+
+    printf("norm qmarray2 = %3.5G\n", qmarray_norm2(Q));
+    double inner;
+    struct GenericFunction *f1,*f2;
+
+    for (size_t ii = 0; ii < 4; ii++){
+        f1 = qmarray_get_func(Q, 0, ii);
+        for (size_t jj = 0; jj < 4; jj++){
+            f2 = qmarray_get_func(Q, 0, jj);
+            inner = generic_function_inner(f1, f2);
+            if (ii != jj){
+                CuAssertDblEquals(tc, 0.0, inner ,1e-14);
+            }
+            else{
+                CuAssertDblEquals(tc, 1.0, inner ,1e-14);
+            }
+        }
+    }
+
+
+    
+
+    /* f2 = quasimatrix_get_func(Q2,3); */
+    /* temp = generic_function_daxpby(1,f1,-1.0,f2); */
+    /* diff = generic_function_norm(temp); */
+    /* CuAssertDblEquals(tc, 0.0, diff ,1e-14); */
+    /* generic_function_free(temp); */
+
+    /* qmarray_free(A); */
+    /* qmarray_free(Q); */
+    /* quasimatrix_free(A2); */
+    /* quasimatrix_free(Q2); */
+    /* free(R); */
+    /* free(R2); */
+    /* fwrap_destroy(fw); */
+    /* ope_opts_free(opts); */
+    /* one_approx_opts_free(qmopts); */
+}
+
 
 void Test_qmarray_householder3(CuTest * tc){
 
@@ -2069,48 +2176,51 @@ void Test_block_kron_mat6(CuTest * tc)
 CuSuite * CLinalgQmarrayGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_qmarray_serialize);
-    SUITE_ADD_TEST(suite, Test_qmarray_savetxt);
+    /* SUITE_ADD_TEST(suite, Test_qmarray_serialize); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_savetxt); */
     
-    // a bunch of QR tests
-    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder2);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder3);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder4);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1);
-    SUITE_ADD_TEST(suite, Test_qmarray_qr1);
-    SUITE_ADD_TEST(suite, Test_qmarray_qr2);
-    SUITE_ADD_TEST(suite, Test_qmarray_qr3);
-    SUITE_ADD_TEST(suite, Test_qmarray_lq);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_constelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowsconstelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_svd);
+    /* // a bunch of QR tests */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns); */
+    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns_fourier);
+    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_rows_fourier);
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder2); */
+    SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier);    
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder3); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder4); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_qr1); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_qr2); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_qr3); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lq); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_constelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rowsconstelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_svd); */
 
-    SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
-    SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
-    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite);
-    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_constelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d2); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_constelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm); */
     
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm);
-    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
+    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm); */
+    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm); */
 
-    SUITE_ADD_TEST(suite,Test_fast_mat_kron);
-    SUITE_ADD_TEST(suite,Test_fast_kron_mat);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat1);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat2);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat3);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat4);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat5);
-    SUITE_ADD_TEST(suite,Test_block_kron_mat6);
+    /* SUITE_ADD_TEST(suite,Test_fast_mat_kron); */
+    /* SUITE_ADD_TEST(suite,Test_fast_kron_mat); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat1); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat2); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat3); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat4); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat5); */
+    /* SUITE_ADD_TEST(suite,Test_block_kron_mat6); */
     
     return suite;
 }

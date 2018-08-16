@@ -67,6 +67,18 @@ int func2(size_t n, const double * x, double * out, void * args)
     return 0;
 }
 
+int funcp(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = sin(2*3.14159*x[ii]);
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
 int func3(size_t n, const double * x, double * out, void * args)
 {
     for (size_t ii = 0; ii < n; ii++){
@@ -79,10 +91,34 @@ int func3(size_t n, const double * x, double * out, void * args)
     return 0;
 }
 
+int func2p(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = sin(pow(x[ii],2.0));
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
 int func4(size_t n, const double * x, double * out, void * args)
 {
     for (size_t ii = 0; ii < n; ii++){
         out[ii] = 3.0*pow(x[ii],4.0) - 2.0*pow(x[ii],2.0);
+    }
+    if (args != NULL){
+        int * N = args;
+        *N += n;
+    }
+    return 0;
+}
+
+int func3p(size_t n, const double * x, double * out, void * args)
+{
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = sin(3.0*pow(x[ii],4.0) - 2.0*pow(x[ii],2.0));
     }
     if (args != NULL){
         int * N = args;

@@ -66,8 +66,8 @@ void RunAllTests(void) {
     
     /* CuSuiteAddSuite(suite, clin); nothing here is used */
     
-    /* CuSuiteAddSuite(suite, qma); */
-    CuSuiteAddSuite(suite, ftr);
+    CuSuiteAddSuite(suite, qma);
+    /* CuSuiteAddSuite(suite, ftr); */
     /* CuSuiteAddSuite(suite, cind); */
     /* CuSuiteAddSuite(suite, fta); */
     /* CuSuiteAddSuite(suite, dmrg); */
