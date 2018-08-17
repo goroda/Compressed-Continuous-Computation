@@ -1370,12 +1370,12 @@ void Test_ftapprox_cross_fourier(CuTest * tc)
     unsigned char * text = NULL;
     size_t size;
     function_train_serialize(NULL,ft,&size);
-    printf("Number of bytes = %zu\n", size);
+    /* printf("Number of bytes = %zu\n", size); */
     text = malloc(size * sizeof(unsigned char));
     function_train_serialize(text,ft,NULL);
 
     struct FunctionTrain * ftd = NULL;
-    printf("derserializing ft\n");
+    /* printf("derserializing ft\n"); */
     function_train_deserialize(text, &ftd);
 
     /* printf("ft dim = %zu\n", ftd->dim); */
@@ -1393,17 +1393,14 @@ void Test_ftapprox_cross_fourier(CuTest * tc)
     double intf = function_train_integrate(ft);
     CuAssertDblEquals(tc, intf, inte, 1e-14);
 
-    printf("get norms\n");
     double norm1 = function_train_norm2(ftd);
     double norm2 = function_train_norm2(ft);
     CuAssertDblEquals(tc, norm1, norm2, 1e-14);
     /* printf("%3.5G, %3.5G\n", inte, intf); */
 
-    printf("wormt\n");
     diff = function_train_relnorm2diff(ft,ftd);
     CuAssertDblEquals(tc,0.0,diff,1e-10);
 
-    printf("ok!\n");
     function_train_free(ftd); ftd = NULL;
     free(text); text = NULL;
 
@@ -1477,23 +1474,23 @@ void Test_ftapprox_cross_fourier2(CuTest * tc)
     CuAssertDblEquals(tc,0.0,err,1e-1);
     //CuAssertDblEquals(tc,0.0,0.0,1e-15);
 
-    // make sure serialization works
-    /* unsigned char * text = NULL; */
-    /* size_t size; */
-    /* function_train_serialize(NULL,ft,&size); */
-    /* //printf("Number of bytes = %zu\n", size); */
-    /* text = malloc(size * sizeof(unsigned char)); */
-    /* function_train_serialize(text,ft,NULL); */
+    /* make sure serialization works */
+    unsigned char * text = NULL;
+    size_t size;
+    function_train_serialize(NULL,ft,&size);
+    //printf("Number of bytes = %zu\n", size);
+    text = malloc(size * sizeof(unsigned char));
+    function_train_serialize(text,ft,NULL);
 
-    /* struct FunctionTrain * ftd = NULL; */
-    /* //printf("derserializing ft\n"); */
-    /* function_train_deserialize(text, &ftd); */
+    struct FunctionTrain * ftd = NULL;
+    //printf("derserializing ft\n");
+    function_train_deserialize(text, &ftd);
 
-    /* double diff = function_train_relnorm2diff(ft,ftd); */
-    /* CuAssertDblEquals(tc,0.0,diff,1e-10); */
+    double diff = function_train_relnorm2diff(ft,ftd);
+    CuAssertDblEquals(tc,0.0,diff,1e-10);
     
-    /* function_train_free(ftd); ftd = NULL; */
-    /* free(text); text = NULL; */
+    function_train_free(ftd); ftd = NULL;
+    free(text); text = NULL;
 
     c3approx_destroy(c3a);
     c3vector_free(optnodes);

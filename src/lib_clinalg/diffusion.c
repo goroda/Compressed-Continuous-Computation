@@ -564,6 +564,8 @@ struct FunctionTrain * exact_laplace(struct FunctionTrain * f,
     return out;
 }
 
+
+
 /***********************************************************//**
     Compute \f[ z(x) = \nabla \cdot \left[ \nabla f(x) \right] \f] exactly
     enforce boundary conditions

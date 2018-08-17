@@ -71,7 +71,7 @@ void RunAllTests(void) {
     /* CuSuiteAddSuite(suite, cind); */
     /* CuSuiteAddSuite(suite, fta); */
     /* CuSuiteAddSuite(suite, dmrg); */
-    /* CuSuiteAddSuite(suite, diff); */
+    CuSuiteAddSuite(suite, diff);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

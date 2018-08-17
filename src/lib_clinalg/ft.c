@@ -2336,18 +2336,12 @@ function_train_integrate_weighted_subset(
 double function_train_inner(const struct FunctionTrain * a, 
                             const struct FunctionTrain * b)
 {
-    printf("in_inner\n");
     double out = 0.123456789;
 
     double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
     double * temp2 = NULL;
 
-    printf("ok!\n");
-    printf("dim = \n");
-    printf("\t %zu\n", a->dim);
-    printf("got dim\n");
     for (size_t ii = 1; ii < a->dim; ii++){
-        printf("ii = %zu/%zu", ii, a->dim-1);
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
@@ -2356,10 +2350,8 @@ double function_train_inner(const struct FunctionTrain * a,
         
         free(temp2); temp2 = NULL;
     }
-    printf("here?\n");
     out = temp[0];
     free(temp); temp=NULL;
-    printf("out_inner\n");
     return out;
 }
 
