@@ -139,6 +139,16 @@ class FunctionTrain(object):
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.HERMITE))
                 c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
                 c3.ope_opts_set_tol(c3_ope_opts[ii], tol)
+            elif ftype == "fourier":
+                c3_ope_opts.append(c3.ope_opts_alloc(c3.FOURIER))
+                c3.ope_opts_set_lb(c3_ope_opts[ii], lb)
+                c3.ope_opts_set_ub(c3_ope_opts[ii], ub)
+                c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
+                c3.ope_opts_set_coeffs_check(c3_ope_opts[ii], coeff_check)
+                c3.ope_opts_set_start(c3_ope_opts[ii], nparam)
+                if np.isinf(maxnum) is False:
+                    c3.ope_opts_set_maxnum(c3_ope_opts[ii], maxnum)
+                c3.ope_opts_set_tol(c3_ope_opts[ii], tol)
             elif ftype == "linelm":
                 c3_ope_opts.append(c3.lin_elem_exp_aopts_alloc(lin_elem_nodes))
             elif ftype == "kernel":
@@ -197,6 +207,8 @@ class FunctionTrain(object):
                 onedopts.append(c3.one_approx_opts_alloc(c3.POLYNOMIAL, ope_opts))
             elif self.opts[ii]['type'] == "hermite":
                 onedopts.append(c3.one_approx_opts_alloc(c3.POLYNOMIAL, ope_opts))
+            elif self.opts[ii]['type'] == "fourier":
+                onedopts.append(c3.one_approx_opts_alloc(c3.POLYNOMIAL, ope_opts))
             elif self.opts[ii]['type'] == "linelm":
                 onedopts.append(c3.one_approx_opts_alloc(c3.LINELM, ope_opts))
             elif self.opts[ii]['type'] == "kernel":
@@ -219,6 +231,8 @@ class FunctionTrain(object):
                 c3.ope_opts_free(low_opts[ii])
             elif self.opts[ii]['type'] == "hermite":
                 c3.ope_opts_free(low_opts[ii])
+            elif self.opts[ii]['type'] == "fourier":
+                c3.ope_opts_free(low_opts[ii])
             elif self.opts[ii]['type'] == "linelm":
                 c3.lin_elem_exp_aopts_free(low_opts[ii])
             elif self.opts[ii]['type'] == "kernel":
@@ -240,12 +254,22 @@ class FunctionTrain(object):
 
         c3a, onedopts, low_opts = self._build_approx_params(c3.CROSS)
 
+        optnodes = []
         for ii in range(self.dim):
             c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
                                self.opts[ii]['ub'], init_rank);
+            if self.opts[ii]['type'] == "hermite" or self.opts[ii]['type'] == "fourier":
+                # x = np.linspace(, self.opts[ii]['ub'], 100)
+                lb = self.opts[ii]['lb']
+                ub = self.opts[ii]['ub']
+                optnodes.append(c3.c3vector_alloc(100, c3.linspace(lb, ub, 100)))
+                c3.c3approx_set_opt_opts_dim(c3a, ii, optnodes[-1])
+        
             # c3.dd_row_linspace(start_fibers, ii, 0.8,
             #                    1.2, init_rank)
-
+            
+        # NEED TO FREE OPTNODES
+        
         c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
         c3.c3approx_set_verbose(c3a, verbose)
         c3.c3approx_set_cross_tol(c3a, cross_tol)

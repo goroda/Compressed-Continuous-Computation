@@ -72,4 +72,6 @@ int funcCheck2(size_t, const double *, double *, void *);
 int funcCheck3(size_t, const double *, double *, void *);
 int quad2d(size_t, const double *, double *, void *);
 
+int gauss2d(size_t, const double *, double *, void *);
+
 #endif

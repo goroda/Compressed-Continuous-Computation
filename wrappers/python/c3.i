@@ -146,8 +146,6 @@ void function_train_free(struct FunctionTrain *);
 %}
 %ignore lin_elem_exp_aopts_alloc;
 
-
-
 %rename (function_train_eval) my_function_train_eval;
 %exception my_function_train_eval{
     $action

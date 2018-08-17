@@ -363,3 +363,13 @@ int quad2d(size_t N, const double * x,double * out, void * arg)
     }
     return 0;
 }
+
+int gauss2d(size_t n, const double *xin, double * out, void * args)
+{
+    (void) args;
+    for (size_t ii = 0; ii < n; ii++){
+        out[ii] = exp(-pow(xin[ii*2 + 0],2) / 0.1 - pow(xin[ii*2+1],2) * 0.1);
+    }
+
+    return 0;
+}

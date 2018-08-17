@@ -2251,53 +2251,53 @@ void Test_block_kron_mat6(CuTest * tc)
 CuSuite * CLinalgQmarrayGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_qmarray_serialize); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_savetxt); */
+    SUITE_ADD_TEST(suite, Test_qmarray_serialize);
+    SUITE_ADD_TEST(suite, Test_qmarray_savetxt);
     
-    /* // a bunch of QR tests */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns_fourier); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_orth1d_rows_fourier); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier); */
+    // a bunch of QR tests
+    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns);
+    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_columns_fourier);
+    SUITE_ADD_TEST(suite, Test_qmarray_orth1d_rows_fourier);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier);
     SUITE_ADD_TEST(suite, Test_qmarray_householder2_fourier2);
     
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder3); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder4); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr1); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_qr3); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lq); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_constelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rowsconstelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_svd); */
+    SUITE_ADD_TEST(suite, Test_qmarray_householder);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder2);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder3);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder4);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_hermite1);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr1);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr2);
+    SUITE_ADD_TEST(suite, Test_qmarray_qr3);
+    SUITE_ADD_TEST(suite, Test_qmarray_lq);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rows_hermite);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_constelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowsconstelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_linelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_householder_rowslinelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_svd);
 
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_constelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm); */
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_hermite);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_constelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_lu1d_linelm);
     
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm); */
-    /* SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm); */
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d2);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_hermite1);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_constelm);
+    SUITE_ADD_TEST(suite, Test_qmarray_maxvol1d_linelm);
 
-    /* SUITE_ADD_TEST(suite,Test_fast_mat_kron); */
-    /* SUITE_ADD_TEST(suite,Test_fast_kron_mat); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat1); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat2); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat3); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat4); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat5); */
-    /* SUITE_ADD_TEST(suite,Test_block_kron_mat6); */
+    SUITE_ADD_TEST(suite,Test_fast_mat_kron);
+    SUITE_ADD_TEST(suite,Test_fast_kron_mat);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat1);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat2);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat3);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat4);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat5);
+    SUITE_ADD_TEST(suite,Test_block_kron_mat6);
     
     return suite;
 }

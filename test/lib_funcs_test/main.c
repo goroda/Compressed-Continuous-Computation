@@ -66,27 +66,27 @@ void RunAllTests(void) {
     CuSuite * kern = KernGetSuite();
 
     // polynomials
-    /* CuSuiteAddSuite(suite, cheb); */
-    /* CuSuiteAddSuite(suite, leg); */
-    /* CuSuiteAddSuite(suite, herm); */
+    CuSuiteAddSuite(suite, cheb);
+    CuSuiteAddSuite(suite, leg);
+    CuSuiteAddSuite(suite, herm);
     CuSuiteAddSuite(suite, fourier);
     
-    /* CuSuiteAddSuite(suite, sp); */
-    /* CuSuiteAddSuite(suite, alg); */
+    CuSuiteAddSuite(suite, sp);
+    CuSuiteAddSuite(suite, alg);
     CuSuiteAddSuite(suite, ser);
-    /* // linear elements */
-    /* CuSuiteAddSuite(suite, lelm); */
-    /* CuSuiteAddSuite(suite, celm); */
-    /* /\* // other stuff *\/ */
-    /* CuSuiteAddSuite(suite, ll); */
-    /* CuSuiteAddSuite(suite, pp); */
-    /* CuSuiteAddSuite(suite, pap); */
+    // linear elements
+    CuSuiteAddSuite(suite, lelm);
+    CuSuiteAddSuite(suite, celm);
+    /* // other stuff */
+    CuSuiteAddSuite(suite, ll);
+    CuSuiteAddSuite(suite, pp);
+    CuSuiteAddSuite(suite, pap);
 
-    /* // Regression */
-    /* CuSuiteAddSuite(suite, preg); */
+    // Regression
+    CuSuiteAddSuite(suite, preg);
 
-    /* // Kernels */
-    /* CuSuiteAddSuite(suite, kern); */
+    // Kernels
+    CuSuiteAddSuite(suite, kern);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

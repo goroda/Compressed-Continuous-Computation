@@ -2664,13 +2664,13 @@ void Test_generic_function_savetxt(CuTest * tc){
 CuSuite * PolySerializationGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    /* SUITE_ADD_TEST(suite, Test_serialize_orth_poly); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion); */
+    SUITE_ADD_TEST(suite, Test_serialize_orth_poly);
+    SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion);
     SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion_fourier);
-    /* SUITE_ADD_TEST(suite, Test_orth_poly_expansion_savetxt); */
-    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function); */
+    SUITE_ADD_TEST(suite, Test_orth_poly_expansion_savetxt);
+    SUITE_ADD_TEST(suite, Test_serialize_generic_function);
     SUITE_ADD_TEST(suite, Test_serialize_generic_function_fourier);
-    /* SUITE_ADD_TEST(suite, Test_generic_function_savetxt); */
+    SUITE_ADD_TEST(suite, Test_generic_function_savetxt);
 
     return suite;
 }

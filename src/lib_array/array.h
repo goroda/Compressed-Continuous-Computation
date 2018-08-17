@@ -103,7 +103,7 @@ struct c3Vector
     double * elem;
 };
 
-struct c3Vector * c3vector_alloc(size_t, const double *);
+struct c3Vector * c3vector_alloc(size_t, const double * xdata);
 struct c3Vector * c3vector_copy(const struct c3Vector *);
 void c3vector_free(struct c3Vector *);
 
