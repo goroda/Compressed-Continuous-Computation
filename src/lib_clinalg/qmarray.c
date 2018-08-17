@@ -1101,6 +1101,7 @@ double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray *
             }
         }
     }
+
     return c;
 }
 

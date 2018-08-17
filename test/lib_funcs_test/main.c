@@ -73,7 +73,7 @@ void RunAllTests(void) {
     
     /* CuSuiteAddSuite(suite, sp); */
     /* CuSuiteAddSuite(suite, alg); */
-    /* CuSuiteAddSuite(suite, ser); */
+    CuSuiteAddSuite(suite, ser);
     /* // linear elements */
     /* CuSuiteAddSuite(suite, lelm); */
     /* CuSuiteAddSuite(suite, celm); */

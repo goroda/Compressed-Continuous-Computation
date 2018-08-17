@@ -2348,20 +2348,42 @@ void Test_serialize_orth_poly(CuTest * tc){
     
     struct OrthPoly * pt = deserialize_orth_poly(text);
     CuAssertIntEquals(tc,0,pt->ptype);
-    
     free(text);
     free_orth_poly(poly);
     free_orth_poly(pt);
 
     poly = init_cheb_poly();
-
     text = serialize_orth_poly(poly);
     pt = deserialize_orth_poly(text);
-
     CuAssertIntEquals(tc,1,pt->ptype);
-    free_orth_poly(pt);
-    free_orth_poly(poly);
     free(text);
+    free_orth_poly(poly);
+    free_orth_poly(pt);
+
+    poly = init_cheb_poly();
+    text = serialize_orth_poly(poly);
+    pt = deserialize_orth_poly(text);
+    CuAssertIntEquals(tc,1,pt->ptype);
+    free(text);
+    free_orth_poly(poly);
+    free_orth_poly(pt);
+
+    poly = init_hermite_poly();
+    text = serialize_orth_poly(poly);
+    pt = deserialize_orth_poly(text);
+    CuAssertIntEquals(tc,2,pt->ptype);
+    free(text);
+    free_orth_poly(poly);
+    free_orth_poly(pt);
+
+    poly = init_fourier_poly();
+    text = serialize_orth_poly(poly);
+    pt = deserialize_orth_poly(text);
+    CuAssertIntEquals(tc,4,pt->ptype);
+    free(text);
+    free_orth_poly(poly);
+    free_orth_poly(pt);
+
 }
 
 void Test_serialize_orth_poly_expansion(CuTest * tc){
@@ -2380,6 +2402,52 @@ void Test_serialize_orth_poly_expansion(CuTest * tc){
     ope_opts_set_lb(opts,lb);
     ope_opts_set_ub(opts,ub);
     opoly_t pl = orth_poly_expansion_approx_adapt(opts,fw);
+
+    unsigned char * text = NULL;
+    size_t size_to_be;
+    serialize_orth_poly_expansion(text, pl, &size_to_be);
+    text = malloc(size_to_be * sizeof(char));
+
+    serialize_orth_poly_expansion(text, pl, NULL);
+
+    opoly_t pt = NULL;
+    deserialize_orth_poly_expansion(text, &pt);
+            
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(POLY_EVAL(pl,xtest[ii]) - POLY_EVAL(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    free(xtest);
+    free(text);
+
+    POLY_FREE(pl);
+    POLY_FREE(pt);
+    ope_opts_free(opts);
+    fwrap_destroy(fw);
+}
+
+void Test_serialize_orth_poly_expansion_fourier(CuTest * tc){
+    
+    printf("Testing functions: (de)serializing orth_poly_expansion_fourier \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,gaussbump,NULL);
+
+    // approximation
+    size_t n = 16;
+    double lb = -4.0, ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_start(opts, n+1);
+
+
+    struct OrthPolyExpansion * pl = orth_poly_expansion_init_from_opts(opts, n+1);
+    orth_poly_expansion_approx_vec(pl, fw, NULL);
 
     unsigned char * text = NULL;
     size_t size_to_be;
@@ -2498,6 +2566,51 @@ void Test_serialize_generic_function(CuTest * tc){
     fwrap_destroy(fw);
 }
 
+void Test_serialize_generic_function_fourier(CuTest * tc){
+    
+    printf("Testing functions: (de)serializing generic_function_fourier \n");
+
+    struct Fwrap * fw = fwrap_create(1,"general-vec");
+    fwrap_set_fvec(fw,maxminpoly,NULL);
+
+    size_t n = 16;
+    double lb = -4.0, ub = 2.0;
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_start(opts, n+1);
+
+    struct GenericFunction * pl =
+        generic_function_approximate1d(POLYNOMIAL,opts,fw);
+    
+    unsigned char * text = NULL;
+    size_t size_to_be;
+    serialize_generic_function(text, pl, &size_to_be);
+    text = malloc(size_to_be * sizeof(char));
+
+    serialize_generic_function(text, pl, NULL);
+    
+    struct GenericFunction * pt = NULL;
+    deserialize_generic_function(text, &pt);
+
+    double * xtest = linspace(lb,ub,1000);
+    size_t ii;
+    double err = 0.0;
+    for (ii = 0; ii < 1000; ii++){
+        err += pow(generic_function_1d_eval(pl,xtest[ii]) -
+                   generic_function_1d_eval(pt,xtest[ii]),2);
+    }
+    err = sqrt(err);
+    CuAssertDblEquals(tc, 0.0, err, 1e-15);
+    free(xtest);
+    free(text);
+
+    ope_opts_free(opts);
+    generic_function_free(pl);
+    generic_function_free(pt);
+    fwrap_destroy(fw);
+}
+
 void Test_generic_function_savetxt(CuTest * tc){
     
     printf("Testing functions: generic_function_savetxt and _loadtxt \n");
@@ -2549,11 +2662,13 @@ void Test_generic_function_savetxt(CuTest * tc){
 CuSuite * PolySerializationGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
-    SUITE_ADD_TEST(suite, Test_serialize_orth_poly);
-    SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion);
-    SUITE_ADD_TEST(suite, Test_orth_poly_expansion_savetxt);
-    SUITE_ADD_TEST(suite, Test_serialize_generic_function);
-    SUITE_ADD_TEST(suite, Test_generic_function_savetxt);
+    /* SUITE_ADD_TEST(suite, Test_serialize_orth_poly); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion); */
+    SUITE_ADD_TEST(suite, Test_serialize_orth_poly_expansion_fourier);
+    /* SUITE_ADD_TEST(suite, Test_orth_poly_expansion_savetxt); */
+    /* SUITE_ADD_TEST(suite, Test_serialize_generic_function); */
+    SUITE_ADD_TEST(suite, Test_serialize_generic_function_fourier);
+    /* SUITE_ADD_TEST(suite, Test_generic_function_savetxt); */
 
     return suite;
 }

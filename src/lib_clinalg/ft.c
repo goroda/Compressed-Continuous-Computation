@@ -2336,13 +2336,18 @@ function_train_integrate_weighted_subset(
 double function_train_inner(const struct FunctionTrain * a, 
                             const struct FunctionTrain * b)
 {
+    printf("in_inner\n");
     double out = 0.123456789;
-    size_t ii;
+
     double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
     double * temp2 = NULL;
 
-    //size_t ii;
-    for (ii = 1; ii < a->dim; ii++){
+    printf("ok!\n");
+    printf("dim = \n");
+    printf("\t %zu\n", a->dim);
+    printf("got dim\n");
+    for (size_t ii = 1; ii < a->dim; ii++){
+        printf("ii = %zu/%zu", ii, a->dim-1);
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
@@ -2351,10 +2356,10 @@ double function_train_inner(const struct FunctionTrain * a,
         
         free(temp2); temp2 = NULL;
     }
-    
+    printf("here?\n");
     out = temp[0];
     free(temp); temp=NULL;
-
+    printf("out_inner\n");
     return out;
 }
 
@@ -2444,9 +2449,9 @@ function_train_orthor(struct FunctionTrain * a,
     // update last core
 //    printf("dim = %zu\n",a->dim);
     o = multi_approx_opts_get_aopts(aopts,core);
-    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core]));
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core])); */
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L,o);
-    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core])); */
     /* ftrl->cores[core] = mqma(L, ftrl->cores[core], ftrl->cores[core]->nrows); */
     /* printf("done with LQ\n"); */
     for (ii = 2; ii < a->dim; ii++){
@@ -2457,13 +2462,13 @@ function_train_orthor(struct FunctionTrain * a,
         L = calloc_double(ftrl->ranks[core]*ftrl->ranks[core]);
         o = multi_approx_opts_get_aopts(aopts,core);
         ftrl->cores[core] = qmarray_householder_simple("LQ",temp,L,o);
-        printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));
+        /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core])); */
         qmarray_free(temp); temp = NULL;
         
     }
     ftrl->cores[0] = qmam(a->cores[0],L,ftrl->ranks[1]);
     /* ftrl->cores[0] = qmarray_copy(a->cores[0]); */
-    printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));    
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));     */
     free(L); L = NULL;
     return ftrl;
 }
@@ -2496,11 +2501,11 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
     delta = delta * epsilon / sqrt(a->dim-1);
     //double delta = epsilon;
 
-    printf("Rounding Starting norm = %G\n",function_train_norm2(a));
+    /* printf("Rounding Starting norm = %G\n",function_train_norm2(a)); */
 //    printf("begin orho\n");
     struct FunctionTrain * ftrl = function_train_orthor(a,aopts);
 
-    printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl));
+    /* printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl)); */
 //    printf("ortho gonalized\n");
     struct FunctionTrain * ft = function_train_alloc(a->dim);
     //struct FunctionTrain * ft = function_train_copy(ftrl);

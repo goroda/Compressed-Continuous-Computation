@@ -1238,6 +1238,9 @@ deserialize_orth_poly(unsigned char * ser)
     else if (type == CHEBYSHEV){
         poly = init_cheb_poly();
     }
+    else if (type == FOURIER){
+        poly = init_fourier_poly();
+    }
     else{
         fprintf(stderr,"Cannot desrialize polynomial of type %d\n",type);
     }
@@ -2435,13 +2438,18 @@ serialize_orth_poly_expansion(unsigned char * ser,
         size_t * totSizeIn)
 {
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
-    
-    if (p->p->ptype == FOURIER){
-        fprintf(stderr, "Cannot serialized fourier polynomials yet\n");
-        exit(1);
+
+    size_t totsize;
+    if (p->p->ptype != FOURIER){
+        totsize = sizeof(int) + 2*sizeof(double) + 
+            p->num_poly * sizeof(double) + sizeof(size_t);
     }
-    size_t totsize = sizeof(int) + 2*sizeof(double) + 
-                       p->num_poly * sizeof(double) + sizeof(size_t);
+    else{
+        /* fprintf(stderr, "Cannot serialized fourier polynomials yet\n"); */
+        /* exit(1); */
+        totsize = sizeof(int) + 2*sizeof(double) + 
+            2*p->num_poly * sizeof(double) + sizeof(size_t);
+    }
 
     size_t size_mapping;
     serialize_space_mapping(NULL,p->space_transform,&size_mapping);
@@ -2455,7 +2463,17 @@ serialize_orth_poly_expansion(unsigned char * ser,
     unsigned char * ptr = serialize_int(ser, p->p->ptype);
     ptr = serialize_double(ptr, p->lower_bound);
     ptr = serialize_double(ptr, p->upper_bound);
-    ptr = serialize_doublep(ptr, p->coeff, p->num_poly);
+    if (p->p->ptype != FOURIER){
+        ptr = serialize_doublep(ptr, p->coeff, p->num_poly);
+    }
+    else{
+        ptr = serialize_size_t(ptr, p->num_poly);
+        for (size_t ii = 0; ii < p->num_poly; ii++){
+            ptr = serialize_double(ptr, creal(p->ccoeff[ii]));
+            ptr = serialize_double(ptr, cimag(p->ccoeff[ii]));
+        }
+    }
+    
     ptr = serialize_space_mapping(ptr,p->space_transform,NULL);
     ptr = serialize_int(ptr,p->kristoffel_eval);
     return ptr;
@@ -2480,6 +2498,7 @@ deserialize_orth_poly_expansion(
     double lower_bound = 0;
     double upper_bound = 0;
     double * coeff = NULL;
+    complex double * ccoeff = NULL;
     struct OrthPoly * p = NULL;
     struct SpaceMapping * map = NULL;
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
@@ -2487,7 +2506,24 @@ deserialize_orth_poly_expansion(
     unsigned char * ptr = ser + sizeof(int);
     ptr = deserialize_double(ptr,&lower_bound);
     ptr = deserialize_double(ptr,&upper_bound);
-    ptr = deserialize_doublep(ptr, &coeff, &num_poly);
+
+    if (p->ptype != FOURIER){
+        ptr = deserialize_doublep(ptr, &coeff, &num_poly);
+    }
+    else{
+        ptr = deserialize_size_t(ptr, &num_poly);
+        /* printf("num_poly = %zu\n", num_poly); */
+        ccoeff = malloc( num_poly * sizeof(complex double));
+        for (size_t ii = 0; ii < num_poly; ii++){
+            double cr;
+            double ci;
+            ptr = deserialize_double(ptr, &cr);
+            ptr = deserialize_double(ptr, &ci);
+            ccoeff[ii] = cr + ci * (complex double) I;
+            /* printf("%3.5f, %3.5f\n", cr, ci); */
+        }
+        
+    }
     ptr = deserialize_space_mapping(ptr, &map);
 
     int kristoffel_eval;
@@ -2500,6 +2536,7 @@ deserialize_orth_poly_expansion(
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
+    (*poly)->ccoeff = ccoeff;
     (*poly)->nalloc = num_poly;//+OPECALLOC;
     (*poly)->p = p;
     (*poly)->space_transform = map;
