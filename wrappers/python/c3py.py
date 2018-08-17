@@ -201,6 +201,7 @@ class FunctionTrain(object):
 
         c3a = c3.c3approx_create(method, self.dim)
         onedopts = []
+        optnodes = []
         for ii in range(self.dim):
             ope_opts = c3_ope_opts[ii]
             if self.opts[ii]['type'] == "legendre":
@@ -218,11 +219,21 @@ class FunctionTrain(object):
             else:
                 raise AttributeError("Don't know what to do here")
 
+
+            lb = self.opts[ii]['lb']
+            ub = self.opts[ii]['ub']
+            if self.opts[ii]['type'] == "hermite" or self.opts[ii]['type'] == "fourier":
+                nn = 50
+                x = c3.linspace(lb, ub, nn)
+                cv = c3.c3vector_alloc(nn, x)
+                optnodes.append((x,cv))
+                c3.c3approx_set_opt_opts_dim(c3a, ii, optnodes[-1][1])
+                
             c3.c3approx_set_approx_opts_dim(c3a, ii, onedopts[ii])
 
-        return c3a, onedopts, c3_ope_opts
+        return c3a, onedopts, c3_ope_opts, optnodes
 
-    def _free_approx_params(self, c3a, onedopts, low_opts):
+    def _free_approx_params(self, c3a, onedopts, low_opts, optnodes):
         for ii in range(self.dim):
             # print("ii: ", ii)
             c3.one_approx_opts_free(onedopts[ii])
@@ -242,6 +253,11 @@ class FunctionTrain(object):
             else:
                 raise AttributeError("Don't know what to do here")
 
+        #NOT FREING optnodes[ii][0]
+        for ii in range(len(optnodes)):
+            # c3.free(optnodes[ii][0])
+            c3.c3vector_free(optnodes[ii][1])
+            
         # print("OK")
         c3.c3approx_destroy(c3a)
         # print("OKkkk")
@@ -252,18 +268,13 @@ class FunctionTrain(object):
 
         start_fibers = c3.malloc_dd(self.dim)
 
-        c3a, onedopts, low_opts = self._build_approx_params(c3.CROSS)
+        c3a, onedopts, low_opts, optnodes = self._build_approx_params(c3.CROSS)
 
-        optnodes = []
+
         for ii in range(self.dim):
             c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
                                self.opts[ii]['ub'], init_rank);
-            if self.opts[ii]['type'] == "hermite" or self.opts[ii]['type'] == "fourier":
-                # x = np.linspace(, self.opts[ii]['ub'], 100)
-                lb = self.opts[ii]['lb']
-                ub = self.opts[ii]['ub']
-                optnodes.append(c3.c3vector_alloc(100, c3.linspace(lb, ub, 100)))
-                c3.c3approx_set_opt_opts_dim(c3a, ii, optnodes[-1])
+
         
             # c3.dd_row_linspace(start_fibers, ii, 0.8,
             #                    1.2, init_rank)
@@ -279,7 +290,7 @@ class FunctionTrain(object):
         c3.c3approx_set_adapt_kickrank(c3a, kickrank)
 
         c3.free_dd(self.dim, start_fibers)
-        return c3a, onedopts, low_opts
+        return c3a, onedopts, low_opts, optnodes
 
     def build_approximation(self, f, fargs, init_rank, verbose, adapt, maxrank=10, cross_tol=1e-8,
                             round_tol=1e-8, kickrank=5, maxiter=5):
@@ -289,7 +300,7 @@ class FunctionTrain(object):
         pcb.assign(fobj, self.dim, f, fargs)
         fw = c3.fwrap_create(self.dim, "python")
         c3.fwrap_set_pyfunc(fw, fobj)
-        c3a, onedopts, low_opts = self._assemble_cross_args(verbose, init_rank,
+        c3a, onedopts, low_opts, optnodes = self._assemble_cross_args(verbose, init_rank,
                                                             maxrank=maxrank,
                                                             cross_tol=cross_tol,
                                                             round_tol=round_tol,
@@ -298,7 +309,7 @@ class FunctionTrain(object):
         # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a, fw, adapt)
 
-        self._free_approx_params(c3a, onedopts, low_opts)
+        self._free_approx_params(c3a, onedopts, low_opts, optnodes)
         c3.fwrap_destroy(fw)
 
 
