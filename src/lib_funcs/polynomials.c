@@ -1720,23 +1720,27 @@ struct OrthPolyExpansion * orth_poly_expansion_copy(const struct OrthPolyExpansi
         //printf("pin->num_poly = %zu, pin->nalloc = %zu\n",pin->num_poly,pin->nalloc);
         p->num_poly = pin->num_poly;
         p->nalloc = pin->nalloc;
-        //p->coeff = calloc_double(p->num_poly);
-        p->coeff = calloc_double(pin->nalloc);
-        memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
+	p->coeff = NULL;
+	p->ccoeff = NULL;
         p->lower_bound = pin->lower_bound;
         p->upper_bound = pin->upper_bound;
         p->space_transform = space_mapping_copy(pin->space_transform);
-        p->ccoeff = NULL;
         p->kristoffel_eval = pin->kristoffel_eval;
         
         switch (pin->p->ptype) {
         case LEGENDRE:
+            p->coeff = calloc_double(pin->nalloc);
+            memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
             p->p = init_leg_poly();
             break;
         case CHEBYSHEV:
+            p->coeff = calloc_double(pin->nalloc);
+            memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
             p->p = init_cheb_poly();
             break;
         case HERMITE:
+            p->coeff = calloc_double(pin->nalloc);
+            memmove(p->coeff,pin->coeff, p->num_poly * sizeof(double));
             p->p = init_hermite_poly();
             break;
         case FOURIER:

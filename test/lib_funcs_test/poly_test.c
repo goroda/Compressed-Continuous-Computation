@@ -1353,7 +1353,9 @@ void Test_fourier_orth_basis(CuTest * tc){
             /* printf("\t inner=%3.5G\n", inner); */
         }
     }
-
+    for (size_t ii = 0; ii < n; ii++){
+    	orth_poly_expansion_free(f[ii]); f[ii] = NULL;
+    }
     ope_opts_free(opts);
 }
 

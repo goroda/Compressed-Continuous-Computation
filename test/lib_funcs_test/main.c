@@ -96,6 +96,7 @@ void RunAllTests(void) {
     CuSuiteDelete(cheb);
     CuSuiteDelete(leg);
     CuSuiteDelete(herm);
+    CuSuiteDelete(fourier);
     CuSuiteDelete(sp);
     CuSuiteDelete(alg);
     CuSuiteDelete(ser);
