@@ -150,7 +150,7 @@ int ifft_base(size_t N, double complex * x, size_t sx,
    Check if a number is power of two.
 
    Algorithm #10 from FFT   
-   http://www.exploringbinary.com/ten-ways-to-check-if-an-integer-is-a-power-of-two-in-c/                                        ***************************************************************/
+   http://www.exploringbinary.com/ten-ways-to-check-if-an-integer-is-a-power-of-two-in-c/ ***************************************************************/
 static int isPowerOfTwo (size_t x)
 {
   return ((x != 0) && ((x & (~x + 1)) == x));
@@ -170,11 +170,13 @@ int fft(size_t N, const double complex * x, size_t sx,
     assert (sX == 1);
     int res = 1;
     if (isPowerOfTwo(N)){
+    /* if (is2(N)){ */
         /* return 1; */
         res = fft_base(N,x,sx,X,sX);
     }
     else{
-        fprintf(stderr, "fft_base can only be called with power of 2\n");
+        fprintf(stderr, "fft_base can only be called with power of 2, not %zu\n",N);
+        /* printf("is2(N) = %d\n", isPowerOfTwo(N)); */
     }
     return res;
 }

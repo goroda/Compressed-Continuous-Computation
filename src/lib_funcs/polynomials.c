@@ -88,7 +88,6 @@ static struct SpaceMapping * space_mapping_create(enum SPACE_MAP map_type)
         exit(1);
     }
 
-
     map->map = map_type;
     map->set = 0;
     if (map_type == SM_LINEAR){
@@ -896,6 +895,13 @@ void ope_opts_set_start(struct OpeOpts * ope, size_t start)
     assert (ope != NULL);
     ope->start_num = start;
 }
+
+size_t ope_opts_get_start(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->start_num;
+}
+
 void ope_opts_set_maxnum(struct OpeOpts * ope, size_t maxnum)
 {
     assert (ope != NULL);
@@ -1231,6 +1237,9 @@ deserialize_orth_poly(unsigned char * ser)
     }
     else if (type == CHEBYSHEV){
         poly = init_cheb_poly();
+    }
+    else if (type == FOURIER){
+        poly = init_fourier_poly();
     }
     else{
         fprintf(stderr,"Cannot desrialize polynomial of type %d\n",type);
@@ -1771,9 +1780,15 @@ orth_poly_expansion_get_ptype(const struct OrthPolyExpansion * ope)
 struct OrthPolyExpansion * 
 orth_poly_expansion_zero(struct OpeOpts * opts, int force_nparam)
 {
-
     assert (opts != NULL);
     struct OrthPolyExpansion * p = NULL;
+    
+    if (opts->ptype == FOURIER){
+        p = orth_poly_expansion_init_from_opts(opts, ope_opts_get_start(opts));
+        return p;
+    }
+    
+
     if (force_nparam == 0){
         p = orth_poly_expansion_init_from_opts(opts,1);
         p->coeff[0] = 0.0;
@@ -1804,11 +1819,24 @@ orth_poly_expansion_constant(double a, struct OpeOpts * opts)
     assert (isnan(a) == 0);
     assert (isinf(a) == 0);
     assert (fabs(a) < 1e100);
+    if (fabs(a) < ZEROTHRESH){
+        return orth_poly_expansion_zero(opts, 0);
+    }
 
     assert (opts != NULL);
+  
+  
     struct OrthPolyExpansion * p = NULL;
-    p = orth_poly_expansion_init_from_opts(opts,1);
-    p->coeff[0] = a / p->p->const_term;
+    if (opts->ptype != FOURIER){
+        p = orth_poly_expansion_init_from_opts(opts,1);
+        p->coeff[0] = a / p->p->const_term;
+    }
+    else{
+        p = orth_poly_expansion_init_from_opts(opts,ope_opts_get_start(opts));
+        p->ccoeff[0] = a;
+    }
+
+
 
     return p;
 }
@@ -1948,8 +1976,11 @@ orth_poly_expansion_genorder(size_t order, struct OpeOpts * opts)
         /* exit(1); */
         break;
     case FOURIER:
-        p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m);
-        break;
+        /* p->coeff[order] = 1.0 / sqrt(p->p->norm(order)) / sqrt(m); */
+        /* break; */
+        fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
+        fprintf(stderr,"order for FOURIER type\n;");
+        exit(1);
     case STANDARD:
         fprintf(stderr,"cannot generate orthonormal polynomial of certin\n");
         fprintf(stderr,"order for STANDARD type\n;");
@@ -2006,8 +2037,39 @@ orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
             }
         }
     }
+    else if (opts->ptype == FOURIER) {
+        size_t N = ope_opts_get_start(opts);
+        /* printf("N = %zu\n", N); */
+        if (n > N){
+            fprintf(stderr, "Cannot look for a rank so large for fourier\n");
+        }
+        for (size_t ii = 0; ii < n; ii++){
+            f[ii] = orth_poly_expansion_init_from_opts(opts, N);
+            f[ii]->ccoeff[ii] = 1.0;
+        }
+        // now gram schmidt
+        double norm, proj;
+        for (size_t ii = 0; ii < n; ii++){
+            /* printf("ii = %zu %zu\n", ii, f[ii]->num_poly); */
+            norm = sqrt(orth_poly_expansion_inner(f[ii], f[ii])); 
+            if (norm > 1e-200){
+                orth_poly_expansion_scale(1.0/norm, f[ii]);
+                for (size_t jj = ii+1; jj < n; jj++){
+                    /* printf("jj = %zu before %zu\n", jj, f[jj]->num_poly); */
+                    proj = orth_poly_expansion_inner(f[ii],f[jj]);
+                    /* printf("jj = %zu after 1 %zu\n", jj, f[jj]->num_poly); */
+                    orth_poly_expansion_axpy(-proj,f[ii],f[jj]);
+                    /* printf("jj = %zu after  2%zu\n", jj, f[jj]->num_poly); */
+                    /* if (f[jj]->num_poly != 33){ */
+                    /*     printf("WARNING\n"); */
+                    /*     exit(1); */
+                    /* } */
+                }
+            }
+        }
+    }
     else{
-        fprintf(stderr, "Cannot generate an orthonormal basis for polytype %d", opts->ptype);
+        fprintf(stderr, "Cannot generate an orthonormal basis for polytype %d\n", opts->ptype);
         exit(1);
     }
 }
@@ -2376,13 +2438,18 @@ serialize_orth_poly_expansion(unsigned char * ser,
         size_t * totSizeIn)
 {
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
-    
-    if (p->p->ptype == FOURIER){
-        fprintf(stderr, "Cannot serialized fourier polynomials yet\n");
-        exit(1);
+
+    size_t totsize;
+    if (p->p->ptype != FOURIER){
+        totsize = sizeof(int) + 2*sizeof(double) + 
+            p->num_poly * sizeof(double) + sizeof(size_t);
     }
-    size_t totsize = sizeof(int) + 2*sizeof(double) + 
-                       p->num_poly * sizeof(double) + sizeof(size_t);
+    else{
+        /* fprintf(stderr, "Cannot serialized fourier polynomials yet\n"); */
+        /* exit(1); */
+        totsize = sizeof(int) + 2*sizeof(double) + 
+            2*p->num_poly * sizeof(double) + sizeof(size_t);
+    }
 
     size_t size_mapping;
     serialize_space_mapping(NULL,p->space_transform,&size_mapping);
@@ -2396,7 +2463,17 @@ serialize_orth_poly_expansion(unsigned char * ser,
     unsigned char * ptr = serialize_int(ser, p->p->ptype);
     ptr = serialize_double(ptr, p->lower_bound);
     ptr = serialize_double(ptr, p->upper_bound);
-    ptr = serialize_doublep(ptr, p->coeff, p->num_poly);
+    if (p->p->ptype != FOURIER){
+        ptr = serialize_doublep(ptr, p->coeff, p->num_poly);
+    }
+    else{
+        ptr = serialize_size_t(ptr, p->num_poly);
+        for (size_t ii = 0; ii < p->num_poly; ii++){
+            ptr = serialize_double(ptr, creal(p->ccoeff[ii]));
+            ptr = serialize_double(ptr, cimag(p->ccoeff[ii]));
+        }
+    }
+    
     ptr = serialize_space_mapping(ptr,p->space_transform,NULL);
     ptr = serialize_int(ptr,p->kristoffel_eval);
     return ptr;
@@ -2421,6 +2498,7 @@ deserialize_orth_poly_expansion(
     double lower_bound = 0;
     double upper_bound = 0;
     double * coeff = NULL;
+    complex double * ccoeff = NULL;
     struct OrthPoly * p = NULL;
     struct SpaceMapping * map = NULL;
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
@@ -2428,7 +2506,24 @@ deserialize_orth_poly_expansion(
     unsigned char * ptr = ser + sizeof(int);
     ptr = deserialize_double(ptr,&lower_bound);
     ptr = deserialize_double(ptr,&upper_bound);
-    ptr = deserialize_doublep(ptr, &coeff, &num_poly);
+
+    if (p->ptype != FOURIER){
+        ptr = deserialize_doublep(ptr, &coeff, &num_poly);
+    }
+    else{
+        ptr = deserialize_size_t(ptr, &num_poly);
+        /* printf("num_poly = %zu\n", num_poly); */
+        ccoeff = malloc( num_poly * sizeof(complex double));
+        for (size_t ii = 0; ii < num_poly; ii++){
+            double cr;
+            double ci;
+            ptr = deserialize_double(ptr, &cr);
+            ptr = deserialize_double(ptr, &ci);
+            ccoeff[ii] = cr + ci * (complex double) I;
+            /* printf("%3.5f, %3.5f\n", cr, ci); */
+        }
+        
+    }
     ptr = deserialize_space_mapping(ptr, &map);
 
     int kristoffel_eval;
@@ -2441,6 +2536,7 @@ deserialize_orth_poly_expansion(
     (*poly)->lower_bound = lower_bound;
     (*poly)->upper_bound = upper_bound;
     (*poly)->coeff = coeff;
+    (*poly)->ccoeff = ccoeff;
     (*poly)->nalloc = num_poly;//+OPECALLOC;
     (*poly)->p = p;
     (*poly)->space_transform = map;
@@ -3308,7 +3404,7 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
 *************************************************************/
 void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
 {   
-    if (0 == 0){
+    if ((0 == 0) && ((*p)->p->ptype != FOURIER)){
         /* double thresh = 1e-3*ZEROTHRESH; */
         double thresh = ZEROTHRESH;
         /* double thresh = 1e-30; */
@@ -3721,8 +3817,14 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
     assert (aopts != NULL);
     assert (fw != NULL);
     if (aopts->ptype == FOURIER){
-        fprintf(stderr, "Cannot perform approx_adapt with fourier basis\n");
-        exit(1);
+
+        size_t N = ope_opts_get_start(aopts);
+        struct OrthPolyExpansion * poly = orth_poly_expansion_init_from_opts(aopts, N);
+        orth_poly_expansion_approx_vec(poly, fw, NULL);
+
+        return poly;
+        /* fprintf(stderr, "Cannot perform approx_adapt with fourier basis\n"); */
+        /* exit(1); */
     }
     
     size_t ii;
@@ -3912,11 +4014,11 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
     struct OrthPolyExpansion * c = NULL;
     double lb = a->lower_bound;
     double ub = a->upper_bound;
-
+    assert ( fabs(a->lower_bound - b->lower_bound) < DBL_EPSILON );
+    assert ( fabs(a->upper_bound - b->upper_bound) < DBL_EPSILON );
+    
     enum poly_type p = a->p->ptype;
     if (p == FOURIER){
-        assert (b->p->ptype == FOURIER);
-        assert (fabs(lb - ub) < ZEROTHRESH);
         return fourier_expansion_prod(a, b);
     }
     if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
@@ -4592,13 +4694,17 @@ orth_poly_expansion_sum3_up(double a, struct OrthPolyExpansion * x,
 int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x,
                              struct OrthPolyExpansion * y)
 {
-    ON HERE
     assert (y != NULL);
     assert (x != NULL);
     assert (x->p->ptype == y->p->ptype);
+    
     assert ( fabs(x->lower_bound - y->lower_bound) < DBL_EPSILON );
     assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON );
-    
+
+    if (x->p->ptype == FOURIER){
+        return fourier_expansion_axpy(a, x, y);
+    }
+        
     if (x->num_poly < y->num_poly){
         // shouldnt need rounding here
         size_t ii;
@@ -4676,98 +4782,26 @@ struct OrthPolyExpansion *
 orth_poly_expansion_daxpby(double a, struct OrthPolyExpansion * x,
                            double b, struct OrthPolyExpansion * y)
 {
-    /*
-    printf("a=%G b=%G \n",a,b);
-    printf("x=\n");
-    print_orth_poly_expansion(x,0,NULL);
-    printf("y=\n");
-    print_orth_poly_expansion(y,0,NULL);
-    */
-    
-    //double diffa = fabs(a-ZEROTHRESH);
-    //double diffb = fabs(b-ZEROTHRESH);
-    size_t ii;
+    /* assert (x->p->ptype != FOURIER); */
     struct OrthPolyExpansion * p ;
-    //if ( (x == NULL && y != NULL) || ((diffa <= ZEROTHRESH) && (y != NULL))){
-    if ( (x == NULL && y != NULL)){
-        //printf("b = %G\n",b);
-        //if (diffb <= ZEROTHRESH){
-        //    p = orth_poly_expansion_init(y->p->ptype,1,y->lower_bound, y->upper_bound);
-       // }
-       // else{    
-            p = orth_poly_expansion_init(y->p->ptype,
-                        y->num_poly, y->lower_bound, y->upper_bound);
-            space_mapping_free(p->space_transform);
-            p->space_transform = space_mapping_copy(y->space_transform);
-            for (ii = 0; ii < y->num_poly; ii++){
-                p->coeff[ii] = y->coeff[ii] * b;
-            }
-        //}
-        orth_poly_expansion_round(&p);
-        return p;
+    if (x != NULL && y != NULL){
+        p = orth_poly_expansion_copy(y);
+        orth_poly_expansion_scale(b, p);
+        orth_poly_expansion_axpy(a, x, p);
     }
-    //if ( (y == NULL && x != NULL) || ((diffb <= ZEROTHRESH) && (x != NULL))){
-    if ( (y == NULL && x != NULL)){
-        //if (a <= ZEROTHRESH){
-        //    p = orth_poly_expansion_init(x->p->ptype,1, x->lower_bound, x->upper_bound);
-       // }
-        //else{
-            p = orth_poly_expansion_init(x->p->ptype,
-                        x->num_poly, x->lower_bound, x->upper_bound);
-            space_mapping_free(p->space_transform);
-            p->space_transform = space_mapping_copy(x->space_transform);
-            for (ii = 0; ii < x->num_poly; ii++){
-                p->coeff[ii] = x->coeff[ii] * a;
-            }
-        //}
-        orth_poly_expansion_round(&p);
-        return p;
+    else if (x != NULL){
+        p = orth_poly_expansion_copy(x);
+        orth_poly_expansion_scale(a, p);
     }
-
-    size_t N = x->num_poly > y->num_poly ? x->num_poly : y->num_poly;
-
-    p = orth_poly_expansion_init(x->p->ptype,
-                    N, x->lower_bound, x->upper_bound);
-    space_mapping_free(p->space_transform);
-    p->space_transform = space_mapping_copy(x->space_transform);
-    
-    size_t xN = x->num_poly;
-    size_t yN = y->num_poly;
-
-    //printf("diffa = %G, x==NULL %d\n",diffa,x==NULL);
-    //printf("diffb = %G, y==NULL %d\n",diffb,y==NULL);
-   // assert(diffa > ZEROTHRESH);
-   // assert(diffb > ZEROTHRESH);
-    if (xN > yN){
-        for (ii = 0; ii < yN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
-        for (ii = yN; ii < xN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a;
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
+    else if (y != NULL){
+        p = orth_poly_expansion_copy(y);
+        orth_poly_expansion_scale(b, p);
     }
     else{
-        for (ii = 0; ii < xN; ii++){
-            p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;           
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-           // }
-        }
-        for (ii = xN; ii < yN; ii++){
-            p->coeff[ii] = y->coeff[ii]*b;
-            //if ( fabs(p->coeff[ii]) < ZEROTHRESH){
-            //    p->coeff[ii] = 0.0;
-            //}
-        }
+        fprintf(stderr, "Error in orth_poly_expansion_daxpby\n");
+        fprintf(stderr, "trying to run with all NULL arguments\n");
+        exit(1);
     }
-
-    orth_poly_expansion_round(&p);
     return p;
 }
 
@@ -5321,12 +5355,16 @@ orth_poly_expansion_real_roots(struct OrthPolyExpansion * p, size_t * nkeep)
         assert (1 == 0);
         //x need to convert polynomial to standard polynomial first
         //real_roots = standard_poly_real_roots(sp,nkeep);
-        //break;
+        break;
     case CHEBYSHEV:
         real_roots = chebyshev_expansion_real_roots(p,nkeep);
         break;
     case HERMITE:
         assert (1 == 0);
+        break;
+    case FOURIER:
+        assert (1 == 0);
+        break;
     }
     return real_roots;
 }
@@ -5348,6 +5386,7 @@ double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
     double maxval;
     double tempval;
 
+    assert(p->p->ptype != FOURIER);
     maxval = orth_poly_expansion_eval(p,p->lower_bound);
     *x = p->lower_bound;
 
@@ -5388,7 +5427,8 @@ double orth_poly_expansion_max(struct OrthPolyExpansion * p, double * x)
 *************************************************************/
 double orth_poly_expansion_min(struct OrthPolyExpansion * p, double * x)
 {
-
+    assert(p->p->ptype != FOURIER);
+    
     double minval;
     double tempval;
 
@@ -5470,10 +5510,10 @@ double orth_poly_expansion_absmax(
 //        printf("optloc=%G .... cval = %G\n",*x,cval);
         return cval;
     }
-    else if (ptype == HERMITE){
+    else if ((ptype == HERMITE) || (ptype == FOURIER)){
         fprintf(stderr,"Must specify optimizatino arguments\n");
         fprintf(stderr,"In the form of candidate points for \n");
-        fprintf(stderr,"finding the absmax of hermite expansion\n");
+        fprintf(stderr,"finding the absmax of hermite or fourier expansion\n");
         exit(1);
         
     }

@@ -158,7 +158,7 @@ int main(int argc, char * argv[])
 
     char * dirout = ".";
     size_t function = 0;
-    size_t N = 8;
+    size_t N = 9;
     double lb = 0.0;
     double ub = 2.0*M_PI;
     int verbose = 0;
@@ -234,7 +234,10 @@ int main(int argc, char * argv[])
     printf("Result is %d\n", res);
     struct OrthPolyExpansion * fourierd = orth_poly_expansion_deriv(fourier);
     struct OrthPolyExpansion * fourierdd = orth_poly_expansion_dderiv(fourier);
-    
+    struct OrthPolyExpansion * faxpy = orth_poly_expansion_copy(fourierd);
+    res = orth_poly_expansion_axpy(2.0, fourier, faxpy);
+    struct OrthPolyExpansion * fprod = orth_poly_expansion_prod(fourier, fourierd);
+    printf("Result is %d\n", res);
 
     size_t Ntest = 100;
     double * xt = linspace(lb, ub, Ntest);
@@ -257,8 +260,15 @@ int main(int argc, char * argv[])
         double vald = orth_poly_expansion_deriv_eval(fourier, xt[ii]);
         double vald2 = orth_poly_expansion_eval(fourierd, xt[ii]);
         double valdd = orth_poly_expansion_eval(fourierdd, xt[ii]);
-        fprintf(fp, "%3.5G %3.5G %3.5G %3.5G %3.5G %3.5G %3.5G %3.5G\n",
-                xt[ii], eval[ii], val, evald[ii], vald, vald2, evaldd[ii], valdd);
+        double vaxpy = orth_poly_expansion_eval(faxpy, xt[ii]);
+        double vprod = orth_poly_expansion_eval(fprod, xt[ii]);
+        fprintf(fp, "%3.5G %3.5G %3.5G %3.5G \
+                     %3.5G %3.5G %3.5G %3.5G \
+                     %3.5G %3.5G %3.5G %3.5G\n",
+                xt[ii], eval[ii], val, evald[ii], vald, vald2, evaldd[ii], valdd,
+                2.0 * eval[ii] + evald[ii], vaxpy,
+                eval[ii] * evald[ii], vprod
+            );
     }
 
     free(xt); xt = NULL;
@@ -272,7 +282,9 @@ int main(int argc, char * argv[])
     ope_opts_free(opts);
     orth_poly_expansion_free(fourier);
     orth_poly_expansion_free(fourierd);
-    
+    orth_poly_expansion_free(fourierdd);
+    orth_poly_expansion_free(faxpy);
+    orth_poly_expansion_free(fprod);
 
     return 0;
 }

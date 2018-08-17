@@ -322,6 +322,24 @@ double fourier_integrate(const struct OrthPolyExpansion * poly)
     return out;
 }
 
+typedef struct Pair
+{
+    const struct OrthPolyExpansion * a;
+    const struct OrthPolyExpansion * b;
+} pair_t;
+
+static int prod_eval(size_t n, const double * x, double * out, void * args)
+{
+    pair_t * pairs = args;
+    double e1, e2;
+    for (size_t ii = 0; ii < n; ii++){
+        e1 = orth_poly_expansion_eval(pairs->a, x[ii]);
+        e2 = orth_poly_expansion_eval(pairs->b, x[ii]);
+        out[ii] = e1 * e2;
+    }
+    return 0;
+}
+
 /********************************************************//**
    Multiply two fourier series'
 
@@ -332,104 +350,110 @@ double fourier_integrate(const struct OrthPolyExpansion * poly)
 *************************************************************/
 struct OrthPolyExpansion *
 fourier_expansion_prod(const struct OrthPolyExpansion * a,
-                          const struct OrthPolyExpansion * b)
+                       const struct OrthPolyExpansion * b)
 {
-    fprintf(stderr, "HAVE NOT FINISHED IMPLEMENTING PRODUCT of fourier\n");
-    exit(1);
-    /* double lb = a->lower_bound; */
-    /* double ub = a->upper_bound; */
-    /* size_t n = a->num_poly */
-    /* struct OrthPolyExpansion * c = */
-    /*     orth_poly_expansion_init(a->p->ptype,n,  lb, ub); */
 
-    /* for (size_t ii = 0; ii < n; ii++){ */
-    /*     c->ccoeff[ii] = a->ccoeff[ii] * b->ccoeff[0]; */
-    /*     for (size_t kk = 1; b->num_poly; ii++){ */
-    /*         c->coeff[ii] += a->ccoeff[ii-kk]*b->ccoeff[kk]; */
-    /*         c->coeff[ii] += a->ccoeff[ii+kk]*b->ccoeff[kk]; */
-    /*     } */
+    /* (void) a; */
+    /* (void) b; */
+    /* fprintf(stderr, "HAVE NOT FINISHED IMPLEMENTING PRODUCT of fourier\n"); */
+    /* exit(1); */
+    double lb = a->lower_bound;
+    double ub = a->upper_bound;
+
+    struct OpeOpts * opts = ope_opts_alloc(FOURIER);
+    ope_opts_set_lb(opts, lb);
+    ope_opts_set_ub(opts, ub);
+    size_t n = a->num_poly-1;
+    ope_opts_set_start(opts, 2*n+1);
+
+    /* printf("n = %zu\n", n); */
+    struct OrthPolyExpansion * fourier =
+        orth_poly_expansion_init_from_opts(opts, 2*n+1);
+    /* struct OrthPolyExpansion * fourier = */
+    /*     orth_poly_expansion_init_from_opts(opts, n+1); */
+
+    if (n > 0){
+        struct Fwrap * fw = fwrap_create(1, "general-vec");
+        pair_t pairs = {a, b};
+        fwrap_set_fvec(fw, prod_eval, &pairs);
+        int res = orth_poly_expansion_approx_vec(fourier, fw, opts);
+        assert (res == 0);
+        fwrap_destroy(fw); fw = NULL;
+    }
+    ope_opts_free(opts); opts = NULL;
+    return fourier;
 }
 
-/* /\********************************************************\//\** */
-/* *   Multiply by scalar and add two orthgonal  */
-/* *   expansions of the same family together \f[ y \leftarrow ax + y \f] */
-/* * */
-/* *   \param[in] a  - scaling factor for first polynomial */
-/* *   \param[in] x  - first polynomial */
-/* *   \param[in] y  - second polynomial */
-/* * */
-/* *   \return 0 if successfull 1 if error with allocating more space for y */
-/* * */
-/* *   \note  */
-/* *       Computes z=ax+by, where x and y are polynomial expansionx */
-/* *       Requires both polynomials to have the same upper  */
-/* *       and lower bounds */
-/* *        */
-/* **************************************************************\/ */
-/* int orth_poly_expansion_axpy(double a, struct OrthPolyExpansion * x, */
-/*                              struct OrthPolyExpansion * y) */
-/* { */
-        
-/*     assert (y != NULL); */
-/*     assert (x != NULL); */
-/*     assert (x->p->ptype == y->p->ptype); */
-/*     assert ( fabs(x->lower_bound - y->lower_bound) < DBL_EPSILON ); */
-/*     assert ( fabs(x->upper_bound - y->upper_bound) < DBL_EPSILON ); */
+/********************************************************//**
+*   Multiply by scalar and add two expansions
+*
+*   \param[in] a  - scaling factor for first polynomial
+*   \param[in] x  - first polynomial
+*   \param[in] y  - second polynomial
+*
+*   \return 0 if successfull 1 if error with allocating more space for y
+*
+*   \note
+*       Computes z=ax+by, where x and y are polynomial expansionx
+*       Requires both polynomials to have the same upper
+*       and lower bounds
+*
+**************************************************************/
+int fourier_expansion_axpy(double a, const struct OrthPolyExpansion * x,
+                           struct OrthPolyExpansion * y)
+{
+
+    if (x->num_poly <= y->num_poly){
+        for (size_t ii = 0; ii < x->num_poly; ii++){
+            y->ccoeff[ii] += a * x->ccoeff[ii];
+            if (cabs(y->ccoeff[ii]) < ZEROTHRESH){
+                y->ccoeff[ii] = 0.0;
+            }
+        }
+    }
+    else{
+        if (x->num_poly > y->nalloc){
+            //printf("hereee\n");
+            y->nalloc = x->num_poly+10;
+            double complex * temp = realloc(y->ccoeff, (y->nalloc)*sizeof(double complex));
+            if (temp == NULL){
+                return 0;
+            }
+            else{
+                y->ccoeff = temp;
+                for (size_t ii = y->num_poly; ii < y->nalloc; ii++){
+                    y->ccoeff[ii] = 0.0;
+                }
+            }
+            //printf("finished\n");
+        }
+        for (size_t ii = y->num_poly; ii < x->num_poly; ii++){
+            y->ccoeff[ii] = a * x->ccoeff[ii];
+            if (cabs(y->ccoeff[ii]) < ZEROTHRESH){
+                y->ccoeff[ii] = 0.0;
+            }
+        }
+        for (size_t ii = 0; ii < y->num_poly; ii++){
+            y->ccoeff[ii] += a * x->ccoeff[ii];
+            if (cabs(y->ccoeff[ii]) < ZEROTHRESH){
+                y->ccoeff[ii] = 0.0;
+            }
+        }
+        y->num_poly = x->num_poly;
+        size_t nround = y->num_poly;
+        for (size_t ii = 0; ii < y->num_poly-1;ii++){
+            if (cabs(y->ccoeff[y->num_poly-1-ii]) > ZEROTHRESH){
+                break;
+            }
+            else{
+                nround = nround-1;
+            }
+        }
+        y->num_poly = nround;
+    }
     
-/*     if (x->num_poly < y->num_poly){ */
-/*         // shouldnt need rounding here */
-/*         size_t ii; */
-/*         for (ii = 0; ii < x->num_poly; ii++){ */
-/*             y->coeff[ii] += a * x->coeff[ii]; */
-/*             if (fabs(y->coeff[ii]) < ZEROTHRESH){ */
-/*                 y->coeff[ii] = 0.0; */
-/*             } */
-/*         } */
-/*     } */
-/*     else{ */
-/*         size_t ii; */
-/*         if (x->num_poly > y->nalloc){ */
-/*             //printf("hereee\n"); */
-/*             y->nalloc = x->num_poly+10; */
-/*             double * temp = realloc(y->coeff, (y->nalloc)*sizeof(double)); */
-/*             if (temp == NULL){ */
-/*                 return 0; */
-/*             } */
-/*             else{ */
-/*                 y->coeff = temp; */
-/*                 for (ii = y->num_poly; ii < y->nalloc; ii++){ */
-/*                     y->coeff[ii] = 0.0; */
-/*                 } */
-/*             } */
-/*             //printf("finished\n"); */
-/*         } */
-/*         for (ii = y->num_poly; ii < x->num_poly; ii++){ */
-/*             y->coeff[ii] = a * x->coeff[ii]; */
-/*             if (fabs(y->coeff[ii]) < ZEROTHRESH){ */
-/*                 y->coeff[ii] = 0.0; */
-/*             } */
-/*         } */
-/*         for (ii = 0; ii < y->num_poly; ii++){ */
-/*             y->coeff[ii] += a * x->coeff[ii]; */
-/*             if (fabs(y->coeff[ii]) < ZEROTHRESH){ */
-/*                 y->coeff[ii] = 0.0; */
-/*             } */
-/*         } */
-/*         y->num_poly = x->num_poly; */
-/*         size_t nround = y->num_poly; */
-/*         for (ii = 0; ii < y->num_poly-1;ii++){ */
-/*             if (fabs(y->coeff[y->num_poly-1-ii]) > ZEROTHRESH){ */
-/*                 break; */
-/*             } */
-/*             else{ */
-/*                 nround = nround-1; */
-/*             } */
-/*         } */
-/*         y->num_poly = nround; */
-/*     } */
-    
-/*     return 0; */
-/* } */
+    return 0;
+}
 
 
 /* /\********************************************************\//\** */
@@ -461,8 +485,8 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*     print_orth_poly_expansion(y,0,NULL); */
 /*     *\/ */
     
-/*     //double diffa = fabs(a-ZEROTHRESH); */
-/*     //double diffb = fabs(b-ZEROTHRESH); */
+/*     //double diffa = cabs(a-ZEROTHRESH); */
+/*     //double diffb = cabs(b-ZEROTHRESH); */
 /*     size_t ii; */
 /*     struct OrthPolyExpansion * p ; */
 /*     //if ( (x == NULL && y != NULL) || ((diffa <= ZEROTHRESH) && (y != NULL))){ */
@@ -518,13 +542,13 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*     if (xN > yN){ */
 /*         for (ii = 0; ii < yN; ii++){ */
 /*             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;            */
-/*             //if ( fabs(p->coeff[ii]) < ZEROTHRESH){ */
+/*             //if ( cabs(p->coeff[ii]) < ZEROTHRESH){ */
 /*             //    p->coeff[ii] = 0.0; */
 /*            // } */
 /*         } */
 /*         for (ii = yN; ii < xN; ii++){ */
 /*             p->coeff[ii] = x->coeff[ii]*a; */
-/*             //if ( fabs(p->coeff[ii]) < ZEROTHRESH){ */
+/*             //if ( cabs(p->coeff[ii]) < ZEROTHRESH){ */
 /*             //    p->coeff[ii] = 0.0; */
 /*            // } */
 /*         } */
@@ -532,13 +556,13 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*     else{ */
 /*         for (ii = 0; ii < xN; ii++){ */
 /*             p->coeff[ii] = x->coeff[ii]*a + y->coeff[ii]*b;            */
-/*             //if ( fabs(p->coeff[ii]) < ZEROTHRESH){ */
+/*             //if ( cabs(p->coeff[ii]) < ZEROTHRESH){ */
 /*             //    p->coeff[ii] = 0.0; */
 /*            // } */
 /*         } */
 /*         for (ii = xN; ii < yN; ii++){ */
 /*             p->coeff[ii] = y->coeff[ii]*b; */
-/*             //if ( fabs(p->coeff[ii]) < ZEROTHRESH){ */
+/*             //if ( cabs(p->coeff[ii]) < ZEROTHRESH){ */
 /*             //    p->coeff[ii] = 0.0; */
 /*             //} */
 /*         } */
@@ -591,8 +615,8 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*     size_t nrows = p->num_poly-1; */
 /*     //printf("coeffs = \n"); */
 /*     //dprint(p->num_poly, p->coeff); */
-/*     while (fabs(p->coeff[nrows]) < ZEROTHRESH ){ */
-/*     //while (fabs(p->coeff[nrows]) < DBL_MIN){ */
+/*     while (cabs(p->coeff[nrows]) < ZEROTHRESH ){ */
+/*     //while (cabs(p->coeff[nrows]) < DBL_MIN){ */
 /*         nrows--; */
 /*         if (nrows == 1){ */
 /*             break; */
@@ -661,7 +685,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         //printf("zero thresh = %3.20G\n",1e-8); */
 /*         //printf("upper thresh = %G\n",p->upper_bound+ZEROTHRESH); */
 /*         //printf("too low? %d \n", real[ii] < (p->lower_bound-1e-8)); */
-/*         if ((fabs(img[ii]) < 1e-7) &&  */
+/*         if ((cabs(img[ii]) < 1e-7) &&  */
 /*             (real[ii] > (p->lower_bound-1e-8)) &&  */
 /*             //(real[ii] >= (p->lower_bound-1e-7)) &&  */
 /*             (real[ii] < (p->upper_bound+1e-8))) { */
@@ -759,7 +783,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         return real_roots; */
 /*     } */
 /*     else if (N == 1){ */
-/*         if (fabs(p->coeff[N]) <= ZEROTHRESH){ */
+/*         if (cabs(p->coeff[N]) <= ZEROTHRESH){ */
 /*             return real_roots; */
 /*         } */
 /*         else{ */
@@ -787,7 +811,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         /\* nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / p->coeff[N]; *\/ */
 /*         nscompanion[(N-1)*N] += hnn1 * p->coeff[0] / (p->coeff[N] * sqrt(2*N+1)); */
 /*         for (ii = 1; ii < N-1; ii++){ */
-/*             assert (fabs(p->p->bn(ii)) < 1e-14); */
+/*             assert (cabs(p->p->bn(ii)) < 1e-14); */
 /*             double in = (double) ii; */
 /*             nscompanion[ii*N+ii-1] = in / ( 2.0 * in + 1.0); */
 /*             nscompanion[ii*N+ii+1] = (in + 1.0) / ( 2.0 * in + 1.0); */
@@ -856,7 +880,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         size_t * keep = calloc_size_t(N); */
 /*         for (ii = 0; ii < N; ii++){ */
 /*             /\* printf("(%3.15G, %3.15G)\n",real[ii],img[ii]); *\/ */
-/*             if ((fabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){ */
+/*             if ((cabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){ */
 /*                 if (real[ii] < -1.0){ */
 /*                     real[ii] = -1.0; */
 /*                 } */
@@ -926,7 +950,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 
 /*     /\* printf("coeff pre truncate = "); dprint(p->num_, p->coeff); *\/ */
 /*     /\* for (size_t ii = 0; ii < p->num_poly; ii++){ *\/ */
-/*     /\*     if (fabs(p->coeff[ii]) < 1e-13){ *\/ */
+/*     /\*     if (cabs(p->coeff[ii]) < 1e-13){ *\/ */
 /*     /\*         p->coeff[ii] = 0.0; *\/ */
 /*     /\*     } *\/ */
 /*     /\* } *\/ */
@@ -937,7 +961,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         return real_roots; */
 /*     } */
 /*     else if (N == 1){ */
-/*         if (fabs(p->coeff[N]) <= ZEROTHRESH){ */
+/*         if (cabs(p->coeff[N]) <= ZEROTHRESH){ */
 /*             return real_roots; */
 /*         } */
 /*         else{ */
@@ -967,7 +991,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         nscompanion[1] = 1.0; */
 /*         nscompanion[(N-1)*N] -= hnn1*p->coeff[0] / gamma; */
 /*         for (ii = 1; ii < N-1; ii++){ */
-/*             assert (fabs(p->p->bn(ii)) < 1e-14); */
+/*             assert (cabs(p->p->bn(ii)) < 1e-14); */
             
 /*             nscompanion[ii*N+ii-1] = 0.5; // ii-th column */
 /*             nscompanion[ii*N+ii+1] = 0.5; */
@@ -1033,7 +1057,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         size_t * keep = calloc_size_t(N); */
 /*         for (ii = 0; ii < N; ii++){ */
 /*             /\* printf("(%3.15G, %3.15G)\n",real[ii],img[ii]); *\/ */
-/*             if ((fabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){ */
+/*             if ((cabs(img[ii]) < 1e-6) && (real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){ */
 /*             /\* if ((real[ii] > -1.0-1e-12) && (real[ii] < 1.0+1e-12)){                 *\/ */
 /*                 if (real[ii] < -1.0){ */
 /*                     real[ii] = -1.0; */
@@ -1223,7 +1247,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*     if (oargs != NULL){ */
 
 /*         struct c3Vector * optnodes = oargs; */
-/*         double mval = fabs(orth_poly_expansion_eval(p,optnodes->elem[0])); */
+/*         double mval = cabs(orth_poly_expansion_eval(p,optnodes->elem[0])); */
 /*         *x = optnodes->elem[0]; */
 /*         double cval = mval; */
 /*         if (ptype == HERMITE){ */
@@ -1231,7 +1255,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         } */
 /*         *x = optnodes->elem[0]; */
 /*         for (size_t ii = 0; ii < optnodes->size; ii++){ */
-/*             double val = fabs(orth_poly_expansion_eval(p,optnodes->elem[ii])); */
+/*             double val = cabs(orth_poly_expansion_eval(p,optnodes->elem[ii])); */
 /*             double tval = val; */
 /*             if (ptype == HERMITE){ */
 /*                 val *= exp(-pow(optnodes->elem[ii],2)/2.0); */
@@ -1265,10 +1289,10 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*         //printf("nroots=%zu\n", nroots); */
 /*         double tempval; */
 
-/*         maxval = fabs(orth_poly_expansion_eval(p,p->lower_bound)); */
+/*         maxval = cabs(orth_poly_expansion_eval(p,p->lower_bound)); */
 /*         *x = p->lower_bound; */
 
-/*         tempval = fabs(orth_poly_expansion_eval(p,p->upper_bound)); */
+/*         tempval = cabs(orth_poly_expansion_eval(p,p->upper_bound)); */
 /*         if (tempval > maxval){ */
 /*             maxval = tempval; */
 /*             *x = p->upper_bound; */
@@ -1280,7 +1304,7 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
 /*             if (nroots > 0){ */
 /*                 size_t ii; */
 /*                 for (ii = 0; ii < nroots; ii++){ */
-/*                     tempval = fabs(orth_poly_expansion_eval(p, roots[ii])); */
+/*                     tempval = cabs(orth_poly_expansion_eval(p, roots[ii])); */
 /*                     if (tempval > maxval){ */
 /*                         *x = roots[ii]; */
 /*                         maxval = tempval; */

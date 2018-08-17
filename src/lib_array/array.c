@@ -427,6 +427,7 @@ size_t iprod_sz(const size_t N, const size_t * in)
 
 #define FRAC_MAX 9223372036854775807LL // 2**63-1 
 
+/// @private
 struct dbl_packed
 {
     int exp;

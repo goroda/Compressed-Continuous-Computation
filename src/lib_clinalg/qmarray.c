@@ -1101,6 +1101,7 @@ double * qmarray_kron_integrate(const struct Qmarray * a, const struct Qmarray *
             }
         }
     }
+
     return c;
 }
 
@@ -2889,6 +2890,8 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
     if (strcmp(dir,"QR") == 0){
         
         Q = qmarray_orth1d_columns(A->nrows,ncols,app);
+
+        
         if (app->fc != PIECEWISE){
             int out = qmarray_qr(A,&Q,&R,app);
             assert (out == 0);

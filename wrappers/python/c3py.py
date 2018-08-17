@@ -44,8 +44,8 @@ class FunctionTrain(object):
             self.opts.append(None)
             self.ranks.append(1)
 
-        if ft is not None:
-            self.ft = ft
+
+        self.ft = ft
         # atexit.register(self.cleanup)
 
     def copy(self):
@@ -477,10 +477,13 @@ class FunctionTrain(object):
 
         c3a, onedopts, low_opts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
-        c3.function_train_round(self.ft, eps, multiopts)
+        ftc = c3.function_train_round(self.ft, eps, multiopts)
+        c3.function_train_free(self.ft)
+        # c3.function_train_free(self.ft)
+        self.ft = ftc
         self._free_approx_params(c3a, onedopts, low_opts)
 
-    def __add__(self, other, eps=1e-14):
+    def __add__(self, other, eps=0):
         """ Add two function trains """
 
         out = FunctionTrain(self.dim)
@@ -489,7 +492,7 @@ class FunctionTrain(object):
         out.round(eps)
         return out
 
-    def __sub__(self, other, eps=1e-14):
+    def __sub__(self, other, eps=0):
         """ Subtract two function trains """
 
         # print("subtracting!")
@@ -504,7 +507,7 @@ class FunctionTrain(object):
         c3.function_train_free(temp1)
         return out_ft
 
-    def __mul__(self, other, eps=1e-14):
+    def __mul__(self, other, eps=0):
         out = FunctionTrain(self.dim)
         out.ft = c3.function_train_product(self.ft, other.ft)
         out.opts = copy.deepcopy(self.opts)
@@ -514,11 +517,14 @@ class FunctionTrain(object):
     def integrate(self):
         return c3.function_train_integrate(self.ft)
 
-    def scale(self, a, eps=1e-14):
+    def inner(self, other):
+        return c3.function_train_inner(self.ft, other.ft)
+    
+    def scale(self, a, eps=0):
         """ f <- a*f"""
         c3.function_train_scale(self.ft, a)
 
-    def scale_and_shift(self, scale, shift, eps=1e-14, c3_pointer=False):
+    def scale_and_shift(self, scale, shift, eps=0, c3_pointer=False):
 
         c3a, onedopts, low_opts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
@@ -556,7 +562,7 @@ class FunctionTrain(object):
 
     def expectation(self):
         return c3.function_train_integrate_weighted(self.ft)
-
+    
     def variance(self):
         mean_val = self.expectation()
         second_moment = c3.function_train_inner_weighted(self.ft, self.ft)
@@ -598,3 +604,37 @@ class GenericFunction(object):
         if self.gf is not None:
             c3.generic_function_free(self.gf)
             self.gf = None
+
+class SobolIndices(object):
+    """ Sobol Sensitivity Indices """
+
+    si = None
+    def __init__(self, ft):
+        order = ft.dim
+        self.si = c3.c3_sobol_sensitivity_calculate(ft.ft, order)
+
+    def get_total_sensitivity(self, index):
+        return c3.c3_sobol_sensitivity_get_total(self.si, index)
+
+    def get_main_sensitivity(self, index):
+        return c3.c3_sobol_sensitivity_get_main(self.si, index)
+
+    def get_variance(self):
+        return c3.c3_sobol_sensitivity_get_variance(self.si)
+    
+    def get_interaction(self, variables):
+        # assert len(variables) == 2, "Only effects between two variables is currently supported"
+        for ii in range(len(variables)-1):
+            assert variables[ii] < variables[ii+1], \
+                "Sobol index variables must be ordered with v[i] < V[j] for i < j"
+        
+        ret = c3.c3_sobol_sensitivity_get_interaction(self.si, variables)
+        return ret
+        
+    def __del__(self):
+        self.close()
+        
+    def close(self):
+        if self.si is not None:
+            c3.c3_sobol_sensitivity_free(self.si)
+            self.si = None

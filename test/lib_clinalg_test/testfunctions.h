@@ -44,7 +44,10 @@
 
 int func(size_t, const double *, double *, void *);
 int func2(size_t, const double *, double *, void *);
+int funcp(size_t, const double *, double *, void *);
+int func2p(size_t, const double *, double *, void *);
 int func3(size_t, const double *, double *, void *);
+int func3p(size_t, const double *, double *, void *);
 int func4(size_t, const double *, double *, void *);
 int func5(size_t, const double *, double *, void *);
 int func6(size_t, const double *, double *, void *);

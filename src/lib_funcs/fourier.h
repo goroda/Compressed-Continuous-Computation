@@ -61,5 +61,8 @@ double fourier_integrate(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 fourier_expansion_prod(const struct OrthPolyExpansion *,
                        const struct OrthPolyExpansion *);
+int
+fourier_expansion_axpy(double, const struct OrthPolyExpansion *,
+                       struct OrthPolyExpansion *);
 
 #endif

@@ -54,6 +54,7 @@
 #include "ft.h"
 
 #ifndef ZEROTHRESH
+/// @private
     #define ZEROTHRESH 1e0* DBL_EPSILON
     /* #define ZEROTHRESH 1e0*DBL_EPSILON */
     /* #define ZEROTHRESH 1e-200 */
@@ -62,14 +63,17 @@
 /* #define ZEROTHRESH 1e-3*DBL_EPSILON */
 
 #ifndef VPREPCORE
+/// @private
     #define VPREPCORE 0
 #endif
 
 #ifndef VFTCROSS
+/// @private
     #define VFTCROSS 0
 #endif
 
 
+/// @private
 struct FTMemSpace
 {
     size_t num_spaces;
@@ -77,6 +81,7 @@ struct FTMemSpace
     double * vals; // num_spaces x space_size
 };
 
+/// @private
 struct FTMemSpace * ft_mem_space_alloc(size_t num_spaces, size_t space_size)
 {
     struct FTMemSpace * ftmem = malloc(sizeof(struct FTMemSpace));
@@ -92,6 +97,7 @@ struct FTMemSpace * ft_mem_space_alloc(size_t num_spaces, size_t space_size)
     return ftmem;
 }
 
+/// @private
 struct FTMemSpace ** ft_mem_space_arr_alloc(size_t dim, size_t num_spaces, size_t space_size)
 {
     struct FTMemSpace ** ftmem = malloc(dim * sizeof(struct FTMemSpace * ));
@@ -106,6 +112,7 @@ struct FTMemSpace ** ft_mem_space_arr_alloc(size_t dim, size_t num_spaces, size_
     return ftmem;
 }
 
+/// @private
 void ft_mem_space_free(struct FTMemSpace * ftmem)
 {
     if (ftmem != NULL){
@@ -114,6 +121,7 @@ void ft_mem_space_free(struct FTMemSpace * ftmem)
     }
 }
 
+/// @private
 void ft_mem_space_arr_free(size_t dim, struct FTMemSpace ** ftmem)
 {
     if (ftmem != NULL){
@@ -125,7 +133,7 @@ void ft_mem_space_arr_free(size_t dim, struct FTMemSpace ** ftmem)
     }
 }
 
-
+/// @private
 int ft_mem_space_check(struct FTMemSpace * ftmem,
                        size_t num_spaces,
                        size_t space_size)
@@ -145,7 +153,8 @@ int ft_mem_space_check(struct FTMemSpace * ftmem,
     return 0;
     
 }
-    
+
+/// @private
 size_t ft_mem_space_get_incr(struct FTMemSpace * ftmem)
 {
     return ftmem->space_size;
@@ -2327,13 +2336,18 @@ function_train_integrate_weighted_subset(
 double function_train_inner(const struct FunctionTrain * a, 
                             const struct FunctionTrain * b)
 {
+    printf("in_inner\n");
     double out = 0.123456789;
-    size_t ii;
+
     double * temp = qmarray_kron_integrate(b->cores[0],a->cores[0]);
     double * temp2 = NULL;
 
-    //size_t ii;
-    for (ii = 1; ii < a->dim; ii++){
+    printf("ok!\n");
+    printf("dim = \n");
+    printf("\t %zu\n", a->dim);
+    printf("got dim\n");
+    for (size_t ii = 1; ii < a->dim; ii++){
+        printf("ii = %zu/%zu", ii, a->dim-1);
         temp2 = qmarray_vec_kron_integrate(temp, a->cores[ii],b->cores[ii]);
         size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
         free(temp);temp=NULL;
@@ -2342,10 +2356,10 @@ double function_train_inner(const struct FunctionTrain * a,
         
         free(temp2); temp2 = NULL;
     }
-    
+    printf("here?\n");
     out = temp[0];
     free(temp); temp=NULL;
-
+    printf("out_inner\n");
     return out;
 }
 
@@ -2437,6 +2451,8 @@ function_train_orthor(struct FunctionTrain * a,
     o = multi_approx_opts_get_aopts(aopts,core);
     /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(a->cores[core])); */
     ftrl->cores[core] = qmarray_householder_simple("LQ",a->cores[core],L,o);
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core])); */
+    /* ftrl->cores[core] = mqma(L, ftrl->cores[core], ftrl->cores[core]->nrows); */
     /* printf("done with LQ\n"); */
     for (ii = 2; ii < a->dim; ii++){
         core = a->dim-ii;
@@ -2446,10 +2462,13 @@ function_train_orthor(struct FunctionTrain * a,
         L = calloc_double(ftrl->ranks[core]*ftrl->ranks[core]);
         o = multi_approx_opts_get_aopts(aopts,core);
         ftrl->cores[core] = qmarray_householder_simple("LQ",temp,L,o);
+        /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core])); */
         qmarray_free(temp); temp = NULL;
         
     }
     ftrl->cores[0] = qmam(a->cores[0],L,ftrl->ranks[1]);
+    /* ftrl->cores[0] = qmarray_copy(a->cores[0]); */
+    /* printf("go orthor, core norm = %3.15G\n", qmarray_norm2(ftrl->cores[core]));     */
     free(L); L = NULL;
     return ftrl;
 }
@@ -3294,6 +3313,7 @@ ftapprox_cross(struct Fwrap * fw,
        /*     diff /= den; */
        /* } */
 
+        /* printf("compute norm\n"); */
 
         diff = function_train_norm2diff(ft,fti);
         den = function_train_norm2(ft);
