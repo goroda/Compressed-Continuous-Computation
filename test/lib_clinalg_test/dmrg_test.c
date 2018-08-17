@@ -1040,6 +1040,7 @@ void Test_exact_laplace_periodic_fourier(CuTest * tc)
 
     
     struct FunctionTrain * ft_psir = c3approx_do_cross(c3a,fw,1);
+    c3vector_free(optnodes); optnodes = NULL;
     /* printf("ranks of ft_psir = "); */
 
     for (size_t ii = 0; ii < N; ii++){
