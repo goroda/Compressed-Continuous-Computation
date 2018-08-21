@@ -1720,8 +1720,8 @@ struct OrthPolyExpansion * orth_poly_expansion_copy(const struct OrthPolyExpansi
         //printf("pin->num_poly = %zu, pin->nalloc = %zu\n",pin->num_poly,pin->nalloc);
         p->num_poly = pin->num_poly;
         p->nalloc = pin->nalloc;
-	p->coeff = NULL;
-	p->ccoeff = NULL;
+        p->coeff = NULL;
+        p->ccoeff = NULL;
         p->lower_bound = pin->lower_bound;
         p->upper_bound = pin->upper_bound;
         p->space_transform = space_mapping_copy(pin->space_transform);
@@ -2044,9 +2044,9 @@ orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
     else if (opts->ptype == FOURIER) {
         size_t N = ope_opts_get_start(opts);
         /* printf("N = %zu\n", N); */
-        if (n > N){
-            fprintf(stderr, "Cannot look for a rank so large for fourier\n");
-        }
+        /* if (n > N){ */
+        /*     fprintf(stderr, "Cannot look for a rank so large for fourier\n"); */
+        /* } */
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = orth_poly_expansion_init_from_opts(opts, N);
             f[ii]->ccoeff[ii] = 1.0;
@@ -5601,18 +5601,26 @@ void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec,
         fprintf(fp, "Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
         fprintf(fp, "Coefficients = ");
         size_t ii;
-        for (ii = 0; ii < p->num_poly; ii++){
-            if (prec == 0){
-                fprintf(fp, "%3.1f ", p->coeff[ii]);
-            }
-            else if (prec == 1){
-                fprintf(fp, "%3.3f ", p->coeff[ii]);
-            }
-            else if (prec == 2){
-                fprintf(fp, "%3.15f ", p->coeff[ii]);
-            }
-            else{
-                fprintf(fp, "%3.15E ", p->coeff[ii]);
+        if (p->p->ptype == FOURIER){
+            for (ii = 0; ii < p->num_poly; ii++){
+                fprintf(fp, "%3.3f %3.3f\n",
+                        creal(p->ccoeff[ii]), cimag(p->ccoeff[ii]));
+            }            
+        }
+        else{
+            for (ii = 0; ii < p->num_poly; ii++){
+                if (prec == 0){
+                    fprintf(fp, "%3.1f ", p->coeff[ii]);
+                }
+                else if (prec == 1){
+                    fprintf(fp, "%3.3f ", p->coeff[ii]);
+                }
+                else if (prec == 2){
+                    fprintf(fp, "%3.15f ", p->coeff[ii]);
+                }
+                else{
+                    fprintf(fp, "%3.15E ", p->coeff[ii]);
+                }
             }
         }
         printf("\n");

@@ -364,13 +364,14 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
     ope_opts_set_lb(opts, lb);
     ope_opts_set_ub(opts, ub);
     size_t n = a->num_poly-1;
-    ope_opts_set_start(opts, 2*n+1);
+    /* ope_opts_set_start(opts, 2*n+1); */
+    ope_opts_set_start(opts, n+1);    
 
     /* printf("n = %zu\n", n); */
-    struct OrthPolyExpansion * fourier =
-        orth_poly_expansion_init_from_opts(opts, 2*n+1);
     /* struct OrthPolyExpansion * fourier = */
-    /*     orth_poly_expansion_init_from_opts(opts, n+1); */
+    /*     orth_poly_expansion_init_from_opts(opts, 2*n+1); */
+    struct OrthPolyExpansion * fourier =
+        orth_poly_expansion_init_from_opts(opts, n+1);
 
     if (n > 0){
         struct Fwrap * fw = fwrap_create(1, "general-vec");
