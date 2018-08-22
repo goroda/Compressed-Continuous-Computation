@@ -2044,16 +2044,17 @@ orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
     else if (opts->ptype == FOURIER) {
         size_t N = ope_opts_get_start(opts);
 
-        /* if (n > N){ */
-        /*     /\* fprintf(stderr, "Cannot look for a rank so large for fourier\n"); *\/ */
+        if (n > N){
+            fprintf(stderr, "Cannot look for a rank so large for fourier\n");
 
-        /*     N = N-1; */
-        /*     while (n > N){ */
-        /*         N = 2 * N; */
-        /*     } */
-        /*     N = N+1; */
-        /*     printf("N = %zu\n", N); */
-        /* } */
+            /* printf("n = %zu\n", n); */
+            /* N = N-1; */
+            /* while (n > N){ */
+            /*     N = 2 * N; */
+            /* } */
+            /* N = N+1; */
+            /* printf("N = %zu\n", N); */
+        }
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = orth_poly_expansion_init_from_opts(opts, N);
             if (n < N){

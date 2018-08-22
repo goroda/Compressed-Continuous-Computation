@@ -510,13 +510,13 @@ class FunctionTrain(object):
     def round(self, eps=1e-14):
         """ Round a FunctionTrain """
 
-        c3a, onedopts, low_opts = self._build_approx_params()
+        c3a, onedopts, low_opts, optopts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
         ftc = c3.function_train_round(self.ft, eps, multiopts)
         c3.function_train_free(self.ft)
         # c3.function_train_free(self.ft)
         self.ft = ftc
-        self._free_approx_params(c3a, onedopts, low_opts)
+        self._free_approx_params(c3a, onedopts, low_opts, optopts)
 
     def __add__(self, other, eps=0):
         """ Add two function trains """
@@ -558,6 +558,7 @@ class FunctionTrain(object):
     def scale(self, a, eps=0):
         """ f <- a*f"""
         c3.function_train_scale(self.ft, a)
+        return self
 
     def scale_and_shift(self, scale, shift, eps=0, c3_pointer=False):
 
@@ -605,7 +606,24 @@ class FunctionTrain(object):
 
     def get_uni_func(self, dim, row, col):
         return GenericFunction(c3.function_train_get_gfuni(self.ft, dim, row, col))
-    
+
+    def laplace(self, eps=0.0):
+        ft_out = FunctionTrain(self.dim)
+
+        c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
+        multiopts = c3.c3approx_get_approx_args(c3a)
+        
+        ft_out.ft = c3.exact_laplace(self.ft, multiopts)
+        ft_out.opts = copy.deepcopy(self.opts)
+
+        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
+
+        if eps > 0.0:
+            ft_out.round(eps=eps)
+
+        return ft_out
+        
+        
     def __del__(self):
         self.close()
 
@@ -616,6 +634,8 @@ class FunctionTrain(object):
             self.ft = None
 
 
+
+            
 class GenericFunction(object):
     """ Univariate Functions """
 
