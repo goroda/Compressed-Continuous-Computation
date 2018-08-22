@@ -356,7 +356,7 @@ class FunctionTrain(object):
         c3.c3opt_set_relftol(optimizer, opt_relftol)
         c3.c3opt_set_maxiter(optimizer, opt_maxiter)
 
-        c3a, onedopts, low_opts = self._build_approx_params(c3.REGRESS)
+        c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
         multiopts = c3.c3approx_get_approx_args(c3a)
 
         reg = c3.ft_regress_alloc(self.dim, multiopts, self.ranks)
@@ -462,7 +462,7 @@ class FunctionTrain(object):
 
         # Free built approximation options
         # print("Free params")
-        self._free_approx_params(c3a, onedopts, low_opts)
+        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
         # print("Done Free params")
 
         if store_opt_info is True:
