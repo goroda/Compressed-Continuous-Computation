@@ -2043,13 +2043,22 @@ orth_poly_expansion_orth_basis(size_t n, struct OrthPolyExpansion ** f,
     }
     else if (opts->ptype == FOURIER) {
         size_t N = ope_opts_get_start(opts);
-        /* printf("N = %zu\n", N); */
+
         /* if (n > N){ */
-        /*     fprintf(stderr, "Cannot look for a rank so large for fourier\n"); */
+        /*     /\* fprintf(stderr, "Cannot look for a rank so large for fourier\n"); *\/ */
+
+        /*     N = N-1; */
+        /*     while (n > N){ */
+        /*         N = 2 * N; */
+        /*     } */
+        /*     N = N+1; */
+        /*     printf("N = %zu\n", N); */
         /* } */
         for (size_t ii = 0; ii < n; ii++){
             f[ii] = orth_poly_expansion_init_from_opts(opts, N);
-            f[ii]->ccoeff[ii] = 1.0;
+            if (n < N){
+                f[ii]->ccoeff[ii] = 1.0;
+            }
         }
         // now gram schmidt
         double norm, proj;
@@ -2828,13 +2837,13 @@ int orth_poly_expansion_arr_evalN(size_t n,
     for (size_t jj = 0; jj < N; jj++){
         for (size_t ii = 0; ii < n; ii++){
             if (isnan(y[ii + jj* incy]) || y[ii+jj * incy] > 1e100){
-                fprintf(stderr,"Warning, evaluation in legendre_array_eval is nan\n");
+                fprintf(stderr,"Warning, evaluation in orth_poly_expansion_array_eval is nan\n");
                 fprintf(stderr,"Polynomial %zu, evaluation %zu\n",ii,jj);
                 print_orth_poly_expansion(parr[ii],0,NULL,stderr);
                 exit(1);
             }
             else if (isinf(y[ii + jj * incy])){
-                fprintf(stderr,"Warning, evaluation in legendre_array_eval inf\n");
+                fprintf(stderr,"Warning, evaluation in orth_poly_expansion_array_eval inf\n");
                 exit(1);
             }        
         }
