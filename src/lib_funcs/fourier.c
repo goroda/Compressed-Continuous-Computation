@@ -202,7 +202,7 @@ struct OrthPolyExpansion * fourier_expansion_dderiv(const struct OrthPolyExpansi
     struct OrthPolyExpansion * out = orth_poly_expansion_copy(p);
     out->ccoeff[0] = 0.0;
     for (size_t ii = 1; ii < p->num_poly; ii++){
-        out->ccoeff[ii] *= -1.0*(double)ii*(double)ii*dx*dx;
+        out->ccoeff[ii] *= -1.0*(double)(ii*ii)*dx*dx;
     }
     return out;
 }

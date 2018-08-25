@@ -612,8 +612,10 @@ class FunctionTrain(object):
 
         c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
         multiopts = c3.c3approx_get_approx_args(c3a)
-        
-        ft_out.ft = c3.exact_laplace(self.ft, multiopts)
+
+        ft_temp = self.copy()
+
+        ft_out.ft = c3.exact_laplace(ft_temp.ft, multiopts)
         ft_out.opts = copy.deepcopy(self.opts)
 
         self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
