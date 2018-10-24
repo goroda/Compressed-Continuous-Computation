@@ -665,8 +665,9 @@ class SobolIndices(object):
     """ Sobol Sensitivity Indices """
 
     si = None
-    def __init__(self, ft):
-        order = ft.dim
+    def __init__(self, ft, order=None):
+        if order is None:
+            order = ft.dim
         self.si = c3.c3_sobol_sensitivity_calculate(ft.ft, order)
 
     def get_total_sensitivity(self, index):

@@ -25,7 +25,7 @@ def gen_results(alpha):
 
     # print("Computing Sobol Indices")
     
-    SI = c3py.SobolIndices(ft)
+    SI = c3py.SobolIndices(ft, order=2)
     var = SI.get_variance()
     names = []
     mains = np.zeros((dim,))
