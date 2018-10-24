@@ -2,7 +2,7 @@ import c3py # import the python interface to the c3 library
 import numpy as np
 import matplotlib.pyplot as plt
 
-dim = 4  # number of features
+dim = 400  # number of features
 def func2(x,param=None):
     out = np.sin(np.sum(x*param,axis=1))
     return out
