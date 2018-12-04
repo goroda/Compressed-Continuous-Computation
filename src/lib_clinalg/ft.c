@@ -3613,7 +3613,7 @@ ftapprox_cross_rankadapt(struct Fwrap * fw,
     {
         adapt = 0;
         if (cargs->verbose > 0){
-            printf("adapting \n");
+            printf("adapting \n");            
             printf("Increasing rank to \n");
             iprint_sz(ft->dim+1,cargs->ranks);
         }

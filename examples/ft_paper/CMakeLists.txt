@@ -37,3 +37,9 @@ target_link_libraries(genznd_diff -g
     ${blas_lapack}
     -lm)
 
+add_executable(singularity singularity.c)
+target_link_libraries(singularity -g
+    c3                             
+    ${blas_lapack}
+    -lm)  
+
