@@ -33,7 +33,7 @@ void print_code_usage (FILE * stream, int exit_code)
             " -n --numparam <val>      Number of parameters in univariate approx (default 5)\n"
             " -r --rank     <val>      Starting rank for approximation (default 4)\n"
             " -a --alg      <string>   Algorithm (AIO or ALS)\n"
-            " -d --adapt    <bool>     Adaptation, in this case rank is upper bound"
+            " -d --adapt    <bool>     Adaptation, in this case rank is upper bound\n"
             "    --reg                 Regularization weight\n"
             "    --cv-kfold <int>      Specify k for kfold cross validation \n"
             "    --cv-rank  <int>      Add rank option with which to cross validate \n"
@@ -298,7 +298,7 @@ int main(int argc, char * argv[])
     size_t opt_maxiter=50000;
     struct FTRegress * ftr = ft_regress_alloc(dim,fapp,ranks);
     if (strcmp(alg,"AIO") == 0){
-        if (reg > 0){
+        if ((reg > 0) || (cvreg > 0)){
             ft_regress_set_alg_and_obj(ftr,AIO,FTLS_SPARSEL2);
         }
         else{
@@ -306,7 +306,7 @@ int main(int argc, char * argv[])
         }
     }
     else if (strcmp(alg,"ALS") == 0){
-        if (reg > 0){
+        if ((reg > 0) || (cvreg > 0)){
             ft_regress_set_alg_and_obj(ftr,ALS,FTLS_SPARSEL2);
         }
         else{
