@@ -202,7 +202,13 @@ struct OrthPolyExpansion{
     double upper_bound; 
     double * coeff;
 
-    double _Complex * ccoeff;
+    /* double _Complex * ccoeff; */
+    /* #ifdef __cplusplus */
+    /* double _Complex * ccoeff;     */
+    /* #else */
+    double complex * ccoeff;
+    /* #endif */
+    /* void * ccoeff; */
     
     size_t nalloc; // number of coefficients allocated for efficiency
 

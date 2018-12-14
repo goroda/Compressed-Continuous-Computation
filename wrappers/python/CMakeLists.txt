@@ -17,7 +17,9 @@ set_target_properties(PyWrapper PROPERTIES EXCLUDE_FROM_ALL TRUE)
 FIND_PACKAGE(SWIG REQUIRED)
 include(${SWIG_USE_FILE})
 include_directories(${PYTHON_INCLUDE_DIRS})
-swig_add_module(c3 python c3.i)
+# swig_add_module(c3 python c3.i)
+
+swig_add_library(c3 LANGUAGE python SOURCES c3.i)
 swig_link_libraries(c3 c3 ${python_lib})
 
 if (APPLE) 
