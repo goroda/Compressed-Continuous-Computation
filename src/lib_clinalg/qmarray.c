@@ -153,9 +153,15 @@ struct Qmarray * qmarray_operate_elements(const struct Qmarray * qm,
                                           const struct Operator * op)
 {
     struct Qmarray * qmo = qmarray_alloc(qm->nrows,qm->ncols);
-    size_t ii;
-    for (ii = 0; ii < qm->nrows*qm->ncols; ii++){
-        qmo->funcs[ii] = op->f(qm->funcs[ii], op->opts);
+    if (op != NULL){
+        for (size_t ii = 0; ii < qm->nrows*qm->ncols; ii++){
+            qmo->funcs[ii] = op->f(qm->funcs[ii], op->opts);
+        }
+    }
+    else{
+        for (size_t ii = 0; ii < qm->nrows*qm->ncols; ii++){
+            qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
+        }
     }
 
     return qmo;

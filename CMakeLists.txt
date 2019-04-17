@@ -16,17 +16,28 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH 1)
 
     option(USE_CLANG "build application with clang" ON)
-    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command")
+    set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command ")
     set(CMAKE_C_COMPILER "clang")
 
     include_directories(/opt/local/include)
-    find_library(macblas
-        NAMES ACCELERATE
-        PATHS ${CMAKE_OSX_SYSROOT}/System/Library
-        PATH_SUFFIXES Frameworks
-        NO_DEFAULT_PATH)
+    # find_library(macblas
+    #     NAMES ACCELERATE
+    #     PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+    #     PATH_SUFFIXES Frameworks
+    #     NO_DEFAULT_PATH)
+    # # find_library(macblas
+    # #     NAMES ACCELERATE
+    # #     PATHS /System/Library
+    # #     PATH_SUFFIXES Frameworks
+    # #     NO_DEFAULT_PATH)  
+    # set(blas_lapack ${macblas}/Accelerate)
+    
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
+    include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
+    set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})    
         
-    set(blas_lapack ${macblas}/Accelerate)
+
 
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")

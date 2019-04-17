@@ -41,7 +41,8 @@
 
 #ifdef __APPLE__
     #include <Accelerate/Accelerate.h>
-    #include "/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Headers/clapack.h"
+    /* #include "/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Headers/clapack.h" */
+
 
     #define dgetri_(X, Y, Z, A , B, C, D ) \
             ( dgetri_( (__CLPK_integer *) X, Y, (__CLPK_integer *) Z, (__CLPK_integer *) A, \
