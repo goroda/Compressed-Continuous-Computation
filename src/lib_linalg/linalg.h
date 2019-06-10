@@ -43,7 +43,6 @@
     #include <Accelerate/Accelerate.h>
     /* #include "/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Headers/clapack.h" */
 
-
     #define dgetri_(X, Y, Z, A , B, C, D ) \
             ( dgetri_( (__CLPK_integer *) X, Y, (__CLPK_integer *) Z, (__CLPK_integer *) A, \
                         B, (__CLPK_integer *)C , (__CLPK_integer *) D) )
@@ -111,11 +110,9 @@
                        (__CLPK_doublereal *)A, (__CLPK_integer *)B, (__CLPK_doublereal *)C,  \
                        (__CLPK_integer *)D, (__CLPK_doublereal *) E, \
 	                   (__CLPK_doublereal *)F, (__CLPK_integer *)G, (__CLPK_doublereal *)H, \
-                       (__CLPK_integer *)I, (__CLPK_integer *)J, (__CLPK_integer *)K))
-                   
+                       (__CLPK_integer *)I, (__CLPK_integer *)J, (__CLPK_integer *)K)) 
 #else
     /* #include <gsl/gsl_cblas.h> */
-
     #include <cblas.h>
 
 void dgetri_(int * X, double *Y, int * Z, int * A, double *B, int *C , int * D);

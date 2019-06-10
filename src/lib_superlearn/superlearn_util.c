@@ -49,6 +49,13 @@
 #include "ft.h"
 
 /***********************************************************//**
+    Return whether or not the gradient is precomputed
+***************************************************************/
+int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem){
+    return ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 1));
+}
+
+/***********************************************************//**
     Allocate a memory structure for storing an array of an array of doubles
 
     \param[in] ndata         - number of arrays

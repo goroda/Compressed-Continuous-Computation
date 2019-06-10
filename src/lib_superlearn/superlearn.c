@@ -44,6 +44,11 @@
 #include "objective_functions.h"
 
 
+double slp_get_minimum(struct SLP * slp)
+{
+    return slp->obj_min;
+}
+
 /***********************************************************//**
     C3OPt optimizer interface for batch descent
 ***************************************************************/

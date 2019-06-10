@@ -115,9 +115,11 @@ void sl_mem_manager_check_structure(struct SLMemManager *, const struct FTparam 
 /***********************************************************//**
     Return whether or not the gradient is precomputed
 ***************************************************************/
-inline int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem){
-    return ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 1));
-}
+int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem);
+/* inline int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem) */
+/* { */
+/*     return ((mem->structure == LINEAR_ST) && (mem->once_eval_structure == 1)); */
+/* } */
 
 struct SLMemManager * sl_mem_manager_alloc(size_t, size_t, size_t,enum FTPARAM_ST);
 void sl_mem_manager_free(struct SLMemManager *);

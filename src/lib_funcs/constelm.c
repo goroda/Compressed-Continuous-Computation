@@ -619,6 +619,14 @@ double const_elem_exp_eval(const struct ConstElemExp * f, double x)
 
 }
 
+// evaluate derivative;
+double const_elem_exp_deriv_eval(const struct ConstElemExp * f, double x)
+{
+    (void)(x);
+    (void)(f);
+    return 0.0;
+}
+
 /********************************************************//**
 *   Evaluate the lin elem expansion
 *

@@ -32,10 +32,10 @@ set(header lib_stringmanip/stringmanip.h
            lib_array/array.h
            lib_superlearn/learning_options.h
            lib_superlearn/objective_functions.h
+           lib_superlearn/superlearn_util.h
+           lib_superlearn/superlearn.h           
            lib_superlearn/parameterization.h
            lib_superlearn/regress.h
-           lib_superlearn/superlearn.h
-           lib_superlearn/superlearn_util.h
            lib_interface/c3_interface.h
            lib_interface/approximate.h
            lib_clinalg/diffusion.h

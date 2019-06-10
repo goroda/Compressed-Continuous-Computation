@@ -49,6 +49,7 @@
 #include "lib_optimization.h"
 #include "regress.h"
 #include "objective_functions.h"
+#include "superlearn_util.h"
 
 
 /** \struct FTRegress

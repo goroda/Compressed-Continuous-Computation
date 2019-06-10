@@ -19,7 +19,7 @@ if (APPLE)
     set(compiler_flags "-std=c99 -O3 -Wall -Weverything -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command ")
     set(CMAKE_C_COMPILER "clang")
 
-    include_directories(/opt/local/include)
+    # include_directories(/opt/local/include)
     # find_library(macblas
     #     NAMES ACCELERATE
     #     PATHS ${CMAKE_OSX_SYSROOT}/System/Library
@@ -37,8 +37,6 @@ if (APPLE)
     include_directories(${BLAS_INCLUDE_DIR}, ${LAPACK_INCLUDE_DIR})
     set(blas_lapack ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})    
         
-
-
     #set(compiler_flags "-g -Wall -Wextra -O2 -std=c99 -flax-vector-conversions")
     #set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 else ()
@@ -55,7 +53,7 @@ else ()
 
 endif()
 
-set(CMAKE_CXX_COMPILER "gcc")
+#set(CMAKE_CXX_COMPILER "gcc")
 
 if (MAKE_PYTHON_WRAPPERS)
   find_package(PythonInterp REQUIRED)
@@ -101,7 +99,6 @@ else ()
   set(static_libs 0)
   set(compiler_flags "${compiler_flags} -fPIC")
 endif()
-
 
 option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 

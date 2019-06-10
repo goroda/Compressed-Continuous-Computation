@@ -118,12 +118,13 @@ serialize_const_elem_exp(unsigned char *, struct ConstElemExp *,size_t *);
 unsigned char * deserialize_const_elem_exp(unsigned char *, 
                                          struct ConstElemExp **);
 double const_elem_exp_eval(const struct ConstElemExp *, double);
-inline double const_elem_exp_deriv_eval(const struct ConstElemExp * f, double x)
-{
-    (void)(x);
-    (void)(f);
-    return 0.0;
-}
+double const_elem_exp_deriv_eval(const struct ConstElemExp * f, double x);
+/* inline double const_elem_exp_deriv_eval(const struct ConstElemExp * f, double x); */
+/* { */
+/*     (void)(x); */
+/*     (void)(f); */
+/*     return 0.0; */
+/* } */
 
 void const_elem_exp_evalN(const struct ConstElemExp *, size_t,
                         const double *, size_t, double *, size_t);
