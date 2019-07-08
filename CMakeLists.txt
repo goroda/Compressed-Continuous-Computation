@@ -133,8 +133,5 @@ if (BUILD_UTILITIES)
 endif()
 
 
-# SWIGGING-BASED Wrappers
-# if (MAKE_PYTHON_WRAPPERS)
-#   add_subdirectory(wrappers/python)
-# endif()
+
 
