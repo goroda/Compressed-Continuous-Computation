@@ -1,9 +1,9 @@
 # adapted from https://stackoverflow.com/a/48015772
 import sys
-# if sys.platform == 'darwin':
-#     from distutils import sysconfig
-#     vars = sysconfig.get_config_vars()
-#     vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
+if sys.platform == 'darwin':
+    from distutils import sysconfig
+    vars = sysconfig.get_config_vars()
+    vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
     
 import os
 import pathlib
@@ -223,10 +223,28 @@ class build_ext(build_ext_orig):
         for ext in self.extensions:
             if ext.name == '_c3_notsure':
                 self.build_cmake(ext)
+
+            if ext.name == "_c3":
+                self.build_swig(ext)
                 
         super().run()
 
+    def build_swig(self, ext):
+        self.announce("Building Swig", level=3)
+        ext.library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
+        # ext.runtime_library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
+        # ext.runtime_library_dirs = ["@loader_path"]
+        
+        print(ext.library_dirs)
+        print(ext.runtime_library_dirs)
+        # exit(1)
+        # super().build(ext)
+    
     def build_cmake(self, ext):
+
+        ext.extra_compile_args=['-install_name @rpath/libc3.dylib']
+        # print(ext.extra_compile_args)        
+        # exit(1)
         cwd = pathlib.Path().absolute()
 
         build_temp = pathlib.Path(self.build_temp)
@@ -316,9 +334,15 @@ c3py = Extension("_c3",
                              "-Ic3"],
                  define_macros =[('COMPILE_WITH_PYTHON',True)],
                  undef_macros = [],
-                 language='c',
-                 runtime_library_dirs=['build/lib.macosx-10.6-x86_64-3.6/'],
-                 library_dirs=['build/lib.macosx-10.6-x86_64-3.6/'],
+                 language='c',                 
+                 # runtime_library_dirs=['build/lib.macosx-10.6-x86_64-3.6/'],
+                 # library_dirs=['build/lib.macosx-10.6-x86_64-3.6/'],
+                 # runtime_library_dirs=[os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')],
+                 # library_dirs=[os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')],
+                 # runtime_library_dirs=["@loader_path/"],
+                 # library_dirs=['build/lib*'],
+                 # runtime_library_dirs=['$ORIGIN/'],
+                 # library_dirs=[''],                 
                  include_dirs=["c3/lib_clinalg", 
                                "c3/lib_interface",
                                "c3/lib_funcs",
@@ -333,20 +357,27 @@ c3py = Extension("_c3",
                                "c3/lib_probability",
                                numpy_include,
                  ],
-                 extra_compile_args = ['-std=c99'],
+                 extra_compile_args = ['-std=c99'],#, "-Wl,-rpath=@executable_path"],
+                 # extra_link_args =  ["-Wl,-rpath,'$ORIGIN'"],
+                 # extra_link_args =  ["-rpath=$ORIGIN"],
+                 extra_link_args =  ["-Wl,-rpath,@loader_path"],
+                 # extra_link_args =  ["-R$ORIGIN"],
                  libraries=["c3"]
 )
 
 setup(name='c3py',
-    author="Alex Gorodetsky",
-    author_email="alex@alexgorodetsky.com", 
+      author="Alex Gorodetsky",
+      author_email="alex@alexgorodetsky.com", 
       version='0.1',
+      description="Compressed Continuous Computation library in Python",
+      keywords="highd-approximation machine-learning uncertainty-quantification",
       package_dir={'': 'wrappers/python/c3py'},
       # packages=find_packages(),
       # packages=['c3py'],
       # ext_modules=[pcback, CMakeExtension(name="_c3"), c3py],
       py_modules=['c3py'],
-      ext_modules=[pcback, CMakeExtension(name="_c3_notsure"), c3py],
+      ext_modules=[CMakeExtension(name="_c3_notsure"),
+                   pcback, c3py],
       # ext_modules=[pcback],
       cmdclass={
           'build_ext' : build_ext,
