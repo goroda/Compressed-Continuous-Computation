@@ -51,7 +51,8 @@ wrappers/python/c3swig/c3.py
 wrappers/python/c3swig/c3_wrap.c
 
 wrappers/python/callback/build*
-
+wrappers/python/c3.py
+wrappers/python/c3_wrap.c
 
 fly*
 

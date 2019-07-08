@@ -4,7 +4,13 @@ if sys.platform == 'darwin':
     from distutils import sysconfig
     vars = sysconfig.get_config_vars()
     vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
-    
+    my_link_args=["-Wl,-rpath,@loader_path"]
+    my_runtime_dirs = []
+else:
+    #my_link_args=["-Xlinker","-Wl,-rpath,$ORIGIN"]
+    my_link_args=[]#"-Xlinker","-Wl,-rpath,$ORIGIN"]
+    my_runtime_dirs=['$ORIGIN/']
+
 import os
 import pathlib
 
@@ -232,7 +238,7 @@ class build_ext(build_ext_orig):
     def build_swig(self, ext):
         self.announce("Building Swig", level=3)
         ext.library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
-        # ext.runtime_library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
+       # ext.runtime_library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
         # ext.runtime_library_dirs = ["@loader_path"]
         
         print(ext.library_dirs)
@@ -341,7 +347,7 @@ c3py = Extension("_c3",
                  # library_dirs=[os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')],
                  # runtime_library_dirs=["@loader_path/"],
                  # library_dirs=['build/lib*'],
-                 # runtime_library_dirs=['$ORIGIN/'],
+                 runtime_library_dirs= my_runtime_dirs, 
                  # library_dirs=[''],                 
                  include_dirs=["c3/lib_clinalg", 
                                "c3/lib_interface",
@@ -360,7 +366,7 @@ c3py = Extension("_c3",
                  extra_compile_args = ['-std=c99'],#, "-Wl,-rpath=@executable_path"],
                  # extra_link_args =  ["-Wl,-rpath,'$ORIGIN'"],
                  # extra_link_args =  ["-rpath=$ORIGIN"],
-                 extra_link_args =  ["-Wl,-rpath,@loader_path"],
+                 extra_link_args =  my_link_args, #[-Wl,-rpath,@loader_path"],
                  # extra_link_args =  ["-R$ORIGIN"],
                  libraries=["c3"]
 )
