@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 try:
-    import c3
+    import _c3 as c3
 except ImportError:
     try:
         C3HOME = os.environ['C3HOME']
@@ -15,7 +15,7 @@ except ImportError:
     if os.path.exists(C3HOME) is False:
         raise ImportError("Must have ${C3HOME}/build/wrappers/python directory structure")
     sys.path.insert(0, C3HOME)
-    import c3
+    import _c3 as c3
 
 import numpy as np
 import copy

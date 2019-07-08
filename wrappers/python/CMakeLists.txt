@@ -13,19 +13,13 @@ cmake_minimum_required (VERSION 3.10)
 
 # set_target_properties(PyWrapper PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-
 FIND_PACKAGE(SWIG REQUIRED)
 include(${SWIG_USE_FILE})
 
-# # swig_add_module(c3 python c3.i)
+# swig_add_module(c3 python c3swig/c3.i)
 
-FIND_PACKAGE(PythonLibs)
-include_directories(${PYTHON_INCLUDE_DIRS})
-
-swig_add_library(c3py
-  LANGUAGE python
-  SOURCES c3.i)
-# swig_link_libraries(c3py c3 ${python_lib})
+swig_add_library(c3 TYPE SHARED LANGUAGE python SOURCES c3swig/c3.i ${src})
+# swig_link_libraries(_c3 c3 ${python_lib})
 
 if (APPLE) 
 

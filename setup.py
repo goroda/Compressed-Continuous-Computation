@@ -147,7 +147,7 @@ class CMakeExtension(Extension):
 
 #         for extension in self.extensions:
 
-#             if extension.name == 'c3py':
+#             if extension.name == '_c3':
 
 #                 self.build_cmake(extension)
 
@@ -175,7 +175,8 @@ class CMakeExtension(Extension):
 #         # Below is just an example set of arguments for building Blender as a Python module
 
         
-#         self.spawn(['cmake', '-H'+str(SOURCE_DIR), '-B'+self.build_temp,
+#         self.spawn(['cmake', '-H'+str(SOURCE_DIR),
+#                     '-B'+self.build_temp,
 #                     '-DBUILD_TESTS=OFF',
 #                     '-DBUILD_EXAMPLES=OFF',
 #                     '-DBUILD_PROFILING=OFF',
@@ -187,40 +188,40 @@ class CMakeExtension(Extension):
 
 #         self.announce("Building binaries", level=3)
 
-#         self.spawn(["cmake", "--build", self.build_temp, "--target", "c3", '--','-j4'])
-#                     # "--config", "Release"])
+        # self.spawn(["cmake", "--build", self.build_temp, "--target", "c3", '--','-j4'])
+                    # "--config", "Release"])
 
-#         # Build finished, now copy the files into the copy directory
-#         # The copy directory is the parent directory of the extension (.pyd)
+        # Build finished, now copy the files into the copy directory
+        # The copy directory is the parent directory of the extension (.pyd)
 
-#         # self.announce("Moving built python module", level=3)
+        # self.announce("Moving built python module", level=3)
 
-#         # bin_dir = os.path.join(build_dir, 'bin', 'Release')
-#         # self.distribution.bin_dir = bin_dir
+        # bin_dir = os.path.join(build_dir, 'bin', 'Release')
+        # self.distribution.bin_dir = bin_dir
 
-#         # pyd_path = [os.path.join(bin_dir, _pyd) for _pyd in
-#         #             os.listdir(bin_dir) if
-#         #             os.path.isfile(os.path.join(bin_dir, _pyd)) and
-#         #             os.path.splitext(_pyd)[0].startswith(PACKAGE_NAME) and
-#         #             os.path.splitext(_pyd)[1] in [".pyd", ".so"]][0]
+        # pyd_path = [os.path.join(bin_dir, _pyd) for _pyd in
+        #             os.listdir(bin_dir) if
+        #             os.path.isfile(os.path.join(bin_dir, _pyd)) and
+        #             os.path.splitext(_pyd)[0].startswith(PACKAGE_NAME) and
+        #             os.path.splitext(_pyd)[1] in [".pyd", ".so"]][0]
 
-#         # shutil.move(pyd_path, extension_path)
+        # shutil.move(pyd_path, extension_path)
 
-#         # After build_ext is run, the following commands will run:
-#         # 
-#         # install_lib
-#         # install_scripts
-#         # 
-#         # These commands are subclassed above to avoid pitfalls that
-#         # setuptools tries to impose when installing these, as it usually
-#         # wants to build those libs and scripts as well or move them to a
-#         # different place. See comments above for additional information
+        # After build_ext is run, the following commands will run:
+        # 
+        # install_lib
+        # install_scripts
+        # 
+        # These commands are subclassed above to avoid pitfalls that
+        # setuptools tries to impose when installing these, as it usually
+        # wants to build those libs and scripts as well or move them to a
+        # different place. See comments above for additional information
         
 class build_ext(build_ext_orig):
 
     def run(self):
         for ext in self.extensions:
-            if ext.name == '_c3':
+            if ext.name == '_c3_notsure':
                 self.build_cmake(ext)
                 
         super().run()
@@ -264,53 +265,52 @@ pcback = Extension('pycback',
                    language='c',
                    extra_compile_args=['-std=c99'])
 
-c3py = Extension("c3py_wrap",
+c3py = Extension("_c3",
                  sources =["wrappers/python/c3swig/c3.i",
-                           # "lib_array/array.c",
-                           # "lib_superlearn/learning_options.c",
-                           # "lib_superlearn/objective_functions.c",
-                           # "lib_superlearn/parameterization.c",
-                           # "lib_superlearn/regress.c",
-                           # "lib_superlearn/superlearn.c",
-                           # "lib_superlearn/superlearn_util.c",
-                           # "lib_interface/approximate.c",
-                           # "lib_clinalg/diffusion.c",
-                           # "lib_clinalg/dmrg.c",
-                           # "lib_clinalg/dmrgprod.c",
-                           # "lib_clinalg/ft.c",
-                           # "lib_clinalg/indmanage.c",
-                           # "lib_clinalg/iterative.c",
-                           # "lib_clinalg/qmarray.c",
-                           # "lib_clinalg/quasimatrix.c",
-                           # "lib_fft/fft.c",
-                           # "lib_funcs/fapprox.c",
-                           # "lib_funcs/functions.c",
-                           # "lib_funcs/fwrap.c",
-                           # "lib_funcs/hpoly.c",
-                           # "lib_funcs/fourier.c",        
-                           # "lib_funcs/constelm.c",
-                           # "lib_funcs/kernels.c",
-                           # "lib_funcs/monitoring.c",
-                           # "lib_funcs/piecewisepoly.c",
-                           # "lib_funcs/pivoting.c",
-                           # "lib_funcs/polynomials.c",
-                           # "lib_funcs/space.c",
-                           # "lib_linalg/linalg.c",
-                           # "lib_linalg/matrix_util.c",
-                           # "lib_optimization/optimization.c",
-                           # "lib_quadrature/legquadrules2.c",
-                           # "lib_quadrature/legquadrules.c",
-                           # "lib_quadrature/quadrature.c",
-                           # "lib_stringmanip/stringmanip.c",
-                           # "lib_tensdecomp/candecomp.c",
-                           # "lib_tensdecomp/convert.c",
-                           # "lib_tensdecomp/cross.c",
-                           # "lib_tensdecomp/cross.h
-                           # "lib_tensdecomp/tensortrain.c",
-                           # "lib_tensdecomp/tt_integrate.c",
-                           # "lib_tensdecomp/tt_multilinalg.c",
-                           # "lib_tensor/tensor.c",
-                           # "lib_probability/probability.c",
+                           # "c3/lib_array/array.c",
+                           # "c3/lib_superlearn/learning_options.c",
+                           # "c3/lib_superlearn/objective_functions.c",
+                           # "c3/lib_superlearn/parameterization.c",
+                           # "c3/lib_superlearn/regress.c",
+                           # "c3/lib_superlearn/superlearn.c",
+                           # "c3/lib_superlearn/superlearn_util.c",
+                           # "c3/lib_interface/approximate.c",
+                           # "c3/lib_clinalg/diffusion.c",
+                           # "c3/lib_clinalg/dmrg.c",
+                           # "c3/lib_clinalg/dmrgprod.c",
+                           # "c3/lib_clinalg/ft.c",
+                           # "c3/lib_clinalg/indmanage.c",
+                           # "c3/lib_clinalg/iterative.c",
+                           # "c3/lib_clinalg/qmarray.c",
+                           # "c3/lib_clinalg/quasimatrix.c",
+                           # "c3/lib_fft/fft.c",
+                           # "c3/lib_funcs/fapprox.c",
+                           # "c3/lib_funcs/functions.c",
+                           # "c3/lib_funcs/fwrap.c",
+                           # "c3/lib_funcs/hpoly.c",
+                           # "c3/lib_funcs/fourier.c",        
+                           # "c3/lib_funcs/constelm.c",
+                           # "c3/lib_funcs/kernels.c",
+                           # "c3/lib_funcs/monitoring.c",
+                           # "c3/lib_funcs/piecewisepoly.c",
+                           # "c3/lib_funcs/pivoting.c",
+                           # "c3/lib_funcs/polynomials.c",
+                           # "c3/lib_funcs/space.c",
+                           # "c3/lib_linalg/linalg.c",
+                           # "c3/lib_linalg/matrix_util.c",
+                           # "c3/lib_optimization/optimization.c",
+                           # "c3/lib_quadrature/legquadrules2.c",
+                           # "c3/lib_quadrature/legquadrules.c",
+                           # "c3/lib_quadrature/quadrature.c",
+                           # "c3/lib_stringmanip/stringmanip.c",
+                           # "c3/lib_tensdecomp/candecomp.c",
+                           # "c3/lib_tensdecomp/convert.c",
+                           # "c3/lib_tensdecomp/cross.c",
+                           # "c3/lib_tensdecomp/tensortrain.c",
+                           # "c3/lib_tensdecomp/tt_integrate.c",
+                           # "c3/lib_tensdecomp/tt_multilinalg.c",
+                           # "c3/lib_tensor/tensor.c",
+                           # "c3/lib_probability/probability.c",
                  ],
                  swig_opts=["-py3",
                              "-Ic3"],
@@ -324,25 +324,33 @@ c3py = Extension("c3py_wrap",
                                "c3/lib_funcs",
                                "c3/lib_linalg",
                                "c3/lib_array",
+                               "c3/lib_fft",
                                "c3/lib_quadrature",
                                "c3/lib_optimization",
                                "c3/lib_stringmanip",
                                "c3/lib_superlearn",
+                               "c3/lib_tensor",                               
                                "c3/lib_probability",
                                numpy_include,
                  ],
                  extra_compile_args = ['-std=c99'],
-                 extra_link_args = ['-Xlinker -rpath build/lib.macosx-10.6-x86_64-3.6'],
-                 libraries=["c3"])
+                 libraries=["c3"]
+)
 
-setup(name='c3py_wrap',
+setup(name='c3py',
+    author="Alex Gorodetsky",
+    author_email="alex@alexgorodetsky.com", 
       version='0.1',
-      packages=find_packages(),
-      ext_modules=[pcback, CMakeExtension(name="_c3"), c3py],
+      package_dir={'': 'wrappers/python/c3py'},
+      # packages=find_packages(),
+      # packages=['c3py'],
+      # ext_modules=[pcback, CMakeExtension(name="_c3"), c3py],
+      py_modules=['c3py'],
+      ext_modules=[pcback, CMakeExtension(name="_c3_notsure"), c3py],
       # ext_modules=[pcback],
       cmdclass={
           'build_ext' : build_ext,
-      #     # 'build_ext': BuildCMakeExt
+          # 'build_ext': BuildCMakeExt
       #     # 'install_data': InstallCMakeLibsData,
       #     # 'install_lib': InstallCMakeLibs,
       #     # 'install_scripts': InstallCMakeScripts
