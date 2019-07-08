@@ -26,13 +26,14 @@ In addition to the above capabilities, which are unique to the C3 package, I als
 Documentation of most functions is provided by Doxygen here: 
 http://alexgorodetsky.com/c3doc/html/
 
-## Installation / Getting started
+### Installation / Getting started
 
 The dependencies for this code are
    1) BLAS
    2) LAPACK
    3) SWIG (if building non-C interfaces)
 
+## From Source
 ```shell
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
 cd c3
@@ -49,22 +50,17 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/your/choice
 make install
 ```
 
-### Python interface
+## Python interface
 
-I have created a partial python interface to the library. This library requires SWIG. To compile and install the python wrappers see the CMake option MAKE_PYTHON_WRAPPERS below. 
+You can install the python interface using the pip utility through
 
-The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
-
-To enable proper access to the python library add the following to your environmental variables
 ``` shell
-export C3HOME=~/Software/c3
-export PYC3=${C3HOME}/wrappers/python
-export PYTHONPATH=$PYTHONPATH:${PYC3}
+pip install c3py
 ```
 
-Then, one can run the examples from the root c3 directory as 
+One can obtain some examples in the pyexamples subdirectory
 ``` shell
-python wrappers/python/pytest.py
+python pywrappers/pytest.py
 ```
 
 ## Configuration Options
@@ -81,16 +77,31 @@ Default: `OFF'
 
 Using this option can toggle whether or not to build each sub-library into its own library
 
-#### MAKE_PYTHON_WRAPPERS
+#### BUILD_TESTS
 Default: `OFF'
 
-Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html).
+Using this option can toggle whether or not to build unit tests
 
-After specifying this option, the commands to compile the library and wrappers are
-``` shell
-make
-make PyWrapper
-```
+#### BUILD_EXAMPLES
+Default: `OFF'
+
+Using this option can toggle whether or not to compile exampels
+
+#### BUILD_PROFILING
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the profiling executables
+
+#### BUILD_BENCHMARKS
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the benchmarks tests
+
+#### BUILD_UTILITIES
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the utilities
+
 
 ## Systems I have tested on
 
