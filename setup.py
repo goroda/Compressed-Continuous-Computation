@@ -27,6 +27,8 @@ except AttributeError:
 PACKAGE_NAME = "c3py"
 SOURCE_DIR = pathlib.Path().absolute()
 
+long_decription="The Compressed Continuous Computation (C3) package is intended to make it easy to perform continuous linear and multilinear algebra with multidimensional functions. It works by representing multidimensional functions in a low-rank format. Common tasks include taking continuous matrix decompositions of vector- or matrix-valued functions, adding or multiplying functions together, integrating multidimensional functions, and much much more."
+
 class CMakeExtension(Extension):
     """
     An extension to run the cmake build
@@ -137,8 +139,9 @@ c3py = Extension("_c3",
 setup(name='c3py',
       author="Alex Gorodetsky",
       author_email="alex@alexgorodetsky.com", 
-      version='0.1',
+      version='0.0.1',
       description="Compressed Continuous Computation library in Python",
+      long_description=long_decription,
       keywords="highd-approximation machine-learning uncertainty-quantification tensors",
       package_dir={'': 'wrappers/python/c3py'},
       py_modules=['c3py'],
@@ -150,14 +153,14 @@ setup(name='c3py',
       install_requires=[
           'numpy',
       ],
-      license='BSD',
+      # license='BSD',
       classifiers=[
-          "License :: BSD",
           "Natural Language :: English",
           "Programming Language :: C",
           "Programming Language :: Python",
-          "Programming Language :: Python :: 3,"
-          "Topic :: Approximation"
+          "Programming Language :: Python :: 3 :: Only",
+          "License :: OSI Approved :: BSD License",
+          "Topic :: Scientific/Engineering :: Mathematics"
       ]
 )
 
