@@ -370,96 +370,25 @@ setup(name='c3py',
       author_email="alex@alexgorodetsky.com", 
       version='0.1',
       description="Compressed Continuous Computation library in Python",
-      keywords="highd-approximation machine-learning uncertainty-quantification",
+      keywords="highd-approximation machine-learning uncertainty-quantification tensors",
       package_dir={'': 'wrappers/python/c3py'},
-      # packages=find_packages(),
-      # packages=['c3py'],
-      # ext_modules=[pcback, CMakeExtension(name="_c3"), c3py],
       py_modules=['c3py'],
       ext_modules=[CMakeExtension(name="_c3_notsure"),
                    pcback, c3py],
-      # ext_modules=[pcback],
       cmdclass={
           'build_ext' : build_ext,
-          # 'build_ext': BuildCMakeExt
-      #     # 'install_data': InstallCMakeLibsData,
-      #     # 'install_lib': InstallCMakeLibs,
-      #     # 'install_scripts': InstallCMakeScripts
       },
+      install_requires=[
+          'numpy',
+      ],
+      license='BSD',
       classifiers=[
           "License :: BSD",
           "Natural Language :: English",
           "Programming Language :: C",
           "Programming Language :: Python",
           "Programming Language :: Python :: 3,"
+          "Topic :: Approximation"
       ]
 )
-    
 
-
-# setup(
-#       name = "c3",
-#       version = "1.0",
-#       ext_modules=[c3ext]
-# )
-# c3 = Extension('_c3',
-#                sources=['c3swig/c3_wrap.c']
-#                ['c3.i'],
-#                include_dirs = [
-#                    numpy_include,
-#                    '../../include',
-#                    '../../src/lib_array',
-#                    '../../src/lib_clinalg',
-#                    '../../src/lib_funcs',
-#                    '../../src/lib_optimization',
-#                    '../../src/lib_linalg',
-#                    '../../src/lib_probability',
-#                    '../../src/lib_quadrature',
-#                    '../../src/lib_stringmanip',
-#                    '../../src/lib_superlearn',
-#                    '../../src/lib_interface',
-#                ],
-#                define_macros =[('COMPILE_WITH_PYTHON',None)],
-#                undef_macros = [],
-#                language='c',
-#                runtime_library_dirs=['../../build/src'],
-#                library_dirs = ['../../build/src'],
-#                # extra_link_args=['-Wl,-R/Users/aagorod/Software/c3/build/src'],
-#                # library_dirs = ['/Users/aagorod/Software/c3/lib'],
-#                libraries = ['c3'],
-#                extra_compile_args = ['-std=c99'],
-# )    
-
-
-# setup(
-#     name="c3py",
-#     version="1.0",
-#     packages=find_packages(),
-    
-#     py_modules=["c3py.py"],
-
-#     author="Alex Gorodetsky",
-#     author_email="alex@alexgorodetsky.com",
-#     description="This is the Compressed Continuous Computation library in Python",
-#     keywords="highd-approximation machine-learning uncertainty-quantification",
-#     url="",
-#     project_urls={
-#         "Source Code": "https://github.com/goroda/compressed-continuous-computation"
-#     },
-#     classifiers=[
-#         'License:BSD'
-#     ]
-    
-# )
-
-
-# # pcback = Extension('pycback',
-# #                    sources = ['python_caller.c'],
-# #                    include_dirs = [
-# #                        numpy_include,
-# #                    ],
-# #                    language='c',
-# #                    extra_compile_args=['-std=c99'])
-
-
-# ~/Software/c3_installed/lib/c3/

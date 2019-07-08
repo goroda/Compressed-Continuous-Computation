@@ -58,5 +58,5 @@ fly*
 *.desktop
 c3_builded*
 c3/CMakeFile*
-dist
+/dist/
 *egg*
