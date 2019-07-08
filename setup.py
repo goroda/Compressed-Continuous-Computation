@@ -27,7 +27,10 @@ except AttributeError:
 PACKAGE_NAME = "c3py"
 SOURCE_DIR = pathlib.Path().absolute()
 
-long_decription="The Compressed Continuous Computation (C3) package is intended to make it easy to perform continuous linear and multilinear algebra with multidimensional functions. It works by representing multidimensional functions in a low-rank format. Common tasks include taking continuous matrix decompositions of vector- or matrix-valued functions, adding or multiplying functions together, integrating multidimensional functions, and much much more."
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory,"README.md"), encoding='utf-8') as f:
+    long_description = f.read()
 
 class CMakeExtension(Extension):
     """
@@ -56,8 +59,6 @@ class build_ext(build_ext_orig):
     def build_swig(self, ext):
         self.announce("Building Swig", level=3)
         ext.library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
-       # ext.runtime_library_dirs = [os.path.join("build", s) for s in os.listdir("build") if os.path.splitext(s)[0].startswith('lib')]
-        # ext.runtime_library_dirs = ["@loader_path"]
         
         print(ext.library_dirs)
         print(ext.runtime_library_dirs)
@@ -139,10 +140,12 @@ c3py = Extension("_c3",
 setup(name='c3py',
       author="Alex Gorodetsky",
       author_email="alex@alexgorodetsky.com", 
-      version='0.0.1',
-      description="Compressed Continuous Computation library in Python",
-      long_description=long_decription,
+      version='0.0.2',
+      description="Compressed Continuous Computation Library in Python",
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       keywords="highd-approximation machine-learning uncertainty-quantification tensors",
+      url="https://github.com/goroda/compressed-continuous-computation",
       package_dir={'': 'wrappers/python/c3py'},
       py_modules=['c3py'],
       ext_modules=[CMakeExtension(name="_c3_notsure"),
