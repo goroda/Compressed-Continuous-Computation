@@ -47,8 +47,8 @@ profiling/regress/bin/*
 profiling/regress/*/*.txt
 
 wrappers/python/build*
-wrappers/python/c3.py
-wrappers/python/c3_wrap.c
+wrappers/python/c3swig/c3.py
+wrappers/python/c3swig/c3_wrap.c
 
 wrappers/python/callback/build*
 
