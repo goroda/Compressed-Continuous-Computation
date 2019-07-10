@@ -4,18 +4,8 @@ from __future__ import print_function
 
 import sys
 import os
-try:
-    import _c3 as c3
-except ImportError:
-    try:
-        C3HOME = os.environ['C3HOME']
-    except KeyError:
-        print("Must set environ variable C3HOME")
-    C3HOME = os.path.join(C3HOME, "build", "wrappers", "python")
-    if os.path.exists(C3HOME) is False:
-        raise ImportError("Must have ${C3HOME}/build/wrappers/python directory structure")
-    sys.path.insert(0, C3HOME)
-    import _c3 as c3
+
+import _c3 as c3
 
 import numpy as np
 import copy
@@ -138,6 +128,10 @@ class FunctionTrain(object):
             elif ftype == "hermite":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.HERMITE))
                 c3.ope_opts_set_nparams(c3_ope_opts[ii], nparam)
+                c3.ope_opts_set_coeffs_check(c3_ope_opts[ii], coeff_check)
+                c3.ope_opts_set_start(c3_ope_opts[ii], nparam)
+                if np.isinf(maxnum) is False:
+                    c3.ope_opts_set_maxnum(c3_ope_opts[ii], maxnum)
                 c3.ope_opts_set_tol(c3_ope_opts[ii], tol)
             elif ftype == "fourier":
                 c3_ope_opts.append(c3.ope_opts_alloc(c3.FOURIER))

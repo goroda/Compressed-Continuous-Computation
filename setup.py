@@ -70,8 +70,9 @@ class build_ext(build_ext_orig):
         ext.extra_compile_args=['-install_name @rpath/libc3.dylib']
         # print(ext.extra_compile_args)        
         # exit(1)
-        cwd = pathlib.Path().absolute()
 
+        print("Creating Tempory File")
+        cwd = pathlib.Path().absolute()
         build_temp = pathlib.Path(self.build_temp)
         build_temp.mkdir(parents=True, exist_ok=True)
         extdir = pathlib.Path(self.get_ext_fullpath(ext.name))
@@ -94,6 +95,7 @@ class build_ext(build_ext_orig):
             '--', '-j4'
         ]
 
+        print("Temporary file = ", build_temp)
         os.chdir(str(build_temp))
         self.spawn(['cmake', str(cwd)] + cmake_args)
         if not self.dry_run:
@@ -140,7 +142,7 @@ c3py = Extension("_c3",
 setup(name='c3py',
       author="Alex Gorodetsky",
       author_email="alex@alexgorodetsky.com", 
-      version='0.0.2',
+      version='0.0.3',
       description="Compressed Continuous Computation Library in Python",
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -154,7 +156,7 @@ setup(name='c3py',
           'build_ext' : build_ext,
       },
       install_requires=[
-          'numpy',
+          'numpy', #'cmake', 
       ],
       # license='BSD',
       classifiers=[

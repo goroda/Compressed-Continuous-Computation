@@ -122,6 +122,26 @@ then the above error might occur. To remedy this error install the swig-python p
 sudo port install swig-python
 ```
 
+### Numpy errors
+
+Sometimes you may see the following errors
+
+``` shell
+_frozen_importlib:219: RuntimeWarning: numpy.ufunc size changed, may indicate binary incompatibility. Expected 216, got 192
+```
+
+or
+
+``` shell
+RuntimeError: The current Numpy installation ('/Users/alex/anaconda3/envs/pytorch/lib/python3.6/site-packages/numpy/__init__.py') fails to pass simple sanity checks. This can be caused for example by incorrect BLAS library being linked in, or by mixing package managers (pip, conda, apt, ...). Search closed numpy issues for similar problems.
+```
+
+One way that I have found (https://stackoverflow.com/a/47975375) that seems to solve this is to upgrade numpy by running the following command. I am really not sure why this works ...
+
+``` shell
+sudo pip install numpy --upgrade --ignore-installed
+```
+
 ## Coding practices
 
 I aim to document (with Doxygen) every function available to the user and provide a unit test. Furthermore, I won't push code to the master branch that has memory leaks. I am constantly looking for more suggestions for improving the robustness of the code if any issues are encountered. 
