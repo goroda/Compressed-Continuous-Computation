@@ -32,6 +32,9 @@ The dependencies for this code are
    1) BLAS
    2) LAPACK
    3) SWIG (if building non-C interfaces)
+   4) CMake
+   
+Usually, these dependencies cnan be installed via the package manager of your system (apt or brew or port)
 
 ## From Source
 ```shell
@@ -55,12 +58,20 @@ make install
 You can install the python interface using the pip utility through
 
 ``` shell
+pip install pathlib
 pip install c3py
 ```
 
 One can obtain some examples in the pyexamples subdirectory
 ``` shell
 python pywrappers/pytest.py
+```
+
+An alternative way to install it is to download the git repository and then run
+
+``` shell
+python setup.py build
+python setup.py install
 ```
 
 ## Configuration Options
@@ -121,6 +132,12 @@ then the above error might occur. To remedy this error install the swig-python p
 ```shell
 sudo port install swig-python
 ```
+
+### (On Mac OS X) Error: stdio.h not found
+
+This happens on some updated versions of Mac OS X. To solve this, the following StackOverflow thread seems to work
+
+https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 
 ### Numpy errors
 

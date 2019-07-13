@@ -156,7 +156,7 @@ setup(name='c3py',
           'build_ext' : build_ext,
       },
       install_requires=[
-          'numpy', #'cmake', 
+          'numpy', 'scipy', 'matplotlib', 'pathlib'
       ],
       # license='BSD',
       classifiers=[
