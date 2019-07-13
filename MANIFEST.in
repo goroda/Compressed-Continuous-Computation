@@ -4,8 +4,20 @@ include README.md
 include LICENSE
 include NOTES
 include contributors.txt
+include CMakeLists.txt
+include c3.cmake
+
+exclude c3/cmake_install.cmake
 
 # sources
-recrusive-include c3 
-recursive-include wrappers/python
-recursive-include pyexamples
+recursive-include c3 *.c *.h *.txt
+recursive-include wrappers/python *.py *.c *.i
+recursive-include pyexamples *
+
+global-exclude *~
+global-exclude .DS_Store
+
+prune c3/CMakeFiles
+prune wrappers/python/c3py/c3py.egg-info
+
+
