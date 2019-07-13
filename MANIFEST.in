@@ -1,4 +1,11 @@
+include MANIFEST.in
+include setup.py
 include README.md
 include LICENSE
 include NOTES
 include contributors.txt
+
+# sources
+recrusive-include c3 
+recursive-include wrappers/python
+recursive-include pyexamples

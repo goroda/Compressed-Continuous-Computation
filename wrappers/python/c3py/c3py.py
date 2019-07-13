@@ -182,7 +182,10 @@ class FunctionTrain(object):
                 c3.pw_poly_opts_set_maxorder(c3_ope_opts[-1], nparam)
                 c3.pw_poly_opts_set_coeffs_check(c3_ope_opts[-1], coeff_check)
                 c3.pw_poly_opts_set_tol(c3_ope_opts[-1], tol)
-                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**8)
+                # c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**8)
+                # c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**3)
+                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**2)                
+                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], (ub-lb))
                 c3.pw_poly_opts_set_nregions(c3_ope_opts[-1], nregions)
             else:
                 raise AttributeError('No options can be specified for function type '
