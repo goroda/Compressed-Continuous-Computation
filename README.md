@@ -74,6 +74,16 @@ python setup.py build
 python setup.py install
 ```
 
+One workflow that works well is to install this package in a new virtual environment. For instance using conda one can run the following (from the c3 directory)
+
+``` shell
+conda create -n c3pyenv python=3.7
+conda activate c3pyenv
+pip install numpy
+python setup.py build
+python setup.py install
+```
+
 ## Configuration Options
 
 #### BUILD_STATIC_LIB
