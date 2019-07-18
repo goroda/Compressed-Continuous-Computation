@@ -82,7 +82,7 @@ typedef long unsigned int size_t;
 };
 
 
-# reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function
+/* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
 extern void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * args);
 
