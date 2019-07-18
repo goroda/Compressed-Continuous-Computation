@@ -135,7 +135,7 @@ c3py = Extension("_c3",
 setup(name='c3py',
       author="Alex Gorodetsky",
       author_email="alex@alexgorodetsky.com", 
-      version='0.0.4.3',
+      version='0.0.5',
       description="Compressed Continuous Computation Library in Python",
       long_description=long_description,
       long_description_content_type="text/markdown",
@@ -149,7 +149,7 @@ setup(name='c3py',
           'build_ext' : build_ext,
       },
       install_requires=[
-          'numpy', 'scipy', 'matplotlib', 'pathlib'
+          'numpy', 'pathlib'
       ],
       # license='BSD',
       classifiers=[
