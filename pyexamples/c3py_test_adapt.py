@@ -4,6 +4,7 @@ import numpy as np
 DIM = 5  # number of features
 def func2(x, param=None):
     # print("x = ",x)
+    # print("param = ", param)
     # print("shape ", x.shape)
     if param is not None:
         # print("param = ", param)
@@ -26,21 +27,22 @@ if __name__ == "__main__":
     ## Run a rank-adaptive regression routine to approximate the first function
     ft = c3py.FunctionTrain(DIM)
     for ii in range(DIM):
-        ft.set_dim_opts(ii, "legendre", lb[ii], ub[ii],
-                        nparam[ii])
+        ft.set_dim_opts(ii, "legendre", lb[ii], ub[ii], nparam[ii])
 
     verbose = 1
     init_rank = 2
-    adapt = 1
+    adapt = 0
     maxrank = 10
     kickrank = 2
-    roundtol = 1e-8
+    roundtol = 1e-10
     maxiter = 5
     scales = [2]*DIM; scales[2] = 0.2
+    scales = None
     ft.build_approximation(func2,scales,init_rank,verbose,adapt,
                            maxrank=maxrank, round_tol=roundtol,
                            kickrank=kickrank, maxiter=maxiter)
 
+    print("done")
     ## Generate test point
     test_pt = np.random.rand(DIM)*2.0-1.0
     ft_adapt_eval = ft.eval(test_pt)
@@ -54,8 +56,7 @@ if __name__ == "__main__":
 
     ft_loaded = c3py.FunctionTrain(DIM)
     for ii in range(DIM):
-        ft_loaded.set_dim_opts(ii, "legendre", lb[ii], ub[ii],
-                        nparam[ii])
+        ft_loaded.set_dim_opts(ii, "legendre", lb[ii], ub[ii], nparam[ii])
     ft_loaded.load(filename)
 
     ftdiff = ft - ft_loaded
@@ -73,7 +74,6 @@ if __name__ == "__main__":
 
     ft3.round(eps=1e-3)
     print("ft3 rounded ranks = ", ft3.get_ranks())
-
 
     inner_product = ft.inner(ft)
     print("Inner product = ", inner_product)

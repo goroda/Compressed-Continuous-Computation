@@ -87,7 +87,8 @@ class build_ext(build_ext_orig):
                        '-DBUILD_PROFILING=OFF',
                        '-DBUILD_BENCHMARKS=OFF',                    
                        '-DBUILD_UTILITIES=OFF',
-                       '-DMAKE_PYTHON_WRAPPERS=ON']
+                       # '-DMAKE_PYTHON_WRAPPERS=ON'
+        ]
 
         # example of build args
         build_args = [
@@ -102,20 +103,12 @@ class build_ext(build_ext_orig):
             self.spawn(['cmake', '--build', '.'] + build_args)
         os.chdir(str(cwd))
 
-pcback = Extension('pycback',
-                   sources = ['wrappers/python/callback/python_caller.c'],
-                   include_dirs = [
-                       numpy_include,
-                   ],
-                   language='c',
-                   extra_compile_args=['-std=c99'])
-
 c3py = Extension("_c3",
                  sources =["wrappers/python/c3swig/c3.i",
                  ],
                  swig_opts=["-py3",
                              "-Ic3"],
-                 define_macros =[('COMPILE_WITH_PYTHON',True)],
+                 # define_macros =[('COMPILE_WITH_PYTHON',True)],
                  undef_macros = [],
                  language='c',                 
                  runtime_library_dirs= my_runtime_dirs, 
@@ -151,7 +144,7 @@ setup(name='c3py',
       package_dir={'': 'wrappers/python/c3py'},
       py_modules=['c3py'],
       ext_modules=[CMakeExtension(name="_c3_notsure"),
-                   pcback, c3py],
+                   c3py],
       cmdclass={
           'build_ext' : build_ext,
       },

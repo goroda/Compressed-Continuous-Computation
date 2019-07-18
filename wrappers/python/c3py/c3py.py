@@ -5,11 +5,11 @@ from __future__ import print_function
 import sys
 import os
 
+import numpy as np
 import _c3 as c3
 
-import numpy as np
 import copy
-import pycback as pcb
+
 import atexit
 # import contextlib
 
@@ -289,15 +289,15 @@ class FunctionTrain(object):
         c3.free_dd(self.dim, start_fibers)
         return c3a, onedopts, low_opts, optnodes
 
-    def build_approximation(self, f, fargs, init_rank, verbose, adapt, maxrank=10, cross_tol=1e-8,
+    def build_approximation(self, f, fargs, init_rank, verbose, adapt,
+                            maxrank=10, cross_tol=1e-8,
                             round_tol=1e-8, kickrank=5, maxiter=5):
         """ Build an adaptive approximation of *f* """
 
-        fobj = pcb.alloc_cobj()
-        pcb.assign(fobj, self.dim, f, fargs)
         fw = c3.fwrap_create(self.dim, "python")
-        c3.fwrap_set_pyfunc(fw, fobj)
-        c3a, onedopts, low_opts, optnodes = self._assemble_cross_args(verbose, init_rank,
+        c3.fwrap_set_pyfunc(fw, f, fargs)
+        c3a, onedopts, low_opts, optnodes = self._assemble_cross_args(verbose,
+                                                                      init_rank,
                                                             maxrank=maxrank,
                                                             cross_tol=cross_tol,
                                                             round_tol=round_tol,
@@ -308,7 +308,6 @@ class FunctionTrain(object):
 
         self._free_approx_params(c3a, onedopts, low_opts, optnodes)
         c3.fwrap_destroy(fw)
-
 
     def build_data_model(self, ndata, xdata, ydata, alg="AIO", obj="LS", verbose=0,
                          opt_type="BFGS", opt_gtol=1e-10, opt_relftol=1e-10,

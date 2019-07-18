@@ -35,10 +35,6 @@
 
 //Code
 
-
-
-
-
 /** \file fwrap.c
  * Provides basic routines for wrapping functions
  */
@@ -51,83 +47,6 @@
 
 #include "array.h"
 #include "fwrap.h"
-
-
-#ifdef COMPILE_WITH_PYTHON
-
-struct Obj
-{
-    size_t dim;
-    void * f;
-    void * params;
-};
-
-PyMODINIT_FUNC initiate_numpy(void)
-{
-    Py_Initialize();
-    import_array();
-    #if PY_MAJOR_VERSION >= 3
-    return 0;
-    #endif
-}
-
-
-static int eval_py_obj(size_t N, const double * x, double * out, void * obj_void)
-{
-    struct Obj * obj = obj_void;
-    size_t dim = obj->dim;
-    
-    npy_intp dims[2];
-    dims[0] = (npy_intp) N;
-    dims[1] = (npy_intp) dim;
-
-    // Setup inputs
-    PyObject * pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(double*)x);
-    
-    // Call function
-    PyObject * pyResult = PyObject_CallFunctionObjArgs(obj->f,pyX,obj->params,NULL);
-    PyArrayObject * arr = (PyArrayObject*)PyArray_ContiguousFromAny(pyResult,NPY_DOUBLE,1,1);
-
-    // Ensure outputs
-    size_t ndims = (size_t)PyArray_NDIM(arr);
-    if (ndims > 1){
-        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return a flattened (1d) array\n");
-        return 1;
-    }
-    npy_intp * dimss  = (npy_intp*)PyArray_DIMS(arr);
-
-    if ((size_t)dimss[0] != N){
-        PyErr_SetString(PyExc_TypeError,
-                        "Wrapped python function must return an array with the same number of rows as input\n");
-        return 1;
-    }
-
-    // copy data to output
-    double * vals = (double*)PyArray_DATA(arr);
-    for (size_t ii = 0; ii < N; ii++){
-        out[ii] = vals[ii];
-    }
-
-    Py_XDECREF(arr);
-    Py_XDECREF(pyX);
-    Py_XDECREF(pyResult);
-    
-    return 0;
-}
-
-int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args)
-{
-
-    /* PyObject * py_obj = args; */
-    /* printf("c3py_wrapped_eval\n"); */
-    struct Obj * obj = args;
-    
-    int res = eval_py_obj(N,x,out,obj);
-    
-    return res;
-}
-#endif /* COMPILE_WITH_PYTHON */
-
 
 typedef enum {ND=0, INTND, VEC, MOVEC, ARRVEC, NUMFT} Ftype; 
 
@@ -202,6 +121,13 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
 
     fw->interface = 0;
     fw->d = dim;
+    fw->evalfunc = 0;
+    fw->fiber_approx = 0;
+    fw->fiber_dim = 0;
+    fw->nfibers = 0;
+    fw->fiber_vals = NULL;
+    fw->onfiber = 0;
+    
     if ( (strcmp(type,"general") == 0) || (type == NULL)){
         fw->ftype = ND;
     }
@@ -211,13 +137,10 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
     else if ( (strcmp(type,"general-vec") == 0)){
         fw->ftype = VEC;
     }
-    #ifdef COMPILE_WITH_PYTHON
     else if ( (strcmp(type,"python") == 0)){
-        initiate_numpy();
         fw->ftype = VEC;
         fw->interface = 1;
     }
-    #endif
     else if ( (strcmp(type,"mo-vec") == 0)){
         fw->ftype = MOVEC;
     }
@@ -228,16 +151,13 @@ struct Fwrap * fwrap_create(size_t dim, const char * type)
         fprintf(stderr,"Wrapped function: unrecognized function type %s\n",type);
         exit(1);
     }
-
-    fw->evalfunc = 0;
-
-
-    fw->fiber_approx = 0;
-    fw->fiber_dim = 0;
-    fw->nfibers = 0;
-    fw->fiber_vals = NULL;
-    fw->onfiber = 0;
     return fw;
+}
+
+size_t fwrap_get_d(const struct Fwrap * fwrap)
+{
+    assert (fwrap != NULL);
+    return fwrap->d;
 }
 
 int fwrap_get_type(const struct Fwrap * fwrap)
@@ -289,21 +209,6 @@ void fwrap_set_fvec(struct Fwrap * fwrap,
     fwrap->fvec = f;
     fwrap->fargs =arg;
 }
-
-#ifdef COMPILE_WITH_PYTHON
-/***********************************************************//**
-    Set a python function
-***************************************************************/
-void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject * args)
-{
-
-    
-    struct Obj * obj = PyCapsule_GetPointer(args,NULL);
-    /* printf("Got obj\n"); */
-    fwrap->fvec = c3py_wrapped_eval;
-    fwrap->fargs = obj;
-}
-#endif
 
 /***********************************************************//**
     Set the multi output vectorized function

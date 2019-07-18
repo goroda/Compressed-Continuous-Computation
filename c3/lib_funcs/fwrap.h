@@ -47,6 +47,7 @@
 
 struct Fwrap;
 struct Fwrap * fwrap_create(size_t, const char *);
+size_t fwrap_get_d(const struct Fwrap * fwrap);
 int fwrap_get_type(const struct Fwrap *);
 void fwrap_set_f(struct Fwrap *, double(*)(const double*,void*),void*);
 void fwrap_set_findex(struct Fwrap *,double(*)(const size_t*,void*),void*);
@@ -82,16 +83,6 @@ int fwrap_eval_fiber(size_t, const void *, double *, void *);
 
 // Interface stuff
 
-#ifdef COMPILE_WITH_PYTHON
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <Python.h>
-#include "numpy/arrayobject.h"
-#include "numpy/ndarraytypes.h"
-
-int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
-void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
-
-#endif
 
 
 #endif

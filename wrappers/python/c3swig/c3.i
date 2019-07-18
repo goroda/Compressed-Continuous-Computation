@@ -6,46 +6,6 @@
     #define SWIG_FILE_WITH_INIT
 
     #include <Python.h>
-/*     #include "lib_interface/approximate.h" */
-/*     #include "lib_array/array.h" */
-    
-/* #include "lib_stringmanip/stringmanip.h" */
-/* #include "lib_superlearn/regress.h" */
-/* #include "lib_superlearn/learning_options.h" */
-/* #include "lib_superlearn/objective_functions.h" */
-/* #include "lib_superlearn/parameterization.h" */
-/* #include "lib_superlearn/superlearn.h" */
-/* #include "lib_interface/c3_interface.h" */
-/* #include "lib_clinalg/diffusion.h" */
-/* #include "lib_clinalg/dmrg.h" */
-/* #include "lib_clinalg/dmrgprod.h" */
-/* #include "lib_clinalg/ft.h" */
-/* #include "lib_clinalg/indmanage.h" */
-/* #include "lib_clinalg/lib_clinalg.h" */
-/* #include "lib_clinalg/qmarray.h" */
-/* #include "lib_clinalg/quasimatrix.h" */
-/* #include "lib_funcs/fapprox.h" */
-/* #include "lib_funcs/functions.h" */
-/* #include "lib_funcs/fwrap.h" */
-/* #include "lib_funcs/hpoly.h" */
-/* #include "lib_funcs/legtens.h" */
-/* #include "lib_funcs/lib_funcs.h" */
-/* #include "lib_funcs/linelm.h" */
-/* #include "lib_funcs/kernels.h" */
-/* #include "lib_funcs/monitoring.h" */
-/* #include "lib_funcs/piecewisepoly.h" */
-/* #include "lib_funcs/pivoting.h" */
-/* #include "lib_funcs/polynomials.h" */
-/* #include "lib_funcs/space.h" */
-/* #include "lib_linalg/lib_linalg.h" */
-/* #include "lib_linalg/linalg.h" */
-/* #include "lib_linalg/matrix_util.h" */
-/* #include "lib_optimization/lib_optimization.h" */
-/* #include "lib_optimization/optimization.h" */
-/* #include "lib_probability/lib_probability.h" */
-/* #include "lib_probability/probability.h" */
-/* #include "lib_quadrature/quadrature.h" */
-         
     #include "approximate.h"
     #include "array.h"
     #include "stringmanip.h"
@@ -88,17 +48,12 @@
     #include "optimization.h"
     #include "quadrature.h"
 
-    int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
-    void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
-
     typedef long unsigned int size_t;
+
 %}
 
 
 typedef long unsigned int size_t;
-int c3py_wrapped_eval(size_t N, const double * x, double * out, void * args);
-void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
-
 
 %include "numpy.i"
 
@@ -125,6 +80,98 @@ void fwrap_set_pyfunc(struct Fwrap *, PyObject *);
 %apply (int DIM1, size_t* IN_ARRAY1) {
     (size_t leni, const size_t * xi) 
 };
+
+
+extern void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * args);
+
+extern void test_py_call(void);
+
+%{
+static PyObject *my_pycallback = NULL;
+static PyObject *my_pycallback_args = NULL;
+static int PythonCallBack(size_t N, const double * x, double * out, void * argsv)
+{
+    struct Fwrap * fwrap = argsv;
+    size_t dim = fwrap_get_d(fwrap);
+    /* PyObject * args = argsv; */
+    PyObject *func, *arglist;
+    PyObject *result;
+
+    /* printf("dim = %zu\n", dim); */
+    /* size_t N = 5; */
+    npy_intp dims[2];
+    dims[0] = N;
+    dims[1] = dim;
+    /* double pt[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}; */
+    /* double out[5];    */
+    PyObject * pyX = PyArray_SimpleNewFromData(2,dims,NPY_DOUBLE,(double*)x);
+   
+    func = my_pycallback;     /* This is the function .... */
+    arglist = Py_BuildValue("(OO)", pyX, my_pycallback_args);  /* No arguments needed */
+    result =  PyEval_CallObject(func, arglist);
+    PyArrayObject * arr = (PyArrayObject*)PyArray_ContiguousFromAny(result,NPY_DOUBLE,1,1);
+    size_t ndims = (size_t)PyArray_NDIM(arr);
+    if (ndims > 1){
+        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return a flattened (1d) array\n");
+        return 1;
+    }
+    npy_intp * dimss  = (npy_intp*)PyArray_DIMS(arr);
+
+    if ((size_t)dimss[0] != N){
+        PyErr_SetString(PyExc_TypeError, "Wrapped python function must return an array with the same number of rows as input\n");
+        return 1;        
+    }
+    
+    double * vals = (double*)PyArray_DATA(arr);
+    for (size_t ii = 0; ii < N; ii++){
+        out[ii] = vals[ii];
+    }
+
+    Py_XDECREF(arr);   
+    Py_DECREF(arglist);
+    Py_XDECREF(result);
+    Py_XDECREF(pyX);
+    return 0 /*void*/;
+}
+
+void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * params)
+{
+    Py_XDECREF(my_pycallback);        /* Dispose of previous callback */
+    Py_XINCREF(PyFunc);               /* Add a reference to new callback */    
+    my_pycallback = PyFunc;           /* Remember new callback */
+
+    Py_XDECREF(my_pycallback_args);   /* Dispose of previous callback */
+    Py_XINCREF(params);               /* Add a reference to new callback */    
+    my_pycallback_args = params;
+
+    fwrap_set_fvec(fwrap, PythonCallBack, fwrap);
+}
+
+void test_py_call(void){
+
+    size_t N = 5;
+    size_t dim = 2;
+    double pt[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
+    double out[5];
+    printf("Testing the callback function\n");
+    struct Fwrap * fwrap = fwrap_create(dim, "python");
+    PythonCallBack(N, pt, out, fwrap);
+    fwrap_destroy(fwrap); fwrap = NULL;
+    for (size_t ii = 0; ii < N; ii++){
+        printf("out[%zu] = %3.5E\n", ii, out[ii]);
+    }
+}
+
+%}
+
+/* %typemap(pythin, in) PyObject *PyFunc { */
+%typemap(in) PyObject *PyFunc {    
+  if (!PyCallable_Check($input)) {
+      PyErr_SetString(PyExc_TypeError, "Need a callable object!");
+      return NULL;
+  }
+  $1 = $input;
+}
 
 
 // Python Memory Management

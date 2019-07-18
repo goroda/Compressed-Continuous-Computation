@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 
 dim = 4  # number of features
 def func2(x,param=None):
-    out = np.sin(np.sum(x*param,axis=1))
+    assert param is not None
+    pnew = np.tile(param, (x.shape[0], 1))
+    out = np.sin(np.sum(x*pnew,axis=1))    
     return out
 
 def gen_results(alpha):
@@ -18,6 +20,8 @@ def gen_results(alpha):
     for ii in range(dim):
         ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
 
+    # print("ftdim = ", ft.dim)
+    # exit(1)
     verbose=0
     init_rank=2
     adapt=1
