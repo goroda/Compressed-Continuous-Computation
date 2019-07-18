@@ -84,6 +84,15 @@ python setup.py build
 python setup.py install
 ```
 
+If you have an old version installed and would like to upgrade the following command is effective at removing all old code
+
+``` shell
+pip install --upgrade --force-reinstall c3py
+```
+
+    
+
+
 ## Configuration Options
 
 #### BUILD_STATIC_LIB
