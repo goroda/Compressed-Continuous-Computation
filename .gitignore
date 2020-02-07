@@ -57,3 +57,4 @@ fly*
 
 *.desktop
 c3_builded*
+dist/*
