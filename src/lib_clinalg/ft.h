@@ -350,25 +350,30 @@ void ft1d_array_eval2(const struct FT1DArray *, const double *, double *);
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double);
+void c3axpy(double, struct FunctionTrain *, struct FunctionTrain **,double,
+            struct MultiApproxOpts *);
 void c3vaxpy_arr(size_t, double, struct FT1DArray *, 
                 size_t, double *, size_t, double,
-                struct FunctionTrain **, double);
+                 struct FunctionTrain **, double,
+                 struct MultiApproxOpts *);
 
 double c3dot(struct FunctionTrain *, struct FunctionTrain *);
 void c3gemv(double, size_t, struct FT1DArray *, size_t, 
-        struct FunctionTrain *,double, struct FunctionTrain *,double);
+            struct FunctionTrain *,double, struct FunctionTrain *,double,
+            struct MultiApproxOpts *);
 
 void c3vaxpy(size_t, double, struct FT1DArray *, size_t, 
-            struct FT1DArray **, size_t, double);
+             struct FT1DArray **, size_t, double,
+             struct MultiApproxOpts *);
 void c3vprodsum(size_t, double, struct FT1DArray *, size_t,
                 struct FT1DArray *, size_t, double,
-                struct FunctionTrain **, double);
+                struct FunctionTrain **, double,
+                struct MultiApproxOpts *);
 void c3vgemv(size_t, size_t, double, struct FT1DArray *, size_t,
         struct FT1DArray *, size_t, double, struct FT1DArray **,
-        size_t, double );
+             size_t, double, struct MultiApproxOpts * opts);
 void c3vgemv_arr(int, size_t, size_t, double, double *, size_t,
         struct FT1DArray *, size_t, double, struct FT1DArray **, 
-        size_t, double);
+                 size_t, double, struct MultiApproxOpts *);
 
 #endif
