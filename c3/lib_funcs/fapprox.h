@@ -63,6 +63,7 @@ void one_approx_opts_free(struct OneApproxOpts *);
 void one_approx_opts_free_deep(struct OneApproxOpts **);
 size_t one_approx_opts_get_nparams(const struct OneApproxOpts *);
 void   one_approx_opts_set_nparams(struct OneApproxOpts *, size_t);
+void   one_approx_opts_set_maxnum(struct OneApproxOpts *, size_t);
 double one_approx_opts_get_lb(const struct OneApproxOpts *);
 double one_approx_opts_get_ub(const struct OneApproxOpts *);
 int one_approx_opts_linear_p(const struct OneApproxOpts *);

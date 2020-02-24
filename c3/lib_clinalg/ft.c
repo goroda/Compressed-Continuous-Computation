@@ -4315,7 +4315,7 @@ void ft1d_array_eval2(const struct FT1DArray * fta, const double * x, double * o
     putting NULL it to round will cause an error
 ***************************************************************/
 void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,
-            double epsilon)
+            double epsilon, struct MultiApproxOpts * opts)
 {
     
     struct FunctionTrain * temp = function_train_copy(x);
@@ -4323,7 +4323,7 @@ void c3axpy(double a, struct FunctionTrain * x, struct FunctionTrain ** y,
     struct FunctionTrain * z = function_train_sum(temp,*y);
     function_train_free(*y); *y = NULL;
     if (epsilon > 0){
-        *y = function_train_round(z,epsilon,NULL);
+        *y = function_train_round(z,epsilon,opts);
         function_train_free(z); z = NULL;
     }
     else{
@@ -4365,8 +4365,8 @@ double c3dot(struct FunctionTrain * x, struct FunctionTrain * y)
     Also rounds after every summation. Will cause an error because putting a NULL into it
 ***************************************************************/
 void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
-        struct FunctionTrain * x,double beta, struct FunctionTrain * y,
-        double epsilon)
+            struct FunctionTrain * x,double beta, struct FunctionTrain * y,
+            double epsilon, struct MultiApproxOpts * opts)
 {
 
     size_t ii;
@@ -4376,16 +4376,16 @@ void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
 
     if (epsilon > 0){
         struct FunctionTrain * runinit = function_train_product(A->ft[0],x);
-        struct FunctionTrain * run = function_train_round(runinit,epsilon,NULL);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon,opts);
         for (ii = 1; ii < n; ii++){
             struct FunctionTrain * temp =
                 function_train_product(A->ft[ii*inca],x);
-            struct FunctionTrain * tempround = function_train_round(temp,epsilon,NULL);
-            c3axpy(1.0,tempround,&run,epsilon);
+            struct FunctionTrain * tempround = function_train_round(temp,epsilon,opts);
+            c3axpy(1.0,tempround,&run,epsilon,opts);
             function_train_free(temp); temp = NULL;
             function_train_free(tempround); tempround = NULL;
         }
-        c3axpy(alpha,run,&y,epsilon);
+        c3axpy(alpha,run,&y,epsilon,opts);
         function_train_free(run); run = NULL;
         function_train_free(runinit); runinit = NULL;
     }
@@ -4394,10 +4394,10 @@ void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
         for (ii = 1; ii < n; ii++){
             struct FunctionTrain * temp =
                 function_train_product(A->ft[ii*inca],x);
-            c3axpy(1.0,temp,&run,epsilon);
+            c3axpy(1.0,temp,&run,epsilon,opts);
             function_train_free(temp); temp = NULL;
         }
-        c3axpy(alpha,run,&y,epsilon);
+        c3axpy(alpha,run,&y,epsilon,opts);
         function_train_free(run); run = NULL;
     }
        
@@ -4411,11 +4411,12 @@ void c3gemv(double alpha, size_t n, struct FT1DArray * A, size_t inca,
 
 ***************************************************************/
 void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx,
-            struct FT1DArray ** y, size_t incy, double epsilon)
+             struct FT1DArray ** y, size_t incy, double epsilon,
+             struct MultiApproxOpts * opts)
 {
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        c3axpy(a,x->ft[ii*incx],&((*y)->ft[ii*incy]),epsilon);
+        c3axpy(a,x->ft[ii*incx],&((*y)->ft[ii*incy]),epsilon, opts);
     }
 }
 
@@ -4427,15 +4428,16 @@ void c3vaxpy(size_t n, double a, struct FT1DArray * x, size_t incx,
 
 ***************************************************************/
 void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,
-                size_t incx, double * y, size_t incy, double beta,
-                struct FunctionTrain ** z, double epsilon)
+                 size_t incx, double * y, size_t incy, double beta,
+                 struct FunctionTrain ** z, double epsilon,
+                 struct MultiApproxOpts * opts)
 {
     assert (*z != NULL);
     function_train_scale(*z,beta);
 
     size_t ii;
     for (ii = 0; ii < n; ii++){
-        c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon);
+        c3axpy(alpha*y[incy*ii],x->ft[ii*incx], z,epsilon, opts);
     }
 }
 
@@ -4452,7 +4454,7 @@ void c3vaxpy_arr(size_t n, double alpha, struct FT1DArray * x,
 ***************************************************************/
 void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
                 struct FT1DArray * y, size_t incy, double beta,
-                struct FunctionTrain ** z, double epsilon)
+                struct FunctionTrain ** z, double epsilon, struct MultiApproxOpts * opts)
 {
     assert (*z != NULL);
     function_train_scale(*z,beta);
@@ -4462,16 +4464,16 @@ void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
     if (epsilon > 0){
         struct FunctionTrain * runinit =
             function_train_product(x->ft[0],y->ft[0]);
-        struct FunctionTrain * run = function_train_round(runinit,epsilon,NULL);
+        struct FunctionTrain * run = function_train_round(runinit,epsilon,opts);
         for (ii = 1; ii < n; ii++){
             struct FunctionTrain * tempinit =
                 function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
-            struct FunctionTrain * temp = function_train_round(tempinit,epsilon,NULL);
-            c3axpy(1.0,temp,&run,epsilon);
+            struct FunctionTrain * temp = function_train_round(tempinit,epsilon,opts);
+            c3axpy(1.0,temp,&run,epsilon, opts);
             function_train_free(temp); temp = NULL;
             function_train_free(tempinit); tempinit = NULL;
         }
-        c3axpy(a,run,z,epsilon);
+        c3axpy(a,run,z,epsilon, opts);
         function_train_free(run); run = NULL;
         function_train_free(runinit); runinit = NULL;
     }
@@ -4481,10 +4483,10 @@ void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
         for (ii = 1; ii < n; ii++){
             struct FunctionTrain * temp =
                 function_train_product(x->ft[ii*incx],y->ft[ii*incy]);
-            c3axpy(1.0,temp,&run,epsilon);
+            c3axpy(1.0,temp,&run,epsilon, opts);
             function_train_free(temp); temp = NULL;
         }
-        c3axpy(a,run,z,epsilon);
+        c3axpy(a,run,z,epsilon, opts);
         function_train_free(run); run = NULL;
     }
 }
@@ -4501,7 +4503,7 @@ void c3vprodsum(size_t n, double a, struct FT1DArray * x, size_t incx,
 ***************************************************************/
 void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
         struct FT1DArray * x, size_t incx, double beta, struct FT1DArray ** y,
-        size_t incy, double epsilon)
+             size_t incy, double epsilon, struct MultiApproxOpts * opts)
 {
 
     size_t ii;
@@ -4512,9 +4514,9 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
     for (ii = 0; ii < m; ii++){
         struct FT1DArray ftatemp;
         ftatemp.ft = A->ft+ii;
-        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii*incy]),epsilon);
+        c3vprodsum(n,1.0,&ftatemp,lda,x,incx,0.0,&(run->ft[ii*incy]),epsilon, opts);
     }
-    c3vaxpy(m,alpha,run,1,y,incy,epsilon);
+    c3vaxpy(m,alpha,run,1,y,incy,epsilon, opts);
 
     ft1d_array_free(run); run = NULL;
 }
@@ -4532,7 +4534,7 @@ void c3vgemv(size_t m, size_t n, double alpha, struct FT1DArray * A, size_t lda,
 ***************************************************************/
 void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
         size_t lda, struct FT1DArray * B, size_t incb, double beta,
-        struct FT1DArray ** y, size_t incy, double epsilon)
+                 struct FT1DArray ** y, size_t incy, double epsilon, struct MultiApproxOpts * opts)
 {
     size_t ii;
     assert (*y != NULL);
@@ -4540,12 +4542,12 @@ void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
         
     if (trans == 0){
         for (ii = 0; ii < m; ii++){
-            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon);
+            c3vaxpy_arr(n,alpha,B,incb,A+ii,lda,beta,&((*y)->ft[ii*incy]),epsilon, opts);
         }
     }
     else if (trans == 1){
         for (ii = 0; ii < m; ii++){
-            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon);
+            c3vaxpy_arr(n,alpha,B,incb,A+ii*lda,1,beta,&((*y)->ft[ii*incy]),epsilon, opts);
         }
     }
 }

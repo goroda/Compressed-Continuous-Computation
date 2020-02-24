@@ -254,6 +254,34 @@ void one_approx_opts_set_nparams(struct OneApproxOpts * oa, size_t num)
     }
 }
 
+/***********************************************************//**
+  Set the maximum number of parametrs in the approximation optins
+***************************************************************/
+void one_approx_opts_set_maxnum(struct OneApproxOpts * oa, size_t num)
+{
+    assert (oa != NULL);
+    assert (oa->aopts != NULL);
+    if (oa->fc == POLYNOMIAL){
+        ope_opts_set_maxnum(oa->aopts,num);
+    }
+    /* else if (oa->fc == PIECEWISE){ */
+    /*     pw_poly_opts_set_maxnum(oa->aopts,num); */
+    /* } */
+    /* else if (oa->fc == LINELM){ */
+    /*     lin_elem_exp_aopts_set_maxnum(oa->aopts,num); */
+    /* } */
+    /* else if (oa->fc == CONSTELM){ */
+    /*     const_elem_exp_aopts_set_maxnum(oa->aopts,num); */
+    /* }     */
+    /* else if (oa->fc == KERNEL){ */
+    /*     kernel_approx_opts_set_maxnum(oa->aopts,num); */
+    /* } */
+    else{
+        fprintf(stderr,"Cannot set maximum number of parameters for one_approx options of type %d\n",
+                oa->fc);
+    }
+}
+
 
 /***********************************************************//**
   Check whether the unknowns are linearly related to the function output.
