@@ -184,8 +184,8 @@ class FunctionTrain(object):
                 c3.pw_poly_opts_set_tol(c3_ope_opts[-1], tol)
                 # c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**8)
                 # c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**3)
-                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**2)                
-                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], (ub-lb))
+                # c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], ((ub-lb)/nregions)**2)
+                c3.pw_poly_opts_set_minsize(c3_ope_opts[-1], (ub-lb)/nregions)
                 c3.pw_poly_opts_set_nregions(c3_ope_opts[-1], nregions)
             else:
                 raise AttributeError('No options can be specified for function type '
@@ -260,7 +260,7 @@ class FunctionTrain(object):
         # print("OKkkk")
 
     def _assemble_cross_args(self, verbose, init_rank, maxrank=10, cross_tol=1e-8,
-                             round_tol=1e-8, kickrank=5, maxiter=5):
+                             round_tol=1e-8, kickrank=5, maxiter=5, fiber_bounds=None):
 
 
         start_fibers = c3.malloc_dd(self.dim)
@@ -269,8 +269,13 @@ class FunctionTrain(object):
 
 
         for ii in range(self.dim):
-            c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
-                               self.opts[ii]['ub'], init_rank);
+            if fiber_bounds is None:
+                c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
+                                   self.opts[ii]['ub'], init_rank)
+            else:
+                # print("should be here! ", fiber_bounds)
+                c3.dd_row_linspace(start_fibers, ii, fiber_bounds[ii][0],
+                                   fiber_bounds[ii][1], init_rank)
 
         
             # c3.dd_row_linspace(start_fibers, ii, 0.8,
@@ -291,18 +296,20 @@ class FunctionTrain(object):
 
     def build_approximation(self, f, fargs, init_rank, verbose, adapt,
                             maxrank=10, cross_tol=1e-8,
-                            round_tol=1e-8, kickrank=5, maxiter=5):
+                            round_tol=1e-8, kickrank=5, maxiter=5,
+                            fiber_bounds=None):
         """ Build an adaptive approximation of *f* """
 
         fw = c3.fwrap_create(self.dim, "python")
         c3.fwrap_set_pyfunc(fw, f, fargs)
         c3a, onedopts, low_opts, optnodes = self._assemble_cross_args(verbose,
                                                                       init_rank,
-                                                            maxrank=maxrank,
-                                                            cross_tol=cross_tol,
-                                                            round_tol=round_tol,
-                                                            kickrank=kickrank,
-                                                            maxiter=maxiter)
+                                                                      maxrank=maxrank,
+                                                                      cross_tol=cross_tol,
+                                                                      round_tol=round_tol,
+                                                                      kickrank=kickrank,
+                                                                      maxiter=maxiter,
+                                                                      fiber_bounds=fiber_bounds)
         # print("do cross\n");
         self.ft = c3.c3approx_do_cross(c3a, fw, adapt)
 

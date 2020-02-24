@@ -75,6 +75,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_probability/lib_probability.h
            lib_probability/probability.h
            lib_probability/probability_utils.h
+           c3.h
            # ../include/c3.h
            )
 

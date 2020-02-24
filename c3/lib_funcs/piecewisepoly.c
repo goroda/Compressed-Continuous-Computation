@@ -2448,14 +2448,14 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
 {
 
     size_t N = aopts->maxorder+1;
-    double normalization = piecewise_poly_inner(pw,pw);
-    /* double normalization = 1; */
+    /* double normalization = piecewise_poly_inner(pw,pw); */
+    double normalization = 1;
 
     double true_lb = piecewise_poly_get_lb(pw);
     double true_ub = piecewise_poly_get_ub(pw);
 
-    /* printf("refining (%G,%G)\n",true_lb,true_ub); */
-    /* printf("number of branches = %zu\n",pw->nbranches); */
+    printf("refining (%G,%G)\n",true_lb,true_ub);
+    printf("number of branches = %zu\n",pw->nbranches);
     assert (pw->ope == NULL);
     int refined_once = 0;
 
@@ -2473,10 +2473,10 @@ static void adapt_help(struct PiecewisePoly * pw, struct PwPolyOpts * aopts, str
         }
         else{
             size_t ncheck = aopts->coeff_check < N ? aopts->coeff_check : N;
-            /* printf("\n\ncheck refine\n"); */
+            printf("\n\ncheck refine\n");
             for (size_t jj = 0; jj < ncheck; jj++){
                 double c =  pw->branches[ii]->ope->coeff[N-1-jj];
-                /* printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,normalization,aopts->epsilon); */
+                printf("coeff = %3.15E,sum=%3.15E,epsilon=%3.15E\n",c,normalization,aopts->epsilon);
                 /* printf("cleft = %3.15E,cright=%3.15E\n",c*c,normalization*aopts->epsilon); */
                 if (c*c > (aopts->epsilon * normalization)){
                     refine = 1;
@@ -2526,10 +2526,11 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
     assert (aopts != NULL);
     assert (aopts->pts == NULL);
 
+    printf("Generate piecewise poly approx\n");
     size_t N = aopts->maxorder+1;
 
     struct PiecewisePoly * poly = piecewise_poly_alloc();
-
+    
     poly->leaf = 1;
     poly->nbranches = 0;
     poly->ope = orth_poly_expansion_init(aopts->ptype,N,aopts->lb,aopts->ub);
@@ -2563,6 +2564,7 @@ piecewise_poly_approx1_adapt(struct PwPolyOpts * aopts,
         adapt_help(poly,aopts,fw);
     }
 
+    printf("Done Generate piecewise poly approx\n");
     /* ope_opts_free(aopts->opeopts); aopts->opeopts = NULL; */
     
     return poly;
