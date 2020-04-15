@@ -86,6 +86,8 @@ struct FTRegress
     int finalize;
     int opt_restricted;
 
+    unsigned int seed;
+
 };
 
 /** \struct PP
@@ -844,7 +846,25 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
     ftr->finalize = 1;
     ftr->opt_restricted = 0;
 
+
+    ftr->seed = time(NULL);
     return ftr;
+}
+
+
+
+/***********************************************************//**
+    Set a seed for random number generation
+    
+    \param[in] ftr  - regression structure
+    \param[in] seed - random number seed
+
+***************************************************************/
+void ft_regress_set_seed(struct FTRegress * ftr, unsigned int seed)
+{
+    assert (ftr != NULL);
+    assert (ftr->regopts != NULL);
+    ftr->seed = seed;
 }
 
 /***********************************************************//**
@@ -1217,6 +1237,8 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr != NULL);
     assert (ftr->ftp != NULL);
     assert (ftr->regopts != NULL);
+
+    srand(ftr->seed);
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
     if (fabs(param_norm) <= 1e-15){
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */

@@ -322,7 +322,8 @@ class FunctionTrain(object):
                          adaptrank=0, roundtol=1e-5, maxrank=10, kickrank=2,
                          kristoffel=False, regweight=1e-7, cvnparam=None,
                          cvregweight=None, kfold=5, cvverbose=0, als_max_sweep=20,
-                         cvrank=None, norm_ydata=False, store_opt_info=False):
+                         cvrank=None, norm_ydata=False, store_opt_info=False,
+                         seed = None):
         """
         Note that this overwrites multiopts, and the final rank might not be the same
         as self.rank
@@ -415,8 +416,6 @@ class FunctionTrain(object):
             c3.cv_opt_grid_add_param(cvgrid, "rank", len(cvrank), list(cvrank))
             c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
 
-        
-        
 
         yuse = ydata
         if norm_ydata is True:
@@ -437,6 +436,9 @@ class FunctionTrain(object):
 
 
         # print("Run regression")
+        if seed is not None:
+            c3.ft_regress_set_seed(reg, seed)
+            
         self.ft = c3.ft_regress_run(reg, optimizer, xdata.flatten(order='C'), yuse)
         # print("Done!")
 

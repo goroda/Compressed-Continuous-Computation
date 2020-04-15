@@ -2,6 +2,8 @@ import c3py # import the python interface to the c3 library
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.random.seed(10)
+
 def func(x):
     return x[:, 0]**2 + x[:, 1]**2 + x[:, 0] * x[:, 1] + np.sin(np.sum(x, axis=1)) \
         + x[:,0] * x[:,-1] + x[:, -1]**2.0 * np.cos(x[:, 0])
@@ -34,7 +36,8 @@ def build_ft_regress(xdata, ydata, nparam=2, init_rank=5, adaptrank=1, verbose=0
     ft.set_ranks(ranks)
     ft.build_data_model(ndata, xdata, ydata,
                         alg="AIO", obj="LS", adaptrank=adaptrank,
-                        kickrank=1, roundtol=1e-10, verbose=verbose)
+                        kickrank=1, roundtol=1e-10, verbose=verbose,
+                        seed=10)
     return ft
 
 print("X shape ", X.shape)

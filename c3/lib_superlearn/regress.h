@@ -62,6 +62,7 @@
 
 struct FTRegress;
 struct FTRegress * ft_regress_alloc(size_t dim, struct MultiApproxOpts *,size_t * ranks);
+void ft_regress_set_seed(struct FTRegress *, unsigned int);
 void ft_regress_set_sample_weights(const struct FTRegress *, const double *);
 size_t ft_regress_get_dim(const struct FTRegress *);
 void ft_regress_set_adapt(struct FTRegress *, int);
