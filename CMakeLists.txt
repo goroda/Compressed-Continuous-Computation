@@ -7,7 +7,6 @@ set(C3_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
 set(C3_VERSION "${C3_VERSION_MAJOR}.${C3_VERSION_MINOR}" CACHE STRING "version" FORCE)
 
 option(C3_DEBUG_MODE "whether or not debug mode is activated" OFF)
-option(MAKE_PYTHON_WRAPPERS "Create python wrappers" OFF)
 
 include(c3.cmake)
 c3_always_full_rpath()

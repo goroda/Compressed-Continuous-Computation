@@ -95,7 +95,7 @@ struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
 void ft_param_create_constant(struct FTparam *, double, double);
 void ft_param_create_from_lin_ls(struct FTparam *, size_t,
                                  const double *, const double *,
-                                 double);
+                                 double, const unsigned int *);
 
 void ft_param_update_params(struct FTparam *, const double *);
 void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);

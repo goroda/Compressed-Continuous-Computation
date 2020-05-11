@@ -316,7 +316,7 @@ void Test_LS_ALS_SPARSE2(CuTest * tc)
     double regweight = 1e-4;
     /* struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks); */
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-2);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-2,NULL);
 
     struct RegressOpts* als_opts = regress_opts_create(dim,ALS,FTLS_SPARSEL2);
     regress_opts_set_verbose(als_opts,0);
@@ -738,7 +738,7 @@ void Test_LS_AIO(CuTest * tc)
     /* printf("\t nunknown = %zu\n",nunknown); */
     /* struct FTparam* ftp = ft_param_alloc(dim,fapp,param_space,ranks); */
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-3);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-3,NULL);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
     struct c3Opt * optimizer = c3opt_create(BFGS);
     /* c3opt_set_verbose(optimizer,1); */
@@ -814,7 +814,7 @@ void Test_LS_AIO2(CuTest * tc)
 
     /* printf("\t nunknowns = %zu\n",nunknowns); */
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-5);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-5, NULL);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
     struct c3Opt * optimizer = c3opt_create(LBFGS);
     c3opt_set_verbose(optimizer,0);
@@ -899,7 +899,7 @@ void Test_LS_AIO3(CuTest * tc)
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-2);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-2,NULL);
     struct RegressOpts* ropts = regress_opts_create(dim,AIO,FTLS);
     struct c3Opt* optimizer = c3opt_create(BFGS);
     c3opt_set_verbose(optimizer,0);
@@ -1249,7 +1249,7 @@ void Test_LS_AIO_ftparam_create_from_lin_ls(CuTest * tc)
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,0.0);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,0.0,NULL);
     struct FunctionTrain * ft = ft_param_get_ft(ftp);
 
 
@@ -1324,7 +1324,7 @@ void Test_LS_AIO_ftparam_create_from_lin_ls_kernel(CuTest * tc)
     }
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10,NULL);
 
     struct FunctionTrain * ft = ft_param_get_ft(ftp);
 
@@ -1950,7 +1950,7 @@ void Test_LS_AIO_kernel(CuTest * tc)
     printf("\t nunknowns = %zu\n",nunknowns);
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10,NULL);
     size_t * npercore = ft_param_get_nparams_per_core(ftp);
     for (size_t jj = 0; jj < dim; jj++){
         CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams,npercore[jj]);
@@ -2081,7 +2081,7 @@ void Test_LS_AIO_kernel_nonlin(CuTest * tc)
     printf("\t nunknowns = %zu\n",nunknowns);
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-8);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-8,NULL);
     size_t * npercore = ft_param_get_nparams_per_core(ftp);
     for (size_t jj = 0; jj < dim; jj++){
         CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams*2,npercore[jj]);
@@ -2217,7 +2217,7 @@ void Test_LS_AIO_rounding(CuTest * tc)
     printf("\t nunknowns = %zu\n",nunknowns);
 
     struct FTparam* ftp = ft_param_alloc(dim,fapp,NULL,ranks);
-    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10);
+    ft_param_create_from_lin_ls(ftp,ndata,x,y,1e-10,NULL);
     size_t * npercore = ft_param_get_nparams_per_core(ftp);
     for (size_t jj = 0; jj < dim; jj++){
         CuAssertIntEquals(tc,ranks[jj]*ranks[jj+1]*nparams,npercore[jj]);

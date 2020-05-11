@@ -459,7 +459,6 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
                       size_t N, const double * x, const double * y)
 {
 
-
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
     struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,structure);
     sl_mem_manager_check_structure(mem,ftp,x);
@@ -1238,15 +1237,17 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr->ftp != NULL);
     assert (ftr->regopts != NULL);
 
-    srand(ftr->seed);
+    /* printf("seed = %d\n", ftr->seed); */
+    /* srand(ftr->seed); */
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
+    /* printf("param_norm = %3.15E\n", param_norm); */
     if (fabs(param_norm) <= 1e-15){
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
         /* yavg /= (double) N; */
 
         /* size_t dim = ftr->dim; */
         /* ft_param_create_from_lin_ls(ftr->ftp,N,x,y,pow(1e-3, 1.0/dim)); */
-        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-2);
+        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-2, &(ftr->seed));
 
         
         /* ft_param_create_from_constant */

@@ -51,7 +51,7 @@ ft_evals = ft_regress.eval(Xtest)
 err = np.linalg.norm(ft_evals - Ytest) / np.linalg.norm(Ytest)
 
 print("Relmse = ", err)
-plt.figure()
-plt.plot(ft_evals, Ytest, 'o')
-plt.show()
+# plt.figure()
+# plt.plot(ft_evals, Ytest, 'o')
+# plt.show()
 

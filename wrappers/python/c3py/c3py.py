@@ -410,7 +410,7 @@ class FunctionTrain(object):
         elif (cvnparam is not None) and (cvregweight is not None) and (cvrank is None):
             cvgrid = c3.cv_opt_grid_init(2)
             c3.cv_opt_grid_add_param(cvgrid, "num_param", len(cvnparam), list(cvnparam))
-            c3.cv_opt_grid_add_param(cvgrid, "reg_weight", len(cvregeight), list(cvnparam))
+            c3.cv_opt_grid_add_param(cvgrid, "reg_weight", len(cvregweight), list(cvnparam))
         elif (cvnparam is not None) and (cvrank is not None):
             cvgrid = c3.cv_opt_grid_init(2)
             c3.cv_opt_grid_add_param(cvgrid, "rank", len(cvrank), list(cvrank))
@@ -438,9 +438,9 @@ class FunctionTrain(object):
         # print("Run regression")
         if seed is not None:
             c3.ft_regress_set_seed(reg, seed)
-            
+
         self.ft = c3.ft_regress_run(reg, optimizer, xdata.flatten(order='C'), yuse)
-        # print("Done!")
+
 
 
         if norm_ydata is True: # need to unnormalize
