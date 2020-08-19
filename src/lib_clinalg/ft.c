@@ -2469,7 +2469,7 @@ function_train_orthor(struct FunctionTrain * a,
     Rounding of a function train
 
     \param[in] ain - FT
-    \param[in] epsilon - threshold
+    \param[in] epsilon - threshold (relative)
     \param[in] aopts - approximation options to QR
 
     \return ft - rounded function train
