@@ -1512,6 +1512,136 @@ void Test_LS_cross_validation(CuTest * tc)
     ft_regress_free(ftr); ftr = NULL;
 }
 
+void Test_LS_cross_validation_rank_adapt(CuTest * tc)
+{
+    printf("\nTesting Function: cross validation with rank adapt on x_1^2+x_2^2 + ... + x_5^2\n");
+    srand(seed);
+    printf("\t  Dimensions:  5\n");
+    printf("\t  Start ranks: [1 2 2 2 2 1]\n");
+    printf("\t  Nunknowns:   48\n");
+    printf("\t  ndata:       40\n");
+    
+    size_t dim = 5;
+    size_t ranks[6] = {1,2,2,2,2,1};
+    double lb = -1.0;
+    double ub = 1.0;
+    size_t maxorder = 2;
+
+    // create data
+    size_t ndata = 40;
+    /* size_t ndata = 80; */
+    /* printf("\t ndata = %zu\n",ndata); */
+    double * x = calloc_double(ndata*dim);
+    double * y = calloc_double(ndata);
+    for (size_t ii = 0 ; ii < ndata; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            x[ii*dim+jj] = randu()*(ub-lb) + lb;
+            /* printf("%G ",x[ii*dim+jj]); */
+        }
+        /* printf("\n"); */
+        // no noise!
+        y[ii] = funccv(x+ii*dim);
+    }
+    size_t nunknowns = 0;
+    for (size_t ii = 0; ii < dim; ii++){
+        nunknowns += (maxorder+1)*ranks[ii]*ranks[ii+1];
+    }
+    /* printf("\t nunknowns = %zu\n",nunknowns); */
+
+    /* dprint2d(ndata,dim,x); */
+    // Regression
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    ope_opts_set_lb(opts,lb);
+    ope_opts_set_ub(opts,ub);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    for (size_t ii = 0; ii < dim; ii++){
+        multi_approx_opts_set_dim(fapp,ii,qmopts);
+    }
+
+    struct FTRegress * ftr = ft_regress_alloc(dim,fapp,ranks);
+    ft_regress_set_alg_and_obj(ftr,AIO,FTLS);
+    ft_regress_set_adapt(ftr,1);
+    ft_regress_set_roundtol(ftr,1e-5);
+    ft_regress_set_maxrank(ftr, 5);
+    ft_regress_set_kickrank(ftr,2);
+
+    struct c3Opt * optimizer = c3opt_create(BFGS);
+    c3opt_set_maxiter(optimizer, 1000);
+    c3opt_set_verbose(optimizer, 0);
+
+
+    size_t kfold = ndata-1;
+    /* size_t kfold = 10; */
+    int cvverbose = 0;
+    /* printf("\t kfold = %zu\n",kfold); */
+    struct CrossValidate * cv = cross_validate_init(ndata,dim,x,y,kfold,cvverbose);
+
+    double err = cross_validate_run(cv,ftr,optimizer);
+    printf("\t CV Error estimate = %G\n",err);
+    double err2 = cross_validate_run(cv,ftr,optimizer);
+    printf("\t CV Error estimate = %G\n",err2);
+    CuAssertDblEquals(tc,err,err2,1e-5);
+
+    /* // set options for parameters */
+    size_t norder_ops = 6;
+    size_t order_ops[6] = {1,2,3,4,5,6};
+
+    struct CVOptGrid * cvgrid = cv_opt_grid_init(1); // 1 more than normal see if it works
+    cv_opt_grid_set_verbose(cvgrid,0);
+    cv_opt_grid_add_param(cvgrid,"num_param",norder_ops,order_ops);
+    cross_validate_grid_opt(cv,cvgrid,ftr,optimizer);
+    cv_opt_grid_free(cvgrid);
+    
+    /* c3opt_set_verbose(optimizer,0); */
+    struct FunctionTrain * ft = ft_regress_run(ftr,optimizer,ndata,x,y);
+    /* struct FunctionTrain * ft = NULL; */
+
+    // check to make sure options are set to optimal ones
+    size_t nparams_per_func;
+    function_train_core_get_nparams(ft,0,&nparams_per_func);
+    CuAssertIntEquals(tc,3,nparams_per_func);
+    /* size_t * ranks_check = function_train_get_ranks(ft); */
+    /* iprint_sz(dim+1,ranks_check); */
+    for (size_t jj = 1; jj < dim; jj++){
+        /* CuAssertIntEquals(tc,2,ranks_check[jj]); // regression testin to match previous */
+        function_train_core_get_nparams(ft,jj,&nparams_per_func);
+        CuAssertIntEquals(tc,3,nparams_per_func); // this is just for regression testing (to match prev code)
+        
+    }
+
+    size_t ntest = 1000;
+    double norm = 0.0;
+    double err_ap = 0.0;
+    double pt[5];
+    for (size_t ii = 0; ii < ntest; ii++){
+        for (size_t jj = 0; jj < dim; jj++){
+            pt[jj] = randu()*(ub-lb) + lb;
+        }
+
+        double val = funccv(pt);
+        double val2 = function_train_eval(ft,pt);
+        double diff = val-val2;
+        err_ap += diff*diff;
+        norm += val*val;
+    }
+
+    printf("\n\t  abs error = %G, norm = %G, ratio = %G \n",err_ap/(double)ntest,norm/(double)ntest,err_ap/norm);
+    
+
+    function_train_free(ft); ft = NULL;
+
+    cross_validate_free(cv); cv = NULL;    
+    free(x); x = NULL;
+    free(y); y = NULL;
+    c3opt_free(optimizer);
+    one_approx_opts_free_deep(&qmopts);
+    multi_approx_opts_free(fapp);
+    ft_regress_free(ftr); ftr = NULL;
+}
 
 void Test_function_train_param_grad_sqnorm(CuTest * tc)
 {
@@ -3465,7 +3595,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
-    
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation_rank_adapt);        
 
     /* Next 2 are good */
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);

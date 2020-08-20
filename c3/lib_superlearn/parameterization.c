@@ -154,6 +154,20 @@ void ft_param_free(struct FTparam * ftr)
 }
 
 
+/**********************************************************//**
+    Copy a function-train parameterization
+    
+    \param[in] ftp - parameterized FT
+
+    \returns copied
+***************************************************************/
+struct FTparam * ft_param_copy(struct FTparam * ftp)
+{
+    struct FTparam * copied = ft_param_alloc(ftp->dim, ftp->approx_opts, ftp->params,
+                                             function_train_get_ranks(ftp->ft));
+    return copied;
+}
+
 /***********************************************************//**
     Get a parameter
 
