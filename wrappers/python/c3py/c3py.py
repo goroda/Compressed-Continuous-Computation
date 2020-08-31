@@ -512,6 +512,15 @@ class FunctionTrain(object):
         c3.function_train_gradient_eval(self.ft, pt, grad_out)
         return grad_out
 
+    def hess_eval(self, pt):
+        """ Evaluate the hessian of a FunctionTrain """
+
+        hess_out = np.zeros((self.dim*self.dim))
+        hess = c3.function_train_hessian(self.ft)
+        c3.ft1d_array_eval2(hess, pt, hess_out)
+        c3.ft1d_array_free(hess)
+        return hess_out.reshape((self.dim, self.dim), order='F')
+
     def round(self, eps=1e-14):
         """ Round a FunctionTrain """
 
@@ -695,7 +704,7 @@ class SobolIndices(object):
         
     def __del__(self):
         self.close()
-        
+
     def close(self):
         if self.si is not None:
             c3.c3_sobol_sensitivity_free(self.si)

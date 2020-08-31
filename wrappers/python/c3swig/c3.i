@@ -279,6 +279,31 @@ void function_train_free(struct FunctionTrain *);
 %}
 %ignore function_train_gradient_eval;
 
+%rename (ft1d_array_eval2) my_ft1d_array_eval2;
+%exception my_ft1d_array_eval2{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft1d_array_eval2(const struct FT1DArray * fta ,size_t len1, const double* evalnd_pt,
+                             size_t len2, double * evalnd_out){
+        if (len1 != function_train_get_dim(fta->ft[0])){
+            PyErr_Format(PyExc_ValueError,
+                         "Evaluation point has incorrect dimensions (%zu) instead of %zu",
+                         len1,function_train_get_dim(fta->ft[0]));
+        }
+        if (len1*len1 != len2){
+            PyErr_Format(PyExc_ValueError,
+                         "Output must be size of dimension squared (%zu,%zu)",
+                         len1,len1);
+        }
+        
+        ft1d_array_eval2(fta,evalnd_pt,evalnd_out);
+
+    }
+%}
+%ignore ft1d_array_eval2;
+
 
 %typemap(in) size_t * ranks {
     if (!PyList_Check($input)) {
