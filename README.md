@@ -191,6 +191,6 @@ Author: [Alex A. Gorodetsky](https://www.alexgorodetsky.com)
 Contact: [goroda@umich.edu](mailto:goroda@umich.edu)  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
-Copyright (c) 2018, University of Michigan  
+Copyright (c) 2018-2021, University of Michigan  
 License: BSD
 

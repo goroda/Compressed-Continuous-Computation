@@ -576,7 +576,7 @@ class FunctionTrain(object):
 
     def scale_and_shift(self, scale, shift, eps=0, c3_pointer=False):
 
-        c3a, onedopts, low_opts = self._build_approx_params()
+        c3a, onedopts, low_opts, optnodes = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
 
         ft1 = c3.function_train_copy(self.ft)
@@ -592,7 +592,7 @@ class FunctionTrain(object):
         c3.function_train_free(ft2)
 
         c3.function_train_round(ft_out.ft, eps, multiopts)
-        self._free_approx_params(c3a, onedopts, low_opts)
+        self._free_approx_params(c3a, onedopts, low_opts, optnodes)
 
         if c3_pointer is True:
             ft_ret = c3.function_train_copy(ft_out.ft)
