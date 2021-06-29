@@ -196,6 +196,9 @@ function_train_orthor(struct FunctionTrain *,
 struct FunctionTrain *
 function_train_round(struct FunctionTrain *, double,
                          struct MultiApproxOpts *);
+struct FunctionTrain *
+function_train_round_maxrank_all(struct FunctionTrain * ain, double epsilon,
+                                 struct MultiApproxOpts * aopts, size_t max_rank);
 void function_train_truncate(struct FunctionTrain *, double);
 
 struct FunctionTrain * 

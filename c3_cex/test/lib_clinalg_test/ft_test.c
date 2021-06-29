@@ -513,6 +513,77 @@ void Test_function_train_sum_function_train_round(CuTest * tc)
     all_opts_free(NULL,opts,qmopts,fopts);
 }
 
+void Test_function_train_sum_function_train_round_max_rank(CuTest * tc)
+{
+    printf("Testing Function: function_train_sum and ft_round_maxrank \n");
+
+    size_t dim = 3;
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+    
+    double coeffs[3] = {1.0, 2.0, 3.0};
+    double off[3] = {0.0,0.0,0.0};
+    struct FunctionTrain * a = function_train_linear(coeffs,1,off,1,fopts);
+
+    double coeffsb[3] = {1.5, -0.2, 3.310};
+    double offb[3]    = {0.0, 0.0, 0.0};
+    struct FunctionTrain * b = function_train_linear(coeffsb,1,offb,1,fopts);
+    
+    struct FunctionTrain * c = function_train_sum(a,b);
+    size_t * ranks = function_train_get_ranks(c);
+    CuAssertIntEquals(tc,1,ranks[0]);
+    CuAssertIntEquals(tc,4,ranks[1]);
+    CuAssertIntEquals(tc,4,ranks[2]);
+    CuAssertIntEquals(tc,1,ranks[3]);
+
+    size_t max_rank = 2;
+    struct FunctionTrain * d = function_train_round_maxrank_all(c, 1e-10, fopts, max_rank);
+    ranks = function_train_get_ranks(d);
+    CuAssertIntEquals(tc,1,ranks[0]);
+    CuAssertIntEquals(tc,2,ranks[1]);
+    CuAssertIntEquals(tc,2,ranks[2]);
+    CuAssertIntEquals(tc,1,ranks[3]);
+
+    double pt[3];
+    double eval, evals;
+        
+    pt[0] = -0.1; pt[1] = 0.4; pt[2]=0.2; 
+    eval = function_train_eval(d,pt);
+    evals = -0.1*(1.0 + 1.5) + 0.4*(2.0-0.2) + 0.2*(3.0 + 3.31);
+    CuAssertDblEquals(tc, evals, eval, 1e-14);
+    
+    pt[0] = 0.8; pt[1] = -0.2; pt[2] = 0.3;
+    evals = 0.8*(1.0 + 1.5) - 0.2*(2.0-0.2) + 0.3*(3.0 + 3.31);
+    eval = function_train_eval(d,pt);
+    CuAssertDblEquals(tc, evals, eval, 1e-14);
+
+    pt[0] = -0.8; pt[1] = 1.0; pt[2] = -0.01;
+    evals = -0.8*(1.0 + 1.5) + 1.0*(2.0-0.2) - 0.01*(3.0 + 3.31);
+    eval = function_train_eval(d,pt);
+    CuAssertDblEquals(tc, evals, eval,1e-14);
+
+    max_rank = 1;
+    struct FunctionTrain * e = function_train_round_maxrank_all(c, 1e-10, fopts, max_rank);
+    ranks = function_train_get_ranks(e);
+    CuAssertIntEquals(tc,1,ranks[0]);
+    CuAssertIntEquals(tc,1,ranks[1]);
+    CuAssertIntEquals(tc,1,ranks[2]);
+    CuAssertIntEquals(tc,1,ranks[3]);
+    
+    CuAssertIntEquals(tc, 0, function_train_get_core(e, 0) == NULL);
+    CuAssertIntEquals(tc, 0, function_train_get_core(e, 1) == NULL);
+    CuAssertIntEquals(tc, 0, function_train_get_core(e, 2) == NULL);
+    
+    function_train_free(a);
+    function_train_free(b);
+    function_train_free(c);
+    function_train_free(d);
+    function_train_free(e);
+    all_opts_free(NULL,opts,qmopts,fopts);
+}
+
 void Test_function_train_scale(CuTest * tc)
 {
     printf("Testing Function: function_train_scale \n");
@@ -2985,6 +3056,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_quadratic);
     SUITE_ADD_TEST(suite, Test_function_train_quadratic2);
     SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round);
+    SUITE_ADD_TEST(suite, Test_function_train_sum_function_train_round_max_rank);
     SUITE_ADD_TEST(suite, Test_function_train_scale);
     SUITE_ADD_TEST(suite, Test_function_train_product);
     SUITE_ADD_TEST(suite, Test_function_train_product_cheb);

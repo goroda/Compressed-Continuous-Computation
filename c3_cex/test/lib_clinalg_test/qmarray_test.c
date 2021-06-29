@@ -595,7 +595,7 @@ void Test_qmarray_householder2_fourier2(CuTest * tc){
     f1 = qmarray_get_func(Q, 0, 0);
     f2 = qmarray_get_func(Q, 1, 0);
     inner = generic_function_inner(f1, f1) + generic_function_inner(f2, f2);
-    CuAssertDblEquals(tc, 1, inner, 1e-15);
+    CuAssertDblEquals(tc, 1, inner, 1e-14);
 
     f1 = qmarray_get_func(Q, 0, 1);
     f2 = qmarray_get_func(Q, 1, 1);

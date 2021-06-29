@@ -2566,6 +2566,121 @@ function_train_round(struct FunctionTrain * ain, double epsilon,
 }
 
 /********************************************************//**
+    Rounding of a function train with a rank bound
+
+    \param[in] ain - FT
+    \param[in] epsilon - threshold (relative)
+    \param[in] aopts - approximation options to QR
+    \param[in] max_rank - maximum rank
+
+    \return ft - rounded function train
+***********************************************************/
+struct FunctionTrain *
+function_train_round_maxrank_all(struct FunctionTrain * ain, double epsilon,
+                                 struct MultiApproxOpts * aopts, size_t max_rank)
+{
+    double normain = function_train_norm2(ain);
+    /* printf("normain = %3.15G\n", normain); */
+    if (normain < ZEROTHRESH){
+        return function_train_constant(0.0, aopts);
+    }
+    struct OneApproxOpts * o = NULL;
+    struct FunctionTrain * a = function_train_copy(ain);
+//    size_t ii;
+    size_t core;
+    struct Qmarray * temp = NULL;
+
+    double delta = function_train_norm2(a);
+    delta = delta * epsilon / sqrt(a->dim-1);
+    //double delta = epsilon;
+
+    /* printf("Rounding Starting norm = %G\n",function_train_norm2(a)); */
+//    printf("begin orho\n");
+    struct FunctionTrain * ftrl = function_train_orthor(a,aopts);
+
+    /* printf("Rounding Ortho norm %G\n",function_train_norm2(ftrl)); */
+//    printf("ortho gonalized\n");
+    struct FunctionTrain * ft = function_train_alloc(a->dim);
+    //struct FunctionTrain * ft = function_train_copy(ftrl);
+    double * vt = NULL;
+    double * s = NULL;
+    double * sdiag = NULL;
+    double * svt = NULL;
+    size_t rank;
+    size_t sizer;
+    core = 0;
+    ft->ranks[core] = 1;
+    sizer = ftrl->cores[core]->ncols;
+    
+    //*
+    //printf("rank before = %zu\n",ftrl->ranks[core+1]);
+    o = multi_approx_opts_get_aopts(aopts,core);
+    rank = qmarray_truncated_svd(ftrl->cores[core], &(ft->cores[core]),
+                                 &s, &vt, delta,o);
+    if (rank > max_rank) {
+        /* truncate core */
+        rank = max_rank;
+        struct Qmarray *temp_core = qmarray_first_cols(ft->cores[core], rank);
+        qmarray_free(ft->cores[core]); ft->cores[core] = NULL;
+        ft->cores[core] = temp_core;
+    }
+    //printf("rankdone\n");
+
+    //printf("rank after = %zu\n",rank);
+    ft->ranks[core+1] = rank;
+    sdiag = diag(rank,s);
+    svt = calloc_double(rank * sizer);
+    cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rank,
+                sizer, rank, 1.0, sdiag, rank, vt, rank, 0.0,
+                svt, rank);
+    //printf("rank\n");
+    temp = mqma(svt,ftrl->cores[core+1],rank);
+    //*/
+
+    free(vt); vt = NULL;
+    free(s); s = NULL;
+    free(sdiag); sdiag = NULL;
+    free(svt); svt = NULL;
+    for (core = 1; core < a->dim-1; core++){
+        o = multi_approx_opts_get_aopts(aopts,core);
+        rank = qmarray_truncated_svd(temp, &(ft->cores[core]), &s, &vt, delta,o);
+        if (rank > max_rank) { 
+            rank = max_rank;
+            struct Qmarray *temp_core = qmarray_first_cols(ft->cores[core], rank);
+            qmarray_free(ft->cores[core]); ft->cores[core] = NULL;
+            ft->cores[core] = temp_core;
+            /* truncate core */
+        }
+        qmarray_free(temp); temp = NULL;
+
+        ft->ranks[core+1] = rank;
+        sdiag = diag(rank,s);
+        svt = calloc_double(rank * a->ranks[core+1]);
+        cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rank,
+                    a->ranks[core+1], rank, 1.0, sdiag, rank, vt, rank, 0.0,
+                    svt, rank);
+        temp = mqma(svt,ftrl->cores[core+1],rank);
+        free(vt); vt = NULL;
+        free(s); s = NULL;
+        free(sdiag); sdiag = NULL;
+        free(svt); svt = NULL;
+    }
+    core = a->dim-1;
+    ft->cores[core] = temp;
+    ft->ranks[a->dim] = 1;
+    
+    function_train_free(ftrl);
+    /*
+    for (ii = 0; ii < ft->dim; ii++){
+        qmarray_roundt(&ft->cores[ii], epsilon);
+    }
+    */
+
+    function_train_free(a); a = NULL;
+    return ft;
+}
+
+/********************************************************//**
     Truncate functions in FT
 
     \param[in,out] ft - FT

@@ -67,6 +67,7 @@ struct Qmarray {
 struct Qmarray * qmarray_alloc(size_t, size_t); 
 void qmarray_free(struct Qmarray *); 
 struct Qmarray * qmarray_copy(const struct Qmarray *);
+struct Qmarray * qmarray_first_cols(const struct Qmarray *qm, size_t num_cols);
 struct Qmarray * qmarray_operate_elements(const struct Qmarray *,
                                           const struct Operator *);
 unsigned char * 

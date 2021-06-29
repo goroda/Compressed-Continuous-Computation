@@ -141,6 +141,29 @@ struct Qmarray * qmarray_copy(const struct Qmarray * qm)
     return qmo;
 }
 
+
+/***********************************************************//**
+    Perform an elementwise operator on a qmarray
+
+    \param[in] qm       - qmarray
+    \param[in] op       - operator
+    \param[in] num_cols - number of columns to keep
+
+    \return qmo  
+
+    \remark leverages column order structure of qmarray
+***************************************************************/
+struct Qmarray * qmarray_first_cols(const struct Qmarray *qm, size_t num_cols)
+{
+    assert (qm != NULL);
+    assert (qm->ncols >= num_cols);
+    struct Qmarray * qmo = qmarray_alloc(qm->nrows, num_cols);
+    for (size_t ii = 0; ii < qm->nrows * num_cols; ii++) {
+        qmo->funcs[ii] = generic_function_copy(qm->funcs[ii]);
+    }
+    return qmo;
+}
+
 /***********************************************************//**
     Perform an elementwise operator on a qmarray
 
