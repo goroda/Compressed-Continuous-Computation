@@ -2619,10 +2619,22 @@ function_train_round_maxrank_all(struct FunctionTrain * ain, double epsilon,
                                  &s, &vt, delta,o);
     if (rank > max_rank) {
         /* truncate core */
+		size_t old_rank = rank;
         rank = max_rank;
         struct Qmarray *temp_core = qmarray_first_cols(ft->cores[core], rank);
         qmarray_free(ft->cores[core]); ft->cores[core] = NULL;
         ft->cores[core] = temp_core;
+
+		
+		double *temp_vt = calloc(max_rank * ftrl->cores[core]->ncols, sizeof(double));
+		for (size_t jj = 0; jj < ftrl->cores[core]->ncols; jj++) {
+			for (size_t ii = 0; ii < max_rank; ii ++){
+				temp_vt[jj * max_rank + ii] = vt[jj * old_rank + ii];
+			}
+		}
+		free(vt); vt = NULL;
+		vt = temp_vt;
+		
     }
     //printf("rankdone\n");
 
@@ -2644,12 +2656,22 @@ function_train_round_maxrank_all(struct FunctionTrain * ain, double epsilon,
     for (core = 1; core < a->dim-1; core++){
         o = multi_approx_opts_get_aopts(aopts,core);
         rank = qmarray_truncated_svd(temp, &(ft->cores[core]), &s, &vt, delta,o);
-        if (rank > max_rank) { 
+        if (rank > max_rank) {
+			size_t old_rank = rank;
             rank = max_rank;
             struct Qmarray *temp_core = qmarray_first_cols(ft->cores[core], rank);
             qmarray_free(ft->cores[core]); ft->cores[core] = NULL;
             ft->cores[core] = temp_core;
             /* truncate core */
+
+			double *temp_vt = calloc(max_rank * temp->ncols, sizeof(double));
+			for (size_t jj = 0; jj < ftrl->cores[core]->ncols; jj++) {
+				for (size_t ii = 0; ii < max_rank; ii ++){
+					temp_vt[jj * max_rank + ii] = vt[jj * old_rank + ii];
+				}
+			}
+			free(vt); vt = NULL;
+			vt = temp_vt;
         }
         qmarray_free(temp); temp = NULL;
 

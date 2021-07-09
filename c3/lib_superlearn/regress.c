@@ -44,6 +44,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <time.h>
 
 #include "lib_linalg.h"
 #include "lib_optimization.h"

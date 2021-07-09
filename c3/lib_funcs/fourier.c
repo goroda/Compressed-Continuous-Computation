@@ -373,12 +373,13 @@ fourier_expansion_prod(const struct OrthPolyExpansion * a,
     struct OrthPolyExpansion * fourier =
         orth_poly_expansion_init_from_opts(opts, n+1);
 
-    int res = 0;
+    
     if (n > 0){
         struct Fwrap * fw = fwrap_create(1, "general-vec");
         pair_t pairs = {a, b};
         fwrap_set_fvec(fw, prod_eval, &pairs);
-        res = orth_poly_expansion_approx_vec(fourier, fw, opts);
+		int res = orth_poly_expansion_approx_vec(fourier, fw, opts);
+		(void) res;
         /* assert (res == 0); */
         fwrap_destroy(fw); fw = NULL;
     }

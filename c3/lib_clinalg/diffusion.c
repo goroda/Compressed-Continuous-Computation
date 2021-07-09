@@ -562,6 +562,7 @@ struct FunctionTrain * exact_laplace(struct FunctionTrain * fin,
         qmarray_free(ddf[ii]); ddf[ii] = NULL;
     }
     free(ddf); ddf = NULL;
+	function_train_free(f); f = NULL;
     return out;
 }
 
