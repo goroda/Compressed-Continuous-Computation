@@ -16,6 +16,8 @@ if (APPLE)
 
     option(USE_CLANG "build application with clang" ON)
     set(compiler_flags "-std=c99 -O3 -Wall -Wextra -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command") # "-Wnoreserved-id-macro" "-Wno-undef")
+    # set(compiler_flags "-std=c99 -O3 -Wall -Wextra -Wno-shorten-64-to-32 -Wno-padded -Wno-missing-prototypes -Wno-format-nonliteral -Wno-disabled-macro-expansion -Wno-missing-noreturn -Wno-cast-qual -Wno-documentation-unknown-command -fvisibility=hidden") # "-Wnoreserved-id-macro" "-Wno-undef")
+    
     set(CMAKE_C_COMPILER "clang")
 
     find_package(BLAS REQUIRED)
@@ -47,6 +49,11 @@ endif()
 
 option(BUILD_SUB_LIBS "Build all sub-libearies into libraries" OFF)
 set(CMAKE_C_FLAGS "${compiler_flags}")
+
+option(LIB_VISIBILITY_OFF "Make symbols invisible beyond local context" OFF)
+if (LIB_VISIBILITY_OFF)
+  add_compile_options(-fvisibility=hidden)
+endif()
 
 # SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 

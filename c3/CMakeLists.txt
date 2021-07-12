@@ -93,7 +93,7 @@ set(src lib_array/array.c
         lib_clinalg/dmrgprod.c
         lib_clinalg/ft.c
         lib_clinalg/indmanage.c
-        lib_clinalg/iterative.c
+        # lib_clinalg/iterative.c
         lib_clinalg/qmarray.c
         lib_clinalg/quasimatrix.c
         lib_fft/fft.c

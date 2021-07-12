@@ -95,6 +95,8 @@ pip install --upgrade --force-reinstall c3py
 
 ## Configuration Options
 
+The following configuration options take boolean (true/false) values
+
 #### BUILD_STATIC_LIB
 Default: `OFF'
 
@@ -132,6 +134,10 @@ Default: `OFF'
 
 Using this option can toggle whether or not to compile the utilities
 
+#### LIB_VISIBILITY_OFF
+Default: `OFF'
+
+Using this option addes the flag `-fvisibility=hidden` to compilation. Useful when embedding this library in a C++ library to hide its symbols.
 
 ## Systems I have tested on
 

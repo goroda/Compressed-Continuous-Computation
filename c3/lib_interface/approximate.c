@@ -132,10 +132,14 @@ struct C3Approx * c3approx_create(enum C3ATYPE type, size_t dim)
         c3a->isl = malloc(dim *sizeof(struct CrossIndex * ));
         if (c3a->isl == NULL){
             fprintf(stderr,"Failure allocating memory for C3Approx\n");
-        }
+        }        
         c3a->isr = malloc(dim *sizeof(struct CrossIndex * ));
         if (c3a->isr == NULL){
             fprintf(stderr,"Failure allocating memory for C3Approx\n");
+        }
+        for (size_t ii = 0; ii < dim; ii++) {
+            c3a->isl[ii] = NULL;
+            c3a->isr[ii] = NULL;
         }
     }
     else if (type == REGRESS){
