@@ -34,7 +34,7 @@ The dependencies for this code are
    3) SWIG (if building non-C interfaces)
    4) CMake
    
-Usually, these dependencies cnan be installed via the package manager of your system (apt or brew or port)
+Usually, these dependencies can be installed via the package manager of your system (apt or brew or port)
 
 ## From Source
 ```shell
@@ -89,9 +89,6 @@ If you have an old version installed and would like to upgrade the following com
 ``` shell
 pip install --upgrade --force-reinstall c3py
 ```
-
-    
-
 
 ## Configuration Options
 
