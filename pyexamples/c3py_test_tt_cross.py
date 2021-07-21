@@ -27,7 +27,7 @@ if __name__ == "__main__":
     # arr = rank_two_fun(indices) # rank 2 function
     arr = rank_four_fun(indices) # rank 3 function
     
-    init_rank = 2
+    init_rank = np.array([1, 2, 3, 1])
     verbose = 1
     adapt = 1
 

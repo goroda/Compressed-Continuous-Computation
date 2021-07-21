@@ -263,19 +263,30 @@ class FunctionTrain(object):
                              round_tol=1e-8, kickrank=5, maxiter=5, fiber_bounds=None):
 
 
+        if isinstance(init_rank, int):
+            use_rank = np.ones((self.dim+1),dtype=np.uint)
+            use_rank[1:self.dim] = init_rank
+        else:
+            assert(len(init_rank) == self.dim+1)
+            use_rank = init_rank.astype(dtype=np.uint)
+            
         start_fibers = c3.malloc_dd(self.dim)
 
         c3a, onedopts, low_opts, optnodes = self._build_approx_params(c3.CROSS)
 
 
         for ii in range(self.dim):
+            if ii == 0:
+                rr = int(use_rank[1])
+            else:
+                rr = int(use_rank[ii])
             if fiber_bounds is None:
                 c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
-                                   self.opts[ii]['ub'], init_rank)
+                                   self.opts[ii]['ub'], rr)
             else:
                 # print("should be here! ", fiber_bounds)
                 c3.dd_row_linspace(start_fibers, ii, fiber_bounds[ii][0],
-                                   fiber_bounds[ii][1], init_rank)
+                                   fiber_bounds[ii][1], rr)
 
         
             # c3.dd_row_linspace(start_fibers, ii, 0.8,
@@ -283,7 +294,8 @@ class FunctionTrain(object):
             
         # NEED TO FREE OPTNODES
         
-        c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
+        # c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
+        c3.c3approx_init_cross_het(c3a, use_rank, verbose, start_fibers)
         c3.c3approx_set_verbose(c3a, verbose)
         c3.c3approx_set_cross_tol(c3a, cross_tol)
         c3.c3approx_set_cross_maxiter(c3a, maxiter)
@@ -662,7 +674,7 @@ class TensorTrain(FunctionTrain):
         return super().eval(xuse)
     
     def eval(self, xin):
-        assert isinstance(pt, np.ndarray)
+        assert isinstance(xin, np.ndarray)
         xuse = xin.astype('float')
         
         return super().eval(xuse)

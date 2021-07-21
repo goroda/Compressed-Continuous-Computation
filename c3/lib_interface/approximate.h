@@ -67,6 +67,8 @@ void c3approx_set_verbose(struct C3Approx *, int);
 ///////////////////////////////////////
 void c3approx_init_cross(struct C3Approx * c3a, size_t, int,
                         double **);
+void c3approx_init_cross_het(struct C3Approx * c3a, const size_t *init_ranks, int verbose,
+							 double ** startin);
 void c3approx_set_cross_tol(struct C3Approx *, double);
 void c3approx_set_adapt_kickrank(struct C3Approx *, size_t);
 void c3approx_set_adapt_maxrank_all(struct C3Approx *, size_t);
