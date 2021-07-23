@@ -23,8 +23,7 @@ In addition to the above capabilities, which are unique to the C3 package, I als
 * Stochastic Gradient with ADAM 
 
 
-Documentation of most functions is provided by Doxygen here: 
-http://alexgorodetsky.com/c3doc/html/
+Documentation of most functions is provided by Doxygen [here.](http://alexgorodetsky.com/c3doc/html/index.html)
 
 ### Installation / Getting started
 
