@@ -284,6 +284,71 @@ void c3approx_init_cross(struct C3Approx * c3a, size_t init_rank, int verbose,
 }
 
 /***********************************************************//**
+    Initialize cross approximation arguments with 
+	heterogeneous ranks
+
+    \param[in,out] c3a        - approx structure
+    \param[in]     init_ranks - starting ranks (dim+1) of approximation
+    \param[in]     verbose    - verbosity level from cross approximation
+    \param[in]     start      - starting nodes 
+
+    \note
+    *starting nodes* are a d dimensional array of 1 dimensional points
+    each array of 1 dimensional must have >= *init_rank* nodes
+	init_ranks should be [1, 3, 1], e.g. for a 2 dimensional problem
+***************************************************************/
+void c3approx_init_cross_het(struct C3Approx * c3a, const size_t *init_ranks, int verbose,
+							 double ** startin)  
+{
+    assert (c3a != NULL);
+    assert (c3a->type == CROSS);
+    if (c3a->fca != NULL){
+        fprintf(stdout,"Initializing cross approximation and\n");
+        fprintf(stdout," destroying previous options\n");
+        ft_cross_args_free(c3a->fca); c3a->fca = NULL;
+    }
+
+    double ** start = NULL;
+    if (startin != NULL){
+        start = startin;
+    }
+    else{
+        start = malloc_dd(c3a->dim);
+        for (size_t ii = 0; ii < c3a->dim; ii++){
+            double lb = multi_approx_opts_get_dim_lb(c3a->fapp, ii);
+            double ub = multi_approx_opts_get_dim_ub(c3a->fapp, ii);
+			if (ii == 0) {
+				start[ii] = linspace(lb, ub, init_ranks[1]);
+			}
+			else {
+				start[ii] = linspace(lb, ub, init_ranks[ii]);
+			}
+        }
+    }
+    
+    c3a->fca = ft_cross_args_alloc(c3a->dim,init_ranks[1]);
+	for (size_t ii = 0; ii <= c3a->dim; ii++){
+		ft_cross_args_set_rank(c3a->fca, ii, init_ranks[ii]);
+	}
+    ft_cross_args_set_verbose(c3a->fca,verbose);
+    ft_cross_args_set_round_tol(c3a->fca,1e-14);
+    
+    size_t * ranks = ft_cross_args_get_ranks(c3a->fca);
+    cross_index_array_initialize(c3a->dim,c3a->isr,0,1,ranks,(void**)start,sizeof(double));
+    cross_index_array_initialize(c3a->dim,c3a->isl,0,0,ranks+1,(void**)start,sizeof(double));
+    if (c3a->ftref != NULL){
+        function_train_free(c3a->ftref); c3a->ftref = NULL;
+    }
+    c3a->ftref = function_train_constant(1.0,c3a->fapp);
+    /* exit(1); */
+     /* function_train_get_lb(c3a->ftref); */
+
+    if (startin == NULL){
+        free_dd(c3a->dim, start);
+    }
+}
+
+/***********************************************************//**
     Set verbosity level
 ***************************************************************/
 void c3approx_set_verbose(struct C3Approx * c3a, int verbose)

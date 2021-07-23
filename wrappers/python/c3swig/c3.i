@@ -81,6 +81,10 @@ typedef long unsigned int size_t;
     (size_t leni, const size_t * xi) 
 };
 
+%apply (int DIM1, size_t* IN_ARRAY1) {
+    (size_t len1, const size_t * init_ranks) 
+};
+
 
 /* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
@@ -235,6 +239,29 @@ void function_train_free(struct FunctionTrain *);
     }
 %}
 %ignore lin_elem_exp_aopts_alloc;
+
+%rename (c3approx_init_cross_het) my_c3approx_init_cross_het;
+%exception my_c3approx_init_cross_het{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_c3approx_init_cross_het(struct C3Approx * c3a, size_t len1, const size_t *init_ranks, int verbose, double ** startin) {
+		if (len1 != (c3approx_get_dim(c3a)+1)){
+            PyErr_Format(PyExc_ValueError,
+                         "ranks has incorrect dimensions (%zu) instead of %zu",
+                         len1, c3approx_get_dim(c3a)+1);
+        }
+		/* size_t *use_ranks = calloc(len1, sizeof(size_t)); */
+		/* for (int ii = 0; ii < len1; ii++) { */
+		/* 	use_ranks[ii] = (int)init_ranks[ii]; */
+		/* } */
+		c3approx_init_cross_het(c3a, init_ranks, verbose, startin);
+		/* c3approx_init_cross_het(c3a, use_ranks, verbose, startin); */
+		/* free(use_ranks); use_ranks = NULL; */
+    }
+%}
+%ignore c3approx_init_cross_het;
 
 %rename (function_train_eval) my_function_train_eval;
 %exception my_function_train_eval{

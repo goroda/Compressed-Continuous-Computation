@@ -263,19 +263,30 @@ class FunctionTrain(object):
                              round_tol=1e-8, kickrank=5, maxiter=5, fiber_bounds=None):
 
 
+        if isinstance(init_rank, int):
+            use_rank = np.ones((self.dim+1),dtype=np.uint)
+            use_rank[1:self.dim] = init_rank
+        else:
+            assert(len(init_rank) == self.dim+1)
+            use_rank = init_rank.astype(dtype=np.uint)
+            
         start_fibers = c3.malloc_dd(self.dim)
 
         c3a, onedopts, low_opts, optnodes = self._build_approx_params(c3.CROSS)
 
 
         for ii in range(self.dim):
+            if ii == 0:
+                rr = int(use_rank[1])
+            else:
+                rr = int(use_rank[ii])
             if fiber_bounds is None:
                 c3.dd_row_linspace(start_fibers, ii, self.opts[ii]['lb'],
-                                   self.opts[ii]['ub'], init_rank)
+                                   self.opts[ii]['ub'], rr)
             else:
                 # print("should be here! ", fiber_bounds)
                 c3.dd_row_linspace(start_fibers, ii, fiber_bounds[ii][0],
-                                   fiber_bounds[ii][1], init_rank)
+                                   fiber_bounds[ii][1], rr)
 
         
             # c3.dd_row_linspace(start_fibers, ii, 0.8,
@@ -283,7 +294,8 @@ class FunctionTrain(object):
             
         # NEED TO FREE OPTNODES
         
-        c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
+        # c3.c3approx_init_cross(c3a, init_rank, verbose, start_fibers)
+        c3.c3approx_init_cross_het(c3a, use_rank, verbose, start_fibers)
         c3.c3approx_set_verbose(c3a, verbose)
         c3.c3approx_set_cross_tol(c3a, cross_tol)
         c3.c3approx_set_cross_maxiter(c3a, maxiter)
@@ -649,8 +661,70 @@ class FunctionTrain(object):
             self.ft = None
 
 
+class TensorTrain(FunctionTrain):
+    """A tensor-train object based on the FunctionTrain
+    To achieve this effect, I use a Function train
+    with piecewise-linear approximation
+    """
 
+    def __getitem__(self, *index):
+        x = np.array(*index)
+        # print(x)
+        xuse = x.astype('float')
+        return super().eval(xuse)
+    
+    def eval(self, xin):
+        assert isinstance(xin, np.ndarray)
+        xuse = xin.astype('float')
+        
+        return super().eval(xuse)
+    
+    @classmethod
+    def cross_from_numpy_tensor(cls, tens, init_rank, verbose, adapt,
+                                maxrank=10, cross_tol=1e-8,
+                                round_tol=1e-8, kickrank=5, maxiter=5):
+        """Use cross approximation to build approximation of a tensor 
+        the keyword arguments are the same as those of cross approximation
+        """
+        
+        mode_sizes = tens.shape
+        dim = len(mode_sizes)
+        tt = cls(dim)
+        for ii in range(dim):
+            lb = float(0)
+            ub = float(mode_sizes[ii])
+            lin_elem_nodes = np.arange(lb, ub, 1.0)
+            print(lin_elem_nodes)
+            tt.set_dim_opts(ii, "linelm", lb, ub, lin_elem_nodes=lin_elem_nodes)
+
+        def func(x, param=None):
             
+            out = np.zeros((x.shape[0]))
+            xuse = np.copy(x).astype('int')
+            # print(xuse)
+            use_index = 0
+            for ii in range(xuse.shape[1]):
+                if xuse[1, ii] != xuse[0, ii]:
+                    use_index = ii
+                    break
+            
+            index = xuse[0, :].tolist()
+            index[use_index] = slice(None)
+            index = tuple(index)
+            return param[index]
+
+        
+        print("build!")
+        tt.build_approximation(func, tens, init_rank, verbose, adapt,
+                               maxrank=maxrank, cross_tol=cross_tol,
+                               round_tol=round_tol, kickrank=kickrank, maxiter=maxiter)
+
+        # exit(1)
+        return tt
+        
+    
+
+    
 class GenericFunction(object):
     """ Univariate Functions """
 
