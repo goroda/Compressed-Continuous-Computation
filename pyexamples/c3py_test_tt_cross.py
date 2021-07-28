@@ -38,22 +38,20 @@ if __name__ == "__main__":
                                                   kickrank=2,
                                                   maxiter=5)
 
-    
+
+    check_multiple = np.array([[0, 0, 0],
+                      [1, 0, 0,],
+                      [1, 1, 0],
+                      [0, 0, 1]])
     print(arr[0, 0, 0])
-    print(tt[0, 0, 0]) # currently only works for a single index
-
     print(arr[1, 0, 0])
-    print(tt[1, 0, 0]) 
-
     print(arr[1, 1, 0])
-    print(tt[1, 1, 0]) 
-
     print(arr[0, 0, 1])
+    
     print(tt[0, 0, 1]) 
+    print(tt.eval(check_multiple))
 
-    print(tt.eval(np.array([0, 0, 1])))
-
-
+    #cores = tt.cores # <- to get a list of cores that are [rank, n, rank]
     # to get the full tensor.
     all_elements = np.array(indices).T.reshape(-1, dim, order='C')
     recon = tt.eval(all_elements)# .reshape(arr.shape, order='F')

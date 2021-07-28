@@ -665,19 +665,42 @@ class TensorTrain(FunctionTrain):
     """A tensor-train object based on the FunctionTrain
     To achieve this effect, I use a Function train
     with piecewise-linear approximation
+
+    Parameters
+    ----------
+    cores - a list of cores
     """
 
+    # def __init__(self, cores):
+    #     self.cores = copy.deepcopy(cores)
+        
     def __getitem__(self, *index):
         x = np.array(*index)
-        # print(x)
-        xuse = x.astype('float')
-        return super().eval(xuse)
+        return self.eval(x)
     
     def eval(self, xin):
         assert isinstance(xin, np.ndarray)
-        xuse = xin.astype('float')
-        
-        return super().eval(xuse)
+
+        if xin.ndim == 1:
+            left = self.cores[0][0, xin[0], :]
+            for ii in range(1, self.dim):
+                current = self.cores[ii][:, xin[ii], :]
+                # print("left.shape = ", left.shape)
+                # print("current.shape = ", current.shape)
+                left = np.einsum("k,kl->l", left, current)
+
+            left = np.squeeze(left, axis=-1)
+            return left
+        else:
+            left = self.cores[0][0, xin[:, 0], :]
+            for ii in range(1, self.dim):
+                current = self.cores[ii][:, xin[:, ii], :]
+                # print("left.shape = ", left.shape)
+                # print("current.shape = ", current.shape)
+                left = np.einsum("mk,kml->ml", left, current)
+
+            left = np.squeeze(left, axis=-1)
+            return left
     
     @classmethod
     def cross_from_numpy_tensor(cls, tens, init_rank, verbose, adapt,
@@ -690,11 +713,13 @@ class TensorTrain(FunctionTrain):
         mode_sizes = tens.shape
         dim = len(mode_sizes)
         tt = cls(dim)
+        nodes = []
         for ii in range(dim):
             lb = float(0)
             ub = float(mode_sizes[ii])
             lin_elem_nodes = np.arange(lb, ub, 1.0)
-            print(lin_elem_nodes)
+            nodes.append(lin_elem_nodes)
+            # print(lin_elem_nodes)
             tt.set_dim_opts(ii, "linelm", lb, ub, lin_elem_nodes=lin_elem_nodes)
 
         def func(x, param=None):
@@ -719,7 +744,19 @@ class TensorTrain(FunctionTrain):
                                maxrank=maxrank, cross_tol=cross_tol,
                                round_tol=round_tol, kickrank=kickrank, maxiter=maxiter)
 
-        # exit(1)
+
+        tt.cores = [None] * dim
+        ranks = tt.get_ranks()
+        for ii in range(dim):
+
+            core = np.zeros((ranks[ii], tens.shape[ii], ranks[ii+1]))
+            qmarray = c3.function_train_get_core(tt.ft, ii)
+            for jj in range(ranks[ii]):
+                for kk in range(ranks[ii+1]):
+                    func = GenericFunction(c3.qmarray_get_func(qmarray, jj, kk))
+                    core[jj, :, kk] = func.eval(nodes[ii])
+            tt.cores[ii] = core
+
         return tt
         
     
