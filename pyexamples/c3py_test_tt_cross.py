@@ -51,7 +51,9 @@ if __name__ == "__main__":
     print(tt[0, 0, 1]) 
     print(tt.eval(check_multiple))
 
-    #cores = tt.cores # <- to get a list of cores that are [rank, n, rank]
+    cores = tt.cores # <- to get a list of cores that are [rank, n, rank]
+    print([c.shape for c in cores])
+    
     # to get the full tensor.
     all_elements = np.array(indices).T.reshape(-1, dim, order='C')
     recon = tt.eval(all_elements)# .reshape(arr.shape, order='F')
