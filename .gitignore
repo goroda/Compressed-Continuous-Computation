@@ -22,7 +22,7 @@ doc/latex/*
 doc/c3doc/*
 doc/*
 
-src/lib_funcs/legpolytens/legtens.h
+# src/lib_funcs/legpolytens/legtens.h
 src/TAGS
 
 bin/*
