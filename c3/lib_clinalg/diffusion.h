@@ -95,4 +95,12 @@ struct FunctionTrain *
 exact_laplace_op(struct FunctionTrain *,
                  struct Operator **,
                  struct MultiApproxOpts *);
+
+struct OperatorForLaplace;
+struct OperatorForLaplace *
+build_lp_operator(size_t dim, size_t len1, const double * evalnd_pt);
+struct Operator ** operator_for_laplace_get_op(struct OperatorForLaplace *op);
+
+void destroy_operator_for_laplace(struct OperatorForLaplace * op);
+
 #endif

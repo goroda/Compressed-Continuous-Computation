@@ -4688,3 +4688,4 @@ void c3vgemv_arr(int trans, size_t m, size_t n, double alpha, double * A,
         }
     }
 }
+

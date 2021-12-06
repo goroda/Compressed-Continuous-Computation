@@ -44,6 +44,8 @@
  */
 
 #include <stdlib.h>
+#include <math.h>
+#include <complex.h>
 #include <assert.h>
 
 #include "diffusion.h"
@@ -708,5 +710,130 @@ exact_laplace_op(struct FunctionTrain * f,
 
 
 
+/***********************************************************//**
+    An example of apply the laplace operator as part of
+    a paper with Victor in fourier space
 
+    \param[in] f    - input to diffusion operator
+    \param[in] args - A laplacian matrix for application
 
+    \return generic function representing the application
+    
+***************************************************************/
+static struct GenericFunction * Lp_apply(const struct GenericFunction * f, void * args)
+{
+    double * Lp = args;
+    assert (f->fc == LINELM);
+    struct LinElemExp * ff = f->f;
+    
+    struct GenericFunction * g = generic_function_alloc(1, LINELM);
+
+    size_t nx = ff->num_nodes;
+    double * new_vals = calloc_double(nx);
+    for (size_t jj = 0; jj < nx; jj++){
+        new_vals[jj] = 0.0;
+        for (size_t kk = 0; kk < nx; kk++){
+            new_vals[jj] += Lp[kk*nx + jj] * ff->coeff[kk];
+        }
+    }
+    g->f = lin_elem_exp_init(nx, ff->nodes, new_vals);
+    free(new_vals); new_vals = NULL;
+    return g;
+}
+
+/***********************************************************//**
+    Laplace matrix for application on nodes, part of paper with
+    victor
+
+    \param[in] nx    - number of nodes
+    \param[in] nodes - nodes
+
+    \return Array representing the laplacian
+***************************************************************/
+static double * compute_Lp(size_t nx, const double * nodes)
+{
+    double dx = nodes[1] - nodes[0];    /* Assumes constant dx. */
+    for (size_t ii = 1; ii < nx-1; ii++){
+        double dx2 = nodes[ii+1] - nodes[ii];
+        if (fabs(dx2-dx) > 1e-15){
+            fprintf(stderr, "Lp only works for uniform spacing\n");
+            fprintf(stderr, "%3.15G %3.15G\n", dx, dx2);
+            exit(1);
+        }
+            
+    }
+    
+    double ub = nodes[nx-1] + dx; /* For periodic grid */
+    double lb = nodes[0];
+
+    double * Lp =calloc_double(nx  * nx);
+    double dp = 2.0 * M_PI / (ub - lb);
+    double * p = calloc_double(nx);
+    for (size_t ii = 0; ii < nx; ii++){
+        for (size_t jj = 0; jj < nx; jj++){
+            Lp[ii*nx + jj] = 0.0;
+        }
+    }
+
+    for (size_t ii = 0; ii < nx; ii++){
+        p[ii] = dp * ii - dp * nx / 2.0;
+    }
+
+    for (size_t ll=0; ll<nx; ll++){
+        for (size_t jj=0; jj<nx; jj++){
+            for (size_t kk=0; kk<nx; kk++){
+                double update =  creal(cexp(I*(nodes[jj]-nodes[ll])*p[kk])*pow(p[kk],2)*dx*dp/(2*M_PI));
+                Lp[ll * nx + jj] = Lp[ll*nx + jj] - update;
+            }
+        }
+    }
+    free(p); p = NULL;
+
+    return Lp;
+}
+
+struct OperatorForLaplace
+{
+    size_t dim;
+    struct Operator** op;
+    double ** opLP;
+};
+
+struct Operator ** operator_for_laplace_get_op(struct OperatorForLaplace * op)
+{
+    if (op == NULL) {
+        return NULL;
+    }
+    return op->op;
+}
+
+struct OperatorForLaplace *
+build_lp_operator(size_t dim, size_t len1, const double * nodes)
+{
+    struct OperatorForLaplace * op = malloc(sizeof(struct OperatorForLaplace));
+    assert (op != NULL);
+
+    op->dim = dim;
+    op->op = malloc(dim * sizeof(struct Operator *));
+    op->opLP = malloc(dim * sizeof(double));
+    for (size_t ii = 0; ii < dim; ii++){
+        op->opLP[ii] = compute_Lp(len1, nodes);
+        op->op[ii] = malloc(sizeof(struct Operator));
+        op->op[ii]->f = Lp_apply;
+        op->op[ii]->opts = op->opLP[ii];
+    }
+    return op;
+}
+
+void destroy_operator_for_laplace(struct OperatorForLaplace * op)
+{
+    if (op != NULL) {
+        for (size_t ii = 0; ii < op->dim; ii++){
+            free(op->op[ii]); op->op = NULL;
+            free(op->opLP[ii]); op->opLP = NULL;
+        } 
+        free(op->op); op->op = NULL;
+        free(op->opLP); op->opLP = NULL;
+        free(op);
+    }
+}

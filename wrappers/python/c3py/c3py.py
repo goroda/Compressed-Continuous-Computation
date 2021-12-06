@@ -649,7 +649,24 @@ class FunctionTrain(object):
             ft_out.round(eps=eps)
 
         return ft_out
-        
+
+    def laplace_op(self, op, eps=0.0):
+        # op should be computed using e.g., build_lp_operator
+        ft_out = FunctionTrain(self.dim)
+
+        c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
+        multiopts = c3.c3approx_get_approx_args(c3a)
+
+        opp = c3.operator_for_laplace_get_op(op)
+        ft_out.ft = c3.exact_laplace_op(self.ft, opp, multiopts)
+        ft_out.opts = copy.deepcopy(self.opts)
+
+        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
+
+        if eps > 0.0:
+            ft_out.round(eps=eps)
+
+        return ft_out
         
     def __del__(self):
         self.close()
