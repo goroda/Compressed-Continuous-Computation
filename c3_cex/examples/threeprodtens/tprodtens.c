@@ -19,7 +19,7 @@ int main()
 {
     // generate the three term product
     
-    size_t maxorder = 200;
+    size_t maxorder = 100;
     size_t ii,jj,kk,ll;
     
     double * coeffs = calloc_double((maxorder/2)*(maxorder/2)*maxorder);
@@ -79,7 +79,11 @@ int main()
     assert (fp != NULL);
 
     fprintf(fp,"%s\n\n", "#include <string.h>");
-    fprintf(fp,"%s\n", "static const double lpolycoeffs[8000000] = {");
+	/* number should be maxorder*maxorder*maxorder / 4*/
+	/* 200 -> 2000000 */
+	/* fprintf(fp,"%s\n", "static const double lpolycoeffs[2000000] = {"); */
+	/* 100 -> 250000 */
+	fprintf(fp,"%s\n", "static const double lpolycoeffs[250000] = {");
     for (ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
         fprintf(fp,"%3.15G,\n",coeffs[ii]);
     }

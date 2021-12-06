@@ -5,8 +5,8 @@ totstring = "#include <string.h> \n "
 name = "legpolytens.dat"
 dat = np.loadtxt(name,skiprows=1,dtype=str)
     
-print dat
-w = dat
+# print dat
+# w = dat
 
 w  = "static const double lpolycoeffs[8000000] = {" + ",".join(w) + "};"
 

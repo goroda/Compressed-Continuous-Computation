@@ -59,7 +59,6 @@
 #include "fft.h"
 #include "lib_quadrature.h"
 #include "linalg.h"
-#include "legtens.h"
 #include "fourier.h"
 
 inline static double fourierortho(size_t n){

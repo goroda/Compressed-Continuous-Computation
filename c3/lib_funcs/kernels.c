@@ -65,7 +65,7 @@
 #include "hpoly.h"
 #include "lib_quadrature.h"
 #include "linalg.h"
-#include "legtens.h"
+/* #include "legtens.h" */
 
 
 /********************************************************//**

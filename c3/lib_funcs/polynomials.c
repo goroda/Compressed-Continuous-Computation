@@ -4035,7 +4035,8 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
     if (p == FOURIER){
         return fourier_expansion_prod(a, b);
     }
-    if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){
+    /* if ( (p == LEGENDRE) && (a->num_poly < 100) && (b->num_poly < 100)){ */ /* for maxorder=200 in tprodtens.c*/
+    if ( (p == LEGENDRE) && (a->num_poly < 50) && (b->num_poly < 50)){  /* for maxorder=200 in tprodtens.c*/	
         //printf("in special prod\n");
         //double lb = a->lower_bound;
         //double ub = b->upper_bound;
@@ -4061,7 +4062,8 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
         for (kk = 0; kk < c->num_poly; kk++){
             for (ii = 0; ii < a->num_poly; ii++){
                 for (jj = 0; jj < b->num_poly; jj++){
-                    c->coeff[kk] +=  lpolycoeffs[ii+jj*100+kk*10000] * 
+                    /* c->coeff[kk] +=  lpolycoeffs[ii+jj*100+kk*10000] * */ /* for max_order == 200 */
+					c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] *  /* for max_order == 100*/
                                         allprods[jj+ii*b->num_poly];
                 }
             }
@@ -4179,7 +4181,8 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
             maxorderb = b[ii*ldb]->num_poly;
         }
     }
-    if ( (maxordera > 99) || (maxorderb > 99) || (ptype != LEGENDRE)){
+    /* if ( (maxordera > 99) || (maxorderb > 99) || (ptype != LEGENDRE)){ */
+    if ( (maxordera > 49) || (maxorderb > 49) || (ptype != LEGENDRE)){	/* see other use of lpolycoeffs above */
         printf("OrthPolyExpansion sum_product greater than order 100 is slow\n");
         c = orth_poly_expansion_prod(a[0],b[0]);
         for (ii = 1; ii< n; ii++){
@@ -4207,7 +4210,9 @@ orth_poly_expansion_sum_prod(size_t n, size_t lda,
         for (ll = 0; ll < c->num_poly; ll++){
             for (ii = 0; ii < maxordera; ii++){
                 for (jj = 0; jj < maxorderb; jj++){
-                    c->coeff[ll] +=  lpolycoeffs[ii+jj*100+ll*10000] * 
+					/* see other use above of lpolycoeffs */
+                    /* c->coeff[ll] +=  lpolycoeffs[ii+jj*100+ll*10000] * */
+                    c->coeff[ll] +=  lpolycoeffs[ii+jj*50+ll*2500] * 						
                                         allprods[jj+ii*maxorderb];
                 }
             }
