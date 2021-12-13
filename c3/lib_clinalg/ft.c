@@ -383,7 +383,11 @@ struct FunctionTrain * function_train_loadtxt(FILE * fp)
 {
     size_t dim;
     int num = fscanf(fp,"%zu ",&dim);
-    assert (num == 1);
+	if (num != 1) {
+		fprintf(stderr, "Error loading function train\n");
+		exit(1);
+	}
+    /* assert (num == 1); */
 
     struct FunctionTrain * ft = function_train_alloc(dim);
     

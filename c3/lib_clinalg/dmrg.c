@@ -72,19 +72,19 @@ struct QR * qr_reduced(const struct Qmarray * a, int type, struct OneApproxOpts 
     }
     qr->mat = NULL;
     qr->Q = NULL;
-    int success = 0;
+    /* int success = 0; */
     if (type == 0){
         qr->right = 0;
         qr->mr = a->nrows;
         qr->mc = a->nrows;
-        success = qmarray_lq(ac,&(qr->Q),&(qr->mat),o);
+        int success = qmarray_lq(ac,&(qr->Q),&(qr->mat),o);
         assert (success == 0);
     }
     else if (type == 1){
         qr->right = 1;
         qr->mc = a->ncols;
         qr->mr = a->ncols;
-        success = qmarray_qr(ac,&(qr->Q),&(qr->mat),o);
+        int success = qmarray_qr(ac,&(qr->Q),&(qr->mat),o);
         assert (success == 0);
     }
     else{
