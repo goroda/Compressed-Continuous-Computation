@@ -30,6 +30,7 @@ class FunctionTrain(object):
         self.dim = din
         self.opts = []
         self.ranks = [1]
+        self.reg = None
         for ii in range(din):
             self.opts.append(None)
             self.ranks.append(1)
@@ -474,7 +475,7 @@ class FunctionTrain(object):
 
             # print("nepoch", nepoch)
 
-        c3.ft_regress_free(reg)
+        self.reg = reg
         c3.c3opt_free(optimizer)
 
         # Free built approximation options
@@ -676,7 +677,10 @@ class FunctionTrain(object):
         if self.ft is not None:
             c3.function_train_free(self.ft)
             self.ft = None
-
+        
+        if self.reg is not None:
+            c3.ft_regress_free(self.reg)
+            self.reg = None
 
 class TensorTrain(FunctionTrain):
     """A tensor-train object based on the FunctionTrain
@@ -776,7 +780,76 @@ class TensorTrain(FunctionTrain):
 
         return tt
         
+class FTparam(object):
+
+    def __init__(self, ft):
+        self.ft_pclass = ft
+        self.ftp = c3.ft_regress_get_ft_param(ft.reg)
+        self.ft = c3.ft_param_get_ft(self.ftp)
+        self.dim = c3.ft_param_get_dim(self.ftp)
+
+    def get_params(self):
+        params = np.zeros(self.get_nparams())
+        c3.ft_param_get_params(self.ftp, params)
+        return params
+
+    def get_param(self, param_idx):
+        return c3.ft_param_get_param(self.ftp, param_idx)
+
+    def free(self):
+        # c3.function_train_free(self.ft)
+        c3.ft_param_free(self.ftp)
+        # self.ft_pclass.close()
+        return
+
+    def get_nparams(self):
+        return c3.ft_param_get_nparams(self.ftp)
+
+    def update_params(self, new_params):
+        c3.ft_param_update_params(self.ftp, new_params)
+        self.ft = c3.ft_param_get_ft(self.ftp)
+
+    def ft_eval(self, pt):
+        assert isinstance(pt, np.ndarray)
+        if pt.ndim == 1:
+            return c3.function_train_eval(self.ft, pt)
+        else:
+            assert pt.shape[1] == self.dim
+            out = np.zeros((pt.shape[0]))
+            for ii, p in enumerate(pt):
+                out[ii] = c3.function_train_eval(self.ft, p)
+            return out
+        
+    def grad_eval(self, x):
+        nparams = self.get_nparams()
+        grad = np.zeros(nparams)
+        mem = c3.sl_mem_manager_alloc(self.dim,1,nparams,c3.LINEAR_ST)
+        c3.sl_mem_manager_check_structure(mem, self.ftp, x)
+        running_eval = c3.sl_mem_manager_get_running_eval(mem)
+        running_grad = c3.sl_mem_manager_get_running_grad(mem)
+        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+        grad_eval = c3.ft_param_gradeval(self.ftp, x, grad, lin_structure_grad, running_grad, running_eval)
+        return grad_eval, grad
     
+    def eval_lin(self, x):
+        nparams = self.get_nparams()
+        mem = c3.sl_mem_manager_alloc(self.dim,1,nparams,c3.LINEAR_ST)
+        c3.sl_mem_manager_check_structure(mem, self.ftp, x)
+        running_eval = c3.sl_mem_manager_get_running_eval(mem)
+        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+        lin_eval = c3.ft_param_eval_lin(self.ftp, lin_structure_grad, running_eval)
+        return lin_eval
+    
+    def grad_eval_lin(self, x):
+        nparams = self.get_nparams()
+        grad = np.zeros(nparams)
+        mem = c3.sl_mem_manager_alloc(self.dim,1,nparams,c3.LINEAR_ST)
+        c3.sl_mem_manager_check_structure(mem, self.ftp, x)
+        running_eval = c3.sl_mem_manager_get_running_eval(mem)
+        running_grad = c3.sl_mem_manager_get_running_grad(mem)
+        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+        grad_eval_lin = c3.ft_param_gradeval_lin(self.ftp, lin_structure_grad, grad, running_eval, running_grad)
+        return grad_eval_lin, grad
 
     
 class GenericFunction(object):

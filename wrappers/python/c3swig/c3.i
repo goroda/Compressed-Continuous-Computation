@@ -14,6 +14,7 @@
     #include "objective_functions.h"
     #include "parameterization.h"
     #include "superlearn.h"
+    #include "superlearn_util.h"
     #include "regress.h"
     #include "c3_interface.h"
     #include "diffusion.h"
@@ -85,6 +86,21 @@ typedef long unsigned int size_t;
     (size_t len1, const size_t * init_ranks) 
 };
 
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len1, const double * params)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len1, const double * x)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len2, double * grad)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len, double * params)
+};
 
 /* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
@@ -205,6 +221,102 @@ void function_train_free(struct FunctionTrain *);
     }
 %}
 %ignore ft_regress_run;
+
+%rename (ft_regress_get_ft_param) my_ft_regress_get_ft_param;
+%exception my_ft_regress_get_ft_param{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    struct FTparam * my_ft_regress_get_ft_param(struct FTRegress * ftr){
+        return ft_regress_get_ft_param(ftr);
+    }
+%}
+%ignore ft_regress_get_ft_param;
+
+
+%rename (ft_param_get_dim) my_ft_param_get_dim;
+%exception my_ft_param_get_dim{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    size_t my_ft_param_get_dim(const struct FTparam * ftp){
+        return ft_param_get_dim(ftp);
+    }
+%}
+%ignore ft_param_get_dim;
+
+
+%rename (ft_param_update_params) my_ft_param_update_params;
+%exception my_ft_param_update_params{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft_param_update_params(struct FTparam * ftp, size_t len1, const double * params){
+        return ft_param_update_params(ftp, params);
+    }
+%}
+%ignore ft_param_update_params;
+
+
+%rename (ft_param_gradeval) my_ft_param_gradeval;
+%exception my_ft_param_gradeval{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    double my_ft_param_gradeval(struct FTparam * ftp, 
+                        size_t len1, const double * x,
+                        size_t len2, double * grad,
+                        double * grad_evals,
+                        double * mem, 
+                        double * evals){
+        return ft_param_gradeval(ftp, x, grad, grad_evals, mem, evals);
+    }
+%}
+%ignore ft_param_gradeval;
+
+
+%rename (sl_mem_manager_check_structure) my_sl_mem_manager_check_structure;
+%exception my_sl_mem_manager_check_structure{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_sl_mem_manager_check_structure(struct SLMemManager * mem,
+                                    const struct FTparam * ftp,
+                                    size_t len1, const double * x){
+        return sl_mem_manager_check_structure(mem, ftp, x);
+    }
+%}
+%ignore sl_mem_manager_check_structure;
+
+%rename (ft_param_gradeval_lin) my_ft_param_gradeval_lin;
+%exception my_ft_param_gradeval_lin{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    double my_ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
+                             size_t len2, double * grad, double * mem, double * evals){
+        return ft_param_gradeval_lin(ftp, grad_evals, grad, mem, evals);
+    }
+%}
+%ignore ft_param_gradeval_lin;
+
+%rename (ft_param_get_params) my_ft_param_get_params;
+%exception my_ft_param_get_params{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft_param_get_params(struct FTparam * ftp, size_t len, double * params){
+        return ft_param_get_params(ftp, params);
+    }
+%}
+%ignore ft_param_get_params;
 
 
 %rename (cross_validate_init) my_cross_validate_init;
@@ -492,6 +604,7 @@ void function_train_free(struct FunctionTrain *);
 %include "lib_superlearn/objective_functions.h"
 %include "lib_superlearn/parameterization.h"
 %include "lib_superlearn/superlearn.h"
+%include "lib_superlearn/superlearn_util.h"
 %include "lib_interface/c3_interface.h"
 %include "lib_clinalg/diffusion.h"
 %include "lib_clinalg/dmrg.h"
