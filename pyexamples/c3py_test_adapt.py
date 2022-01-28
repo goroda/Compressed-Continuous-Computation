@@ -75,6 +75,10 @@ if __name__ == "__main__":
     ft3.round(eps=1e-3)
     print("ft3 rounded ranks = ", ft3.get_ranks())
 
+    ft3b = ft2 * ft
+    ft3b.round(maxrank_all=1)
+    print("ft3b rounded ranks = ", ft3b.get_ranks())
+
     inner_product = ft.inner(ft)
     print("Inner product = ", inner_product)
 

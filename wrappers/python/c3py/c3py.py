@@ -533,12 +533,18 @@ class FunctionTrain(object):
         c3.ft1d_array_free(hess)
         return hess_out.reshape((self.dim, self.dim), order='F')
 
-    def round(self, eps=1e-14):
-        """ Round a FunctionTrain """
-
+    def round(self, eps=1e-14, maxrank_all=None):
+        """Round a FunctionTrain. """
+        
         c3a, onedopts, low_opts, optopts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
-        ftc = c3.function_train_round(self.ft, eps, multiopts)
+
+        if maxrank_all is not None:
+            assert isinstance(maxrank_all, int)
+            ftc = c3.function_train_round_maxrank_all(self.ft, eps, multiopts, maxrank_all)
+        else:
+            ftc = c3.function_train_round(self.ft, eps, multiopts)
+            
         c3.function_train_free(self.ft)
         # c3.function_train_free(self.ft)
         self.ft = ftc
