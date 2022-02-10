@@ -28,24 +28,13 @@ def build_ft_adapt(dim):
     ft.build_approximation(func1, None, init_rank, verbose, adapt, maxiter=10)
     return ft
 
-def build_ft_regress(dim):
-    ft = c3py.FunctionTrain(dim)
-    for ii in range(dim):
-        ft.set_dim_opts(ii, "legendre", LB, UB, NPARAM)
-
-    ranks = [2]*(DIM+1)
-    ranks[0] = 1
-    ranks[DIM] = 1
-    ft.set_ranks(ranks)
-    verbose = 0
-    adaptrank = 0
-    ft.build_data_model(NDATA, X, Y,
-                        alg="AIO", obj="LS", adaptrank=adaptrank,
-                        kickrank=1, roundtol=1e-10, verbose=verbose)
-    return ft
-
 ft_adapt = build_ft_adapt(DIM)
-ft_regress = build_ft_regress(DIM)
+
+ft_regress = c3py.FunctionTrain(DIM)
+ft_regress.build_model(X, Y, LB, UB, nparam=NPARAM, init_rank=2, basis="legendre",
+                    alg="AIO", obj="LS", adaptrank=0,
+                    kickrank=1, roundtol=1e-10, verbose=0)
+ft_regress.run_regression()
 # ft_diff = ft_adapt - ft_regress
 
 for ii in range(100):
