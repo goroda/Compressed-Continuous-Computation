@@ -1107,7 +1107,7 @@ double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
 /***********************************************************//**
     Get the FT param 
 
-    \param[in, out] ftr    - regression structuture
+    \param[in] ftr    - regression structuture
 
     \returns FTparam struct
 ***************************************************************/

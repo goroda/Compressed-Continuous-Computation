@@ -65,7 +65,7 @@ for e in range(epochs):
     
     param_grads = np.zeros((len(Y), nparams))
     for d in range(len(Y)):
-        _, grad_evals = ft.grad_eval(X[d])
+        _, grad_evals = ft.param_grad_eval(X[d])
         param_grads[d] = grad_evals
         
     cost_grads = -(2/len(Y))*np.dot(error_diff, param_grads) 
