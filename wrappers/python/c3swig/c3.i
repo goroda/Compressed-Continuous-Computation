@@ -318,6 +318,18 @@ void function_train_free(struct FunctionTrain *);
 %}
 %ignore ft_param_get_params;
 
+%rename (function_train_get_params) my_function_train_get_params;
+%exception my_function_train_get_params{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    size_t my_function_train_get_params(const struct FunctionTrain * ft, size_t len, double * params){
+        return function_train_get_params(ft, params);
+    }
+%}
+%ignore function_train_get_params;
+
 
 %rename (cross_validate_init) my_cross_validate_init;
 %exception my_cross_validate_init{

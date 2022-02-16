@@ -28,23 +28,31 @@ nparam = 2                             # number of parameters per univariate fun
 
 ## Run a rank-adaptive regression routine to approximate the first function
 ft = c3py.FunctionTrain(dim)
-ft.build_model(x, y1, lb, ub, nparam=nparam, init_rank=1, basis="legendre",
-                    alg="AIO", obj="LS", adaptrank=1,
-                    kickrank=1, roundtol=1e-10, verbose=0)
-ft.run_regression()
+for ii in range(dim):
+    ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
+ft.build_data_model(ndata, x, y1, alg="AIO", obj="LS", adaptrank=1,
+                    kickrank=1, roundtol=1e-10, verbose=0, store_opt_info=False)
 
 
 ## Run a fixed-rank regression routine to approximate the second function with stochastic gradient descent
 ft_sgd = c3py.FunctionTrain(dim)
-ft_sgd.build_model(x, y2, lb, ub, nparam=nparam, init_rank=2, basis="legendre",
-                    alg="AIO", obj="LS", opt_type="SGD", verbose=0)
-ft_sgd.run_regression()
+ranks = [2]*(dim+1)
+ranks[0] = 1
+ranks[dim] = 1
+ft_sgd.set_ranks(ranks)
+for ii in range(dim):
+    ft_sgd.set_dim_opts(ii,"legendre",lb,ub,nparam)
+ft_sgd.build_data_model(ndata,x,y2,alg="AIO",obj="LS",opt_type="SGD",verbose=0)
 
 ## Run a fixed-rank regression routine to approximate the second function
 ft2 = c3py.FunctionTrain(dim)
-ft2.build_model(x, y2, lb, ub, nparam=nparam, init_rank=2, basis="legendre",
-                    alg="AIO", obj="LS", verbose=0)
-ft2.run_regression()
+ranks = [2]*(dim+1)
+ranks[0] = 1
+ranks[dim] = 1
+ft2.set_ranks(ranks)
+for ii in range(dim):
+    ft2.set_dim_opts(ii,"legendre",lb,ub,nparam)
+ft2.build_data_model(ndata,x,y2,alg="AIO",obj="LS",verbose=0)
 
 # ## Select number of parameters through cross validation
 # # ftcv = c3py.FunctionTrain(dim)
@@ -137,20 +145,30 @@ lb = -1                                # lower bounds of features
 ub = 1                                 # upper bounds of features
 nparam = 10                            # number of parameters per univariate function
 
+ranks = [2]*(dim+1)
+ranks[0] = 1
+ranks[dim] = 1
+
 ft = c3py.FunctionTrain(dim)
-ft.build_model(x, y1, lb, ub, nparam=nparam, init_rank=2, basis="legendre",
-                    alg="AIO", obj="LS", adaptrank=0, verbose=0, store_opt_info=True)
-opt_ft = ft.run_regression()
+ft.set_ranks(ranks)
+for ii in range(dim):
+    ft.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_ft = ft.build_data_model(ndata, x, y1, alg="AIO", obj="LS", adaptrank=0, verbose=0, store_opt_info=True)
 
 ft_sgd = c3py.FunctionTrain(dim)
-ft_sgd.build_model(x, y1, lb, ub, nparam=nparam, init_rank=2, basis="legendre", opt_type="SGD", opt_maxiter=100,
-                    alg="AIO", obj="LS", opt_sgd_learn_rate=1e-4, adaptrank=0, verbose=0, store_opt_info=True)
-opt_sgd = ft_sgd.run_regression()
+ft_sgd.set_ranks(ranks)
+for ii in range(dim):
+    ft_sgd.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_sgd = ft_sgd.build_data_model(ndata, x, y1, alg="AIO", obj="LS",
+                                  opt_type="SGD", opt_sgd_learn_rate=1e-4,
+                                  adaptrank=0, verbose=0, opt_maxiter=100, store_opt_info=True)
 
 ft_als = c3py.FunctionTrain(dim)
-ft_als.build_model(x, y1, lb, ub, nparam=nparam, init_rank=2, basis="legendre",
-                    alg="ALS", obj="LS", adaptrank=0, verbose=0, store_opt_info=True)
-opt_als = ft_als.run_regression()
+ft_als.set_ranks(ranks)
+for ii in range(dim):
+    ft_als.set_dim_opts(ii,"legendre",lb,ub,nparam)
+opt_als = ft_als.build_data_model(ndata, x, y1, alg="ALS", obj="LS",
+                                  adaptrank=0, verbose=0,  store_opt_info=True)
 
 
 plt.figure()

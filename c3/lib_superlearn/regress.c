@@ -1113,7 +1113,10 @@ double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
 ***************************************************************/
 struct FTparam * ft_regress_get_ft_param(struct FTRegress * ftr)
 {
-    return ftr->ftp;
+    if (ftr != NULL) {
+        return ftr->ftp;
+    }
+    return NULL;
 }
 
 /***********************************************************//**

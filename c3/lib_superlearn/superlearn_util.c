@@ -270,7 +270,10 @@ sl_mem_manager_alloc(size_t d, size_t n,
 ***************************************************************/
 double * sl_mem_manager_get_running_eval(struct SLMemManager * mem)
 {
-    return mem->running_eval;
+    if (mem != NULL){
+        return mem->running_eval;
+    }
+    return NULL;
 }
 
 /***********************************************************//**
@@ -282,7 +285,10 @@ double * sl_mem_manager_get_running_eval(struct SLMemManager * mem)
 ***************************************************************/
 double * sl_mem_manager_get_running_grad(struct SLMemManager * mem)
 {
-    return mem->running_grad;
+    if (mem != NULL){
+        return mem->running_grad;
+    }
+    return NULL;
 }
 
 /***********************************************************//**
@@ -294,7 +300,10 @@ double * sl_mem_manager_get_running_grad(struct SLMemManager * mem)
 ***************************************************************/
 double * sl_mem_manager_get_lin_structure_vals(struct SLMemManager * mem)
 {
-    return mem->lin_structure_vals;
+    if (mem != NULL){
+        return mem->lin_structure_vals;
+    }
+    return NULL;
 }
 
 /***********************************************************//**

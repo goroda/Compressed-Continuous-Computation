@@ -197,14 +197,19 @@ double ft_param_get_param(const struct FTparam * ftp, size_t index)
     Get parameters
 
     \param[in] ftp   - parameterized function train
+    \param[in] nparams - number of parameters to copy
     \param[in, out] params - empty parameter array
 
     \return parameters
 ***************************************************************/
-void ft_param_get_params(const struct FTparam * ftp, double * params)
+void ft_param_get_params(const struct FTparam * ftp, size_t nparams, double * params)
 {
-    if (ftp->nparams > 0){
-        for (size_t i=0; i<ftp->nparams; i++) {
+    if (ftp->nparams <= 0) {
+        fprintf(stderr,"No parameters have yet been specified\n");
+        exit(1);
+    } 
+    else if (nparams <= ftp->nparams){
+        for (size_t i=0; i<nparams; i++) {
             params[i] = ftp->params[i];
         }
     }
