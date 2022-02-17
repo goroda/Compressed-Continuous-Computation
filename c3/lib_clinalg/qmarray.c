@@ -290,7 +290,11 @@ struct Qmarray * qmarray_loadtxt(FILE * fp)
 {
     size_t nrows, ncols;
     int num = fscanf(fp,"%zu ",&nrows);
-    assert (num == 1);
+	if (num != 1) {
+		fprintf(stderr, "Error loading qmarray\n");
+		exit(1);
+	}
+    /* assert (num == 1); */
     num =fscanf(fp,"%zu ",&ncols);
     assert(num == 1);
     struct Qmarray * qma = qmarray_alloc(nrows, ncols);
@@ -2922,14 +2926,26 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
         Q = qmarray_orth1d_columns(A->nrows,ncols,app);
         if (app->fc != PIECEWISE){
             out = qmarray_qr(A,&Q,&R,app);
-            assert (out == 0);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (QR)\n");
+				exit(1);
+			}
+            /* assert (out == 0); */
         }
         else{
             struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
             out = qmarray_householder(A,Q,V,R);
-            assert(out == 0);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (QR)\n");
+				exit(1);
+			}
+            /* assert(out == 0); */
             out = qmarray_qhouse(Q,V);
-            assert(out == 0);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (QR)\n");
+				exit(1);
+			}
+            /* assert(out == 0); */
             qmarray_free(V);
         }
     }
@@ -2940,7 +2956,11 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
         if (app->fc != PIECEWISE){
             //free(R); R = NULL;
             out = qmarray_lq(A,&Q,&R,app);
-            assert (out == 0);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (LQ)\n");
+				exit(1);
+			}
+            /* assert (out == 0); */
         }
         else{
             struct Qmarray * V = qmarray_alloc(A->nrows,ncols);
@@ -2953,15 +2973,22 @@ qmarray_householder_simple(char * dir,struct Qmarray * A,double * R,
             /* printf("VV  right after qmarray_householder_rows \n"); */
             /* print_qmarray(V,0,NULL); */
 
-            assert(out == 0);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (LQ)\n");
+				exit(1);
+			}
+            /* assert(out == 0); */
             out = qmarray_qhouse_rows(Q,V);
+			if (out != 0) {
+				fprintf(stderr, "Error in qmarray_householder_simple (LQ)\n");
+				exit(1);
+			}
 
             /* printf("\n\n\n\n"); */
             /* printf("right after qmarray_qhouse_rows \n"); */
             /* print_qmarray(Q,0,NULL); */
             /* printf("\n\n\n\n"); */
-
-            assert(out == 0);
+            /* assert(out == 0); */
             qmarray_free(V); V = NULL;
         }
     }
