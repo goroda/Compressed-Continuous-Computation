@@ -1,7 +1,6 @@
 """ Compressed Continuous Computation in python """
 
 from __future__ import print_function
-from ftplib import FTP
 
 import sys
 import os
@@ -374,8 +373,8 @@ class FunctionTrain(object):
                   kfold=5, verbose=0, kristoffel=False):
         
         reg, c3a, onedopts, low_opts, opt_opts = self.build_reg(alg, obj, adaptrank, maxrank, kickrank, 
-                  regweight, roundtol, als_max_sweep, opt_relftol, 
-                  kfold, verbose, kristoffel)
+                                                                regweight, roundtol, als_max_sweep, opt_relftol, 
+                                                                kfold, verbose, kristoffel)
         
         self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
         
@@ -439,6 +438,8 @@ class FunctionTrain(object):
         if self.ft is not None:
             c3.function_train_free(self.ft)
 
+
+
         cv = None
         cvgrid = None
         if (cvnparam is not None) and (cvregweight is None) and (cvrank is None):
@@ -473,6 +474,7 @@ class FunctionTrain(object):
             c3.cross_validate_grid_opt(cv, cvgrid, reg, optimizer)
             c3.cv_opt_grid_free(cvgrid)
             c3.cross_validate_free(cv)
+
 
         # print("Run regression")
         if seed is not None:
@@ -560,12 +562,18 @@ class FunctionTrain(object):
         c3.ft1d_array_free(hess)
         return hess_out.reshape((self.dim, self.dim), order='F')
 
-    def round(self, eps=1e-14):
-        """ Round a FunctionTrain """
+    def round(self, eps=1e-14, maxrank_all=None):
+        """Round a FunctionTrain. """
 
         c3a, onedopts, low_opts, optopts = self._build_approx_params()
         multiopts = c3.c3approx_get_approx_args(c3a)
-        ftc = c3.function_train_round(self.ft, eps, multiopts)
+        
+        if maxrank_all is not None:
+            assert isinstance(maxrank_all, int)
+            ftc = c3.function_train_round_maxrank_all(self.ft, eps, multiopts, maxrank_all)
+        else:
+            ftc = c3.function_train_round(self.ft, eps, multiopts)
+        
         c3.function_train_free(self.ft)
         # c3.function_train_free(self.ft)
         self.ft = ftc
@@ -704,6 +712,7 @@ class FunctionTrain(object):
             c3.function_train_free(self.ft)
             self.ft = None
 
+
 class TensorTrain(FunctionTrain):
     """A tensor-train object based on the FunctionTrain
     To achieve this effect, I use a Function train
@@ -814,7 +823,7 @@ class FTparam(object):
 
     def get_params(self):
         params = np.zeros(self.get_nparams())
-        c3.ft_param_get_params(self.ftp, params)
+        c3.ft_param_get_params(self.ftp, self.nparams, params)
         return params
 
     def get_param(self, param_idx):

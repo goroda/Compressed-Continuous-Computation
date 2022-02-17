@@ -312,8 +312,8 @@ void function_train_free(struct FunctionTrain *);
     if (PyErr_Occurred()) SWIG_fail;
 }
 %inline %{
-    void my_ft_param_get_params(struct FTparam * ftp, size_t len, double * params){
-        return ft_param_get_params(ftp, params);
+    size_t my_ft_param_get_params(struct FTparam * ftp, size_t nparams, size_t len, double * params){
+        return ft_param_get_params(ftp, nparams, params);
     }
 %}
 %ignore ft_param_get_params;

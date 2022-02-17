@@ -200,9 +200,9 @@ double ft_param_get_param(const struct FTparam * ftp, size_t index)
     \param[in] nparams - number of parameters to copy
     \param[in, out] params - empty parameter array
 
-    \return parameters
+    \return number of parameters copied
 ***************************************************************/
-void ft_param_get_params(const struct FTparam * ftp, size_t nparams, double * params)
+size_t ft_param_get_params(const struct FTparam * ftp, size_t nparams, double * params)
 {
     if (ftp->nparams <= 0) {
         fprintf(stderr,"No parameters have yet been specified\n");
@@ -212,10 +212,13 @@ void ft_param_get_params(const struct FTparam * ftp, size_t nparams, double * pa
         for (size_t i=0; i<nparams; i++) {
             params[i] = ftp->params[i];
         }
+        return nparams;
     }
     else{
-        fprintf(stderr,"No parameters have yet been specified\n");
-        exit(1);
+        for (size_t i=0; i<ftp->nparams; i++) {
+            params[i] = ftp->params[i];
+        }
+        return ftp->nparams;
     }
 }
 
@@ -241,6 +244,7 @@ size_t ft_param_get_nparams(const struct FTparam * ftp)
 ***************************************************************/
 size_t ft_param_get_dim(const struct FTparam * ftp)
 {
+    assert (ftp != NULL);
     return ftp->dim;
 }
 

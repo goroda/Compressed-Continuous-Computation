@@ -55,7 +55,6 @@ for ii in range(dim):
          
 ftp_new = ft_new.build_param_model(alg="AIO", obj="LS", adaptrank=0)
 
-ftp_regress.free()
 #%%
 
 nparams = ftp_regress.get_nparams()
