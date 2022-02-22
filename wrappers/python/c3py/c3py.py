@@ -331,6 +331,7 @@ class FunctionTrain(object):
     def build_reg(self, alg, obj, adaptrank, maxrank, kickrank, 
                   regweight, roundtol, als_max_sweep, opt_relftol, 
                   kfold, verbose, kristoffel):
+        '''Builds a regressor object'''
         
         c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
         multiopts = c3.c3approx_get_approx_args(c3a)
@@ -371,19 +372,26 @@ class FunctionTrain(object):
     def build_param_model(self, alg="AIO", obj="LS", adaptrank=0, maxrank=10, kickrank=2, 
                   regweight=1e-7, roundtol=1e-5, als_max_sweep=20, opt_relftol=1e-10, 
                   kfold=5, verbose=0, kristoffel=False):
+        '''Builds a Parameterized FT model'''
         
         reg, c3a, onedopts, low_opts, opt_opts = self.build_reg(alg, obj, adaptrank, maxrank, kickrank, 
                                                                 regweight, roundtol, als_max_sweep, opt_relftol, 
                                                                 kfold, verbose, kristoffel)
         
-        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
+        #LINEAR IF ADAPT CENTER IS 0 ------ source: ft_param_extract_structure -> multi_approx_opts_linear_p -> one_approx_opts_linear_p -> kernel_approx_opts_linear_p
+        is_linear = True
+        for i in range(self.dim):
+            if self.opts[i]['kernel_adapt_center'] == 1:
+                is_linear = False
         
-        ftp = FTparam(reg)
+        ftp = FTparam(reg, is_linear)
         
         if self.ft is not None:
             params = np.zeros(ftp.nparams)
             c3.function_train_get_params(self.ft, params)
             ftp.update_params(params)
+            
+        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
         
         return ftp
 
@@ -813,13 +821,13 @@ class TensorTrain(FunctionTrain):
         
 class FTparam(object):
 
-    def __init__(self, reg):
+    def __init__(self, reg, is_linear):
         self.reg = reg
         self.ftp = c3.ft_regress_get_ft_param(reg)
         self.ft = c3.ft_param_get_ft(self.ftp)
         self.dim = c3.ft_param_get_dim(self.ftp)
         self.nparams = self.get_nparams()
-        self.mem = c3.sl_mem_manager_alloc(self.dim,1,self.nparams,c3.LINEAR_ST)
+        self.is_linear = is_linear
 
     def get_params(self):
         params = np.zeros(self.get_nparams())
@@ -843,44 +851,46 @@ class FTparam(object):
             return c3.function_train_eval(self.ft, pt)
         else:
             assert pt.shape[1] == self.dim
-            out = np.zeros((pt.shape[0]))
-            for ii, p in enumerate(pt):
-                out[ii] = c3.function_train_eval(self.ft, p)
+            N = pt.shape[0]
+            X = pt.flatten()
+            out = np.zeros((N))
+            c3.function_train_evals(self.ft, N, X, out)
+            
             return out
         
     def grad_eval(self, x):
-        grad = np.zeros(self.nparams)
-        c3.sl_mem_manager_check_structure(self.mem, self.ftp, x)
-        running_eval = c3.sl_mem_manager_get_running_eval(self.mem)
-        running_grad = c3.sl_mem_manager_get_running_grad(self.mem)
-        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(self.mem)
-        grad_eval = c3.ft_param_gradeval(self.ftp, x, grad, lin_structure_grad, running_grad, running_eval)
-        return grad_eval, grad
-    
-    def eval_lin(self, x):
-        c3.sl_mem_manager_check_structure(self.mem, self.ftp, x)
-        running_eval = c3.sl_mem_manager_get_running_eval(self.mem)
-        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(self.mem)
-        lin_eval = c3.ft_param_eval_lin(self.ftp, lin_structure_grad, running_eval)
-        return lin_eval
-    
-    def grad_eval_lin(self, x):
-        grad = np.zeros(self.nparams)
-        c3.sl_mem_manager_check_structure(self.mem, self.ftp, x)
-        running_eval = c3.sl_mem_manager_get_running_eval(self.mem)
-        running_grad = c3.sl_mem_manager_get_running_grad(self.mem)
-        lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(self.mem)
-        grad_eval_lin = c3.ft_param_gradeval_lin(self.ftp, lin_structure_grad, grad, running_eval, running_grad)
-        return grad_eval_lin, grad
+        if (len(x.shape) == 1):
+            N = 1
+        else:
+            N = x.shape[0]
+        X = x.flatten()
+        grad = np.zeros(N*self.nparams)
+        
+        if self.is_linear:
+            c3.sl_mem_manager_check_structure(mem, self.ftp, X)
+            
+            running_eval = c3.sl_mem_manager_get_running_eval(mem)
+            running_grad = c3.sl_mem_manager_get_running_grad(mem)
+            lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+            c3.ft_param_gradevals(self.ftp, N, X, grad, lin_structure_grad, running_grad, running_eval)
+        else:
+            mem = c3.sl_mem_manager_alloc(self.dim, N, self.nparams, c3.NONE_ST)
+            c3.sl_mem_manager_check_structure(mem, self.ftp, X)
+            
+            running_eval = c3.sl_mem_manager_get_running_eval(mem)
+            running_grad = c3.sl_mem_manager_get_running_grad(mem)
+            lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+            c3.ft_param_gradevals(self.ftp, N, X, grad, lin_structure_grad, running_grad, running_eval)
+        
+        
+        c3.sl_mem_manager_free(mem)
+        grad = grad.reshape((N,self.nparams))
+        return grad
     
     def free(self):
         if self.reg is not None:
             c3.ft_regress_free(self.reg)
             self.reg = None
-            
-        if self.mem is not None:
-            c3.sl_mem_manager_free(self.mem)
-            self.mem = None
     
     def __del__(self):
         self.free()

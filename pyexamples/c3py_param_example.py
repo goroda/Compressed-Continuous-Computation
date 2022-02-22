@@ -71,14 +71,13 @@ err = np.linalg.norm(ft_evals - Ytest) / np.linalg.norm(Ytest)
 mse = np.square(ft_evals - Ytest).mean()
 print("Before Relmse = ", err, " MSE = ", mse)
 
-
 print("--- GRADIENT DESCENT ---")
 params = np.random.randn(nparams)
-print("First Random Updated Parameters: ", params[:2])
+print("Initialize with Random Parameters: ", params[:2])
 ftp_regress.update_params(params)
 
 
-epochs = 300
+epochs = 3000
 learning_rate = 5e-3
 
 errors = np.zeros(epochs)
@@ -87,10 +86,7 @@ for e in range(epochs):
     error_diff = (Y - ftp_regress.ft_eval(X))
     errors[e] = (1/len(Y))*(error_diff**2).sum()
     
-    param_grads = np.zeros((len(Y), nparams))
-    for d in range(len(Y)):
-        _, grad_evals = ftp_regress.grad_eval(X[d])
-        param_grads[d] = grad_evals
+    param_grads = ftp_regress.grad_eval(X)
         
     cost_grads = -(2/len(Y))*np.dot(error_diff, param_grads) 
     
@@ -102,5 +98,6 @@ ft_evals = ftp_regress.ft_eval(Xtest)
 err = np.linalg.norm(ft_evals - Ytest) / np.linalg.norm(Ytest)
 mse = np.square(ft_evals - Ytest).mean()
 print("Gradient Descent Relmse = ", err, " MSE = ", mse)
+print("Gradient Descent Params: ", params[:2])
 
 # %%

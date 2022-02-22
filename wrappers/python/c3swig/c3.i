@@ -102,6 +102,10 @@ typedef long unsigned int size_t;
     (size_t len, double * params)
 };
 
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len2, double * evals)
+};
+
 /* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
 extern void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * args);
@@ -277,6 +281,35 @@ void function_train_free(struct FunctionTrain *);
     }
 %}
 %ignore ft_param_gradeval;
+
+%rename (ft_param_gradevals) my_ft_param_gradevals;
+%exception my_ft_param_gradevals{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft_param_gradevals(struct FTparam * ftp, size_t N,
+                        size_t len1, const double * x,
+                        size_t len2, double * grad,
+                        double * grad_evals,
+                        double * mem, 
+                        double * evals){
+        return ft_param_gradevals(ftp, N, x, grad, grad_evals, mem, evals);
+    }
+%}
+%ignore ft_param_gradevals;
+
+%rename (function_train_evals) my_function_train_evals;
+%exception my_function_train_evals{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_evals(struct FunctionTrain * ft, size_t N, size_t len1, const double * x, size_t len2, double * evals){
+        return function_train_evals(ft, N, x, evals);
+    }
+%}
+%ignore function_train_evals;
 
 
 %rename (sl_mem_manager_check_structure) my_sl_mem_manager_check_structure;
