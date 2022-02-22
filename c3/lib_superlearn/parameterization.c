@@ -897,7 +897,6 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
     \param[in,out] mem        - workspace (number of univariate functions)
     \param[in,out] evals      - workspace (number of univariate functions)
 
-    \return evaluation
 ***************************************************************/
 void ft_param_gradevals(struct FTparam * ftp, size_t N, const double * x,
                          double * grad,

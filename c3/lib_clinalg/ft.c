@@ -732,7 +732,6 @@ void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, cons
     \param[in]      x       - locations at which to evaluate
     \param[in,out]  evals   - evalutions
 
-    \return val - value of the function train
 ***************************************************************/
 void function_train_evals(struct FunctionTrain * ft, size_t N, const double * x, double * evals)
 {

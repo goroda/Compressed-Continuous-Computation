@@ -378,7 +378,6 @@ class FunctionTrain(object):
                                                                 regweight, roundtol, als_max_sweep, opt_relftol, 
                                                                 kfold, verbose, kristoffel)
         
-        #LINEAR IF ADAPT CENTER IS 0 ------ source: ft_param_extract_structure -> multi_approx_opts_linear_p -> one_approx_opts_linear_p -> kernel_approx_opts_linear_p
         is_linear = True
         for i in range(self.dim):
             if self.opts[i]['kernel_adapt_center'] == 1:
@@ -867,6 +866,7 @@ class FTparam(object):
         grad = np.zeros(N*self.nparams)
         
         if self.is_linear:
+            mem = c3.sl_mem_manager_alloc(self.dim, N, self.nparams, c3.LINEAR_ST)
             c3.sl_mem_manager_check_structure(mem, self.ftp, X)
             
             running_eval = c3.sl_mem_manager_get_running_eval(mem)
