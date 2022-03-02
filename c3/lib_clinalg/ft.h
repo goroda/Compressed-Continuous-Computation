@@ -108,6 +108,7 @@ struct Qmarray* function_train_get_core(const struct FunctionTrain *, size_t);
 void function_train_eval_up_to_core(struct FunctionTrain *,
                                     size_t, const double *,
                                     double *, size_t *);
+void function_train_evals(struct FunctionTrain *,  size_t, const double *, double *);
 double function_train_eval(struct FunctionTrain *, const double * evalnd_pt);
 
 size_t function_train_func_get_nparams(const struct FunctionTrain *,

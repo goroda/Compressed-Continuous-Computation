@@ -1103,6 +1103,22 @@ double * ft_regress_get_params(struct FTRegress * ftr, size_t * nparam)
     return param;
 }
 
+
+/***********************************************************//**
+    Get the FT param 
+
+    \param[in] ftr    - regression structuture
+
+    \returns FTparam struct
+***************************************************************/
+struct FTparam * ft_regress_get_ft_param(struct FTRegress * ftr)
+{
+    if (ftr != NULL) {
+        return ftr->ftp;
+    }
+    return NULL;
+}
+
 /***********************************************************//**
     Update parameters
 

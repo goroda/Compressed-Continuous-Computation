@@ -727,6 +727,22 @@ void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, cons
 /***********************************************************//**
     Evaluate a function train
 
+    \param[in]      ft      - function train
+    \param[in]      N       - number of data points
+    \param[in]      x       - locations at which to evaluate
+    \param[in,out]  evals   - evalutions
+
+***************************************************************/
+void function_train_evals(struct FunctionTrain * ft, size_t N, const double * x, double * evals)
+{
+    for (size_t ii=0; ii<N; ii++){
+        evals[ii] = function_train_eval(ft, x + ii*ft->dim);
+    }
+}
+
+/***********************************************************//**
+    Evaluate a function train
+
     \param[in] ft - function train
     \param[in] x  - location at which to evaluate
 
