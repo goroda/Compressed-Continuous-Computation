@@ -227,6 +227,10 @@ size_t piecewise_poly_get_num_params(const struct PiecewisePoly *);
 int piecewise_poly_update_params(struct PiecewisePoly *, size_t, const double *);
 int piecewise_poly_param_grad_eval(const struct PiecewisePoly *, size_t, const double *, double *);
 double piecewise_poly_param_grad_eval2(const struct PiecewisePoly *, double, double *);
+size_t piecewise_poly_param_grad_inner(const struct PiecewisePoly * a,
+                                       const struct PiecewisePoly * b,
+                                       double *inner_vals);
+
 int piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly *, double, double *);
 size_t piecewise_poly_get_params(const struct PiecewisePoly *, double *);
 double * piecewise_poly_get_params_ref(const struct PiecewisePoly *, size_t *);

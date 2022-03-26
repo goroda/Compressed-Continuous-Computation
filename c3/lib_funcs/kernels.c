@@ -1380,6 +1380,29 @@ double kernel_expansion_param_grad_eval2(
     return eval;
 }
 
+
+/********************************************************//**
+*   Inner product between gradient w.r.t parameters of a and b
+*
+*   \param[in]      a          - first function
+*   \param[in]      b          - second function
+*   \param[in, out] inner_vals - values of inner product, 
+*                                size of number of parameters of a
+*
+*   \return number of elements written to gradient
+*************************************************************/
+size_t
+kernel_expansion_param_grad_inner(const struct KernelExpansion * a,
+                                  const struct KernelExpansion * b,
+                                  double *inner_vals)
+{
+    (void) a;
+    (void) b;
+    (void) inner_vals;
+    NOT_IMPLEMENTED_MSG("kernel_expansion_param_grad_inner");
+    exit(1);    
+}
+
 /********************************************************//**
     Take a gradient of the squared norm 
     with respect to its parameters, and add a scaled version

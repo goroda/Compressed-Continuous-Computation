@@ -309,6 +309,11 @@ int orth_poly_expansion_param_grad_eval(
     const struct OrthPolyExpansion *, size_t, const double *, double *);
 double orth_poly_expansion_param_grad_eval2(const struct OrthPolyExpansion *, double, double *);
 
+size_t
+orth_poly_expansion_param_grad_inner(const struct OrthPolyExpansion * a,
+                                     const struct OrthPolyExpansion * b,
+                                     double *inner_vals);
+
 int
 orth_poly_expansion_squared_norm_param_grad(const struct OrthPolyExpansion *,
                                             double, double *);

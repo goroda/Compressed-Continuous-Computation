@@ -135,6 +135,11 @@ struct ConstElemExp * const_elem_exp_dderiv_periodic(const struct ConstElemExp *
 int const_elem_exp_param_grad_eval(
     struct ConstElemExp *, size_t, const double *, double *);
 double const_elem_exp_param_grad_eval2(struct ConstElemExp *, double, double *);
+size_t
+const_elem_exp_param_grad_inner(const struct ConstElemExp * a,
+                                const struct ConstElemExp * b,
+                                double *inner_vals);
+
 
 int
 const_elem_exp_squared_norm_param_grad(const struct ConstElemExp *,

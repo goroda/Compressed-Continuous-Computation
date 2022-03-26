@@ -134,6 +134,10 @@ struct LinElemExp * lin_elem_exp_dderiv_periodic(struct LinElemExp *);
 int lin_elem_exp_param_grad_eval(
     struct LinElemExp *, size_t, const double *, double *);
 double lin_elem_exp_param_grad_eval2(struct LinElemExp *, double, double *);
+size_t
+lin_elem_exp_param_grad_inner(const struct LinElemExp * a,
+                              const struct LinElemExp* b,
+                              double *inner_vals);
 
 int
 lin_elem_exp_squared_norm_param_grad(const struct LinElemExp *,

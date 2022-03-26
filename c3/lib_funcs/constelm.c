@@ -782,6 +782,28 @@ double const_elem_exp_param_grad_eval2(
 }
 
 /********************************************************//**
+*   Inner product between gradient w.r.t parameters of a and b
+*
+*   \param[in]      a          - first function
+*   \param[in]      b          - second function
+*   \param[in, out] inner_vals - values of inner product, 
+*                                size of number of parameters of a
+*
+*   \return number of elements written to gradient
+*************************************************************/
+size_t
+const_elem_exp_param_grad_inner(const struct ConstElemExp * a,
+                                const struct ConstElemExp* b,
+                                double *inner_vals)
+{
+    (void) a;
+    (void) b;
+    (void) inner_vals;
+    NOT_IMPLEMENTED_MSG("const_elem_exp_param_grad_inner");
+    exit(1);    
+}
+
+/********************************************************//**
     Take a gradient of the squared norm 
     with respect to its parameters, and add a scaled version
     of this gradient to *grad*

@@ -1659,6 +1659,32 @@ double generic_function_param_grad_eval2(const struct GenericFunction * gf,
 GF_IN_GENOUT(integrate, double, 0.0)           // Compute an integral
 GF_IN_GENOUT(integrate_weighted, double, 0.0)  // Take the derivative of a generic function
 
+
+/********************************************************//**
+    Inner product <grad f, g>, output has as many parameters as f
+
+    \param[in]     f    - generic function
+    \param[in]     g    - generic function
+    \param[in,out] grad - gradient (N)
+                          size of number of parameters of f
+
+    \return  evaluation
+
+    \notes f and g must be the same class for now
+************************************************************/
+size_t generic_function_param_grad_inner(const struct GenericFunction * f,
+                                         const struct GenericFunction * g,
+                                         double * grad)
+                                        
+{
+    enum function_class fc_f = generic_function_get_fc(f);
+    enum function_class fc_g = generic_function_get_fc(g);
+    assert (fc_f == fc_g);
+    size_t ret = 0;
+    GF_SWITCH_THREEOUT(param_grad_inner, fc_f, ret, f->f, g->f, grad)
+    return ret;
+}
+    
 /********************************************************//**
 *   Compute norm of a generic function
 *

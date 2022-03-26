@@ -1444,6 +1444,7 @@ double orth_poly_deriv(enum poly_type ptype, size_t order, double x)
 *   \param[in] x   - location at which to evaluate
 *
 *   \return out - polynomial value
+*
 *************************************************************/
 double 
 orth_poly_eval(const struct OrthPoly * rec, size_t n, double x)
@@ -1455,8 +1456,17 @@ orth_poly_eval(const struct OrthPoly * rec, size_t n, double x)
         return rec->lin_coeff * x + rec->lin_const;
     }
     else {
-        double out = (rec->an(n)*x + rec->bn(n)) * orth_poly_eval(rec,n-1,x) +
-                        rec->cn(n) * orth_poly_eval(rec,n-2,x);
+        double prev = rec->lin_coeff * x + rec->lin_const;
+        double prev2 = rec->const_term;
+        double out = 0.0;
+        for (size_t nn = 2; nn < n+1; nn++){
+            out = (rec->an(n)*x + rec->bn(n)) * prev + rec->cn(n) * prev2;
+            prev2 = prev;
+            prev = out;
+        }
+        
+        /* double out = (rec->an(n)*x + rec->bn(n)) * orth_poly_eval(rec,n-1,x) + */
+        /*                 rec->cn(n) * orth_poly_eval(rec,n-2,x); */
         return out;
     }
 }
@@ -3072,7 +3082,6 @@ int orth_poly_expansion_param_grad_eval(
     return 0;    
 }
 
-
 /********************************************************//*
 *   Evaluate the gradient of an orthonormal polynomial expansion 
 *   with respect to the parameters
@@ -3132,6 +3141,39 @@ double orth_poly_expansion_param_grad_eval2(
         }
     }
     return out;    
+}
+
+/********************************************************//**
+*   Inner product between gradient w.r.t parameters of poly a and b
+*
+*   \param[in]      a          - first polynomial
+*   \param[in]      b          - second polynomai
+*   \param[in, out] inner_vals - values of inner product, 
+*                                size of number of coefficients of a
+*
+*   \return number of elements written to gradient
+*************************************************************/
+size_t
+orth_poly_expansion_param_grad_inner(const struct OrthPolyExpansion * a,
+                                     const struct OrthPolyExpansion * b,
+                                     double *inner_vals)
+{   
+   assert (a->p->ptype == b->p->ptype);
+
+   size_t n = a->num_poly;
+   if (a->num_poly > b->num_poly)
+       n = b->num_poly;
+   
+   for (size_t ii = 0; ii < n; ii++){
+       inner_vals[ii] = b->coeff[ii];
+   }
+
+   /* in case polynomial b had fewer coefficients */
+   for (size_t ii = n; ii < a->num_poly; ii++) {
+       inner_vals[ii] = 0.0;
+   }
+
+   return a->num_poly;
 }
 
 /********************************************************//**
