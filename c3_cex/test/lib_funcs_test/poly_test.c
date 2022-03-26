@@ -2042,7 +2042,7 @@ void Test_hermite_orth_poly_expansion_create_with_params_and_grad(CuTest * tc){
     size_t nparams = 10;
     double params[10] = {0.12,2.04,9.0,-0.2,0.4,
                          0.6,-0.9,-.2,0.04,1.2};
-    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
     struct OrthPolyExpansion * ope = NULL;
     ope = orth_poly_expansion_create_with_params(opts,nparams,params);
 
@@ -2103,6 +2103,39 @@ void Test_hermite_orth_poly_expansion_create_with_params_and_grad(CuTest * tc){
 }
 
 
+void Test_hermite_orth_poly_param_grad_inner(CuTest * tc){
+    
+    printf("Testing functions: orth_poly_expansion_param_grad_inner hermite poly\n");
+
+    size_t nparams_1 = 5;
+    double params_1[5] = {0.12,2.04,9.0,-0.2,0.4};
+    size_t nparams_2 = 5;
+    double params_2[5] = {0.6,-0.9,-.2,0.04,1.2};
+    
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    struct OrthPolyExpansion * ope1 = 
+        orth_poly_expansion_create_with_params(opts, nparams_1, params_1);
+    struct OrthPolyExpansion * ope2 = 
+        orth_poly_expansion_create_with_params(opts, nparams_2, params_2);
+
+    double grad[5];
+
+    size_t nvars = orth_poly_expansion_param_grad_inner(ope1, ope2, grad);
+    CuAssertIntEquals(tc,5, (int) nvars);
+
+    /* double grad_should[5] = {0.0, 0.0, 0.0, 0.0, 0.0}; */
+    CuAssertDblEquals(tc, params_2[0], grad[0], 1e-7);
+    CuAssertDblEquals(tc, params_2[1], grad[1], 1e-7);
+    CuAssertDblEquals(tc, params_2[2], grad[2], 1e-7);
+    CuAssertDblEquals(tc, params_2[3], grad[3], 1e-7);
+    CuAssertDblEquals(tc, params_2[4], grad[4], 1e-7);
+
+    ope_opts_free(opts); opts = NULL;
+    orth_poly_expansion_free(ope1); ope1 = NULL;
+    orth_poly_expansion_free(ope2); ope2 = NULL;
+}
+
+
 CuSuite * HermGetSuite(){
 
     CuSuite * suite = CuSuiteNew();
@@ -2119,6 +2152,7 @@ CuSuite * HermGetSuite(){
     SUITE_ADD_TEST(suite, Test_hermite_linear);
     SUITE_ADD_TEST(suite, Test_hermite_quadratic);
     SUITE_ADD_TEST(suite, Test_hermite_orth_poly_expansion_create_with_params_and_grad);
+    SUITE_ADD_TEST(suite, Test_hermite_orth_poly_param_grad_inner);
     return suite;
 }
 
