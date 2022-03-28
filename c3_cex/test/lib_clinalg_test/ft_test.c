@@ -1185,6 +1185,48 @@ void Test_function_train_inner(CuTest * tc)
     all_opts_free(fw,opts,qmopts,fopts);
 }
 
+void Test_function_train_inner2(CuTest * tc)
+{
+    printf("Testing Function: function_train_inner2 \n");
+    size_t dim = 4;
+
+    // functions
+    struct Fwrap * fw = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw,4);
+    fwrap_set_func_array(fw,0,func,NULL);
+    fwrap_set_func_array(fw,1,func2,NULL);
+    fwrap_set_func_array(fw,2,func3,NULL);
+    fwrap_set_func_array(fw,3,func4,NULL);
+
+    struct Fwrap * fw2 = fwrap_create(1,"array-vec");
+    fwrap_set_num_funcs(fw2,4);
+    fwrap_set_func_array(fw2,0,func6,NULL);
+    fwrap_set_func_array(fw2,1,func5,NULL);
+    fwrap_set_func_array(fw2,2,func4,NULL);
+    fwrap_set_func_array(fw2,3,func3,NULL);
+
+    struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fopts = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fopts,qmopts);
+
+    struct FunctionTrain * ft = function_train_initsum(fopts,fw);
+    struct FunctionTrain * gt = function_train_initsum(fopts,fw2);
+    struct FunctionTrain * ft2 =  function_train_product(gt,ft);
+    
+    double int1 = function_train_integrate(ft2);
+    double int2 = function_train_inner2(gt,ft);
+    
+    double relerr = pow(int1-int2,2)/pow(int1,2);
+    CuAssertDblEquals(tc,0.0,relerr,1e-13);
+    
+    function_train_free(ft);
+    function_train_free(ft2);
+    function_train_free(gt);
+    fwrap_destroy(fw2);
+    all_opts_free(fw,opts,qmopts,fopts);
+}
+
 void Test_function_train_inner_cheb(CuTest * tc)
 {
     printf("Testing Function: function_train_inner_cheb \n");
@@ -3065,6 +3107,7 @@ CuSuite * CLinalgFuncTrainGetSuite(){
     SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted);
     SUITE_ADD_TEST(suite, Test_function_train_integrate_weighted_subset);
     SUITE_ADD_TEST(suite, Test_function_train_inner);
+    SUITE_ADD_TEST(suite, Test_function_train_inner2);
     SUITE_ADD_TEST(suite, Test_function_train_inner_cheb);
     SUITE_ADD_TEST(suite, Test_function_train_inner_linelm);
     SUITE_ADD_TEST(suite, Test_ftapprox_cross_fourier);

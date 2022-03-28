@@ -991,6 +991,33 @@ qmatqma_integrate(const struct Qmarray * a,const struct Qmarray * b)
 }
 
 /***********************************************************//**
+    Integral of Qmarray - Qmarray integral 
+
+    \param[in] a - qmarray 1
+    \param[in] b - qmarray 2
+ 
+    \return array of integrals of \f$ c = \int a(x) b(x) dx \f$
+***************************************************************/
+double *
+qmaqma_integrate(const struct Qmarray * a, const struct Qmarray * b)
+{
+    /* struct Qmarray * c = qmarray_alloc(a->nrows, b->ncols); */
+    double * c = calloc_double(a->nrows * b->ncols);
+    
+    size_t ii,jj;
+    for (jj = 0; jj < b->ncols; jj++){
+        for (ii = 0; ii < a->nrows; ii++){
+            // a[ii,:]b[:,jj]
+            c[jj*a->nrows+ii] =
+                generic_function_inner_sum(a->ncols, a->nrows, 
+                                           a->funcs + ii, 1,
+                                           b->funcs + jj*b->nrows);
+        }
+    }
+    return c;
+}
+
+/***********************************************************//**
     Integral of qmarray - transpose qmarray mutliplication
 
     \param[in] a - qmarray 1

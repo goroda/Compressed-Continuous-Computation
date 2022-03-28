@@ -187,6 +187,8 @@ function_train_integrate_weighted_subset(
     const struct FunctionTrain * ft, size_t,size_t *);
 double function_train_inner(const struct FunctionTrain *, 
                             const struct FunctionTrain * );
+double function_train_inner2(const struct FunctionTrain *, 
+                             const struct FunctionTrain * );
 double function_train_inner_weighted(const struct FunctionTrain *, 
                                      const struct FunctionTrain *);
 double function_train_norm2(const struct FunctionTrain *);

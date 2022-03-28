@@ -2359,6 +2359,44 @@ double function_train_inner(const struct FunctionTrain * a,
     return out;
 }
 
+
+/********************************************************//**
+    Inner product between two functions in FT form (alternate)
+
+    \param[in] a - Function train 1
+    \param[in] b - Function train 2
+
+    \return Inner product \f$ \int a(x)b(x) dx \f$
+***********************************************************/
+double function_train_inner2(const struct FunctionTrain * a, 
+                             const struct FunctionTrain * b)
+{
+    double out = 0.123456789;
+
+    double * temp = qmarray_kron_integrate(a->cores[0],b->cores[0]);
+    double * temp2 = NULL;
+
+    for (size_t ii = 1; ii < a->dim; ii++){
+
+        /* A^T = G_k^TL */
+        struct Qmarray * Atrans = qmatm(b->cores[ii], temp, b->cores[ii]->nrows);
+        /* <A^T F> */
+        temp2 = qmaqma_integrate(Atrans, a->cores[ii]);
+        qmarray_free(Atrans);
+
+        size_t stemp = a->cores[ii]->ncols * b->cores[ii]->ncols;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        
+        free(temp2); temp2 = NULL;
+     
+    }
+    out = temp[0];
+    free(temp); temp=NULL;
+    return out;
+}
+
 /********************************************************//**
     Inner product between two functions in FT form with weighted
     space w(x)

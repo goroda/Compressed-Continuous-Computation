@@ -135,6 +135,7 @@ struct Qmarray * qmaqma(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmatqma(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmaqmat(const struct Qmarray * a, const struct Qmarray * b);
 struct Qmarray * qmatqmat(const struct Qmarray * a, const struct Qmarray * b);
+double * qmaqma_integrate(const struct Qmarray * a, const struct Qmarray * b);
 double * qmatqma_integrate(const struct Qmarray *,const struct Qmarray *);
 double * qmaqmat_integrate(const struct Qmarray *, const struct Qmarray *);
 double * qmatqmat_integrate_weighted(const struct Qmarray *,const struct Qmarray *);
