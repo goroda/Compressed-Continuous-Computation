@@ -681,6 +681,153 @@ void Test_ft_param_gradeval_lin(CuTest * tc)
 
 }
 
+void Test_ft_param_grad_inner(CuTest * tc)
+{
+    printf("\nTesting Function: ft_param_grad_inner \n");
+    printf("\t  Dimensions: 4\n");
+    printf("\t  Ranks:      [1 2 3 8 1]\n");
+    printf("\t  LPOLY order: 10\n");
+
+    srand(seed);
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,3,8,1};
+    size_t maxorder = 10; 
+    double lb = -INFINITY;
+    double ub = INFINITY;
+
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * g = function_train_poly_randu(HERMITE, bds,
+                                                         ranks, maxorder);
+
+
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
+
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+
+    double * grad = calloc_double(nparam);
+    ft_param_grad_inner(ftp, g, grad);
+
+    double base = function_train_inner2(ftp->ft, g);
+
+    double h = 1e-7;
+    for (size_t zz = 0; zz < nparam; zz++){
+        /* printf("grad[%zu] = %3.15f\n", zz, grad[zz]); */
+
+        param[zz] += h;
+        ft_param_update_params(ftp,param);
+        double next = function_train_inner(ftp->ft, g);
+        double fd  = (next-base)/h;
+        
+        CuAssertDblEquals(tc,fd,grad[zz],1e-5);
+        param[zz] -=h;
+        ft_param_update_params(ftp,param);
+    }
+    
+    free(grad);
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    function_train_free(g);
+
+}
+
+void Test_ft_param_grad_inner_different_ranks(CuTest * tc)
+{
+    printf("\nTesting Function: ft_param_grad_inner with mismatched ranks\n");
+    printf("\t  Dimensions: 4\n");
+    printf("\t  Ranks f:      [1 2 3 8 1]\n");
+    printf("\t  Ranks g:      [1 4 5 7 1]\n");
+    printf("\t  LPOLY order f: 10\n");
+    printf("\t  LPOLY order g: 12\n");
+
+    srand(seed);
+    size_t dim = 4;
+    size_t ranks[5] = {1,2,3,8,1};
+    size_t ranksg[5] = {1,4,5,7,1};
+    size_t maxorder = 10; 
+    double lb = -INFINITY;
+    double ub = INFINITY;
+
+    struct BoundingBox * bds = bounding_box_init(dim,lb,ub);
+    struct FunctionTrain * g = function_train_poly_randu(HERMITE, bds,
+                                                         ranksg, maxorder + 2);
+
+
+    size_t nparam = ranks[1]*ranks[0] + ranks[2]*ranks[1] +
+                    ranks[3]*ranks[2] + ranks[4]*ranks[3];
+    nparam *= (maxorder+1);
+    double * param = calloc_double(nparam);
+    
+    for (size_t ii = 0; ii < nparam; ii++){
+        param[ii] = randn();
+    }
+
+    // Initialize Approximation Structure
+    struct OpeOpts * opts = ope_opts_alloc(HERMITE);
+    ope_opts_set_lb(opts,-1.5);
+    ope_opts_set_ub(opts,2.3);
+    ope_opts_set_nparams(opts,maxorder+1);
+    struct OneApproxOpts * qmopts = one_approx_opts_alloc(POLYNOMIAL,opts);
+    struct MultiApproxOpts * fapp = multi_approx_opts_alloc(dim);
+    multi_approx_opts_set_all_same(fapp,qmopts);
+
+    struct FTparam * ftp = ft_param_alloc(dim,fapp,param,ranks);
+
+    double * grad = calloc_double(nparam);
+    ft_param_grad_inner(ftp, g, grad);
+    
+    /* double base = function_train_inner(ftp->ft, g); */
+
+    double h = 1e-6;
+    for (size_t zz = 0; zz < nparam; zz++){
+        /* printf("grad[%zu] = %3.15f\n", zz, grad[zz]); */
+
+        param[zz] += h;
+        ft_param_update_params(ftp,param);
+        double next = function_train_inner(ftp->ft, g);
+        param[zz] -=h;
+        ft_param_update_params(ftp,param);
+
+        param[zz] -= h;
+        ft_param_update_params(ftp,param);
+        double prev = function_train_inner(ftp->ft, g);
+        param[zz] +=h;
+        ft_param_update_params(ftp,param);
+
+
+        double fd  = (next-prev)/(2*h);
+        
+        double err = fabs(fd - grad[zz]) / fabs(fd);
+        CuAssertDblEquals(tc,0.0, err,1e-5);
+
+    }
+    
+    free(grad);
+    multi_approx_opts_free(fapp);
+    one_approx_opts_free_deep(&qmopts);
+    free(param);
+    ft_param_free(ftp);
+    function_train_free(g);
+
+}
+
 void Test_LS_AIO(CuTest * tc)
 {
     srand(seed);
@@ -1171,7 +1318,7 @@ void Test_LS_AIO_new_weighted(CuTest * tc)
     diff1 = fabs(y[1] - eval1);
     printf("\t Error on heavily weighted sample = %3.5G\n", diff0);
     printf("\t Error on next sample = %3.5G\n", diff1);
-    CuAssertDblEquals(tc, 0.0, diff0, 1e-10);
+    CuAssertDblEquals(tc, 0.0, diff0, 1e-9);
     CuAssertIntEquals(tc, 1, diff0 < diff1);
 
     
@@ -3584,6 +3731,9 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_ft_param_gradeval);
     SUITE_ADD_TEST(suite, Test_ft_param_eval_lin);
     SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin);
+    SUITE_ADD_TEST(suite, Test_ft_param_grad_inner);
+    SUITE_ADD_TEST(suite, Test_ft_param_grad_inner_different_ranks);
+    
     SUITE_ADD_TEST(suite, Test_LS_AIO);
     SUITE_ADD_TEST(suite, Test_LS_AIO2);
     SUITE_ADD_TEST(suite, Test_LS_AIO3);
@@ -3595,7 +3745,7 @@ CuSuite * CLinalgRegressGetSuite()
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
     SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
     /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
-    SUITE_ADD_TEST(suite, Test_LS_cross_validation_rank_adapt);        
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation_rank_adapt);
 
     /* Next 2 are good */
     SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);

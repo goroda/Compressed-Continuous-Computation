@@ -1668,7 +1668,7 @@ GF_IN_GENOUT(integrate_weighted, double, 0.0)  // Take the derivative of a gener
     \param[in,out] grad - gradient (N)
                           size of number of parameters of f
 
-    \return  evaluation
+    \return number of parameters
 
     \notes f and g must be the same class for now
 ************************************************************/

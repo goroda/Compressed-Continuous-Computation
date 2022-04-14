@@ -1570,3 +1570,108 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
     free(d1_evals); d1_evals = NULL;
     return eval;
 }
+
+/***********************************************************//**
+    Evaluate the inner product \f$ \langle \nablea_{theta} f(x; theta), g(x) \f$
+
+    \param[in,out] ftp      - parameterized FTP
+    \param[in]     g        - function train
+    \param[in,out] grad_loc - location of the gradient
+
+    \return evaluation
+***************************************************************/
+void  ft_param_grad_inner(struct FTparam * ftp, struct FunctionTrain *g,
+                          double *grad_param)
+{
+
+    struct FunctionTrain * f = ftp->ft;    
+    size_t dim = f->dim;
+    assert (dim == g->dim);
+    
+    double * temp = qmarray_kron_integrate(f->cores[dim-1], g->cores[dim-1]);
+    double * temp2 = NULL;
+    struct Qmarray **Ak = malloc(f->dim * sizeof(struct Qmarray *));
+    for (size_t ii = 0; ii < f->dim; ii++){
+        Ak[ii] = NULL;
+    }
+    
+    size_t on_dim = 0;
+    for (size_t ii = 1; ii < f->dim; ii++){
+        on_dim = dim-1-ii; /* on_dim = d-2 */
+
+        /* A = G R */
+        Ak[on_dim] = qmam(g->cores[on_dim], temp, f->cores[on_dim]->ncols);
+        /* R = <A F^T> */
+        temp2 = qmaqmat_integrate(Ak[on_dim], f->cores[on_dim]);
+        /* qmarray_free(A); */
+
+        size_t stemp = f->cores[on_dim]->nrows * g->cores[on_dim]->nrows;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        
+        free(temp2); temp2 = NULL;
+     
+    }
+    /* out = temp[0]; */
+    free(temp); temp = NULL;    
+    
+    /* first core */
+    size_t * ranks = function_train_get_ranks(f);
+    size_t on_param = 0;
+    for (size_t ii = 0; ii < ranks[1]; ii++) {
+        size_t num = generic_function_param_grad_inner(f->cores[0]->funcs[ii],
+                                                       Ak[0]->funcs[ii],
+                                                       grad_param + on_param);
+        on_param += num;
+    }
+
+    temp = qmarray_kron_integrate(f->cores[0], g->cores[0]);
+    for (size_t ii = 1; ii < dim-1; ii++){
+        struct Qmarray * Ctranspose = qmatm(Ak[ii], temp, f->cores[ii]->nrows);
+        for (size_t col = 0; col < ranks[ii+1]; col++){
+            for (size_t row = 0; row < ranks[ii]; row++){
+                size_t num =
+                    generic_function_param_grad_inner(
+                        f->cores[ii]->funcs[row + col * ranks[ii]],
+                        Ctranspose->funcs[col + row * ranks[ii+1]],
+                        grad_param + on_param);
+                on_param += num;
+            }
+        }
+
+        qmarray_free(Ctranspose); Ctranspose = NULL;
+        
+        /* A^T = G_k^TL */
+        struct Qmarray * Atrans = qmatm(g->cores[ii], temp, f->cores[ii]->nrows);
+        /* <A^T F> */
+        temp2 = qmaqma_integrate(Atrans, f->cores[ii]);
+        qmarray_free(Atrans);
+
+
+        size_t stemp = f->cores[ii]->ncols * g->cores[ii]->ncols;
+        free(temp);temp=NULL;
+        temp = calloc_double(stemp);
+        memmove(temp, temp2,stemp*sizeof(double));
+        
+        free(temp2); temp2 = NULL;
+        
+    }
+    struct Qmarray * Atrans = qmatm(g->cores[f->dim-1], temp,
+                                    f->cores[f->dim-1]->nrows);
+    for (size_t ii = 0; ii < ranks[dim-1]; ii++){
+        size_t num = generic_function_param_grad_inner(
+            f->cores[dim-1]->funcs[ii],
+            Atrans->funcs[ii],
+            grad_param + on_param);
+        on_param += num;
+    }
+
+    for (size_t ii = 0; ii < f->dim; ii++){
+        qmarray_free(Ak[ii]); Ak[ii] = NULL;
+    };
+    free(Ak);
+    
+    free(temp); temp=NULL;
+}
+    

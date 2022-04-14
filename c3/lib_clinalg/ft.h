@@ -189,6 +189,8 @@ double function_train_inner(const struct FunctionTrain *,
                             const struct FunctionTrain * );
 double function_train_inner2(const struct FunctionTrain *, 
                              const struct FunctionTrain * );
+double function_train_inner_rl(const struct FunctionTrain * a, 
+                               const struct FunctionTrain * b);
 double function_train_inner_weighted(const struct FunctionTrain *, 
                                      const struct FunctionTrain *);
 double function_train_norm2(const struct FunctionTrain *);

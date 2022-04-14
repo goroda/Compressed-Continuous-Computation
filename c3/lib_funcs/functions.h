@@ -227,7 +227,11 @@ void generic_function_1darray_eval2N(size_t, struct GenericFunction **, size_t, 
 void generic_function_1darray_eval2_ind(size_t, struct GenericFunction **, size_t, double *);
 int generic_function_param_grad_eval(const struct GenericFunction *, size_t, const double *, double *);
 double generic_function_param_grad_eval2(const struct GenericFunction *, double, double *);
-                                         
+
+size_t generic_function_param_grad_inner(const struct GenericFunction * f,
+                                         const struct GenericFunction * g,
+                                         double * grad);
+    
 
 ////////////////////////////////////////////////////////////////
 // Analysis -- no input
