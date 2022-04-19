@@ -438,6 +438,22 @@ const_elem_exp_create_with_params(struct ConstElemExpAopts * opts,
 }
 
 /********************************************************//**
+*   Pad extra zero coefficients
+*            
+*   \param[in] p          - approximation
+*   \param[in] num_params - total number of parameters in modified approx 
+*************************************************************/
+void
+const_elem_exp_pad_params(struct ConstElemExp * p,
+                          size_t num_params)
+
+{
+    (void)(p);
+    (void)(num_params);
+    NOT_IMPLEMENTED_MSG("const_elem_exp_pad_params\n");
+}
+
+/********************************************************//**
     Get number of nodes
 *************************************************************/
 size_t const_elem_exp_get_num_nodes(const struct ConstElemExp * lexp)

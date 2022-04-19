@@ -2893,3 +2893,19 @@ piecewise_poly_create_with_params(struct PwPolyOpts * opts,
     NOT_IMPLEMENTED_MSG("piecewise_poly_create_with_params\n");
     return NULL;
 }
+
+/********************************************************//**
+*   Pad extra zero coefficients
+*            
+*   \param[in] p          - polynomial
+*   \param[in] num_params - total number of parameters in modified poly
+*************************************************************/
+void
+piecewise_poly_pad_params(struct PiecewisePoly * p,
+                          size_t num_params)
+
+{
+    (void)(p);
+    (void)(num_params);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_pad_params\n");
+}

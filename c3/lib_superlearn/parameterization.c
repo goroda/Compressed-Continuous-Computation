@@ -138,6 +138,94 @@ ft_param_alloc(size_t dim,
 }
 
 /***********************************************************//**
+    Allocate parameterized function train
+
+    \param[in] ft     - function_train (ownership is transferred)
+    \param[in] aopts  - approximation options
+    \param[in] params - parameters
+    \param[in] ranks  - ranks (dim+1,)
+
+    \return parameterized FT
+
+
+    \notes uses the number of parameters per dimension from multiapprox opts,
+    modifies univariate funciton parameters of ft if needed for this by padding the functions with zeros
+***************************************************************/
+struct FTparam *
+ft_param_alloc_with_ft(struct FunctionTrain * ft, struct MultiApproxOpts * aopts)
+{
+
+    if (ft == NULL){
+        fprintf(stderr, "initialized function train for parameterized ft is not specified in allocation\n");
+        exit(1);
+    }
+        
+    if (aopts == NULL){
+        fprintf(stderr, "approximation options for parameterized ft are not specified in allocation\n");
+        exit(1);
+    }
+    struct FTparam * ftr = malloc(sizeof(struct FTparam));
+    if (ftr == NULL){
+        fprintf(stderr, "Cannot allocate FTparam structure\n");
+        exit(1);
+    }
+    ftr->ft = ft;
+    ftr->approx_opts = aopts;
+    ftr->dim = function_train_get_dim(ft);
+    
+    size_t *ranks = function_train_get_ranks(ft);
+    
+    ftr->nparams_per_core = calloc_size_t(ftr->dim);
+    ftr->nparams = 0;
+    size_t nuni = 0; // number of univariate functions
+
+    for (size_t jj = 0; jj < ftr->dim; jj++)
+    {
+        size_t nparams_should =  multi_approx_opts_get_dim_nparams(aopts,jj);
+        nuni += ranks[jj]*ranks[jj+1];
+        ftr->nparams_per_core[jj] = ranks[jj] * ranks[jj+1] * nparams_should;
+            /* qmarray_get_nparams(ft->cores[jj], &maxfunc); */
+        ftr->nparams += ftr->nparams_per_core[jj];
+    }
+    
+    ftr->nparams_per_uni = calloc_size_t(nuni);
+    ftr->max_param_uni = 0;
+    size_t onind = 0;
+    for (size_t jj = 0; jj < ftr->dim; jj++){
+
+        /* printf("jj = %zu\n", jj); */
+        size_t nparams_should =  multi_approx_opts_get_dim_nparams(aopts,jj);
+        /* printf("nparams_should = %zu\n", nparams_should); */
+        for (size_t col = 0; col < ranks[jj+1]; col++) {
+            for (size_t row = 0; row < ranks[jj]; row++) {
+
+                size_t nparams = qmarray_func_get_nparams(ft->cores[jj], row, col);
+                /* printf("nparams = %zu\n", nparams); */
+                if (nparams > nparams_should) {
+                    fprintf(stderr, "FT has more parameters than allowed by approxopts\n");
+                    exit(1);
+                }
+                else if (nparams < nparams_should){
+                    qmarray_uni_pad_params(ft->cores[jj], row, col, nparams_should);
+                }
+                
+                ftr->nparams_per_uni[onind] = nparams_should;
+                if (ftr->nparams_per_uni[onind] > ftr->max_param_uni){
+                    ftr->max_param_uni = ftr->nparams_per_uni[onind];
+                }
+                onind++;
+            }
+        }
+    }
+
+    ftr->params = calloc_double(ftr->nparams);
+    size_t check_nparams = function_train_get_params(ft, ftr->params);
+    assert (check_nparams == ftr->nparams);
+
+    return ftr;
+}
+
+/***********************************************************//**
     Free memory allocated for FT parameterization structure
     
     \param[in,out] ftr - parameterized FT

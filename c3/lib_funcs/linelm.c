@@ -492,6 +492,23 @@ lin_elem_exp_create_with_params(struct LinElemExpAopts * opts,
     return lexp;
 }
 
+
+/********************************************************//**
+*   Pad extra zero coefficients
+*            
+*   \param[in] p          - approximation
+*   \param[in] num_params - total number of parameters in modified approx 
+*************************************************************/
+void
+lin_elem_exp_pad_params(struct LinElemExp * p,
+                        size_t num_params)
+
+{
+    (void)(p);
+    (void)(num_params);
+    NOT_IMPLEMENTED_MSG("lin_elem_exp_pad_params\n");
+}
+
 /********************************************************//**
     Get number of nodes
 *************************************************************/
@@ -2550,4 +2567,5 @@ struct LinElemExp * lin_elem_exp_loadtxt(FILE * stream)//, size_t prec)
     free(coeff); coeff = NULL;
     return lexp;
 }
+
 

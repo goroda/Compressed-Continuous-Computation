@@ -963,6 +963,22 @@ kernel_expansion_create_with_params(struct KernelApproxOpts * opts,
     return ke;
 }
 
+/********************************************************//**
+*   Pad extra zero coefficients
+*            
+*   \param[in] p          - approximation
+*   \param[in] num_params - total number of parameters in modified approx 
+*************************************************************/
+void
+kernel_expansion_pad_params(struct KernelExpansion * p,
+                            size_t num_params)
+
+{
+    (void)(p);
+    (void)(num_params);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_pad_params\n");
+}
+
 
 /********************************************************//**
     Return a zero function

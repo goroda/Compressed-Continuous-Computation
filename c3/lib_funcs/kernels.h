@@ -87,6 +87,9 @@ int kernel_expansion_update_params(struct KernelExpansion *, size_t, const doubl
 struct KernelExpansion *
 kernel_expansion_create_with_params(struct KernelApproxOpts *,
                                     size_t, const double *);
+void
+kernel_expansion_pad_params(struct KernelExpansion * p,
+                            size_t num_params);
 struct KernelExpansion *
 kernel_expansion_zero(const struct KernelApproxOpts *, int);
 struct KernelExpansion * kernel_expansion_constant(double val, const struct KernelApproxOpts *);

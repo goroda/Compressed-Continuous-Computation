@@ -77,6 +77,8 @@ void ope_opts_set_start(struct OpeOpts *, size_t);
 size_t ope_opts_get_start(const struct OpeOpts *);
 void ope_opts_set_maxnum(struct OpeOpts *, size_t);
 size_t ope_opts_get_maxnum(const struct OpeOpts *);
+int ope_opts_get_final_round(const struct OpeOpts * ope);
+void ope_opts_set_final_round(struct OpeOpts * ope, int);
 void ope_opts_set_coeffs_check(struct OpeOpts *, size_t);
 void ope_opts_set_tol(struct OpeOpts *, double);
 void ope_opts_set_lb(struct OpeOpts *, double);
@@ -229,6 +231,9 @@ struct OrthPolyExpansion *
 orth_poly_expansion_init_from_opts(const struct OpeOpts *, size_t);
 struct OrthPolyExpansion * 
 orth_poly_expansion_create_with_params(struct OpeOpts *, size_t, const double *);
+void
+orth_poly_expansion_pad_params(struct OrthPolyExpansion * p,
+                               size_t num_params);;
 size_t orth_poly_expansion_get_params(const struct OrthPolyExpansion *, double *);
 double * orth_poly_expansion_get_params_ref(const struct OrthPolyExpansion *, size_t *);
 

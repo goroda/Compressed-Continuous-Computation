@@ -828,7 +828,12 @@ struct OpeOpts{
     double mean;
     double std;
 
-
+    /* Option one can use to determine if rounding occurs
+       during adaptive approximation
+       1 to truncate small coefficients , 0 otherwise 
+    */
+    int final_round; 
+    
     // kristoffel weighting for least squares
     int kristoffel_eval;
     enum quad_rule qrule;
@@ -847,7 +852,7 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
     ao->coeffs_check = 2;
     ao->tol = 1e-10;
     ao->max_num = 100;
-
+    
     ao->ptype = ptype;
     if (ptype == HERMITE){
         ao->lb = -DBL_MAX;
@@ -868,6 +873,7 @@ struct OpeOpts * ope_opts_alloc(enum poly_type ptype)
     ao->mean = 0.0;
     ao->std  = 1.0;
 
+    ao->final_round = 1;
 
     // for least squares applications
     ao->kristoffel_eval = 0;
@@ -920,6 +926,18 @@ void ope_opts_set_coeffs_check(struct OpeOpts * ope, size_t num)
 {
     assert (ope != NULL);
     ope->coeffs_check = num;
+}
+
+int ope_opts_get_final_round(const struct OpeOpts * ope)
+{
+    assert (ope != NULL);
+    return ope->final_round;
+}
+
+void ope_opts_set_final_round(struct OpeOpts * ope, int true_false)
+{
+    assert (ope != NULL);
+    ope->final_round = true_false;
 }
 
 void ope_opts_set_tol(struct OpeOpts * ope, double tol)
@@ -1644,6 +1662,41 @@ orth_poly_expansion_create_with_params(struct OpeOpts * opts,
     }
     return poly;
 }
+
+
+/********************************************************//**
+*   Pad extra zero coefficients
+*            
+*   \param[in] p          - polynomial
+*   \param[in] num_params - total number of parameters in modified poly
+*************************************************************/
+void
+orth_poly_expansion_pad_params(struct OrthPolyExpansion * p,
+                               size_t num_params)
+{
+
+    if (p->p->ptype == FOURIER) {
+        fprintf(stderr, "Cannot pad parameters for fourier basis\n");
+        exit(1);
+    }
+
+    if (p->nalloc < num_params) {
+        double * coeff = calloc_double(num_params);
+        for (size_t ii = 0; ii < p->num_poly; ii++) {
+            coeff[ii] = p->coeff[ii];
+        }
+        free(p->coeff); p->coeff = NULL;
+        p->coeff = coeff;
+        p->nalloc = num_params;
+    }
+    else {
+        for (size_t ii = p->num_poly; ii < num_params; ii++){
+            p->coeff[ii] = 0.0;
+        }
+        p->num_poly = num_params;
+    }
+}
+
 
 /********************************************************//**
 *   Get parameters defining polynomial (for now just coefficients)
@@ -3459,7 +3512,7 @@ orth_poly_expansion_rkhs_squared_norm_param_grad(const struct OrthPolyExpansion 
 *      (UNTESTED, use with care!!!! 
 *************************************************************/
 void orth_poly_expansion_round(struct OrthPolyExpansion ** p)
-{   
+{
     if ((0 == 0) && ((*p)->p->ptype != FOURIER)){
         /* double thresh = 1e-3*ZEROTHRESH; */
         double thresh = ZEROTHRESH;
@@ -3957,8 +4010,10 @@ orth_poly_expansion_approx_adapt(const struct OpeOpts * aopts,
         }
 
     }
-    
-    orth_poly_expansion_round(&poly);
+
+    if (ope_opts_get_final_round(aopts) == 1) {
+        orth_poly_expansion_round(&poly);
+    }
 
     // verify
     /* double pt = (upper - lower)*randu() + lower; */

@@ -235,6 +235,9 @@ int piecewise_poly_squared_norm_param_grad(const struct PiecewisePoly *, double,
 size_t piecewise_poly_get_params(const struct PiecewisePoly *, double *);
 double * piecewise_poly_get_params_ref(const struct PiecewisePoly *, size_t *);
 struct PiecewisePoly * piecewise_poly_create_with_params(struct PwPolyOpts *, size_t, const double *);
+void
+piecewise_poly_pad_params(struct PiecewisePoly * p,
+                          size_t num_params);
 #endif
 
 

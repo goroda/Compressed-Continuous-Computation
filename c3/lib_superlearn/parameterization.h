@@ -86,6 +86,8 @@ struct FTparam
 struct FTparam *
 ft_param_alloc(size_t,struct MultiApproxOpts *,
                double *, size_t *);
+struct FTparam *
+ft_param_alloc_with_ft(struct FunctionTrain * ft, struct MultiApproxOpts * aopts);
 void ft_param_free(struct FTparam *);
 struct FTparam * ft_param_copy(struct FTparam * ftp);
 double ft_param_get_param(const struct FTparam *, size_t);

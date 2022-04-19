@@ -106,6 +106,9 @@ struct ConstElemExp * const_elem_exp_init(size_t, double *, double *);
 struct ConstElemExp *
 const_elem_exp_create_with_params(struct ConstElemExpAopts *,
                                 size_t, const double *);
+void
+const_elem_exp_pad_params(struct ConstElemExp * p,
+                          size_t num_params);
 int
 const_elem_exp_update_params(struct ConstElemExp *,
                              size_t, const double *);

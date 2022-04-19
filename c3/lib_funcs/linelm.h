@@ -113,6 +113,9 @@ struct LinElemExp * lin_elem_exp_init(size_t, double *, double *);
 struct LinElemExp *
 lin_elem_exp_create_with_params(struct LinElemExpAopts *,
                                 size_t, const double *);
+void
+lin_elem_exp_pad_params(struct LinElemExp * p,
+                        size_t num_params);
 int
 lin_elem_exp_update_params(struct LinElemExp *,
                            size_t, const double *);

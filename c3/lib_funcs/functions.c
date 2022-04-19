@@ -447,6 +447,21 @@ generic_function_create_with_params(enum function_class fc, void * aopts, size_t
     return gf;
 }
 
+
+/********************************************************//**
+    Add parameters to a function via padding, the meaning
+    is dependent upon the functional forms
+
+    \param[in,out] func    - generic function
+    \param[in]     nparams - number of parameters the function should eventually have
+
+************************************************************/
+void
+generic_function_pad_params(struct GenericFunction * func, size_t nparams)
+{   
+    GF_SWITCH_NO_ONEOUT(pad_params, func->fc, func->f, nparams); 
+}
+
 /********************************************************//**
     Return a zero function
 

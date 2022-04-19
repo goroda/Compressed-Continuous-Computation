@@ -3486,6 +3486,20 @@ void qmarray_uni_update_params(struct Qmarray * qma, size_t row, size_t col,
 }
 
 /***********************************************************//**
+    Pad parameters of the univariate functions with zeros 
+
+    \param[in,out]  qma    - quasimatrix array whose parameters to update
+    \param[in]      row    - row of the function to update
+    \param[in]      col    - column of the function
+    \param[in]      nparam - total number of parameters
+***************************************************************/
+void qmarray_uni_pad_params(struct Qmarray * qma, size_t row, size_t col, size_t nparam)
+{
+     size_t ind = col * qma->nrows + row;
+     generic_function_pad_params(qma->funcs[ind],nparam);
+}
+
+/***********************************************************//**
     Update Qmarray parameters
 
     \param[in,out]  qma     - quasimatrix array whose parameters to update

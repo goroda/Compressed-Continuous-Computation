@@ -122,6 +122,8 @@ struct GenericFunction *
 generic_function_regress1d(struct Regress1DOpts *, struct c3Opt *, int *);
 struct GenericFunction *
 generic_function_create_with_params(enum function_class,void *,size_t,const double*);
+void
+generic_function_pad_params(struct GenericFunction * func, size_t nparams);
 struct GenericFunction * 
 generic_function_zero(enum function_class, void *, int);
 struct GenericFunction * 
