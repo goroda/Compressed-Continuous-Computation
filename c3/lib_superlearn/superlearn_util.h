@@ -122,6 +122,9 @@ int sl_mem_manager_gradient_precomputedp(const struct SLMemManager * mem);
 /* } */
 
 struct SLMemManager * sl_mem_manager_alloc(size_t, size_t, size_t,enum FTPARAM_ST);
+double * sl_mem_manager_get_running_eval(struct SLMemManager *);
+double * sl_mem_manager_get_running_grad(struct SLMemManager *);
+double * sl_mem_manager_get_lin_structure_vals(struct SLMemManager *);
 void sl_mem_manager_free(struct SLMemManager *);
 
 

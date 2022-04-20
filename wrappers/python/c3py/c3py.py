@@ -327,6 +327,72 @@ class FunctionTrain(object):
 
         self._free_approx_params(c3a, onedopts, low_opts, optnodes)
         c3.fwrap_destroy(fw)
+        
+    def build_reg(self, alg, obj, adaptrank, maxrank, kickrank, 
+                  regweight, roundtol, als_max_sweep, opt_relftol, 
+                  kfold, verbose, kristoffel):
+        '''Builds a regressor object'''
+        
+        c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
+        multiopts = c3.c3approx_get_approx_args(c3a)
+
+        reg = c3.ft_regress_alloc(self.dim, multiopts, self.ranks)
+        if alg == "AIO" and obj == "LS":
+            c3.ft_regress_set_alg_and_obj(reg, c3.AIO, c3.FTLS)
+        elif alg == "AIO" and obj == "LS_SPARSECORE":
+            c3.ft_regress_set_alg_and_obj(reg, c3.AIO, c3.FTLS_SPARSEL2)
+            c3.ft_regress_set_regularization_weight(reg, regweight)
+        elif alg == "ALS" and obj == "LS":
+            c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
+        elif alg == "ALS" and obj == "LS_SPARSECORE":
+            c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS_SPARSEL2)
+            c3.ft_regress_set_regularization_weight(reg, regweight)
+            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
+        else:
+            raise AttributeError('Option combination of algorithm and objective not implemented '\
+                                 + alg + obj)
+        if alg == 'ALS':
+            c3.ft_regress_set_als_conv_tol(reg, opt_relftol)
+            
+        if adaptrank != 0:
+            c3.ft_regress_set_adapt(reg, adaptrank)
+            c3.ft_regress_set_roundtol(reg, roundtol)
+            c3.ft_regress_set_maxrank(reg, maxrank)
+            c3.ft_regress_set_kickrank(reg, kickrank)
+            c3.ft_regress_set_kfold(reg, kfold)
+
+        c3.ft_regress_set_verbose(reg, verbose)
+
+        if kristoffel is True:
+            c3.ft_regress_set_kristoffel(reg, 1)
+            
+        return reg, c3a, onedopts, low_opts, opt_opts
+        
+    def build_param_model(self, alg="AIO", obj="LS", adaptrank=0, maxrank=10, kickrank=2, 
+                  regweight=1e-7, roundtol=1e-5, als_max_sweep=20, opt_relftol=1e-10, 
+                  kfold=5, verbose=0, kristoffel=False):
+        '''Builds a Parameterized FT model'''
+        
+        reg, c3a, onedopts, low_opts, opt_opts = self.build_reg(alg, obj, adaptrank, maxrank, kickrank, 
+                                                                regweight, roundtol, als_max_sweep, opt_relftol, 
+                                                                kfold, verbose, kristoffel)
+        
+        is_linear = True
+        for i in range(self.dim):
+            if self.opts[i]['kernel_adapt_center'] == 1:
+                is_linear = False
+        
+        ftp = FTparam(reg, is_linear)
+        
+        if self.ft is not None:
+            params = np.zeros(ftp.nparams)
+            c3.function_train_get_params(self.ft, params)
+            ftp.update_params(params)
+            
+        self._free_approx_params(c3a, onedopts, low_opts, opt_opts)
+        
+        return ftp
 
     def build_data_model(self, ndata, xdata, ydata, alg="AIO", obj="LS", verbose=0,
                          opt_type="BFGS", opt_gtol=1e-10, opt_relftol=1e-10,
@@ -372,39 +438,9 @@ class FunctionTrain(object):
         c3.c3opt_set_relftol(optimizer, opt_relftol)
         c3.c3opt_set_maxiter(optimizer, opt_maxiter)
 
-        c3a, onedopts, low_opts, opt_opts = self._build_approx_params(c3.REGRESS)
-        multiopts = c3.c3approx_get_approx_args(c3a)
-
-        reg = c3.ft_regress_alloc(self.dim, multiopts, self.ranks)
-        if alg == "AIO" and obj == "LS":
-            c3.ft_regress_set_alg_and_obj(reg, c3.AIO, c3.FTLS)
-        elif alg == "AIO" and obj == "LS_SPARSECORE":
-            c3.ft_regress_set_alg_and_obj(reg, c3.AIO, c3.FTLS_SPARSEL2)
-            c3.ft_regress_set_regularization_weight(reg, regweight)
-        elif alg == "ALS" and obj == "LS":
-            c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS)
-            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
-        elif alg == "ALS" and obj == "LS_SPARSECORE":
-            c3.ft_regress_set_alg_and_obj(reg, c3.ALS, c3.FTLS_SPARSEL2)
-            c3.ft_regress_set_regularization_weight(reg, regweight)
-            c3.ft_regress_set_max_als_sweep(reg, als_max_sweep)
-        else:
-            raise AttributeError('Option combination of algorithm and objective not implemented '\
-                                 + alg + obj)
-        if alg == 'ALS':
-            c3.ft_regress_set_als_conv_tol(reg, opt_relftol)
-            
-        if adaptrank != 0:
-            c3.ft_regress_set_adapt(reg, adaptrank)
-            c3.ft_regress_set_roundtol(reg, roundtol)
-            c3.ft_regress_set_maxrank(reg, maxrank)
-            c3.ft_regress_set_kickrank(reg, kickrank)
-            c3.ft_regress_set_kfold(reg, kfold)
-
-        c3.ft_regress_set_verbose(reg, verbose)
-
-        if kristoffel is True:
-            c3.ft_regress_set_kristoffel(reg, 1)
+        reg, c3a, onedopts, low_opts, opt_opts = self.build_reg(alg, obj, adaptrank, maxrank, kickrank, 
+                                                                regweight, roundtol, als_max_sweep, opt_relftol, 
+                                                                kfold, verbose, kristoffel)
 
         if self.ft is not None:
             c3.function_train_free(self.ft)
@@ -782,8 +818,83 @@ class TensorTrain(FunctionTrain):
 
         return tt
         
-    
+class FTparam(object):
 
+    def __init__(self, reg, is_linear):
+        self.reg = reg
+        self.ftp = c3.ft_regress_get_ft_param(reg)
+        self.ft = c3.ft_param_get_ft(self.ftp)
+        self.dim = c3.ft_param_get_dim(self.ftp)
+        self.nparams = self.get_nparams()
+        self.is_linear = is_linear
+
+    def get_params(self):
+        params = np.zeros(self.get_nparams())
+        c3.ft_param_get_params(self.ftp, self.nparams, params)
+        return params
+
+    def get_param(self, param_idx):
+        return c3.ft_param_get_param(self.ftp, param_idx)
+        
+    def get_nparams(self):
+        self.nparams = c3.ft_param_get_nparams(self.ftp)
+        return self.nparams
+
+    def update_params(self, new_params):
+        c3.ft_param_update_params(self.ftp, new_params)
+        self.ft = c3.ft_param_get_ft(self.ftp)
+
+    def ft_eval(self, pt):
+        assert isinstance(pt, np.ndarray)
+        if pt.ndim == 1:
+            return c3.function_train_eval(self.ft, pt)
+        else:
+            assert pt.shape[1] == self.dim
+            N = pt.shape[0]
+            X = pt.flatten()
+            out = np.zeros((N))
+            c3.function_train_evals(self.ft, N, X, out)
+            
+            return out
+        
+    def grad_eval(self, x):
+        if (len(x.shape) == 1):
+            N = 1
+        else:
+            N = x.shape[0]
+        X = x.flatten()
+        grad = np.zeros(N*self.nparams)
+        
+        if self.is_linear:
+            mem = c3.sl_mem_manager_alloc(self.dim, N, self.nparams, c3.LINEAR_ST)
+            c3.sl_mem_manager_check_structure(mem, self.ftp, X)
+            
+            running_eval = c3.sl_mem_manager_get_running_eval(mem)
+            running_grad = c3.sl_mem_manager_get_running_grad(mem)
+            lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+            c3.ft_param_gradevals(self.ftp, N, X, grad, lin_structure_grad, running_grad, running_eval)
+        else:
+            mem = c3.sl_mem_manager_alloc(self.dim, N, self.nparams, c3.NONE_ST)
+            c3.sl_mem_manager_check_structure(mem, self.ftp, X)
+            
+            running_eval = c3.sl_mem_manager_get_running_eval(mem)
+            running_grad = c3.sl_mem_manager_get_running_grad(mem)
+            lin_structure_grad = c3.sl_mem_manager_get_lin_structure_vals(mem)
+            c3.ft_param_gradevals(self.ftp, N, X, grad, lin_structure_grad, running_grad, running_eval)
+        
+        
+        c3.sl_mem_manager_free(mem)
+        grad = grad.reshape((N,self.nparams))
+        return grad
+    
+    def free(self):
+        if self.reg is not None:
+            c3.ft_regress_free(self.reg)
+            self.reg = None
+    
+    def __del__(self):
+        self.free()
+        return
     
 class GenericFunction(object):
     """ Univariate Functions """

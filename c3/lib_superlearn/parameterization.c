@@ -301,6 +301,35 @@ double * ft_param_get_params(struct FTparam * ftp)
 }
 
 /***********************************************************//**
+    Get parameters
+
+    \param[in] ftp   - parameterized function train
+    \param[in] nparams - number of parameters to copy
+    \param[in, out] params - empty parameter array
+
+    \return number of parameters copied
+***************************************************************/
+size_t ft_param_get_params(const struct FTparam * ftp, size_t nparams, double * params)
+{
+    if (ftp->nparams <= 0) {
+        fprintf(stderr,"No parameters have yet been specified\n");
+        exit(1);
+    } 
+    else if (nparams <= ftp->nparams){
+        for (size_t i=0; i<nparams; i++) {
+            params[i] = ftp->params[i];
+        }
+        return nparams;
+    }
+    else{
+        for (size_t i=0; i<ftp->nparams; i++) {
+            params[i] = ftp->params[i];
+        }
+        return ftp->nparams;
+    }
+}
+
+/***********************************************************//**
     Get number of parameters 
 
     \param[in] ftp - parameterized FTP
@@ -310,6 +339,20 @@ double * ft_param_get_params(struct FTparam * ftp)
 size_t ft_param_get_nparams(const struct FTparam * ftp)
 {
     return ftp->nparams;
+}
+
+
+/***********************************************************//**
+    Get number of dimensions 
+
+    \param[in] ftp - parameterized FTP
+
+    \return number of dimensions
+***************************************************************/
+size_t ft_param_get_dim(const struct FTparam * ftp)
+{
+    assert (ftp != NULL);
+    return ftp->dim;
 }
 
 /***********************************************************//**
@@ -958,6 +1001,29 @@ double ft_param_gradeval_lin(struct FTparam * ftp, const double * grad_evals,
     }
 
     return out;
+}
+
+
+/***********************************************************//**
+    Evaluate the gradient of the ft with respect to each parameter
+
+    \param[in,out] ftp        - parameterized FTP
+    \param[in]     N          - number of data points
+    \param[in]     x          - locations at which to evaluate
+    \param[in,out] grad       - gradient wrt each parameter in each univariate function
+    \param[in,out] grad_evals - workspace (number of univariate functions)
+    \param[in,out] mem        - workspace (number of univariate functions)
+    \param[in,out] evals      - workspace (number of univariate functions)
+
+***************************************************************/
+void ft_param_gradevals(struct FTparam * ftp, size_t N, const double * x,
+                         double * grad,
+                         double * grad_evals,
+                         double * mem, double * evals)
+{
+    for (size_t ii=0; ii<N; ii++){
+        ft_param_gradeval(ftp, x + ii*ftp->dim, grad + ii*ftp->nparams, grad_evals, mem, evals);
+    }
 }
 
 /***********************************************************//**

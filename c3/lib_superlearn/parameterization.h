@@ -90,6 +90,8 @@ struct FTparam *
 ft_param_alloc_with_ft(struct FunctionTrain * ft, struct MultiApproxOpts * aopts);
 void ft_param_free(struct FTparam *);
 struct FTparam * ft_param_copy(struct FTparam * ftp);
+size_t ft_param_get_dim(const struct FTparam *);
+size_t ft_param_get_params(const struct FTparam *, size_t, double *);
 double ft_param_get_param(const struct FTparam *, size_t);
 double * ft_param_get_params(struct FTparam * ftp);
 size_t ft_param_get_nparams(const struct FTparam *);
@@ -110,6 +112,7 @@ void ft_param_update_core_params(struct FTparam *, size_t, const double *);
 enum FTPARAM_ST ft_param_extract_structure(const struct FTparam *);
 
 // AIO HELPERS
+void ft_param_gradevals(struct FTparam *, size_t, const double *, double *, double *, double *, double *);
 double ft_param_gradeval(struct FTparam *, const double *,double*, double *, double*,double*);
 double ft_param_eval_lin(struct FTparam *, const double *,double*);
 double ft_param_gradeval_lin(struct FTparam *, const double *,double *,double *,double *);

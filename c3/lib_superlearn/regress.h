@@ -94,6 +94,7 @@ double ft_regress_get_stored_fvals(const struct FTRegress *, size_t);
 double * ft_regress_get_params(struct FTRegress *, size_t *);
 void ft_regress_update_params(struct FTRegress *, const double *);
 
+struct FTparam * ft_regress_get_ft_param(struct FTRegress *);
 
 
 struct FunctionTrain *
