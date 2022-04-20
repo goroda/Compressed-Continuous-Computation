@@ -93,7 +93,7 @@ struct FTparam * ft_param_copy(struct FTparam * ftp);
 size_t ft_param_get_dim(const struct FTparam *);
 size_t ft_param_get_params(const struct FTparam *, size_t, double *);
 double ft_param_get_param(const struct FTparam *, size_t);
-double * ft_param_get_params(struct FTparam * ftp);
+double * ft_param_get_params_ref(struct FTparam * ftp);
 size_t ft_param_get_nparams(const struct FTparam *);
 size_t ft_param_get_nparams_restrict(const struct FTparam *, const size_t *);
 size_t * ft_param_get_nparams_per_core(const struct FTparam *);

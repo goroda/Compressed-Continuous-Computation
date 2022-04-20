@@ -289,7 +289,7 @@ double ft_param_get_param(const struct FTparam * ftp, size_t index)
 
     \return parameters
 ***************************************************************/
-double * ft_param_get_params(struct FTparam * ftp)
+double * ft_param_get_params_ref(struct FTparam * ftp)
 {
     if (ftp->nparams > 0){
         return ftp->params;

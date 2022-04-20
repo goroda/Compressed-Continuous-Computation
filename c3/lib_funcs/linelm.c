@@ -1058,6 +1058,9 @@ lin_elem_exp_param_grad_inner(const struct LinElemExp * a,
                               const struct LinElemExp* b,
                               double *inner_vals)
 {
+    (void) a;
+    (void) b;
+    (void) inner_vals;
     NOT_IMPLEMENTED_MSG("lin_elem_exp_param_grad_inner");
     exit(1);    
 }
