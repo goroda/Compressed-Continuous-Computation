@@ -281,6 +281,25 @@ double ft_param_get_param(const struct FTparam * ftp, size_t index)
     }
 }
 
+
+/***********************************************************//**
+    Get a reference to all parameters
+
+    \param[in] ftp   - parameterized function train
+
+    \return parameters
+***************************************************************/
+double * ft_param_get_params(struct FTparam * ftp)
+{
+    if (ftp->nparams > 0){
+        return ftp->params;
+    }
+    else{
+        fprintf(stderr,"No parameters have yet been specified\n");
+        exit(1);
+    }
+}
+
 /***********************************************************//**
     Get number of parameters 
 
@@ -305,6 +324,17 @@ void ft_param_update_params(struct FTparam * ftp, const double * params)
     function_train_update_params(ftp->ft,ftp->params);
 }
 
+/***********************************************************//**
+    Update the parameters of an FT with the parameters saved
+    in the ft-param structure itself
+
+    \param[in,out] ftp    - parameterized FTP
+    \param[in]     params - new parameter values
+***************************************************************/
+void ft_param_self_update_params(struct FTparam * ftp)
+{
+    function_train_update_params(ftp->ft,ftp->params);
+}
 
 /***********************************************************//**
     Get the number of parameters of an FT for univariate functions
