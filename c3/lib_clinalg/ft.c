@@ -816,7 +816,7 @@ double function_train_eval(struct FunctionTrain * ft, const double * x)
 /***********************************************************//**
    Get number of parameters of a particular univariate function
 
-   \param[in] ft   - functoin train
+   \param[in] ft   - function train
    \param[in] core - which core parameters to count
    \param[in] ii   - row
    \param[in] jj   - column

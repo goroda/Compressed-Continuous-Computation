@@ -21,14 +21,28 @@ int main()
     
     size_t maxorder = 100;
     size_t ii,jj,kk,ll;
+    int legendre = 0;
+    
     
     double * coeffs = calloc_double((maxorder/2)*(maxorder/2)*maxorder);
-    struct OrthPoly * leg = init_leg_poly();
+    struct OrthPoly * leg = NULL;
+    if (legendre == 1) {
+        leg = init_leg_poly();
+    }
+    else {
+        leg = init_hermite_poly();
+    }
+    
 
     size_t nquad = 3*maxorder+2;
     double * pt = calloc_double(nquad);
     double * wt = calloc_double(nquad);
-    gauss_legendre(nquad,pt,wt);
+    if (legendre == 1) {
+        gauss_legendre(nquad,pt,wt);
+    }
+    else {
+        gauss_hermite(nquad,pt,wt);
+    }
 
     double * evals = calloc_double(nquad * (maxorder+1));
         
@@ -75,20 +89,39 @@ int main()
     }
     printf("done and printing\n");
     printf("density level %zu / %zu = %G\n", nonzero,total,(double) nonzero/ (double)total);
-    FILE * fp = fopen("legpolytens.dat","w");
-    assert (fp != NULL);
+    if (legendre == 1) {
+        FILE * fp = fopen("legpolytens.dat","w");
+        assert (fp != NULL);
 
-    fprintf(fp,"%s\n\n", "#include <string.h>");
-	/* number should be maxorder*maxorder*maxorder / 4*/
-	/* 200 -> 2000000 */
-	/* fprintf(fp,"%s\n", "static const double lpolycoeffs[2000000] = {"); */
-	/* 100 -> 250000 */
-	fprintf(fp,"%s\n", "static const double lpolycoeffs[250000] = {");
-    for (ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
-        fprintf(fp,"%3.15G,\n",coeffs[ii]);
+        fprintf(fp,"%s\n\n", "#include <string.h>");
+        /* number should be maxorder*maxorder*maxorder / 4*/
+        /* 200 -> 2000000 */
+        /* fprintf(fp,"%s\n", "static const double lpolycoeffs[2000000] = {"); */
+        /* 100 -> 250000 */
+        fprintf(fp,"%s\n", "static const double lpolycoeffs[250000] = {");
+        for (ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
+            fprintf(fp,"%3.15G,\n",coeffs[ii]);
+        }
+        fprintf(fp,"};\n");
+        fclose(fp);
     }
-    fprintf(fp,"};\n");
-    fclose(fp); 
+    else {
+        FILE * fp = fopen("hermpolytens.dat","w");
+        assert (fp != NULL);
+
+        fprintf(fp,"%s\n\n", "#include <string.h>");
+        /* number should be maxorder*maxorder*maxorder / 4*/
+        /* 200 -> 2000000 */
+        /* fprintf(fp,"%s\n", "static const double lpolycoeffs[2000000] = {"); */
+        /* 100 -> 250000 */
+        fprintf(fp,"%s\n", "static const double hermpolycoeffs[250000] = {");
+        for (ii = 0; ii < maxorder*maxorder*maxorder/4; ii++){
+            fprintf(fp,"%3.15G,\n",coeffs[ii]);
+        }
+        fprintf(fp,"};\n");
+        fclose(fp);
+    }
+    
     /* int success = darray_save(maxorder*maxorder*maxorder/4,1,coeffs,"legpolytens.dat",1); */
     /* assert ( success == 1); */
     free_orth_poly(leg);

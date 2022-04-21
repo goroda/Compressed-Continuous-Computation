@@ -86,7 +86,7 @@ exact_diffusion(struct FunctionTrain *, struct FunctionTrain *,
                 struct MultiApproxOpts *);
 
 struct FunctionTrain *
-exact_laplace(struct FunctionTrain *,
+exact_laplace(const struct FunctionTrain *,
               struct MultiApproxOpts *);
 struct FunctionTrain *
 exact_laplace_periodic(struct FunctionTrain *,

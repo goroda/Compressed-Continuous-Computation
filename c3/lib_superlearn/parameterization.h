@@ -141,6 +141,6 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
                         const double * vec,
                         double * hess_vec);
 
-void ft_param_grad_inner(struct FTparam * ftp, struct FunctionTrain *g,
+void ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
                          double *grad_param);
 #endif
