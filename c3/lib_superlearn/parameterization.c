@@ -1766,10 +1766,10 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
     \param[in]     g        - function train
     \param[in,out] grad_loc - location of the gradient
 
-    \return evaluation
+    \return inner product, which is computed as a bi-product
 ***************************************************************/
-void  ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
-                          double *grad_param)
+double ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
+                           double *grad_param)
 {
 
     struct FunctionTrain * f = ftp->ft;    
@@ -1801,7 +1801,7 @@ void  ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
         free(temp2); temp2 = NULL;
      
     }
-    /* out = temp[0]; */
+    double inner_product = temp[0];
     free(temp); temp = NULL;    
     
     /* first core */
@@ -1861,5 +1861,7 @@ void  ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
     free(Ak);
     
     free(temp); temp=NULL;
+
+    return inner_product;
 }
     
