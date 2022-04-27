@@ -193,14 +193,11 @@ ft_param_alloc_with_ft(struct FunctionTrain * ft, struct MultiApproxOpts * aopts
     size_t onind = 0;
     for (size_t jj = 0; jj < ftr->dim; jj++){
 
-        /* printf("jj = %zu\n", jj); */
         size_t nparams_should =  multi_approx_opts_get_dim_nparams(aopts,jj);
-        /* printf("nparams_should = %zu\n", nparams_should); */
         for (size_t col = 0; col < ranks[jj+1]; col++) {
             for (size_t row = 0; row < ranks[jj]; row++) {
 
                 size_t nparams = qmarray_func_get_nparams(ft->cores[jj], row, col);
-                /* printf("nparams = %zu\n", nparams); */
                 if (nparams > nparams_should) {
                     fprintf(stderr, "FT has more parameters than allowed by approxopts\n");
                     exit(1);
@@ -220,7 +217,14 @@ ft_param_alloc_with_ft(struct FunctionTrain * ft, struct MultiApproxOpts * aopts
 
     ftr->params = calloc_double(ftr->nparams);
     size_t check_nparams = function_train_get_params(ft, ftr->params);
-    assert (check_nparams == ftr->nparams);
+    if (check_nparams != ftr->nparams) {
+        /* size_t check2 = function_train_get_nparams(ft); */
+        /* printf("check2 = %zu\n", check2); */
+        fprintf(stderr, "Expected %zu parameters, but function train actually has %zu\n",
+                ftr->nparams, check_nparams);
+        exit(1);
+    }
+
 
     return ftr;
 }
@@ -1756,16 +1760,16 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
 }
 
 /***********************************************************//**
-    Evaluate the inner product \f$ \langle \nablea_{theta} f(x; theta), g(x) \f$
+    Evaluate the inner product \f$ \langle \nabla_{theta} f(x; theta), g(x) \f$
 
     \param[in,out] ftp      - parameterized FTP
     \param[in]     g        - function train
     \param[in,out] grad_loc - location of the gradient
 
-    \return evaluation
+    \return inner product, which is computed as a bi-product
 ***************************************************************/
-void  ft_param_grad_inner(struct FTparam * ftp, struct FunctionTrain *g,
-                          double *grad_param)
+double ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
+                           double *grad_param)
 {
 
     struct FunctionTrain * f = ftp->ft;    
@@ -1797,7 +1801,7 @@ void  ft_param_grad_inner(struct FTparam * ftp, struct FunctionTrain *g,
         free(temp2); temp2 = NULL;
      
     }
-    /* out = temp[0]; */
+    double inner_product = temp[0];
     free(temp); temp = NULL;    
     
     /* first core */
@@ -1857,5 +1861,7 @@ void  ft_param_grad_inner(struct FTparam * ftp, struct FunctionTrain *g,
     free(Ak);
     
     free(temp); temp=NULL;
+
+    return inner_product;
 }
     

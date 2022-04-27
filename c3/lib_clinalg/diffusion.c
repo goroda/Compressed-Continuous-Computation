@@ -513,7 +513,7 @@ struct FunctionTrain * exact_diffusion(
     \note 
     Result is not rounded. Might want to perform rounding afterwards
 ***************************************************************/
-struct FunctionTrain * exact_laplace(struct FunctionTrain * fin,
+struct FunctionTrain * exact_laplace(const struct FunctionTrain * fin,
                                      struct MultiApproxOpts * opts)
 {
     struct FunctionTrain * f = function_train_copy(fin);

@@ -65,6 +65,7 @@
 #include "lib_quadrature.h"
 #include "linalg.h"
 #include "legtens.h"
+#include "hermtens.h"
 #include "fourier.h"
 
 enum SPACE_MAP {SM_LINEAR,SM_ROSENBLATT};
@@ -1688,6 +1689,7 @@ orth_poly_expansion_pad_params(struct OrthPolyExpansion * p,
         free(p->coeff); p->coeff = NULL;
         p->coeff = coeff;
         p->nalloc = num_params;
+        p->num_poly = num_params;
     }
     else {
         for (size_t ii = p->num_poly; ii < num_params; ii++){
@@ -4162,6 +4164,42 @@ orth_poly_expansion_prod(const struct OrthPolyExpansion * a,
                     /* c->coeff[kk] +=  lpolycoeffs[ii+jj*100+kk*10000] * */ /* for max_order == 200 */
 					c->coeff[kk] +=  lpolycoeffs[ii+jj*50+kk*2500] *  /* for max_order == 100*/
                                         allprods[jj+ii*b->num_poly];
+                }
+            }
+            //printf("c coeff[%zu]=%G\n",kk,c->coeff[kk]);
+        }
+        orth_poly_expansion_round(&c);
+        free(allprods); allprods=NULL;
+    }
+    else if ( (p == HERMITE) && (a->num_poly < 50) && (b->num_poly < 50)){  /* for maxorder=200 in tprodtens.c*/	
+        //printf("in special prod\n");
+        //double lb = a->lower_bound;
+        //double ub = b->upper_bound;
+            
+        size_t ii,jj;
+        c = orth_poly_expansion_init(p, a->num_poly + b->num_poly+1, lb, ub);
+        double * allprods = calloc_double(a->num_poly * b->num_poly);
+        for (ii = 0; ii < a->num_poly; ii++){
+            for (jj = 0; jj < b->num_poly; jj++){
+                allprods[jj + ii * b->num_poly] = a->coeff[ii] * b->coeff[jj];
+            }
+        }
+        
+        //printf("A = \n");
+        //print_orth_poly_expansion(a,1,NULL);
+
+        //printf("B = \n");
+        //print_orth_poly_expansion(b,1,NULL);
+
+        //dprint2d_col(b->num_poly, a->num_poly, allprods);
+
+        size_t kk;
+        for (kk = 0; kk < c->num_poly; kk++){
+            for (ii = 0; ii < a->num_poly; ii++){
+                for (jj = 0; jj < b->num_poly; jj++){
+                    /* c->coeff[kk] +=  lpolycoeffs[ii+jj*100+kk*10000] * */ /* for max_order == 200 */
+					c->coeff[kk] +=  hermpolycoeffs[ii+jj*50+kk*2500] *  /* for max_order == 100*/
+                                         allprods[jj+ii*b->num_poly];
                 }
             }
             //printf("c coeff[%zu]=%G\n",kk,c->coeff[kk]);
