@@ -1855,9 +1855,11 @@ double ft_param_grad_inner(const struct FTparam * ftp, struct FunctionTrain *g,
         on_param += num;
     }
 
+	qmarray_free(Atrans); Atrans = NULL;	
     for (size_t ii = 0; ii < f->dim; ii++){
         qmarray_free(Ak[ii]); Ak[ii] = NULL;
     };
+
     free(Ak);
     
     free(temp); temp=NULL;

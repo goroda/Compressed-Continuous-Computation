@@ -725,7 +725,7 @@ void Test_ft_param_grad_inner(CuTest * tc)
 
     double base = function_train_inner2(ftp->ft, g);
 
-	CuAssertDblEquals(tc, base, inner, 1e-20);
+	CuAssertDblEquals(tc, base, inner, 1e-12);
 		
     double h = 1e-7;
     for (size_t zz = 0; zz < nparam; zz++){
@@ -747,6 +747,7 @@ void Test_ft_param_grad_inner(CuTest * tc)
     free(param);
     ft_param_free(ftp);
     function_train_free(g);
+	bounding_box_free(bds); bds       = NULL;
 
 }
 
@@ -827,7 +828,7 @@ void Test_ft_param_grad_inner_different_ranks(CuTest * tc)
     free(param);
     ft_param_free(ftp);
     function_train_free(g);
-
+	bounding_box_free(bds); bds       = NULL;
 }
 
 void Test_LS_AIO(CuTest * tc)
@@ -3723,58 +3724,58 @@ CuSuite * CLinalgRegressGetSuite()
 {
     CuSuite * suite = CuSuiteNew();
 
-    /* /\* next 3 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2); */
+    /* next 3 are good */
+    SUITE_ADD_TEST(suite, Test_LS_ALS);
+    SUITE_ADD_TEST(suite, Test_LS_ALS2);
+    SUITE_ADD_TEST(suite, Test_LS_ALS_SPARSE2);
 
-    /* /\* next 5 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_gradeval); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_eval_lin); */
-    /* SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin); */
+    /* next 5 are good */
+    SUITE_ADD_TEST(suite, Test_ft_param_core_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval);
+    SUITE_ADD_TEST(suite, Test_ft_param_eval_lin);
+    SUITE_ADD_TEST(suite, Test_ft_param_gradeval_lin);
     SUITE_ADD_TEST(suite, Test_ft_param_grad_inner);
-    /* SUITE_ADD_TEST(suite, Test_ft_param_grad_inner_different_ranks); */
+    SUITE_ADD_TEST(suite, Test_ft_param_grad_inner_different_ranks);
     
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO);
+    SUITE_ADD_TEST(suite, Test_LS_AIO2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO3);
 
 
-    /* /\* next 4 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_weighted); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel); */
-    /* /\* SUITE_ADD_TEST(suite, Test_LS_cross_validation); *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation_rank_adapt); */
+    /* next 4 are good */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_weighted);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_ftparam_create_from_lin_ls_kernel);
+    /* SUITE_ADD_TEST(suite, Test_LS_cross_validation); */
+    SUITE_ADD_TEST(suite, Test_LS_cross_validation_rank_adapt);
 
-    /* /\* Next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIO); */
+    /* Next 2 are good */
+    SUITE_ADD_TEST(suite, Test_function_train_param_grad_sqnorm);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIO);
 
-    /* /\* next 2 are good *\/ */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV); */
-    /* SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation); */
+    /* next 2 are good */
+    SUITE_ADD_TEST(suite, Test_SPARSELS_AIOCV);
+    SUITE_ADD_TEST(suite, Test_SPARSELS_cross_validation);
 
-    /* /\* /\\* Next 3 are good *\\/ *\/ */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin); */
+    /* /\* Next 3 are good *\/ */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel_nonlin);
     
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rounding); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rounding);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_rankadapt_kernel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel2);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kernel3);
 
-    /* SUITE_ADD_TEST(suite, Test_kristoffel); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_kristoffel); */
+    SUITE_ADD_TEST(suite, Test_kristoffel);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_kristoffel);
 
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd); */
-    /* SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd); */
+    SUITE_ADD_TEST(suite, Test_LS_AIO3_sgd);
+    SUITE_ADD_TEST(suite, Test_LS_AIO_new_sgd);
 
-    /* SUITE_ADD_TEST(suite,Test_ft_param_hess_vec); */
-    /* SUITE_ADD_TEST(suite,Test_ft_param_hess_vec2); */
+    SUITE_ADD_TEST(suite,Test_ft_param_hess_vec);
+    SUITE_ADD_TEST(suite,Test_ft_param_hess_vec2);
 
     return suite;
 }
