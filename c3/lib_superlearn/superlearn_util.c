@@ -357,10 +357,15 @@ void sl_mem_manager_check_structure(struct SLMemManager * mem,
         mem->once_eval_structure = 1;
     }
 
+
     for (size_t ii = 0; ii < ftp->dim; ii++){
+        // printf("RANK B: %zu\n", ftp->ft->ranks[ii]);
+        // printf("RANK A: %zu\n", ftp->ft->ranks[ii+1]);
         for (size_t jj = 0; jj < mem->N; jj++){
             mem->running_lr[ii][jj] = calloc_double(ftp->ft->ranks[ii+1]);
+            // printf("Check 1: %f\n", *mem->running_lr[ii][jj]);
             mem->running_rl[ii][jj] = calloc_double(ftp->ft->ranks[ii]);
+            // printf("Check 2: %f\n", *mem->running_rl[ii][jj]);
         }
     }
     

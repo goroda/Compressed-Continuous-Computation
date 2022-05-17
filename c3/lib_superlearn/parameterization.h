@@ -94,6 +94,7 @@ double ft_param_get_param(const struct FTparam *, size_t);
 size_t ft_param_get_nparams(const struct FTparam *);
 size_t ft_param_get_nparams_restrict(const struct FTparam *, const size_t *);
 size_t * ft_param_get_nparams_per_core(const struct FTparam *);
+size_t ft_param_get_core_nparams(const struct FTparam *, size_t);
 struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
 void ft_param_create_constant(struct FTparam *, double, double);
 void ft_param_create_from_lin_ls(struct FTparam *, size_t,
@@ -127,6 +128,8 @@ void process_sweep_right_left_lin(struct FTparam * ftp, size_t current_core,doub
 double ft_param_core_gradeval(struct FTparam * ftp, size_t core, double x,
                               double *,  double *,double * running_rl,
                               double *);
+void ft_param_core_gradevals(struct FTparam *, size_t, size_t, double *,
+                              double *, int, double *, double *, double *);
 double ft_param_core_eval_lin(struct FTparam *,size_t,double *,double *,const double *);
 double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
                                   double * grad,  double * running_lr,double * running_rl,
@@ -136,5 +139,10 @@ double ft_param_core_gradeval_lin(struct FTparam * ftp, size_t core,
 double ft_param_hessvec(struct FTparam * ftp, const double * x,
                         const double * vec,
                         double * hess_vec);
+
+// GIBBS
+void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y, 
+        double * init_sample, double * prior_cov, double * prior_mean, double noise_var,
+        size_t Nsamples, double * out);
 
 #endif

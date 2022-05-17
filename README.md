@@ -73,6 +73,13 @@ python setup.py build
 python setup.py install
 ```
 
+To make changes to the repository locally using this installation method, simply edit the Python/C code and rerun the above commands. If the changes don't appear to be properly functional, delete the contents of the build directory and remake the files in this directory through
+
+``` shell
+cmake ..
+make
+```
+
 One workflow that works well is to install this package in a new virtual environment. For instance using conda one can run the following (from the c3 directory)
 
 ``` shell

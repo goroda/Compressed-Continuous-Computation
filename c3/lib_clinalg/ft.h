@@ -219,6 +219,18 @@ void function_train_activate_kristoffel(struct FunctionTrain *);
 void function_train_deactivate_kristoffel(struct FunctionTrain *);
 double function_train_get_kristoffel_weight(const struct FunctionTrain *,
                                             const double *);
+void function_train_eval_prev_core(struct FunctionTrain *, size_t, size_t,
+                                   const double *,size_t,double *,size_t,
+                                   double *, size_t,double *,size_t);
+void function_train_pre_eval(struct FunctionTrain *, size_t *,
+                             double **,double **,double **, size_t);
+void function_train_eval_next_core(struct FunctionTrain *, size_t, size_t,
+                                   const double *,size_t,double *,size_t,
+                                   double *, size_t,double *,size_t);
+void function_train_eval_running_right_left(struct FunctionTrain *, 
+                                    size_t, const double *, double *);
+void function_train_eval_running_left_right(struct FunctionTrain *, size_t, const double *, double *);
+void function_train_eval_core(struct FunctionTrain *, size_t, size_t, const double *, double *);
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////

@@ -826,7 +826,9 @@ class FTparam(object):
         self.ft = c3.ft_param_get_ft(self.ftp)
         self.dim = c3.ft_param_get_dim(self.ftp)
         self.nparams = self.get_nparams()
+        self.nparams_per_core = self.get_nparams_per_core()
         self.is_linear = is_linear
+        self.ranks = [c3.function_train_get_rank(self.ft, i) for i in range(self.dim+1)]
 
     def get_params(self):
         params = np.zeros(self.get_nparams())
@@ -887,6 +889,140 @@ class FTparam(object):
         grad = grad.reshape((N,self.nparams))
         return grad
     
+    def grad_core_eval(self, core_num, x, running_lr=None, running_rl=None):
+        assert core_num <= self.dim-1 and core_num >= 0
+        
+        if (len(x.shape) == 1):
+            N = 1
+        else:
+            N = x.shape[0]
+            
+        X = x.flatten()
+        core_nparams = c3.function_train_core_get_nparams(self.ft,core_num,None)
+        grad = np.zeros(N*core_nparams)
+        
+        # r1 = c3.function_train_get_rank(self.ft, core_num)
+        # if (core_num < self.dim-1):
+        #     r2 = c3.function_train_get_rank(self.ft, core_num+1)
+        # else:
+        #     r2 = 1
+        
+        r1 = self.ranks[core_num]
+        r2 = self.ranks[core_num+1]
+            
+        
+        grad_evals = np.zeros(r1*r2)
+        
+        #May not work with function of dimension 1
+        #c3.ft_param_core_gradevals(self.ftp, core_num, N, X, grad)
+        #c3.ft_param_core_gradevals(self.ftp, core_num, N, X, grad, grad_evals)
+        if (running_lr is not None) or (running_rl is not None):
+            L = running_lr.flatten()
+            R = running_rl.flatten()
+            
+            c3.ft_param_core_gradevals(self.ftp, core_num, N, X, grad, 0, L, R, grad_evals)
+        else:
+            running_lr = np.zeros(1)
+            running_rl = np.zeros(1)
+            c3.ft_param_core_gradevals(self.ftp, core_num, N, X, grad, 1, running_lr, running_rl, grad_evals)
+            
+        
+        
+        grad = grad.reshape((N,core_nparams))
+        return grad
+    
+    def eval_running_right_left(self, x):
+        if (len(x.shape) == 1):
+            N = 1
+        else:
+            N = x.shape[0]
+            
+        X = x.flatten()
+        
+        tot_evals = np.array(self.ranks[:-1]).sum()
+        out = np.zeros(tot_evals*N) #Last Rank by cores by data points
+        
+        c3.function_train_eval_running_right_left(self.ft, N, X, out)
+        
+        #Fastest index grad in core
+        #Second Fastest index core
+        #Third Fastest data point
+        
+        out = out.reshape((N,tot_evals))
+        return out
+    
+    def eval_running_left_right(self, x):
+        if (len(x.shape) == 1):
+            N = 1
+        else:
+            N = x.shape[0]
+            
+        X = x.flatten()
+        
+        tot_evals = np.array(self.ranks[1:]).sum()
+        out = np.zeros(tot_evals*N) #Last Rank by cores by data points
+        
+        c3.function_train_eval_running_left_right(self.ft, N, X, out)
+        
+        #Fastest index grad in core
+        #Second Fastest index core
+        #Third Fastest data point
+        
+        out = out.reshape((N,tot_evals))
+        return out
+    
+    def ft_eval_core(self,core,x):
+        assert core <= self.dim-1 and core >= 0
+        
+        if (type(x) != np.ndarray):
+            N = 1
+            x = np.array([x])
+        else:
+            N = x.shape[0]
+            
+        X = x.flatten()
+        
+        out = np.zeros(N*self.ranks[core]*self.ranks[core+1])
+        
+        c3.function_train_eval_core(self.ft, core, N, X, out)
+        
+        out = out.reshape((N,self.ranks[core],self.ranks[core+1]))
+        return out
+    
+    def get_core_rank(self,core_idx):
+        assert core_idx <= self.dim-1 and core_idx >= 0
+        return self.ranks[core_idx+1]
+    
+    def update_core_params(self, core, params):
+        assert self.nparams_per_core[core] == len(params)
+        c3.ft_param_update_core_params(self.ftp, core, params)
+        self.ft = c3.ft_param_get_ft(self.ftp)
+        return
+    
+    def get_nparams_per_core(self):
+        nparams = np.zeros(self.dim)
+        for core in range(self.dim):
+            nparam = c3.ft_param_get_core_nparams(self.ftp, core)
+            nparams[core] = nparam
+        
+        self.nparams_per_core = nparams
+        return self.nparams_per_core
+    
+    def sample_Gibbs_lin(self, X, Y, init_sample, Nsamples, prior_cov, prior_mean, noise_var):
+        if (len(X.shape) == 1):
+            N = 1
+        else:
+            N = X.shape[0]
+            
+        x = X.flatten()
+        PC = prior_cov.flatten()
+        
+        out = np.zeros(self.nparams*Nsamples)
+        
+        c3.sample_gibbs_linear(self.ftp, N, x, Y, init_sample, PC, prior_mean, noise_var, Nsamples, out)
+        out = out.reshape((Nsamples,self.nparams))
+        return out
+        
     def free(self):
         if self.reg is not None:
             c3.ft_regress_free(self.reg)

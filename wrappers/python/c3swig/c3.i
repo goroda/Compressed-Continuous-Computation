@@ -106,6 +106,42 @@ typedef long unsigned int size_t;
     (size_t len2, double * evals)
 };
 
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len1, double * x)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len3, double * running_eval)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len4, double * running_lr)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len5, double * running_rl)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len2, double * out)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len3, double * y)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len4, double * init_sample)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len5, double * prior_cov)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len6, double * prior_mean)
+};
+
 /* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
 extern void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * args);
@@ -325,6 +361,83 @@ void function_train_free(struct FunctionTrain *);
     }
 %}
 %ignore sl_mem_manager_check_structure;
+
+%rename (ft_param_core_gradevals) my_ft_param_core_gradevals;
+%exception my_ft_param_core_gradevals{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft_param_core_gradevals(struct FTparam * ftp, size_t core, size_t N, size_t len1, double * x,
+                              size_t len2, double * grad, int calc_running, size_t len4, double * running_lr, size_t len5, double * running_rl,
+                              size_t len3, double * running_eval)
+                              {
+        return ft_param_core_gradevals(ftp, core, N, x, grad, calc_running, running_lr, running_rl, running_eval);
+    }
+%}
+%ignore ft_param_core_gradevals;
+
+%rename (ft_param_update_core_params) my_ft_param_update_core_params;
+%exception my_ft_param_update_core_params{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_ft_param_update_core_params(struct FTparam * ftp, size_t core, size_t len1, const double * params){
+        return ft_param_update_core_params(ftp, core, params);
+    }
+%}
+%ignore ft_param_update_core_params;
+
+%rename (function_train_eval_running_right_left) my_function_train_eval_running_right_left;
+%exception my_function_train_eval_running_right_left{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_eval_running_right_left(struct FunctionTrain * ft, size_t N, size_t len1, const double * x, size_t len2, double * out){
+        return function_train_eval_running_right_left(ft, N, x, out);
+    }
+%}
+%ignore function_train_eval_running_right_left;
+
+%rename (function_train_eval_running_left_right) my_function_train_eval_running_left_right;
+%exception my_function_train_eval_running_left_right{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_eval_running_left_right(struct FunctionTrain * ft, size_t N, size_t len1, const double * x, size_t len2, double * out){
+        return function_train_eval_running_left_right(ft, N, x, out);
+    }
+%}
+%ignore function_train_eval_running_left_right;
+
+%rename (function_train_eval_core) my_function_train_eval_core;
+%exception my_function_train_eval_core{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_function_train_eval_core(struct FunctionTrain * ft, size_t core, size_t N, size_t len1, const double * x, size_t len2, double * out){
+        return function_train_eval_core(ft, core, N, x, out);
+    }
+%}
+%ignore function_train_eval_core;
+
+%rename (sample_gibbs_linear) my_sample_gibbs_linear;
+%exception my_sample_gibbs_linear{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_sample_gibbs_linear(struct FTparam * ftp, size_t N, size_t len1, double * x, size_t len3, double * y, 
+        size_t len4, double * init_sample, size_t len5, double * prior_cov, size_t len6, double * prior_mean, double noise_var,
+        size_t Nsamples, size_t len2, double * out){
+        return sample_gibbs_linear(ftp, N, x, y, init_sample, prior_cov, prior_mean, noise_var, Nsamples, out);
+    }
+%}
+%ignore sample_gibbs_linear;
 
 %rename (ft_param_gradeval_lin) my_ft_param_gradeval_lin;
 %exception my_ft_param_gradeval_lin{

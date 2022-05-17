@@ -725,6 +725,154 @@ void function_train_eval_up_to_core(struct FunctionTrain * ft, size_t core, cons
 }
 
 /***********************************************************//**
+    Evaluate a function train core
+
+    \param[in]     ft      - function train
+    \param[in]     core    - which core to evaluate at
+    \param[in]     N       - number of locations to evaluate
+    \param[in]     x       - locations at which to evaluate
+    \param[in,out] out     - evaluation, number of univariate functions by the number of locations
+
+    \note out returns evaluations of a core
+***************************************************************/
+void function_train_eval_core(struct FunctionTrain * ft, size_t core, size_t N, const double * x, double * out)
+{
+    assert (core < ft->dim);
+
+    size_t num_funs = ft->cores[core]->nrows * ft->cores[core]->ncols;
+    generic_function_1darray_eval2N(num_funs, ft->cores[core]->funcs, N, x,  1, out, num_funs);
+    // for (size_t ii=0; ii<N; ii++){
+    //     generic_function_1darray_eval2(
+    //         num_funs,
+    //         ft->cores[core]->funcs, x[ii], out + ii*num_funs);
+    // }
+}
+
+/***********************************************************//**
+    Evaluate a function train from the last core to the first
+
+    \param[in]     ft      - function train
+    \param[in]     N       - number of locations to evaluate
+    \param[in]     x       - locations at which to evaluate
+    \param[in,out] out     - evaluation, with enough space
+
+    \note out returns running evaluations of each core
+***************************************************************/
+void function_train_eval_running_right_left(struct FunctionTrain * ft, size_t N, const double * x, double * out)
+{
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    for (size_t jj=0; jj<N; jj++){
+        size_t maxrank = 0;
+        double *t4=NULL, *t5=NULL, *t6=NULL;
+        function_train_pre_eval(ft,&maxrank,&t4,&t5,&t6,1);
+
+        int ii = dim-1;
+        generic_function_1darray_eval2(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, x[ii + jj*dim],t4);
+
+
+        size_t tot_num_of_evals = 0;
+        for(size_t zz=0; zz<dim; zz++){
+            tot_num_of_evals += ft->cores[zz]->nrows;
+        }
+
+        size_t num_of_evals = ft->cores[ii]->nrows;
+        size_t running_num_evals = num_of_evals;
+        for (size_t kk=0; kk<num_of_evals; kk++){
+            out[jj*tot_num_of_evals + tot_num_of_evals-running_num_evals + kk] = t4[kk];
+        }
+    
+        for (ii = dim-2; ii >= 0; ii--){
+            if ((ii-dim-2)%2 == 0){
+                function_train_eval_prev_core(ft,ii,1,x+ii+jj*dim,0,t4,0,t5,0,t6,0); // zero because 1 data pint
+
+                num_of_evals = ft->cores[ii]->nrows;
+                running_num_evals += num_of_evals;
+                for (size_t kk=0; kk<num_of_evals; kk++){
+                    out[jj*tot_num_of_evals + tot_num_of_evals-running_num_evals + kk] = t6[kk];
+                }
+            }
+            else{
+                function_train_eval_prev_core(ft,ii,1,x+ii+jj*dim,0,t6,0,t5,0,t4,0);
+                
+                num_of_evals = ft->cores[ii]->nrows;
+                running_num_evals += num_of_evals;
+                for (size_t kk=0; kk<num_of_evals; kk++){
+                    out[jj*tot_num_of_evals + tot_num_of_evals-running_num_evals + kk] = t4[kk];
+                }
+            }
+        }
+    }
+}
+
+
+/***********************************************************//**
+    Evaluate a function train from the first core to the last
+
+    \param[in]     ft      - function train
+    \param[in]     N       - number of locations to evaluate
+    \param[in]     x       - locations at which to evaluate
+    \param[in,out] out     - evaluation, with enough space
+
+    \note out returns running evaluations of each core
+***************************************************************/
+void function_train_eval_running_left_right(struct FunctionTrain * ft, size_t N, const double * x, double * out)
+{
+    size_t dim = ft->dim;
+    assert(ft->ranks[0] == 1);
+    assert(ft->ranks[dim] == 1);
+
+    for (size_t jj=0; jj<N; jj++){
+        size_t maxrank = 0;
+        double *t4=NULL, *t5=NULL, *t6=NULL;
+        function_train_pre_eval(ft,&maxrank,&t4,&t5,&t6,1);
+
+        size_t ii = 0;
+        generic_function_1darray_eval2(
+            ft->cores[ii]->nrows * ft->cores[ii]->ncols,
+            ft->cores[ii]->funcs, x[ii + jj*dim],t4);
+
+
+        size_t tot_num_of_evals = 0;
+        for(size_t zz=0; zz<dim; zz++){
+            tot_num_of_evals += ft->cores[zz]->ncols;
+        }
+
+        size_t num_of_evals = ft->cores[ii]->ncols;
+        size_t running_num_evals = 0;
+        for (size_t kk=0; kk<num_of_evals; kk++){
+            out[jj*tot_num_of_evals + running_num_evals + kk] = t4[kk];
+        }
+        running_num_evals += num_of_evals;
+    
+        for (ii = 1; ii < dim; ii++){
+            if (ii%2 == 1){
+                function_train_eval_next_core(ft,ii,1,x+ii+jj*dim,0,t4,0,t5,0,t6,0); // zero because 1 data pint
+
+                num_of_evals = ft->cores[ii]->ncols;
+                for (size_t kk=0; kk<num_of_evals; kk++){
+                    out[jj*tot_num_of_evals + running_num_evals + kk] = t6[kk];
+                }
+                running_num_evals += num_of_evals;
+            }
+            else{
+                function_train_eval_next_core(ft,ii,1,x+ii+jj*dim,0,t6,0,t5,0,t4,0);
+                
+                num_of_evals = ft->cores[ii]->ncols;
+                for (size_t kk=0; kk<num_of_evals; kk++){
+                    out[jj*tot_num_of_evals + running_num_evals + kk] = t4[kk];
+                }
+                running_num_evals += num_of_evals;
+            }
+        }
+    }
+}
+
+/***********************************************************//**
     Evaluate a function train
 
     \param[in]      ft      - function train
