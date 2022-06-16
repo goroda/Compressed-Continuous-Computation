@@ -144,5 +144,11 @@ double ft_param_hessvec(struct FTparam * ftp, const double * x,
 void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y, 
         double * init_sample, double * prior_cov, double * prior_mean, double noise_var,
         size_t Nsamples, double * out);
+void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
+        double * init_sample, double * prior_cov, double * prior_mean, int noise_alpha,
+        double noise_theta, size_t Nsamples, double * out);
+void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
+        double * init_sample, int, double, int noise_alpha, 
+        double noise_theta, size_t Nsamples, double * out);
 
 #endif

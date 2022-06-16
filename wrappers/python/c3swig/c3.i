@@ -142,6 +142,17 @@ typedef long unsigned int size_t;
     (size_t len6, double * prior_mean)
 };
 
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len5, double * prior_alphas)
+};
+
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len6, double * prior_thetas)
+};
+%apply (int DIM1, double* IN_ARRAY1) {
+    (size_t len7, double * prior_out)
+};
+
 /* reference https://stackoverflow.com/questions/3843064/swig-passing-argument-to-python-callback-function */
 
 extern void fwrap_set_pyfunc(struct Fwrap * fwrap, PyObject *PyFunc, PyObject * args);
@@ -438,6 +449,34 @@ void function_train_free(struct FunctionTrain *);
     }
 %}
 %ignore sample_gibbs_linear;
+
+%rename (sample_gibbs_linear_noise) my_sample_gibbs_linear_noise;
+%exception my_sample_gibbs_linear_noise{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, size_t len1, double * x, size_t len3, double * y, 
+        size_t len4, double * init_sample, size_t len5, double * prior_cov, size_t len6, double * prior_mean, int noise_alpha,
+        double noise_theta, size_t Nsamples, size_t len2, double * out){
+        return sample_gibbs_linear_noise(ftp, N, x, y, init_sample, prior_cov, prior_mean, noise_alpha, noise_theta, Nsamples, out);
+    }
+%}
+%ignore sample_gibbs_linear_noise;
+
+%rename (sample_hier_group_gibbs_linear_noise) my_sample_hier_group_gibbs_linear_noise;
+%exception my_sample_hier_group_gibbs_linear_noise{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, size_t len1, double * x, size_t len3, double * y, 
+        size_t len4, double * init_sample, int prior_alpha, double prior_theta, int noise_alpha,
+        double noise_theta, size_t Nsamples, size_t len2, double * out){
+        return sample_hier_group_gibbs_linear_noise(ftp, N, x, y, init_sample, prior_alpha, prior_theta, noise_alpha, noise_theta, Nsamples, out);
+    }
+%}
+%ignore sample_hier_group_gibbs_linear_noise;
 
 %rename (ft_param_gradeval_lin) my_ft_param_gradeval_lin;
 %exception my_ft_param_gradeval_lin{

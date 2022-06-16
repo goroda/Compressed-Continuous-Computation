@@ -986,7 +986,9 @@ class FTparam(object):
         
         c3.function_train_eval_core(self.ft, core, N, X, out)
         
-        out = out.reshape((N,self.ranks[core],self.ranks[core+1]))
+        # out = out.reshape((N,self.ranks[core],self.ranks[core+1]))
+        out = out.reshape((N,self.ranks[core+1],self.ranks[core]))
+        out = np.transpose(out,axes=[0,2,1])
         return out
     
     def get_core_rank(self,core_idx):
@@ -1021,6 +1023,57 @@ class FTparam(object):
         
         c3.sample_gibbs_linear(self.ftp, N, x, Y, init_sample, PC, prior_mean, noise_var, Nsamples, out)
         out = out.reshape((Nsamples,self.nparams))
+        return out
+    
+    def sample_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_cov, prior_mean, alpha, theta):
+        if (len(X.shape) == 1):
+            N = 1
+        else:
+            N = X.shape[0]
+            
+        x = X.flatten()
+        PC = prior_cov.flatten()
+        
+        out = np.zeros((self.nparams+1)*Nsamples)
+        
+        c3.sample_gibbs_linear_noise(self.ftp, N, x, Y, init_sample, PC, prior_mean, alpha, theta, Nsamples, out)
+        out = out.reshape((Nsamples,self.nparams+1))
+        return out
+    
+    # def sample_hier_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_alphas, prior_thetas, alpha, theta):
+    #     if (len(X.shape) == 1):
+    #         N = 1
+    #     else:
+    #         N = X.shape[0]
+            
+    #     if isinstance(prior_alphas, (int, float)):
+    #         prior_alphas = np.array([prior_alphas for i in range(self.dim)])
+            
+    #     if isinstance(prior_thetas, (int, float)):
+    #         prior_thetas = np.array([prior_thetas for i in range(self.dim)])
+            
+    #     x = X.flatten()
+        
+    #     out = np.zeros((self.nparams+1)*Nsamples)
+    #     var_out = np.zeros((Nsamples-1)*self.dim)
+        
+    #     c3.sample_hier_gibbs_linear_noise(self.ftp, N, x, Y, init_sample, prior_alphas, prior_thetas, alpha, theta, Nsamples, out, var_out)
+    #     out = out.reshape((Nsamples,self.nparams+1))
+    #     var_out = var_out.reshape((Nsamples-1,self.dim))
+    #     return out, var_out
+    
+    def sample_hier_group_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_alpha, prior_theta, alpha, theta):
+        if (len(X.shape) == 1):
+            N = 1
+        else:
+            N = X.shape[0]
+            
+        x = X.flatten()
+        
+        out = np.zeros((self.nparams+2)*Nsamples)
+        
+        c3.sample_hier_group_gibbs_linear_noise(self.ftp, N, x, Y, init_sample, prior_alpha, prior_theta, alpha, theta, Nsamples, out)
+        out = out.reshape((Nsamples,self.nparams+2))
         return out
         
     def free(self):
