@@ -1225,6 +1225,7 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
     }
 
     // Calculate PseudoInverse of all core covariance matrices
+    // COULD BE ROW MAJOR WHICH WOULD MESS UP CALCULATIONS
     size_t running_nparams = 0;
     double inv_prior_cov[ftp->nparams*ftp->nparams];
     for (size_t core=0; core<ftp->dim; core++){
@@ -1277,7 +1278,6 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
         }   
     }
     
-
     for (size_t iter = 1; iter < Nsamples; iter++){
 
         running_nparams = 0;
@@ -1304,7 +1304,9 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             }
 
             
+            
             // Sample Core
+            // ROW MAJOR??
             double inv_core_prior_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++) {
                 for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++) {
@@ -1334,12 +1336,14 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             // N x N times N x Nparams
             double inv_noise_x_grad[N*ftp->nparams_per_core[core]]; // N x nparams_core
             cblas_dgemm(CblasRowMajor,CblasNoTrans, CblasNoTrans, N, ftp->nparams_per_core[core], N, 1.0, inv_noise_cov, N, mem->grad->vals, ftp->nparams_per_core[core], 0.0, inv_noise_x_grad, ftp->nparams_per_core[core]);
+            // cblas_dgemm(CblasColMajor,CblasNoTrans, CblasNoTrans, N, ftp->nparams_per_core[core], N, 1.0, inv_noise_cov, N, mem->grad->vals, N, 0.0, inv_noise_x_grad, N);
             
 
             // np.dot(core_grad.T, temp)
             // Nparams x N times N x Nparams
             double gradT_x_noise_x_grad[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]]; // nparams_core x nparams_core
             cblas_dgemm(CblasRowMajor,CblasTrans, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], N, 1.0, mem->grad->vals, ftp->nparams_per_core[core], inv_noise_x_grad, ftp->nparams_per_core[core], 0.0, gradT_x_noise_x_grad, ftp->nparams_per_core[core]);
+            // cblas_dgemm(CblasColMajor,CblasTrans, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], N, 1.0, mem->grad->vals, N, inv_noise_x_grad, N, 0.0, gradT_x_noise_x_grad, ftp->nparams_per_core[core]);
 
             // term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, core_grad ))
             double mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
@@ -1348,20 +1352,24 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             }
 
             double inv_mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // DOES THIS REQUIRE ROW OR COLUMN MAJOR??
             pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
                 mean, inv_mean, 0.0);
             
             // mean_inv = np.linalg.pinv(term + inv_cov)
 
             double noise_x_data[N];
+            // cblas_dgemv(CblasColMajor, CblasNoTrans, N, N, 1.0, inv_noise_cov, N, y, 1, 0.0, noise_x_data, 1);
             cblas_dgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0, inv_noise_cov, N, y, 1, 0.0, noise_x_data, 1);
 
             double data_term[ftp->nparams_per_core[core]];
+            // cblas_dgemv(CblasColMajor, CblasTrans, N, ftp->nparams_per_core[core], 1.0, mem->grad->vals, N, noise_x_data, 1, 0.0, data_term, 1);
             cblas_dgemv(CblasRowMajor, CblasTrans, N, ftp->nparams_per_core[core], 1.0, mem->grad->vals, ftp->nparams_per_core[core], noise_x_data, 1, 0.0, data_term, 1);
             
             // data_term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, self.Ydata ))
 
             double prior_term[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // cblas_dgemv(CblasColMajor, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_core_prior_cov, ftp->nparams_per_core[core], core_prior_mean, 1, 0.0, prior_term, 1);
             cblas_dgemv(CblasRowMajor, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_core_prior_cov, ftp->nparams_per_core[core], core_prior_mean, 1, 0.0, prior_term, 1);
 
             // prior_term = np.dot(inv_cov, core_prior_mean)
@@ -1372,6 +1380,7 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             }
 
             double post_mean[ftp->nparams_per_core[core]];
+            // cblas_dgemv(CblasColMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_mean, ftp->nparams_per_core[core], data_plus_prior, 1, 0.0, post_mean,1);
             cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_mean, ftp->nparams_per_core[core], data_plus_prior, 1, 0.0, post_mean,1);
 
             // post_mean = np.dot(mean_inv, data_term + prior_term)
@@ -1410,7 +1419,8 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             }
             
             double sqrtcov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            // cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
 
             // u, s, v = np.linalg.svd(post_cov)
             // sqrtcov = np.dot(u, np.sqrt(np.diag(s)))
@@ -1421,12 +1431,22 @@ void sample_gibbs_linear(struct FTparam * ftp, size_t N, double * x, double * y,
             }
 
             double bef_core_sample[ftp->nparams_per_core[core]];
-            cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
+            // cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
+            cblas_dgemv(CblasColMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
 
             double core_sample[ftp->nparams_per_core[core]];
             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
                 core_sample[ii] = bef_core_sample[ii] + post_mean[ii];
             }
+
+            // if (core==0 && iter==1){
+            //     for (size_t ii=0; ii<ftp->nparams_per_core[core]*ftp->nparams_per_core[core]; ii++){
+            //         printf("%ld: %f\n",ii, u[ii]);
+            //     }
+            //     return;
+            // }
+
+
             // core_sample = post_mean + np.dot(sqrtcov, np.random.randn(core_nparams))
 
             // Update Core
@@ -1554,9 +1574,10 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
 
     // Calculate Noise alpha
     // new_alpha = self.alpha + 0.5*self.Xdata.shape[0]
-    int new_alpha = noise_alpha + 0.5*N;
+    int new_alpha = noise_alpha + round(0.5*N);
 
-    double inv_noise_cov[N*N];
+    // double inv_noise_cov[N*N];
+    double * inv_noise_cov = malloc(N*N * sizeof(double));
     for (size_t ii=0; ii<N; ii++){
         for (size_t jj=0; jj<N; jj++){
             inv_noise_cov[N*jj +ii] = 0.0;
@@ -1659,10 +1680,51 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
             }
 
             double inv_mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-                mean, inv_mean, 0.0);
+            // pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //     mean, inv_mean, 0.0);
             
             // mean_inv = np.linalg.pinv(term + inv_cov)
+
+            size_t m = ftp->nparams_per_core[core];
+            double cutoff = 0.0;
+            double u_[m*m];
+            double vt_[m*m];
+            double s_[m];
+            
+            // not sure about thir dargument
+            svd(m, m, m, mean, u_, s_, vt_); //note changed from m to lda
+            
+            double * smat = calloc_double(m*m);
+            double * smat_sqrt = calloc_double(m*m);
+
+            for (size_t ii = 0; ii < m; ii++){
+                if (fabs(s_[ii]) < cutoff){ 
+                    smat[ii*m+ii] = 0.0;
+                    smat_sqrt[ii*m+ii] = 0.0;
+                }
+                else{
+                    smat[ii*m+ii] = 1.0/s_[ii];
+                    smat_sqrt[ii*m+ii] = sqrt(1.0/s_[ii]);
+                }
+            }
+            
+            double temp[m*m];
+            
+            cblas_dgemm(CblasColMajor,CblasTrans,CblasTrans, m, m, m, 1.0, 
+                            vt_, m, smat, m, 0.0, temp, m);
+
+            free(smat);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasTrans, m, m, m, 1.0, 
+                            temp, m, u_, m, 0.0, inv_mean, m);
+
+
+
+
+
+
+
+
+
 
             double noise_x_data[N];
             cblas_dgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0, inv_noise_cov, N, y, 1, 0.0, noise_x_data, 1);
@@ -1700,28 +1762,28 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
 
             // post_cov = np.linalg.pinv(term + inv_cov)
 
-            double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            double s[ftp->nparams_per_core[core]];
-            double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // double s[ftp->nparams_per_core[core]];
+            // double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // // svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            // //         post_cov, u, s, vt);
             // svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-            //         post_cov, u, s, vt);
-            svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-                    inv_mean, u, s, vt);
+            //         inv_mean, u, s, vt);
 
-            double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-                for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
-                    if (ii==jj){
-                        s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
-                    } else {
-                        s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
-                    }
-                }
-            }
+            // double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+            //     for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
+            //         if (ii==jj){
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
+            //         } else {
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
+            //         }
+            //     }
+            // }
             
             double sqrtcov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
-
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, vt_, ftp->nparams_per_core[core], smat_sqrt, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            free(smat_sqrt);
             // u, s, v = np.linalg.svd(post_cov)
             // sqrtcov = np.dot(u, np.sqrt(np.diag(s)))
 
@@ -1731,7 +1793,7 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
             }
 
             double bef_core_sample[ftp->nparams_per_core[core]];
-            cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
+            cblas_dgemv(CblasColMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
 
             double core_sample[ftp->nparams_per_core[core]];
             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
@@ -1787,6 +1849,7 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
     }
     
     sl_mem_manager_free(mem); mem = NULL;
+    free(inv_noise_cov);
 }
 
 
@@ -1812,7 +1875,6 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
         double * init_sample, int prior_alpha, double prior_theta, int noise_alpha, 
         double noise_theta, size_t Nsamples, double * out)
 {
-
     struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,LINEAR_ST);
     sl_mem_manager_check_structure(mem,ftp,x);
 
@@ -1836,7 +1898,6 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
                                             mem->running_rl[zz+1][ii],mem->running_rl[zz][ii]);
         }   
     }
-
     // Calculate Noise alpha
     // new_alpha = self.alpha + 0.5*self.Xdata.shape[0]
     int new_n_alpha = noise_alpha + round(0.5*N);
@@ -1844,7 +1905,8 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
     // Calculate prior alpha
     int new_p_alpha = prior_alpha + round(0.5*ftp->nparams);
 
-    double inv_noise_cov[N*N];
+    // double inv_noise_cov[N*N];
+    double * inv_noise_cov = malloc(N*N * sizeof(double));
     for (size_t ii=0; ii<N; ii++){
         for (size_t jj=0; jj<N; jj++){
             inv_noise_cov[N*jj +ii] = 0.0;
@@ -1955,7 +2017,6 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
             // N x N times N x Nparams
             double inv_noise_x_grad[N*ftp->nparams_per_core[core]]; // N x nparams_core
             cblas_dgemm(CblasRowMajor,CblasNoTrans, CblasNoTrans, N, ftp->nparams_per_core[core], N, 1.0, inv_noise_cov, N, mem->grad->vals, ftp->nparams_per_core[core], 0.0, inv_noise_x_grad, ftp->nparams_per_core[core]);
-            
 
             // np.dot(core_grad.T, temp)
             // Nparams x N times N x Nparams
@@ -1968,9 +2029,51 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
                 mean[ii] = gradT_x_noise_x_grad[ii] + inv_core_prior_cov[ii];
             }
 
+
+            // PSEUDO INVERSE
             double inv_mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-                mean, inv_mean, 0.0);
+            // pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //     mean, inv_mean, 0.0);
+
+            
+            size_t m = ftp->nparams_per_core[core];
+            double cutoff = 0.0;
+            double u_[m*m];
+            double vt_[m*m];
+            double s_[m];
+            
+            // not sure about thir dargument
+            svd(m, m, m, mean, u_, s_, vt_); //note changed from m to lda
+            
+            double * smat = calloc_double(m*m);
+            double * smat_sqrt = calloc_double(m*m);
+
+            for (size_t ii = 0; ii < m; ii++){
+                if (fabs(s_[ii]) < cutoff){ 
+                    smat[ii*m+ii] = 0.0;
+                    smat_sqrt[ii*m+ii] = 0.0;
+                }
+                else{
+                    smat[ii*m+ii] = 1.0/s_[ii];
+                    smat_sqrt[ii*m+ii] = sqrt(1.0/s_[ii]);
+                }
+            }
+            
+            double temp[m*m];
+            
+            cblas_dgemm(CblasColMajor,CblasTrans,CblasTrans, m, m, m, 1.0, 
+                            vt_, m, smat, m, 0.0, temp, m);
+
+            free(smat);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasTrans, m, m, m, 1.0, 
+                            temp, m, u_, m, 0.0, inv_mean, m);
+            
+            
+
+
+
+
+
             
             // mean_inv = np.linalg.pinv(term + inv_cov)
 
@@ -2010,26 +2113,30 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
 
             // post_cov = np.linalg.pinv(term + inv_cov)
 
-            double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            double s[ftp->nparams_per_core[core]];
-            double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-                    inv_mean, u, s, vt);
 
 
-            double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-                for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
-                    if (ii==jj){
-                        s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
-                    } else {
-                        s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
-                    }
-                }
-            }
+            // double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // double s[ftp->nparams_per_core[core]];
+            // double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //         inv_mean, u, s, vt);
+
+
+            // double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+            //     for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
+            //         if (ii==jj){
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
+            //         } else {
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
+            //         }
+            //     }
+            // }
             
             double sqrtcov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-            cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            // THIS WAS PREVIOUSLY U, BUT NOW WE NEED TO TRANSPOSE V
+            cblas_dgemm(CblasColMajor,CblasTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, vt_, ftp->nparams_per_core[core], smat_sqrt, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            free(smat_sqrt);
 
             // u, s, v = np.linalg.svd(post_cov)
             // sqrtcov = np.dot(u, np.sqrt(np.diag(s)))
@@ -2040,7 +2147,7 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
             }
 
             double bef_core_sample[ftp->nparams_per_core[core]];
-            cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
+            cblas_dgemv(CblasColMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
 
             double core_sample[ftp->nparams_per_core[core]];
             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
@@ -2096,312 +2203,363 @@ void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double
     }
     
     sl_mem_manager_free(mem); mem = NULL;
+    free(inv_noise_cov);
 }
 
 
-// /***********************************************************//**
-//     Run Gibbs Sampler using Linear Parameterization of FT 
-//         and sample noise
+/***********************************************************//**
+    Run Gibbs Sampler using Linear Parameterization of FT,
+      sample noise precision, and use a hierarchical prior 
+      variance along each core
 
-//     \param[in,out] ftp          - parameterized function train
-//     \param[in]     N            - number of data points
-//     \param[in]     x            - training samples
-//     \param[in]     y            - training labels
-//     \param[in]     init_sample  - original sample to start at
-//     \param[in]     prior_alphas - prior alpha list for prior variance gamma distribution
-//     \param[in]     prior_thetas - prior theta list 
-//     \param[in]     noise_alpha  - noise precision prior gamma distribution - alpha
-//     \param[in]     noise_theta  - noise precision prior gamma distribution - theta
-//     \param[in]     Nsamples     - number of samples requested
-//     \param[in,out] out          - space to put samples in
-//     \param[in,out] prior_out    - space to put variance samples in
+    \param[in,out] ftp          - parameterized function train
+    \param[in]     N            - number of data points
+    \param[in]     x            - training samples
+    \param[in]     y            - training labels
+    \param[in]     init_sample  - original sample to start at
+    \param[in]     prior_alphas - prior alpha list for prior variance gamma distribution
+    \param[in]     prior_thetas - prior theta list 
+    \param[in]     noise_alpha  - noise precision prior gamma distribution - alpha
+    \param[in]     noise_theta  - noise precision prior gamma distribution - theta
+    \param[in]     Nsamples     - number of samples requested
+    \param[in,out] out          - space to put samples in
+    \param[in,out] prior_out    - space to put variance samples in
 
-// ***************************************************************/
-// void sample_hier_ind_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
-//         double * init_sample, double * prior_alphas, double * prior_thetas, int noise_alpha, 
-//         double noise_theta, size_t Nsamples, double * out, double* prior_out)
-// {
-//     // CREATE A GAMMA DISTRIBUTION OVER THE PRIOR VARIANCE 
-//     // POSSIBLE CREATE INDIVIDUAL GAMMA DISTRIBUTIONS OVER EACH DIMENSION
+***************************************************************/
+void sample_hier_ind_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
+        double * init_sample, double * prior_alphas, double * prior_thetas, int noise_alpha, 
+        double noise_theta, size_t Nsamples, double * out, double* prior_out)
+{
+    // CREATE A GAMMA DISTRIBUTION OVER THE PRIOR VARIANCE 
+    // POSSIBLE CREATE INDIVIDUAL GAMMA DISTRIBUTIONS OVER EACH DIMENSION
 
-//     struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,LINEAR_ST);
-//     sl_mem_manager_check_structure(mem,ftp,x);
+    struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,LINEAR_ST);
+    sl_mem_manager_check_structure(mem,ftp,x);
 
-//     // Initialize with Initial Sample
-//     ft_param_update_params(ftp, init_sample+1);
-//     for (size_t ii=0; ii<ftp->nparams+1; ii++){
-//         out[ii] = init_sample[ii];
-//     }
+    // Initialize with Initial Sample
+    ft_param_update_params(ftp, init_sample+1);
+    for (size_t ii=0; ii<ftp->nparams+1; ii++){
+        out[ii] = init_sample[ii];
+    }
 
 
-//     // init forward sweep
-//     for (size_t ii = 0; ii < N; ii++){
-//         process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + ii * ftp->nparams,
-//                                         NULL, mem->running_rl[ftp->dim-1][ii]);
-//     }
+    // init forward sweep
+    for (size_t ii = 0; ii < N; ii++){
+        process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + ii * ftp->nparams,
+                                        NULL, mem->running_rl[ftp->dim-1][ii]);
+    }
     
     
-//     for (size_t zz = ftp->dim-2; zz > 0; zz--){
-//         for (size_t ii = 0; ii < N; ii++){
-//             process_sweep_right_left_lin(ftp,zz,mem->lin_structure_vals + ii * ftp->nparams,
-//                                             mem->running_rl[zz+1][ii],mem->running_rl[zz][ii]);
-//         }   
-//     }
+    for (size_t zz = ftp->dim-2; zz > 0; zz--){
+        for (size_t ii = 0; ii < N; ii++){
+            process_sweep_right_left_lin(ftp,zz,mem->lin_structure_vals + ii * ftp->nparams,
+                                            mem->running_rl[zz+1][ii],mem->running_rl[zz][ii]);
+        }   
+    }
 
-//     // Calculate Noise alpha
-//     // new_alpha = self.alpha + 0.5*self.Xdata.shape[0]
-//     int new_alpha = noise_alpha + 0.5*N;
+    // Calculate Noise alpha
+    // new_alpha = self.alpha + 0.5*self.Xdata.shape[0]
+    int new_n_alpha = noise_alpha + round(0.5*N);
 
-//     // Calculate prior alpha
-//     int new_p_alpha = 
+    double * inv_noise_cov = malloc(N*N * sizeof(double));
+    for (size_t ii=0; ii<N; ii++){
+        for (size_t jj=0; jj<N; jj++){
+            inv_noise_cov[N*jj +ii] = 0.0;
+        }
+    }
 
-//     double inv_noise_cov[N*N];
-//     for (size_t ii=0; ii<N; ii++){
-//         for (size_t jj=0; jj<N; jj++){
-//             inv_noise_cov[N*jj +ii] = 0.0;
-//         }
-//     }
+    // Begin iterations
+    for (size_t iter = 1; iter < Nsamples; iter++){
 
-//     // Begin iterations
-//     for (size_t iter = 1; iter < Nsamples; iter++){
+        // Sample Noise
+        double ft_evals[N];
+        const double * x_in = (const double *) x;
+        function_train_evals(ftp->ft, N, x_in, ft_evals);
 
-//         // Sample Noise
-//         double ft_evals[N];
-//         const double * x_in = (const double *) x;
-//         function_train_evals(ftp->ft, N, x_in, ft_evals);
+        double residual = 0;
+        for (size_t ii=0; ii<N; ii++){
+            residual += (y[ii] - ft_evals[ii])*(y[ii] - ft_evals[ii]);
+        }
+        double new_n_beta = (1/noise_theta) + 0.5*residual;
 
-//         double residual = 0;
-//         for (size_t ii=0; ii<N; ii++){
-//             residual += (y[ii] - ft_evals[ii])*(y[ii] - ft_evals[ii]);
-//         }
-//         double new_beta = (1/noise_theta) + 0.5*residual;
+        // Requires alpha >= 1
+        double noise_sample = log(randu());
+        for (int ii=1; ii<new_n_alpha; ii++){
+            noise_sample += log(randu());
+        }
+        noise_sample = (-1/new_n_beta)*noise_sample;
 
-//         // Requires alpha >= 1
-//         double noise_sample = log(randu());
-//         for (int ii=1; ii<new_alpha; ii++){
-//             noise_sample += log(randu());
-//         }
-//         noise_sample = (-1/new_beta)*noise_sample;
+        out[iter*(ftp->nparams+1)] = noise_sample;
 
-//         out[iter*(ftp->nparams+1)] = noise_sample;
-
-//         // Fill in identity
-//         for (size_t ii=0; ii<N; ii++){
-//             inv_noise_cov[N*ii + ii] = noise_sample;
-//         }
+        // Fill in identity
+        for (size_t ii=0; ii<N; ii++){
+            inv_noise_cov[N*ii + ii] = noise_sample;
+        }
 
 
-//         // Sample Prior Variance
-//         // New alpha
+        // Loop through cores
+        size_t running_nparams = 0;
+        for (size_t core = 0; core < ftp->dim; core++){
 
-//         double var_sample = log(randu());
-//         for (int ii=1; ii<prior_alphas[core]; ii++){
-//             var_sample += log(randu());
-//         }
-//         var_sample = -prior_thetas[core]*var_sample;
+            if (core > 0 && core < ftp->dim-1){
+                for (size_t ii = 0; ii < N; ii++){
+                    ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
+                                                        mem->running_lr[core-1][ii],mem->running_rl[core+1][ii],
+                                                        mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            } else if (core == 0){
+                for (size_t ii = 0; ii < N; ii++){
+                    ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
+                                                        NULL,mem->running_rl[core+1][ii],
+                                                        mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            } else {
+                for (size_t ii = 0; ii < N; ii++){
+                    ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
+                                                        mem->running_lr[core-1][ii],NULL,
+                                                        mem->lin_structure_vals + ii * ftp->nparams);
+                }
+            }
 
-//         prior_out[(iter-1)*ftp->dim + core] = var_sample;
+            // Calculate prior alpha
+            int new_p_alpha = round(prior_alphas[core] + 0.5*ftp->nparams_per_core[core]); //round(0.5*ftp->nparams_per_core[core]);
 
-//         // Loop through cores
-//         size_t running_nparams = 0;
-//         for (size_t core = 0; core < ftp->dim; core++){
+            // Sample Prior Variance
 
-//             if (core > 0 && core < ftp->dim-1){
-//                 for (size_t ii = 0; ii < N; ii++){
-//                     ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
-//                                                         mem->running_lr[core-1][ii],mem->running_rl[core+1][ii],
-//                                                         mem->lin_structure_vals + ii * ftp->nparams);
-//                 }
-//             } else if (core == 0){
-//                 for (size_t ii = 0; ii < N; ii++){
-//                     ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
-//                                                         NULL,mem->running_rl[core+1][ii],
-//                                                         mem->lin_structure_vals + ii * ftp->nparams);
-//                 }
-//             } else {
-//                 for (size_t ii = 0; ii < N; ii++){
-//                     ft_param_core_gradeval_lin(ftp,core, mem->grad->vals + ii * ftp->nparams_per_core[core],
-//                                                         mem->running_lr[core-1][ii],NULL,
-//                                                         mem->lin_structure_vals + ii * ftp->nparams);
-//                 }
-//             }
+            // ONLY FOR THIS CORE OF PARAMETERS
+            size_t runparam = 0;
+            for (size_t ii = 0; ii < core; ii ++){
+                runparam += ftp->nparams_per_core[ii];
+            }
 
+            double squared_sum = 0;
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                squared_sum += ftp->params[runparam + ii]*ftp->params[runparam + ii];
+            }
 
+            double new_p_beta = (1/prior_thetas[core]) + 0.5*squared_sum;
 
-//             // Create Inverse Prior Covariance Matrix
-//             double inv_core_prior_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++) {
-//                 for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++) {
-//                     if (ii==jj){
-//                         inv_core_prior_cov[ftp->nparams_per_core[core]*jj + ii] = 1/var_sample; // CHECK THIS
-//                     } else {
-//                         inv_core_prior_cov[ftp->nparams_per_core[core]*jj + ii] = 0.0;
-//                     }
-//                 }
-//             }
+            double var_sample = log(randu());
+            for (int ii=1; ii<new_p_alpha; ii++){
+                var_sample += log(randu());
+            }
+            var_sample = -(1/new_p_beta)*var_sample;
 
-//             double core_prior_mean[ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 core_prior_mean[ii] = 0;
-//             }
+            prior_out[(iter-1)*ftp->dim + core] = var_sample;
 
 
-//             // Sample Core
-//             //cblas_dgemm(Col, TransOpA, TransOpB, M, N, K, al, A, lda, B, ldb, beta, C, ldc)
-//             // op(A) = M x K
-//             // op(B) = K x N
-//             //    C  = M x N
-//             // lda = cols of A = M or K
-//             // ldb = cols of B = K or N
-//             // ldc = cols of C = M
+            // Create Inverse Prior Covariance Matrix
+            double inv_core_prior_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++) {
+                for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++) {
+                    if (ii==jj){
+                        inv_core_prior_cov[ftp->nparams_per_core[core]*jj + ii] = var_sample; // CHECK THIS
+                    } else {
+                        inv_core_prior_cov[ftp->nparams_per_core[core]*jj + ii] = 0.0;
+                    }
+                }
+            }
+
+            double core_prior_mean[ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                core_prior_mean[ii] = 0;
+            }
 
 
-//             // temp = np.dot( self.inv_noise_cov, core_grad )
-//             // N x N times N x Nparams
-//             double inv_noise_x_grad[N*ftp->nparams_per_core[core]]; // N x nparams_core
-//             cblas_dgemm(CblasRowMajor,CblasNoTrans, CblasNoTrans, N, ftp->nparams_per_core[core], N, 1.0, inv_noise_cov, N, mem->grad->vals, ftp->nparams_per_core[core], 0.0, inv_noise_x_grad, ftp->nparams_per_core[core]);
+            // Sample Core
+            //cblas_dgemm(Col, TransOpA, TransOpB, M, N, K, al, A, lda, B, ldb, beta, C, ldc)
+            // op(A) = M x K
+            // op(B) = K x N
+            //    C  = M x N
+            // lda = cols of A = M or K
+            // ldb = cols of B = K or N
+            // ldc = cols of C = M
+
+
+            // temp = np.dot( self.inv_noise_cov, core_grad )
+            // N x N times N x Nparams
+            double inv_noise_x_grad[N*ftp->nparams_per_core[core]]; // N x nparams_core
+            cblas_dgemm(CblasRowMajor,CblasNoTrans, CblasNoTrans, N, ftp->nparams_per_core[core], N, 1.0, inv_noise_cov, N, mem->grad->vals, ftp->nparams_per_core[core], 0.0, inv_noise_x_grad, ftp->nparams_per_core[core]);
             
 
-//             // np.dot(core_grad.T, temp)
-//             // Nparams x N times N x Nparams
-//             double gradT_x_noise_x_grad[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]]; // nparams_core x nparams_core
-//             cblas_dgemm(CblasRowMajor,CblasTrans, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], N, 1.0, mem->grad->vals, ftp->nparams_per_core[core], inv_noise_x_grad, ftp->nparams_per_core[core], 0.0, gradT_x_noise_x_grad, ftp->nparams_per_core[core]);
+            // np.dot(core_grad.T, temp)
+            // Nparams x N times N x Nparams
+            double gradT_x_noise_x_grad[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]]; // nparams_core x nparams_core
+            cblas_dgemm(CblasRowMajor,CblasTrans, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], N, 1.0, mem->grad->vals, ftp->nparams_per_core[core], inv_noise_x_grad, ftp->nparams_per_core[core], 0.0, gradT_x_noise_x_grad, ftp->nparams_per_core[core]);
 
-//             // term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, core_grad ))
-//             double mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]*ftp->nparams_per_core[core]; ii++){
-//                 mean[ii] = gradT_x_noise_x_grad[ii] + inv_core_prior_cov[ii];
-//             }
+            // term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, core_grad ))
+            double mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]*ftp->nparams_per_core[core]; ii++){
+                mean[ii] = gradT_x_noise_x_grad[ii] + inv_core_prior_cov[ii];
+            }
 
-//             double inv_mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-//                 mean, inv_mean, 0.0);
+            double inv_mean[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //       mean, inv_mean, 0.0);
+
+            size_t m = ftp->nparams_per_core[core];
+            double cutoff = 0.0;
+            double u_[m*m];
+            double vt_[m*m];
+            double s_[m];
             
-//             // mean_inv = np.linalg.pinv(term + inv_cov)
-
-//             double noise_x_data[N];
-//             cblas_dgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0, inv_noise_cov, N, y, 1, 0.0, noise_x_data, 1);
-
-//             double data_term[ftp->nparams_per_core[core]];
-//             cblas_dgemv(CblasRowMajor, CblasTrans, N, ftp->nparams_per_core[core], 1.0, mem->grad->vals, ftp->nparams_per_core[core], noise_x_data, 1, 0.0, data_term, 1);
+            // not sure about thir dargument
+            svd(m, m, m, mean, u_, s_, vt_); //note changed from m to lda
             
-//             // data_term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, self.Ydata ))
+            double * smat = calloc_double(m*m);
+            double * smat_sqrt = calloc_double(m*m);
 
-//             double prior_term[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             cblas_dgemv(CblasRowMajor, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_core_prior_cov, ftp->nparams_per_core[core], core_prior_mean, 1, 0.0, prior_term, 1);
+            for (size_t ii = 0; ii < m; ii++){
+                if (fabs(s_[ii]) < cutoff){ 
+                    smat[ii*m+ii] = 0.0;
+                    smat_sqrt[ii*m+ii] = 0.0;
+                }
+                else{
+                    smat[ii*m+ii] = 1.0/s_[ii];
+                    smat_sqrt[ii*m+ii] = sqrt(1.0/s_[ii]);
+                }
+            }
+            
+            double temp[m*m];
+            
+            cblas_dgemm(CblasColMajor,CblasTrans,CblasTrans, m, m, m, 1.0, 
+                            vt_, m, smat, m, 0.0, temp, m);
 
-//             // prior_term = np.dot(inv_cov, core_prior_mean)
+            free(smat);
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasTrans, m, m, m, 1.0, 
+                            temp, m, u_, m, 0.0, inv_mean, m);
 
-//             double data_plus_prior[ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 data_plus_prior[ii] = data_term[ii] + prior_term[ii];
-//             }
 
-//             double post_mean[ftp->nparams_per_core[core]];
-//             cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_mean, ftp->nparams_per_core[core], data_plus_prior, 1, 0.0, post_mean,1);
 
-//             // post_mean = np.dot(mean_inv, data_term + prior_term)
+
+            
+            // mean_inv = np.linalg.pinv(term + inv_cov)
+
+            double noise_x_data[N];
+            cblas_dgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0, inv_noise_cov, N, y, 1, 0.0, noise_x_data, 1);
+
+            double data_term[ftp->nparams_per_core[core]];
+            cblas_dgemv(CblasRowMajor, CblasTrans, N, ftp->nparams_per_core[core], 1.0, mem->grad->vals, ftp->nparams_per_core[core], noise_x_data, 1, 0.0, data_term, 1);
+            
+            // data_term = np.dot(core_grad.T, np.dot( self.inv_noise_cov, self.Ydata ))
+
+            double prior_term[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            cblas_dgemv(CblasRowMajor, CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_core_prior_cov, ftp->nparams_per_core[core], core_prior_mean, 1, 0.0, prior_term, 1);
+
+            // prior_term = np.dot(inv_cov, core_prior_mean)
+
+            double data_plus_prior[ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                data_plus_prior[ii] = data_term[ii] + prior_term[ii];
+            }
+
+            double post_mean[ftp->nparams_per_core[core]];
+            cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, inv_mean, ftp->nparams_per_core[core], data_plus_prior, 1, 0.0, post_mean,1);
+
+            // post_mean = np.dot(mean_inv, data_term + prior_term)
 
             
             
-//             // double term_plus_inv_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             // for (size_t ii=0; ii<ftp->nparams_per_core[core]*ftp->nparams_per_core[core]; ii++){
-//             //     term_plus_inv_cov[ii] = gradT_x_noise_x_grad[ii] + inv_core_prior_cov[ii];
-//             // }
+            // double term_plus_inv_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // for (size_t ii=0; ii<ftp->nparams_per_core[core]*ftp->nparams_per_core[core]; ii++){
+            //     term_plus_inv_cov[ii] = gradT_x_noise_x_grad[ii] + inv_core_prior_cov[ii];
+            // }
 
-//             // double post_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             // pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-//             //     term_plus_inv_cov, post_cov, 0.0);
+            // double post_cov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // pinv(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //     term_plus_inv_cov, post_cov, 0.0);
 
-//             // post_cov = np.linalg.pinv(term + inv_cov)
+            // post_cov = np.linalg.pinv(term + inv_cov)
 
-//             double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             double s[ftp->nparams_per_core[core]];
-//             double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
-//                     inv_mean, u, s, vt);
+            // double u[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // double s[ftp->nparams_per_core[core]];
+            // double vt[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // svd(ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 
+            //         inv_mean, u, s, vt);
 
 
-//             double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
-//                     if (ii==jj){
-//                         s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
-//                     } else {
-//                         s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
-//                     }
-//                 }
-//             }
+            // double s_mat[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            // for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+            //     for (size_t jj=0; jj<ftp->nparams_per_core[core]; jj++){
+            //         if (ii==jj){
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = sqrt(s[ii]);
+            //         } else {
+            //             s_mat[jj*ftp->nparams_per_core[core] + ii] = 0.0;
+            //         }
+            //     }
+            // }
             
-//             double sqrtcov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
-//             cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, u, ftp->nparams_per_core[core], s_mat, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            double sqrtcov[ftp->nparams_per_core[core]*ftp->nparams_per_core[core]];
+            cblas_dgemm(CblasColMajor,CblasTrans,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, vt_, ftp->nparams_per_core[core], smat_sqrt, ftp->nparams_per_core[core], 0.0, sqrtcov, ftp->nparams_per_core[core]);
+            free(smat_sqrt);
 
-//             // u, s, v = np.linalg.svd(post_cov)
-//             // sqrtcov = np.dot(u, np.sqrt(np.diag(s)))
+            // u, s, v = np.linalg.svd(post_cov)
+            // sqrtcov = np.dot(u, np.sqrt(np.diag(s)))
 
-//             double rand_arr[ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 rand_arr[ii] = randn();
-//             }
+            double rand_arr[ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                rand_arr[ii] = randn();
+            }
 
-//             double bef_core_sample[ftp->nparams_per_core[core]];
-//             cblas_dgemv(CblasRowMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
+            double bef_core_sample[ftp->nparams_per_core[core]];
+            cblas_dgemv(CblasColMajor,CblasNoTrans, ftp->nparams_per_core[core], ftp->nparams_per_core[core], 1.0, sqrtcov, ftp->nparams_per_core[core], rand_arr, 1, 0.0, bef_core_sample,1);
 
-//             double core_sample[ftp->nparams_per_core[core]];
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 core_sample[ii] = bef_core_sample[ii] + post_mean[ii];
-//             }
-//             // core_sample = post_mean + np.dot(sqrtcov, np.random.randn(core_nparams))
+            double core_sample[ftp->nparams_per_core[core]];
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                core_sample[ii] = bef_core_sample[ii] + post_mean[ii];
+            }
+            // core_sample = post_mean + np.dot(sqrtcov, np.random.randn(core_nparams))
 
-//             // Update Core
+            // Update Core
 
-//             ft_param_update_core_params(ftp,core,core_sample);
+            ft_param_update_core_params(ftp,core,core_sample);
 
-//             for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
-//                 out[iter*(ftp->nparams+1) + running_nparams + ii + 1] = core_sample[ii];
-//             }
+            for (size_t ii=0; ii<ftp->nparams_per_core[core]; ii++){
+                out[iter*(ftp->nparams+1) + running_nparams + ii + 1] = core_sample[ii];
+            }
 
-//             // Calculate running left 
+            // Calculate running left 
 
-//             running_nparams += ftp->nparams_per_core[core];
+            running_nparams += ftp->nparams_per_core[core];
 
 
-//             // forward sweep
-//             if ((core > 0) && (core < ftp->dim-1)){
-//                 for (size_t zz = 0; zz < N; zz++){
-//                     process_sweep_left_right_lin(ftp, core, mem->lin_structure_vals + zz * ftp->nparams,
-//                                                     mem->running_lr[core-1][zz], mem->running_lr[core][zz]);
-//                 }
-//             }
-//             else if (core == 0){
-//                 for (size_t zz = 0; zz < N; zz++){
-//                     process_sweep_left_right_lin(ftp, core, mem->lin_structure_vals + zz * ftp->nparams,
-//                                                     NULL, mem->running_lr[core][zz]);
-//                 }
-//             }
+            // forward sweep
+            if ((core > 0) && (core < ftp->dim-1)){
+                for (size_t zz = 0; zz < N; zz++){
+                    process_sweep_left_right_lin(ftp, core, mem->lin_structure_vals + zz * ftp->nparams,
+                                                    mem->running_lr[core-1][zz], mem->running_lr[core][zz]);
+                }
+            }
+            else if (core == 0){
+                for (size_t zz = 0; zz < N; zz++){
+                    process_sweep_left_right_lin(ftp, core, mem->lin_structure_vals + zz * ftp->nparams,
+                                                    NULL, mem->running_lr[core][zz]);
+                }
+            }
             
-//         }
+        }
 
 
-//         // backward sweep
-//         for (size_t zz = 0; zz < N; zz++){
-//             process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + zz * ftp->nparams,
-//                                             NULL, mem->running_rl[ftp->dim-1][zz]);
-//         }
+        // backward sweep
+        for (size_t zz = 0; zz < N; zz++){
+            process_sweep_right_left_lin(ftp, ftp->dim-1, mem->lin_structure_vals + zz * ftp->nparams,
+                                            NULL, mem->running_rl[ftp->dim-1][zz]);
+        }
             
-//         for (size_t jj = 1; jj < ftp->dim-1; jj++){
-//             size_t ii = ftp->dim-1-jj;
+        for (size_t jj = 1; jj < ftp->dim-1; jj++){
+            size_t ii = ftp->dim-1-jj;
 
-//             for (size_t zz = 0; zz < N; zz++){
-//                 process_sweep_right_left_lin(ftp,ii,mem->lin_structure_vals + zz * ftp->nparams,
-//                                                 mem->running_rl[ii+1][zz],mem->running_rl[ii][zz]);
-//             }   
-//         }
+            for (size_t zz = 0; zz < N; zz++){
+                process_sweep_right_left_lin(ftp,ii,mem->lin_structure_vals + zz * ftp->nparams,
+                                                mem->running_rl[ii+1][zz],mem->running_rl[ii][zz]);
+            }   
+        }
 
-//     }
+    }
     
-//     sl_mem_manager_free(mem); mem = NULL;
-// }
+    sl_mem_manager_free(mem); mem = NULL;
+    free(inv_noise_cov);
+}
 
 /***********************************************************//**
     Evaluate the gradient of the ft with respect to each parameter in a core

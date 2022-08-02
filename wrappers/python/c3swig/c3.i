@@ -478,6 +478,20 @@ void function_train_free(struct FunctionTrain *);
 %}
 %ignore sample_hier_group_gibbs_linear_noise;
 
+%rename (sample_hier_ind_gibbs_linear_noise) my_sample_hier_ind_gibbs_linear_noise;
+%exception my_sample_hier_ind_gibbs_linear_noise{
+    $action
+    if (PyErr_Occurred()) SWIG_fail;
+}
+%inline %{
+    void my_sample_hier_ind_gibbs_linear_noise(struct FTparam * ftp, size_t N, size_t len1, double * x, size_t len3, double * y, 
+        size_t len4, double * init_sample, size_t len5, double * prior_alphas, size_t len6, double * prior_thetas, int noise_alpha, 
+        double noise_theta, size_t Nsamples, size_t len2, double * out, size_t len7, double* prior_out){
+        return sample_hier_ind_gibbs_linear_noise(ftp, N, x, y, init_sample, prior_alphas, prior_thetas, noise_alpha, noise_theta, Nsamples, out, prior_out);
+    }
+%}
+%ignore sample_hier_ind_gibbs_linear_noise;
+
 %rename (ft_param_gradeval_lin) my_ft_param_gradeval_lin;
 %exception my_ft_param_gradeval_lin{
     $action

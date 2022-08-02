@@ -150,5 +150,8 @@ void sample_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, doubl
 void sample_hier_group_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
         double * init_sample, int, double, int noise_alpha, 
         double noise_theta, size_t Nsamples, double * out);
+void sample_hier_ind_gibbs_linear_noise(struct FTparam * ftp, size_t N, double * x, double * y, 
+        double * init_sample, double * prior_alphas, double * prior_thetas, int noise_alpha, 
+        double noise_theta, size_t Nsamples, double * out, double* prior_out);
 
 #endif

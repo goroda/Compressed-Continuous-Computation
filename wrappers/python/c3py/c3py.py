@@ -1040,27 +1040,27 @@ class FTparam(object):
         out = out.reshape((Nsamples,self.nparams+1))
         return out
     
-    # def sample_hier_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_alphas, prior_thetas, alpha, theta):
-    #     if (len(X.shape) == 1):
-    #         N = 1
-    #     else:
-    #         N = X.shape[0]
+    def sample_hier_ind_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_alphas, prior_thetas, alpha, theta):
+        if (len(X.shape) == 1):
+            N = 1
+        else:
+            N = X.shape[0]
             
-    #     if isinstance(prior_alphas, (int, float)):
-    #         prior_alphas = np.array([prior_alphas for i in range(self.dim)])
+        if isinstance(prior_alphas, (int, float)):
+            prior_alphas = np.array([prior_alphas for i in range(self.dim)])
             
-    #     if isinstance(prior_thetas, (int, float)):
-    #         prior_thetas = np.array([prior_thetas for i in range(self.dim)])
+        if isinstance(prior_thetas, (int, float)):
+            prior_thetas = np.array([prior_thetas for i in range(self.dim)])
             
-    #     x = X.flatten()
+        x = X.flatten()
         
-    #     out = np.zeros((self.nparams+1)*Nsamples)
-    #     var_out = np.zeros((Nsamples-1)*self.dim)
+        out = np.zeros((self.nparams+1)*Nsamples)
+        var_out = np.zeros((Nsamples-1)*self.dim)
         
-    #     c3.sample_hier_gibbs_linear_noise(self.ftp, N, x, Y, init_sample, prior_alphas, prior_thetas, alpha, theta, Nsamples, out, var_out)
-    #     out = out.reshape((Nsamples,self.nparams+1))
-    #     var_out = var_out.reshape((Nsamples-1,self.dim))
-    #     return out, var_out
+        c3.sample_hier_ind_gibbs_linear_noise(self.ftp, N, x, Y, init_sample, prior_alphas, prior_thetas, alpha, theta, Nsamples, out, var_out)
+        out = out.reshape((Nsamples,self.nparams+1))
+        var_out = var_out.reshape((Nsamples-1,self.dim))
+        return out, var_out
     
     def sample_hier_group_Gibbs_lin_noise(self, X, Y, init_sample, Nsamples, prior_alpha, prior_theta, alpha, theta):
         if (len(X.shape) == 1):

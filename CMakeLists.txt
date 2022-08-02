@@ -81,7 +81,7 @@ include_directories(include)
 add_subdirectory(c3)
 
 option(BUILD_TESTS "Build Unit Tests" OFF)
-option(BUILD_EXAMPLES "Build Examples" OFF)
+option(BUILD_EXAMPLES "Build Examples" ON)
 option(BUILD_PROFILING "Build Profiling Tests" OFF)
 option(BUILD_BENCHMARKS "Build Benchmarks Tests" OFF)
 option(BUILD_UTILITIES "Build Utilities" OFF)
