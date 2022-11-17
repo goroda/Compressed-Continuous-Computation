@@ -2275,6 +2275,86 @@ orth_poly_expansion_deriv(const struct OrthPolyExpansion * pin)
 }
 
 /********************************************************//**
+*   Obtain the antiderivative 
+*
+*   \param[in] pin - orthogonal polynomial expansion
+*   
+*   \return antiderivative
+*
+*   \note
+*       Could speed this up slightly by using partial sum
+*       to keep track of sum of coefficients
+*************************************************************/
+struct OrthPolyExpansion *
+orth_poly_expansion_antideriv(const struct OrthPolyExpansion * pin, double lower_bound)
+{
+    if (pin == NULL) return NULL;
+    assert (pin->kristoffel_eval == 0);
+
+    if (pin->p->ptype != LEGENDRE) return NULL;
+
+    /* if (pin->p->ptype == FOURIER){ */
+    /*     return fourier_expansion_deriv(pin); */
+    /* } */
+
+    // Why makes two copies, p and out?
+    struct OrthPolyExpansion * p = orth_poly_expansion_copy(pin);
+    // What is the orth_poly_expansion_round for?
+    orth_poly_expansion_round(&p);
+            
+    struct OrthPolyExpansion * out = NULL;
+
+    out = orth_poly_expansion_copy(p);
+    out->nalloc += 1;
+    for (size_t ii = 0; ii < out->nalloc; ii++){
+        out->coeff[ii] = 0.0;
+    }
+    /* if (p->num_poly == 1){ */
+    /*     orth_poly_expansion_round(&out); */
+    /*     orth_poly_expansion_free(p); p = NULL; */
+    /*     return out; */
+    /* } */
+
+    out->num_poly += 1;
+    if (p->p->ptype == LEGENDRE){
+    /* if (1 == 0){ */
+
+        double dtransform_dx = space_mapping_map_deriv(p->space_transform,0.0);
+        /* for (size_t ii = 0; ii < p->num_poly-1; ii++){ // loop over coefficients */
+        /*     for (size_t jj = ii+1; jj < p->num_poly; jj+=2){ */
+        /*         /\* out->coeff[ii] += p->coeff[jj]; *\/ */
+        /*         out->coeff[ii] += p->coeff[jj]*sqrt(2*jj+1); */
+        /*     } */
+        /*     /\* out->coeff[ii] *= (double) ( 2 * (ii) + 1) * dtransform_dx; *\/ */
+        /*     out->coeff[ii] *= sqrt((double) ( 2 * (ii) + 1))* dtransform_dx; */
+        /* } */
+
+	out->coeff[0] = 0.0; //should be specified by the lower bound
+	for (size_t ii = 1; ii < p->num_poly; ii++){
+	    // For the highest order 
+	    out->coeff[ii] = p->coeff[ii-1]/sqrt( 2 * (ii-1) + 1) - p->coeff[ii+1]/sqrt( 2 * (ii+1) + 1);
+            out->coeff[ii] /= sqrt((double) ( 2 * (ii) + 1));
+	    out->coeff[ii] /= dtransform_dx;
+	}
+	out->coeff[p->num_poly] = p->coeff[p->num_poly-1]/sqrt(2*(p->num_poly-1)+1);
+        out->coeff[p->num_poly] /= sqrt((double) ( 2 * (p->num_poly) + 1));
+        out->coeff[p->num_poly] /= dtransform_dx;
+
+	out->coeff[0] = -orth_poly_expansion_eval(out, lower_bound); 
+    }
+    /* else if (p->p->ptype == CHEBYSHEV){ */
+    /*     orth_poly_expansion_approx(cheb_expansion_deriv_eval_for_approx, p, out);       */
+    /* } */
+    /* else{ */
+    /*     orth_poly_expansion_approx(orth_poly_expansion_deriv_eval_for_approx, p, out);       */
+    /* } */
+
+    orth_poly_expansion_round(&out);
+    orth_poly_expansion_free(p); p = NULL;
+    return out;
+}
+
+/********************************************************//**
 *   Evaluate the second derivative of a chebyshev expansion
 *
 *   \param[in] poly - pointer to orth poly expansion
