@@ -2293,6 +2293,11 @@ orth_poly_expansion_antideriv(const struct OrthPolyExpansion * pin, double lower
 
     if (pin->p->ptype != LEGENDRE) return NULL;
 
+    if (lower_bound < pin->lower_bound || lower_bound > pin->upper_bound) {
+      fprintf(stderr, "Lower bound is not within the domain.");
+      exit(1);
+    }
+
     /* if (pin->p->ptype == FOURIER){ */
     /*     return fourier_expansion_deriv(pin); */
     /* } */
