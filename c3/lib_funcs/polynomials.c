@@ -2286,14 +2286,14 @@ orth_poly_expansion_deriv(const struct OrthPolyExpansion * pin)
 *       to keep track of sum of coefficients
 *************************************************************/
 struct OrthPolyExpansion *
-orth_poly_expansion_antideriv(const struct OrthPolyExpansion * pin, double lower_bound)
+orth_poly_expansion_antideriv(const struct OrthPolyExpansion * pin, double lower_limit)
 {
     if (pin == NULL) return NULL;
     assert (pin->kristoffel_eval == 0);
 
     if (pin->p->ptype != LEGENDRE) return NULL;
 
-    if (lower_bound < pin->lower_bound || lower_bound > pin->upper_bound) {
+    if (lower_limit < pin->lower_bound || lower_limit > pin->upper_bound) {
       fprintf(stderr, "Lower bound is not within the domain.");
       exit(1);
     }
@@ -2345,7 +2345,7 @@ orth_poly_expansion_antideriv(const struct OrthPolyExpansion * pin, double lower
         out->coeff[p->num_poly] /= sqrt((double) ( 2 * (p->num_poly) + 1));
         out->coeff[p->num_poly] /= dtransform_dx;
 
-	out->coeff[0] = -orth_poly_expansion_eval(out, lower_bound); 
+	out->coeff[0] = -orth_poly_expansion_eval(out, lower_limit); 
     }
     /* else if (p->p->ptype == CHEBYSHEV){ */
     /*     orth_poly_expansion_approx(cheb_expansion_deriv_eval_for_approx, p, out);       */
