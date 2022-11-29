@@ -750,6 +750,19 @@ double lin_elem_exp_get_nodal_val(const struct LinElemExp * f, size_t node)
     return f->coeff[node];
 }
 
+/********************************************************//**
+*   Take a antiderivative same nodes,
+*
+*   \param[in] f - function
+*
+*   \return derivative
+*************************************************************/
+struct LinElemExp * lin_elem_exp_antideriv(const struct LinElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("lin_elem_exp_antideriv");
+    exit(1);
+}
 
 
 /********************************************************//**

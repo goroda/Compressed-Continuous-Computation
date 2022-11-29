@@ -661,6 +661,19 @@ double const_elem_exp_get_nodal_val(const struct ConstElemExp * f, size_t node)
     return f->coeff[node];
 }
 
+/********************************************************//**
+*   Take a antiderivative same nodes,
+*
+*   \param[in] f - function
+*
+*   \return integral
+*************************************************************/
+struct ConstElemExp * const_elem_exp_antideriv(const struct ConstElemExp * f)
+{
+    (void)(f);
+    NOT_IMPLEMENTED_MSG("const_elm_exp_deriv");
+    exit(1);
+}
 
 
 /********************************************************//**

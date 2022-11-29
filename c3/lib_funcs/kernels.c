@@ -1149,6 +1149,16 @@ void kernel_expansion_evalN(struct KernelExpansion * ke, size_t N,
 }
 
 /********************************************************//**
+*   Obtain the antiderivative of a kernel
+*************************************************************/
+struct KernelExpansion * kernel_expansion_antideriv(const struct KernelExpansion * ke, double lower_limit)
+{
+    (void)(ke);
+    NOT_IMPLEMENTED_MSG("kernel_expansion_antideriv");
+    exit(1);
+}
+
+/********************************************************//**
 *   Obtain the derivative of a kernel
 *************************************************************/
 struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion * ke)

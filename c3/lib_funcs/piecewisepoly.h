@@ -133,6 +133,7 @@ double piecewise_poly_deriv_eval(const struct PiecewisePoly *, double);
 void piecewise_poly_evalN(const struct PiecewisePoly *, size_t,
                           const double *, size_t, double *, size_t);
 void piecewise_poly_scale(double, struct PiecewisePoly *);
+struct PiecewisePoly * piecewise_poly_antideriv(const struct PiecewisePoly *, double);
 struct PiecewisePoly * piecewise_poly_deriv(const struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_dderiv(const struct PiecewisePoly *);
 struct PiecewisePoly * piecewise_poly_dderiv_periodic(const struct PiecewisePoly *);

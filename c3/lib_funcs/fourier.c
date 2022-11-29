@@ -165,6 +165,20 @@ double fourier_expansion_deriv_eval(const struct OrthPolyExpansion * poly, doubl
 }
 
 /********************************************************//**
+   Compute an expansion for the antiderivtive
+
+   \param[in] p - orthogonal polynomial expansion
+   
+   \return antiderivative
+*************************************************************/
+struct OrthPolyExpansion * fourier_expansion_antideriv(const struct OrthPolyExpansion * p, double lower_limit)
+{
+    (void)(p);
+    NOT_IMPLEMENTED_MSG("fourier_expansion_antideriv");
+    exit(1);
+}
+
+/********************************************************//**
    Compute an expansion for the derivtive
 
    \param[in] p - orthogonal polynomial expansion

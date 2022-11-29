@@ -51,6 +51,7 @@ struct OrthPoly;
 struct OrthPoly * init_fourier_poly(void);
 double fourier_expansion_eval(const struct OrthPolyExpansion *, double);
 double fourier_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
+struct OrthPolyExpansion * fourier_expansion_antideriv(const struct OrthPolyExpansion *, double);
 struct OrthPolyExpansion * fourier_expansion_deriv(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion * fourier_expansion_dderiv(const struct OrthPolyExpansion *);
 int fourier_expansion_approx_vec(struct OrthPolyExpansion *,

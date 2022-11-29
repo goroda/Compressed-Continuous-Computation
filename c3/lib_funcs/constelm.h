@@ -129,6 +129,7 @@ double const_elem_exp_deriv_eval(const struct ConstElemExp * f, double x);
 void const_elem_exp_evalN(const struct ConstElemExp *, size_t,
                         const double *, size_t, double *, size_t);
 double const_elem_exp_get_nodal_val(const struct ConstElemExp *, size_t);
+struct ConstElemExp * const_elem_exp_antideriv(const struct ConstElemExp *);
 struct ConstElemExp * const_elem_exp_deriv(const struct ConstElemExp *);
 struct ConstElemExp * const_elem_exp_dderiv(const struct ConstElemExp *);
 struct ConstElemExp * const_elem_exp_dderiv_periodic(const struct ConstElemExp *);

@@ -98,6 +98,7 @@ struct KernelExpansion * kernel_expansion_quadratic(double, double, void *);
 double kernel_expansion_eval(const struct KernelExpansion *, double);
 void kernel_expansion_evalN(const struct KernelExpansion *, size_t,
                             const double *, size_t, double *, size_t);
+struct KernelExpansion * kernel_expansion_antideriv(const struct KernelExpansion * ke, double lower_limit);
 struct KernelExpansion * kernel_expansion_deriv(const struct KernelExpansion *);
 struct KernelExpansion * kernel_expansion_dderiv(const struct KernelExpansion *);
 struct KernelExpansion * kernel_expansion_dderiv_periodic(const struct KernelExpansion *);

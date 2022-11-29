@@ -265,6 +265,8 @@ double orth_poly_expansion_deriv_eval(const struct OrthPolyExpansion *, double);
 
 
 struct OrthPolyExpansion *
+orth_poly_expansion_antideriv(const struct OrthPolyExpansion *, double);
+struct OrthPolyExpansion *
 orth_poly_expansion_deriv(const struct OrthPolyExpansion *);
 struct OrthPolyExpansion *
 orth_poly_expansion_dderiv(const struct OrthPolyExpansion *);

@@ -982,6 +982,21 @@ void piecewise_poly_scale(double a, struct PiecewisePoly * poly){
 }
 
 /********************************************************//**
+*   Obtain the antiderivative of a piecewise polynomial
+*   
+*   \param[in] p - pw poly to integrate (from the left)
+*
+*   \return pnew - polynomial
+*************************************************************/
+struct PiecewisePoly * 
+piecewise_poly_antideriv(const struct PiecewisePoly * p, double lower_limit)
+{
+    (void)(p);
+    NOT_IMPLEMENTED_MSG("piecewise_poly_antideriv");
+    exit(1);
+}
+
+/********************************************************//**
 *   Differentiate a piecewise polynomial
 *   
 *   \param[in] p - pw poly to differentiate (from the left)
