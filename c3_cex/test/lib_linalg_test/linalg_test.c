@@ -221,7 +221,7 @@ void Test_vec_kron(CuTest * tc)
     double vec[9] = { 0.2, 0.4, 0.6, 0.3, 0.5, 0.7, 0.1, 0.05 };
     
     double out[9];
-    memset(out, 0.0, 9);
+    memset(out, 0.0, 9*sizeof(double));
     vec_kron(2,3,m,2,4,3,m2,4,vec,0.0, out);
     double outs[9] = {0.40703, 0.364065, 0.139685, 
                       0.75409, 0.667695, 0.256555,

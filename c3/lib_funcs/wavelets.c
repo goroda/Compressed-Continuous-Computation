@@ -47,6 +47,7 @@
 #include <float.h>
 #include <assert.h>
 
+#include "futil.h"
 #include "stringmanip.h"
 #include "array.h"
 #include "polynomials.h"
@@ -115,7 +116,7 @@ void wavelet_opts_set_lb(struct WaveletsOpts * wavelet, double lb)
 double wavelet_opts_get_lb(const struct WaveletsOpts * wavelet)
 {
     NOT_IMPLEMENTED_MSG("wavelet_opts_get_lb");
-    return 0
+    return 0;
 }
 
 void wavelet_opts_set_ub(struct WaveletsOpts * wavelet, double ub)
@@ -445,8 +446,9 @@ struct Wavelets * wavelet_loadtxt(FILE * stream)
 double wavelet_eval(const struct Wavelets * f, double x)
 {
     NOT_IMPLEMENTED_MSG("wavelet_eval");
-    return NULL;
+    return 0.0;
 }
+
 /********************************************************//**
 *   Evaluate Wavelets
 *
@@ -682,7 +684,7 @@ double wavelet_norm(const struct Wavelets * f)
 {
 
     double out = 0.0;
-    out = sqrt(wavelet_inner(p,p));
+    out = sqrt(wavelet_inner(f,f));
     return out;
 }
 

@@ -115,7 +115,7 @@ void NLOWER_opts_set_lb(struct NAMEOpts * NLOWER, double lb)
 double NLOWER_opts_get_lb(const struct NAMEOpts * NLOWER)
 {
     NOT_IMPLEMENTED_MSG("NLOWER_opts_get_lb");
-    return 0
+    return 0;
 }
 
 void NLOWER_opts_set_ub(struct NAMEOpts * NLOWER, double ub)
@@ -445,7 +445,7 @@ struct NAME * NLOWER_loadtxt(FILE * stream)
 double NLOWER_eval(const struct NAME * f, double x)
 {
     NOT_IMPLEMENTED_MSG("NLOWER_eval");
-    return NULL;
+    return 0.0;
 }
 /********************************************************//**
 *   Evaluate NAME
@@ -682,7 +682,7 @@ double NLOWER_norm(const struct NAME * f)
 {
 
     double out = 0.0;
-    out = sqrt(NLOWER_inner(p,p));
+    out = sqrt(NLOWER_inner(f, f));
     return out;
 }
 

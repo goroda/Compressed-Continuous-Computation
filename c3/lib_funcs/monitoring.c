@@ -250,9 +250,12 @@ struct Cpair * cpair_create(char * a, char * b)
         exit(1);
     }
     size_t N1 = strlen(a);
-    pair->a = malloc((N1+1)*sizeof(char));
-    strncpy(pair->a,a,N1);
-    pair->a[N1] = '\0';
+    /* pair->a = malloc((N1+1)*sizeof(char)); */
+	/* pair->a[N1] = '\0'; */
+	pair->a = malloc((N1+1)*sizeof(char));
+    memcpy(pair->a, a, N1*sizeof(char));
+	pair->a[N1] = '\0';
+
 
     /* size_t N2 = strlen(b); */    
     /* pair->b = malloc((N2+1)*sizeof(char)); */

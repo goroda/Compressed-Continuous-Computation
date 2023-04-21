@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.20)
 
 
 file(GLOB SRC_FILES kernel_test.c other_test.c piecewise_test.c linelm_test.c constelm_test.c poly_test.c testfunctions.c main.c)

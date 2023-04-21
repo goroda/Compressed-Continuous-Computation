@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.20)
 
 if (BUILD_SUB_LIBS)
   add_subdirectory(lib_stringmanip)
@@ -57,6 +57,7 @@ set(header lib_stringmanip/stringmanip.h
            lib_funcs/piecewisepoly.h
            lib_funcs/pivoting.h
            lib_funcs/polynomials.h
+		   lib_funcs/futil.h
            lib_funcs/space.h
            lib_linalg/lib_linalg.h
            lib_linalg/linalg.h
@@ -109,6 +110,7 @@ set(src lib_array/array.c
         lib_funcs/pivoting.c
         lib_funcs/polynomials.c
         lib_funcs/space.c
+		lib_funcs/wavelets.c
         lib_linalg/linalg.c
         lib_linalg/matrix_util.c
         lib_optimization/optimization.c

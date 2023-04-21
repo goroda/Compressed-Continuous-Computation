@@ -53,5 +53,6 @@
 #include "space.h"
 #include "monitoring.h"
 #include "fapprox.h"
+#include "futil.h"
 
 #endif

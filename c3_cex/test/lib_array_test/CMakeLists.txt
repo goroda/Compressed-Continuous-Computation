@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.20)
 
 add_executable(array_test lib_array_test.c)
 TARGET_LINK_LIBRARIES(array_test 
