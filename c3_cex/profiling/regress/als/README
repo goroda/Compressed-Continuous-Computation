@@ -1,0 +1,9 @@
+Notes:
+1) ./runprof.sh maxorder = 5; ranks = 4, DIM=5,FUNC=3,NSAMPLE=1000
+
+
+first.svg  : original
+
+second.svg :
+           : times = 7.055s, 6.758s, 7.510s
+

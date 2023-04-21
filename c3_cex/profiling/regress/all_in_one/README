@@ -1,0 +1,43 @@
+Notes:
+1) ./runprof.sh maxorder = 5; ranks = 4, DIM=5,FUNC=3,NSAMPLE=1000
+2) training data on cube of [0,1] but polynomials defined on [-1,1] (should fix)
+3) After third.svg - Can probably further increase speed by 10% by storing legendre 
+	                 polynomial evaluations
+                     but such an optimization is limited to legendre polynomials. 
+                     At this point it might be
+                     worth exploring stochastic descent optimization algorithms
+4) Was wrong, fourth and fifth result in speedup of 6 times. 80% speedup over first one
+
+first.svg : working regression code, unoptimized, 
+          : times = 59.576s 58.443s 54.347s (on work machine)
+
+second.svg : increased memory requirement and reduced computation by creating a forward
+             and backward sweep, storing all evaluations for each core required, 
+           : times = 39.936s 40.268s 38.650s (on work machine)
+
+third.svg  : improved vectorization in qmarray_param_grad_eval
+           : times = 36.606s 37.964s 37.489s
+
+fourth.svg : first attempt taking advantage of sparsity of gradients of cores during the
+           : left to right multiplication (still need to do it for final multiplication with
+           : the cores on the the right
+           : times = 24.469s, 24.562s, 25.092s
+
+fifth.svg  : take advantage of sparsity of gradients during right-to-left multiplication
+           : times = 11.708s, 11.281s, 11.761s
+
+sixth.svg  : precompute gradients for linear parameters
+           : times = 9.438s, 9.875s, 9.486
+
+seventh.svg : new interface
+            : times = 7.519s, 7.911s, 7.631s
+
+eight.svg : new interface, initialized from linear regression
+          : times = 5.191s, 5.924s, 5.553s
+
+ninth.svg : another new interface
+          : times = 3.825s, 3.682s, 3.107s
+
+tenth.svg : yet another new interface 6/12/2017
+          : time = 2.120s, 1.532s, 1.536s
+

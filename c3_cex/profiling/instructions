@@ -1,0 +1,17 @@
+To profile a code first run
+
+valgrind --tool=callgrind ./(binary)
+
+python gprof2dot.py -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
+
+
+# for perf
+perf record -g ./test/lib_clinalg_test/clinalg_test 
+
+then
+perf report -g
+
+for visualization
+./flamegraph.sh
+
+

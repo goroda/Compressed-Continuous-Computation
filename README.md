@@ -23,18 +23,20 @@ In addition to the above capabilities, which are unique to the C3 package, I als
 * Stochastic Gradient with ADAM 
 
 
-For more details see the website at 
+Documentation of most functions is provided by Doxygen [here.](http://alexgorodetsky.com/c3doc/html/index.html)
 
-http://www.alexgorodetsky.com/c3/html/
-
-## Installation / Getting started
+### Installation / Getting started
 
 The dependencies for this code are
    1) BLAS
    2) LAPACK
    3) SWIG (if building non-C interfaces)
+   4) CMake
+   
+Usually, these dependencies can be installed via the package manager of your system (apt or brew or port)
 
-``` shell
+## From Source
+```shell
 git clone https://github.com/goroda/Compressed-Continuous-Computation.git c3
 cd c3
 mkdir build
@@ -50,53 +52,133 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/your/choice
 make install
 ```
 
-### Python interface
+## Python interface
 
-I have created a partial python interface to the library. This library requires SWIG. To compile and install the python wrappers see the CMake option MAKE_PYTHON_WRAPPERS below. 
+You can install the python interface using the pip utility through
 
-The modules will be created in wrappers/python. I have created a FunctionTrain class in the wrappers/python/c3py.py.
-
-To enable proper access to the python library add the following to your environmental variables
 ``` shell
-export C3HOME=~/Software/c3
-export PYC3=${C3HOME}/wrappers/python
-export PYTHONPATH=$PYTHONPATH:${PYC3}
+pip install pathlib
+pip install c3py
 ```
 
-Then, one can run the examples from the root c3 directory as 
+One can obtain some examples in the pyexamples subdirectory
 ``` shell
-python wrappers/python/pytest.py
+python pywrappers/pytest.py
+```
+
+An alternative way to install it is to download the git repository and then run
+
+``` shell
+python setup.py build
+python setup.py install
+```
+
+One workflow that works well is to install this package in a new virtual environment. For instance using conda one can run the following (from the c3 directory)
+
+``` shell
+conda create -n c3pyenv python=3.7
+conda activate c3pyenv
+pip install numpy
+python setup.py build
+python setup.py install
+```
+
+If you have an old version installed and would like to upgrade the following command is effective at removing all old code and reinstalling
+
+``` shell
+pip install --upgrade --force-reinstall c3py
 ```
 
 ## Configuration Options
+
+The following configuration options take boolean (true/false) values
 
 #### BUILD_STATIC_LIB
 Default: `OFF'
 
 Using this option can toggle whether or not static or shared libraries should be built.
 
-** Note: This option cannot be set to ON if building the python wrapper **
+**Note: This option cannot be set to ON if building the python wrapper**
 
 #### BUILD_SUB_LIBS
 Default: `OFF'
 
 Using this option can toggle whether or not to build each sub-library into its own library
 
-#### MAKE_PYTHON_WRAPPERS
+#### BUILD_TESTS
 Default: `OFF'
 
-Using this option can toggle whether or not to compile the python wrappers. To specify specific python installations use the CMake options defined [here](https://cmake.org/cmake/help/v3.0/module/FindPythonLibs.html).
+Using this option can toggle whether or not to build unit tests
 
-After specifying this option, the commands to compile the library and wrappers are
-``` shell
-make
-make PyWrapper
-```
+#### BUILD_EXAMPLES
+Default: `OFF'
+
+Using this option can toggle whether or not to compile exampels
+
+#### BUILD_PROFILING
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the profiling executables
+
+#### BUILD_BENCHMARKS
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the benchmarks tests
+
+#### BUILD_UTILITIES
+Default: `OFF'
+
+Using this option can toggle whether or not to compile the utilities
+
+#### LIB_VISIBILITY_OFF
+Default: `OFF'
+
+Using this option addes the flag `-fvisibility=hidden` to compilation. Useful when embedding this library in a C++ library to hide its symbols.
 
 ## Systems I have tested on
 
 1) Mac OS X with clang version 8.0  
 2) Ubuntu with gcc version 5.0
+
+
+## Solutions to some possible problems
+
+### Error: Unable to find 'python.swg'
+
+On Mac OS X, if SWIG is installed with macports using
+```shell
+sudo port install swig
+```
+then the above error might occur. To remedy this error install the swig-python package
+```shell
+sudo port install swig-python
+```
+
+### (On Mac OS X) Error: stdio.h not found
+
+This happens on some updated versions of Mac OS X. To solve this, the following StackOverflow thread seems to work
+
+https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
+
+### Numpy errors
+
+Sometimes you may see the following errors
+
+``` shell
+_frozen_importlib:219: RuntimeWarning: numpy.ufunc size changed, may indicate binary incompatibility. Expected 216, got 192
+```
+
+or
+
+``` shell
+RuntimeError: The current Numpy installation ('/Users/alex/anaconda3/envs/pytorch/lib/python3.6/site-packages/numpy/__init__.py') fails to pass simple sanity checks. This can be caused for example by incorrect BLAS library being linked in, or by mixing package managers (pip, conda, apt, ...). Search closed numpy issues for similar problems.
+```
+
+One way that I have found (https://stackoverflow.com/a/47975375) that seems to solve this is to upgrade numpy by running the following command. I am really not sure why this works ...
+
+``` shell
+sudo pip install numpy --upgrade --ignore-installed
+```
 
 ## Coding practices
 
@@ -107,9 +189,10 @@ I aim to document (with Doxygen) every function available to the user and provid
 Please open a Github issue to ask a question, report a bug, or to request features.
 To contribute, fork the repository and setup a branch.
 
-Author: Alex A. Gorodetsky  
-Contact: alex@alexgorodetsky.com  
+Author: [Alex A. Gorodetsky](https://www.alexgorodetsky.com)  
+Contact: [goroda@umich.edu](mailto:goroda@umich.edu)  
 Copyright (c) 2014-2016, Massachusetts Institute of Technology  
 Copyright (c) 2016-2017, Sandia National Laboratories  
+Copyright (c) 2018-2021, University of Michigan  
 License: BSD
 

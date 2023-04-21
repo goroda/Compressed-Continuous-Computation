@@ -1,0 +1,1 @@
+this stores the values of the polynomial tensor c[i + j*200 + k*40000] = \int phi_i phi_j phi_k dx

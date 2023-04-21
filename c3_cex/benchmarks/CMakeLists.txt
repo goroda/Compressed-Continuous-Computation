@@ -1,0 +1,12 @@
+cmake_minimum_required (VERSION 2.6)
+
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/fastmkron/bin)
+add_subdirectory(fastmkron)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/dmrgprod/bin)
+add_subdirectory(dmrgprod)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/qrdecomp/bin)
+add_subdirectory(qrdecomp)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/scalardiffusion/bin)
+add_subdirectory(scalardiffusion)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/benchmarks/linelmconv/bin)
+add_subdirectory(linelmconv)

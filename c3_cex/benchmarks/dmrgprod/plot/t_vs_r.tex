@@ -1,0 +1,149 @@
+\documentclass[border={0pt 0pt 40pt 30pt}]{standalone}
+%\documentclass[]{article}
+
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8in}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{colormaps}
+
+\pgfkeys
+{
+    /tikz/.cd,
+    myvar/.store in=\myvar,
+    %#adjust 1
+    myvar={../dat/time_vs_rank.dat},
+}
+
+\begin{document}
+    \begin{tikzpicture}
+      \begin{loglogaxis}[ 
+	  %\begin{axis}[ 
+          %cycle list name=black white,
+	  xlabel={$\textrm{rank}(a)$},
+          ylabel={$\textrm{rank}(a^2)$},
+          grid=major,
+	  enlargelimits=true,
+          legend entries={direct, fast},
+          legend style={
+            legend pos = north west,
+          },
+	  %colorbar,
+        ]
+        \addplot table [x=x0,y=x3] {\myvar};
+        \addplot[no marks] table [ 
+            x=x0,
+            y={create col/linear regression={y=x3,
+                variance list={1000,800,250,100,50,25}}}] {\myvar}
+            coordinate [pos=0.03] (A)
+            coordinate [pos=0.15]  (B)
+            ;
+
+        \xdef\slope{\pgfplotstableregressiona}
+        \draw (A) -| (B)
+         node [pos=0.75,anchor=west]
+          {\pgfmathprintnumber{\slope}};
+      \end{loglogaxis}
+      %\end{axis}
+    \end{tikzpicture}
+
+	%%\begin{tikzpicture}
+	%% 	\begin{loglogaxis}[ 
+        %%     %cycle list name=black white,
+	%% 		xlabel={rank($a$)},
+	%% 		ylabel={Time},
+	%% 		%width={0.3\textwidth},
+        %%     grid=major,
+	%% 		enlargelimits=true,
+        %%     legend entries={direct, fast},
+        %%     legend style={
+        %%         legend pos = north west,
+        %%     },
+	%% 		%colorbar,
+        %% ]
+        %% \addplot table [x=x0,y=x1] {\myvar};
+        %% \addplot table [x=x0,y=x2] {\myvar};
+        %% \addplot[no marks] table [ 
+        %%     x=x0,
+        %%     y={create col/linear regression={y=x1,
+        %%         variance list={800,600,400,400,400,400}}}] {\myvar}
+        %%     coordinate [pos=0.03] (A)
+        %%     coordinate [pos=0.15]  (B)
+        %%     ;
+
+        %% \xdef\slope{\pgfplotstableregressiona}
+        %% \draw (A) -| (B)
+        %%  node [pos=0.75,anchor=west]
+        %%   {\pgfmathprintnumber{\slope}};
+
+        %% \addplot[dashed] table [
+        %%     x=x0,
+        %%     y={create col/linear regression={y=x2,
+        %%         variance list={800,600,400,400,400,400}}}] {\myvar}
+        %%     coordinate [pos=0.7] (C)
+        %%     coordinate [pos=0.85]  (D)
+        %%     ;
+
+        %% \xdef\slopeb{\pgfplotstableregressiona}
+        %% \draw (C) -| (D)
+        %%  node [pos=0.75,anchor=west]
+        %%   {\pgfmathprintnumber{\slopeb}};
+
+	%% 	\end{loglogaxis}
+	%% \end{tikzpicture}
+
+          \begin{tikzpicture}
+		\begin{loglogaxis}[ 
+            %cycle list name=black white,
+			xlabel={rank($a^2$)},
+			%xlabel={rank($a$)},
+			ylabel={Time},
+			%width={0.3\textwidth},
+            grid=major,
+			enlargelimits=true,
+            legend entries={direct, fast},
+            legend style={
+                legend pos = north west,
+            },
+			%colorbar,
+        ]
+        \addplot table [x=x3,y=x1] {\myvar};
+        \addplot table [x=x3,y=x2] {\myvar};
+        \addplot[no marks] table [ 
+            x=x3,
+            y={create col/linear regression={y=x1,
+                variance list={800,600,400,400,400,400}}}] {\myvar}
+            coordinate [pos=0.03] (A)
+            coordinate [pos=0.15]  (B)
+            ;
+
+        \xdef\slope{\pgfplotstableregressiona}
+        \draw (A) -| (B)
+         node [pos=0.75,anchor=west]
+          {\pgfmathprintnumber{\slope}};
+
+        \addplot[dashed] table [
+            x=x3,
+            y={create col/linear regression={y=x2,
+                variance list={800,600,400,400,400,400}}}] {\myvar}
+            coordinate [pos=0.7] (C)
+            coordinate [pos=0.85]  (D)
+            ;
+
+        \xdef\slopeb{\pgfplotstableregressiona}
+        \draw (C) -| (D)
+         node [pos=0.75,anchor=west]
+          {\pgfmathprintnumber{\slopeb}};
+
+		\end{loglogaxis}
+	\end{tikzpicture}
+
+
+\end{document}

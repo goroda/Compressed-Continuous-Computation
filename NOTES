@@ -1,3 +1,4 @@
 - Need to adjust the maxiteradapt in the function train cross to not exceed the complexity of the fiber representation if that representation is fixed.
 
 - Not sure yet best way to do 1d optimization of fibers with hermite polynomials
+
