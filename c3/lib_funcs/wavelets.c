@@ -151,64 +151,64 @@ void wavelet_opts_set_nparams(struct WaveletsOpts * opts, size_t num)
 /********************************************************//**
 *   Get number of parameters
 *************************************************************/
-size_t wavelet_get_num_params(const struct Wavelets * wavelet)
+size_t wavelet_expansion_get_num_params(const struct WaveletExpansion * wavelet)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_get_num_params");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_get_num_params");
     return 0;
 }
 
 /********************************************************//**
 *   Get lower bounds
 *************************************************************/
-double wavelet_get_lb(const struct Wavelets * wavelet)
+double wavelet_expansion_get_lb(const struct WaveletExpansion * wavelet)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_get_lb");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_get_lb");
     return 0;
 }
 
 /********************************************************//**
 *   Get upper bounds
 *************************************************************/
-double wavelet_get_ub(const struct Wavelets * wavelet)
+double wavelet_expansion_get_ub(const struct WaveletExpansion * wavelet)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_get_ub");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_get_ub");
     return 0;
 }
 
 
 /********************************************************//**
-*   Initialize Wavelets with parameters
+*   Initialize WaveletExpansion with parameters
 *            
 *   \param[in] opts    - approximation options
 *   \param[in] nparams - number of parameters
 *   \param[in] param   - parameters
 *
-*   \return p - Wavelets
+*   \return p - WaveletExpansion
 *************************************************************/
-struct Wavelets * 
-wavelet_create_with_params(struct WaveletsOpts * opts,
+struct WaveletExpansion * 
+wavelet_expansion_create_with_params(struct WaveletExpansionOpts * opts,
                           size_t nparams, const double * param)
 {
 
-    NOT_IMPLEMENTED_MSG("wavelet_create_with_params");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_create_with_params");
     return NULL;
 }
 
 /********************************************************//**
 *   Get parameters defining polynomial (for now just coefficients)
 *************************************************************/
-size_t wavelet_get_params(const struct Wavelets * wavelet, double * param)
+size_t wavelet_expansion_get_params(const struct WaveletExpansion * wavelet, double * param)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_get_params");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_get_params");
     return 0;
 }
 
 /********************************************************//**
 *   Get parameters defining polynomial (for now just coefficients)
 *************************************************************/
-double * wavelet_get_params_ref(const struct Wavelets * wavelet, size_t *nparam)
+double * wavelet_expansion_get_params_ref(const struct WaveletExpansion * wavelet, size_t *nparam)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_get_params_res");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_get_params_res");
     return NULL;
 }
 
@@ -221,24 +221,24 @@ double * wavelet_get_params_ref(const struct Wavelets * wavelet, size_t *nparam)
 
 *   \returns 0 if successful
 *************************************************************/
-int wavelet_update_params(struct Wavelets * wavelet,
+int wavelet_expansion_update_params(struct WaveletExpansion * wavelet,
                          size_t nparams, const double * param)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_update_params");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_update_params");
     return 0;
 }
 
 /********************************************************//**
-*   Copy an Wavelets
+*   Copy an WaveletExpansion
 *            
 *   \param[in] pin
 *
-*   \return p - Wavelets
+*   \return p - WaveletExpansion
 *************************************************************/
-struct Wavelets * 
-wavelet_copy(struct Wavelets * pin)
+struct WaveletExpansion * 
+wavelet_expansion_copy(struct WaveletExpansion * pin)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_copy");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_copy");
     return NULL;
 
 }
@@ -253,10 +253,10 @@ wavelet_copy(struct Wavelets * pin)
 
     \return p - zero function
 ************************************************************/
-struct Wavelets * 
-wavelet_zero(struct WaveletsOpts * opts, int force_nparam)
+struct WaveletExpansion * 
+wavelet_expansion_zero(struct WaveletExpansionOpts * opts, int force_nparam)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_zero");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_zero");
     return NULL;
 }
 
@@ -269,10 +269,10 @@ wavelet_zero(struct WaveletsOpts * opts, int force_nparam)
 *
 *   \return p 
 *************************************************************/
-struct Wavelets * 
-wavelet_constant(double a, struct WaveletsOpts * opts)
+struct WaveletExpansion * 
+wavelet_expansion_constant(double a, struct WaveletExpansionOpts * opts)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_constant");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_constant");
     return NULL;
 }
 
@@ -285,10 +285,10 @@ wavelet_constant(double a, struct WaveletsOpts * opts)
 *
 *   \return p - orthogonal polynomial expansion
 *************************************************************/
-struct Wavelets * 
-wavelet_linear(double a, double offset, struct WaveletsOpts * opts)
+struct WaveletExpansion * 
+wavelet_expansion_linear(double a, double offset, struct WaveletExpansionOpts * opts)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_linear");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_linear");
     return NULL;
 }
 
@@ -303,14 +303,14 @@ wavelet_linear(double a, double offset, struct WaveletsOpts * opts)
 *
 *************************************************************/
 int
-wavelet_linear_update(struct Wavelets * p, double a, double offset)
+wavelet_expansion_linear_update(struct WaveletExpansion * p, double a, double offset)
 {
     assert (isnan(a) == 0);
     assert (isinf(a) == 0);
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
 
-    NOT_IMPLEMENTED_MSG("wavelet_linear_update");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_linear_update");
     return NULL;
 }
 
@@ -324,14 +324,14 @@ wavelet_linear_update(struct Wavelets * p, double a, double offset)
 *
 *   \return quadratic polynomial
 *************************************************************/
-struct Wavelets * 
-wavelet_quadratic(double a, double offset, struct WaveletsOpts * opts)
+struct WaveletExpansion * 
+wavelet_expansion_quadratic(double a, double offset, struct WaveletExpansionOpts * opts)
 {
     assert (isnan(a) == 0);
     assert (isinf(a) == 0);
     assert (isnan(offset) == 0);
     assert (isinf(offset) == 0);
-    NOT_IMPLEMENTED_MSG("wavelet_quadratic");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_quadratic");
     return NULL;
 }
 
@@ -345,34 +345,34 @@ wavelet_quadratic(double a, double offset, struct WaveletsOpts * opts)
 *
 *   \return out - value of derivative
 *************************************************************/
-double wavelet_deriv_eval(const struct Wavelets * poly, double x)
+double wavelet_expansion_deriv_eval(const struct WaveletExpansion * poly, double x)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_deriv_eval");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_deriv_eval");
     return 0.0;
 }
 
 /********************************************************//**
-*   Evaluate the derivative of Wavelets
+*   Evaluate the derivative of WaveletExpansion
 *
 *   \param[in] p - 
 *   
 *   \return derivative
 *
 *************************************************************/
-struct Wavelets * wavelet_deriv(struct Wavelets * p)
+struct WaveletExpansion * wavelet_expansion_deriv(struct WaveletExpansion * p)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_deriv");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_deriv");
     return NULL;
 }
 
 /********************************************************//**
-*   free the memory of Wavelets
+*   free the memory of WaveletExpansion
 *
 *   \param[in,out] p 
 *************************************************************/
-void wavelet_free(struct Wavelets * p)
+void wavelet_expansion_free(struct WaveletExpansion * p)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_free");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_free");
 }
 
 /********************************************************//**
@@ -386,7 +386,7 @@ void wavelet_free(struct Wavelets * p)
 *   \return ptr : pointer to end of serialization
 *************************************************************/
 unsigned char *
-serialize_wavelet(unsigned char * ser, struct Wavelets * p, size_t * totSizeIn)
+serialize_wavelet(unsigned char * ser, struct WaveletExpansion * p, size_t * totSizeIn)
 {
     // order is  ptype->lower_bound->upper_bound->orth_poly->coeff
     NOT_IMPLEMENTED_MSG("serialize_wavelet");
@@ -399,60 +399,60 @@ serialize_wavelet(unsigned char * ser, struct Wavelets * p, size_t * totSizeIn)
 *   \param[in]     ser  - input string
 *   \param[in,out] poly - poly expansion
 *
-*   \return ptr - ser + number of bytes of Wavelets
+*   \return ptr - ser + number of bytes of WaveletExpansion
 *************************************************************/
 unsigned char * 
-deserialize_wavelet(unsigned char * ser, struct Wavelets ** poly)
+deserialize_wavelet(unsigned char * ser, struct WaveletExpansion ** poly)
 {
     NOT_IMPLEMENTED_MSG("deserialize_wavelet");
     return NULL;
 }
 
 /********************************************************//**
-    Save an Wavelets in text format
+    Save an WaveletExpansion in text format
 
     \param[in] f      - function to save
     \param[in] stream - stream to save it to
     \param[in] prec   - precision with which to save it
 ************************************************************/
-void wavelet_savetxt(const struct Wavelets * f,
+void wavelet_expansion_savetxt(const struct WaveletExpansion * f,
                                  FILE * stream, size_t prec)
 {
     assert (f != NULL);
-    NOT_IMPLEMENTED_MSG("wavelet_savetxt");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_savetxt");
 }
 
 /********************************************************//**
-    Load an Wavelets in text format
+    Load an WaveletExpansion in text format
 
     \param[in] stream - stream to save it to
 
-    \return Wavelets
+    \return WaveletExpansion
 ************************************************************/
-struct Wavelets * wavelet_loadtxt(FILE * stream)
+struct WaveletExpansion * wavelet_expansion_loadtxt(FILE * stream)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_loadtxt");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_loadtxt");
     return NULL;
 }
 
 /********************************************************//**
-*   Evaluate Wavelets 
+*   Evaluate WaveletExpansion 
 *
-*   \param[in] f - Wavelets
+*   \param[in] f - WaveletExpansion
 *   \param[in] x - location at which to evaluate
 *
 *   \return out - value
 *************************************************************/
-double wavelet_eval(const struct Wavelets * f, double x)
+double wavelet_expansion_eval(const struct WaveletExpansion * f, double x)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_eval");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_eval");
     return 0.0;
 }
 
 /********************************************************//**
-*   Evaluate Wavelets
+*   Evaluate WaveletExpansion
 *
-*   \param[in]     f    - Wavelets
+*   \param[in]     f    - WaveletExpansion
 *   \param[in]     N    - number of evaluations
 *   \param[in]     x    - location at which to evaluate
 *   \param[in]     incx - increment of x
@@ -462,32 +462,32 @@ double wavelet_eval(const struct Wavelets * f, double x)
 *   \note Currently just calls the single evaluation code
 *         Note sure if this is optimal, cache-wise
 *************************************************************/
-void wavelet_evalN(const struct Wavelets *f, size_t N,
+void wavelet_expansion_evalN(const struct WaveletExpansion *f, size_t N,
                   const double * x, size_t incx, double * y, size_t incy)
 {
     for (size_t ii = 0; ii < N; ii++){
-        y[ii*incy] = wavelet_eval(f,x[ii*incx]);
+        y[ii*incy] = wavelet_expansion_eval(f,x[ii*incx]);
     }
 }
 
 /********************************************************//*
-*   Evaluate the gradient of Wavelets with respect to the parameters
+*   Evaluate the gradient of WaveletExpansion with respect to the parameters
 *
-*   \param[in]     f    - Wavelets
+*   \param[in]     f    - WaveletExpansion
 *   \param[in]     nx   - number of x points
 *   \param[in]     x    - location at which to evaluate
 *   \param[in,out] grad - gradient values (N,nx)
 *
 *   \return 0 success, 1 otherwise
 *************************************************************/
-int wavelet_param_grad_eval(const struct Wavelets * f, size_t nx, const double * x, double * grad)
+int wavelet_expansion_param_grad_eval(const struct WaveletExpansion * f, size_t nx, const double * x, double * grad)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_param_grad_eval");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_param_grad_eval");
     return 0;
 }
 
 /********************************************************//*
-*   Evaluate the gradient of Wavelets with respect to the parameters
+*   Evaluate the gradient of WaveletExpansion with respect to the parameters
 *
 *   \param[in]     f    - function
 *   \param[in]     x    - location at which to evaluate
@@ -495,9 +495,9 @@ int wavelet_param_grad_eval(const struct Wavelets * f, size_t nx, const double *
 *
 *   \return evaluation
 *************************************************************/
-double wavelet_param_grad_eval2(const struct Wavelets * f, double x, double * grad)
+double wavelet_expansion_param_grad_eval2(const struct WaveletExpansion * f, double x, double * grad)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_param_grad_eval2");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_param_grad_eval2");
     return 0;
 }
 
@@ -506,7 +506,7 @@ double wavelet_param_grad_eval2(const struct Wavelets * f, double x, double * gr
     with respect to its parameters, and add a scaled version
     of this gradient to *grad*
 
-    \param[in]     f     - Wavelets
+    \param[in]     f     - WaveletExpansion
     \param[in]     scale - scaling for additional gradient
     \param[in,out] grad  - gradient, on output adds scale * new_grad
 
@@ -514,16 +514,16 @@ double wavelet_param_grad_eval2(const struct Wavelets * f, double x, double * gr
 
 ************************************************************/
 int
-wavelet_squared_norm_param_grad(const struct Wavelets * f,
+wavelet_expansion_squared_norm_param_grad(const struct WaveletExpansion * f,
                                double scale, double * grad)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_squared_norm_param_grad");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_squared_norm_param_grad");
     return 0;
 }
 
 
 /********************************************************//**
-*  Approximate a function in Wavelets format
+*  Approximate a function in WaveletExpansion format
 *  
 *  \param[in,out] fa  -  approximated format
 *  \param[in]     f    - wrapped function
@@ -533,27 +533,27 @@ wavelet_squared_norm_param_grad(const struct Wavelets * f,
 
 *************************************************************/
 int
-wavelet_approx(struct Wavelets * poly, struct Fwrap * f,
-              const struct WaveletsOpts * opts)
+wavelet_expansion_approx(struct WaveletExpansion * poly, struct Fwrap * f,
+              const struct WaveletExpansionOpts * opts)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_approx");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_approx");
     return 0;
 }
 
 /********************************************************//**
-*   Compute the product of two Waveletss
+*   Compute the product of two WaveletExpansions
 *
 *   \param[in] a - first 
 *   \param[in] b - second 
 *
-*   \return c - Wavelets
+*   \return c - WaveletExpansion
 *
 *   \note 
 *   Computes c(x) = a(x)b(x) where c is same form as a
 *************************************************************/
-struct Wavelets * wavelet_prod(const struct Wavelets * a, const struct Wavelets * b)
+struct WaveletExpansion * wavelet_expansion_prod(const struct WaveletExpansion * a, const struct WaveletExpansion * b)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_prod");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_prod");
     return NULL;
 }
 
@@ -562,41 +562,41 @@ struct Wavelets * wavelet_prod(const struct Wavelets * a, const struct Wavelets 
 *
 *   \param[in] n   - number of functions
 *   \param[in] lda - stride of first array
-*   \param[in] a   - array of Waveletss
+*   \param[in] a   - array of WaveletExpansions
 *   \param[in] ldb - stride of second array
-*   \param[in] b   - array of Waveletss
+*   \param[in] b   - array of WaveletExpansions
 *
-*   \return c - Wavelets
+*   \return c - WaveletExpansion
 *
 *   \note 
 *       All the functions need to have the same lower 
 *       and upper bounds and be of the same type*
 *************************************************************/
-struct Wavelets *
-wavelet_sum_prod(size_t n, size_t lda, 
-                struct Wavelets ** a, size_t ldb,
-                struct Wavelets ** b)
+struct WaveletExpansion *
+wavelet_expansion_sum_prod(size_t n, size_t lda, 
+                struct WaveletExpansion ** a, size_t ldb,
+                struct WaveletExpansion ** b)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_sum_prod");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_sum_prod");
     return NULL;
 }
 
 /********************************************************//**
-*   Integrate an Wavelets
+*   Integrate an WaveletExpansion
 *
-*   \param[in] f - Wavelets
+*   \param[in] f - WaveletExpansion
 *
 *   \return out - Integral of the function
 *************************************************************/
 double
-wavelet_integrate(const struct Wavelets * f)
+wavelet_expansion_integrate(const struct WaveletExpansion * f)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_integrate");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_integrate");
     return 0.0;
 }
 
 /********************************************************//**
-*   Integrate a Wavelets with weighted measure
+*   Integrate a WaveletExpansion with weighted measure
 *
 *   \param[in] f - function to integrate
 *
@@ -606,18 +606,18 @@ wavelet_integrate(const struct Wavelets * f)
     in the qmarray
 *************************************************************/
 double
-wavelet_integrate_weighted(const struct Wavelets * f)
+wavelet_expansion_integrate_weighted(const struct WaveletExpansion * f)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_integrate_weighted");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_integrate_weighted");
     return 0.0;
 }
 
 
 /********************************************************//**
-*   Weighted inner product between two Waveletss
+*   Weighted inner product between two WaveletExpansions
 *
-*   \param[in] a - first Wavelets
-*   \param[in] b - second Wavelets
+*   \param[in] a - first WaveletExpansion
+*   \param[in] b - second WaveletExpansion
 *
 *   \return inner product
 *
@@ -625,9 +625,9 @@ wavelet_integrate_weighted(const struct Wavelets * f)
 *       Computes \f[ \int_{lb}^ub  a(x)b(x) w(x) dx \f]
 *
 *************************************************************/
-double wavelet_inner_w(const struct Wavelets * a, const struct Wavelets * b)
+double wavelet_expansion_inner_w(const struct WaveletExpansion * a, const struct WaveletExpansion * b)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_inner_w");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_inner_w");
     return 0.0;
 }
 
@@ -646,9 +646,9 @@ double wavelet_inner_w(const struct Wavelets * a, const struct Wavelets * b)
 *   Otherwise it computes the error with respect to gaussia weight
 *************************************************************/
 double
-wavelet_inner(const struct Wavelets * a, const struct Wavelets * b)
+wavelet_expansion_inner(const struct WaveletExpansion * a, const struct WaveletExpansion * b)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_inner");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_inner");
     return 0.0;
 }
 
@@ -664,14 +664,14 @@ wavelet_inner(const struct Wavelets * a, const struct Wavelets * b)
 *   \note
 *        Computes  \f$ \sqrt(\int f(x)^2 w(x) dx) \f$
 *************************************************************/
-double wavelet_norm_w(const struct Wavelets * p)
+double wavelet_expansion_norm_w(const struct WaveletExpansion * p)
 {
-    double out = sqrt(wavelet_inner_w(p,p));
+    double out = sqrt(wavelet_expansion_inner_w(p,p));
     return sqrt(out);
 }
 
 /********************************************************//**
-*   Compute the norm of Wavelets
+*   Compute the norm of WaveletExpansion
 *
 *   \param[in] f - function
 *
@@ -680,31 +680,31 @@ double wavelet_norm_w(const struct Wavelets * p)
 *   \note
 *        Computes \f$ \sqrt(\int_a^b f(x)^2 dx) \f$
 *************************************************************/
-double wavelet_norm(const struct Wavelets * f)
+double wavelet_expansion_norm(const struct WaveletExpansion * f)
 {
 
     double out = 0.0;
-    out = sqrt(wavelet_inner(f,f));
+    out = sqrt(wavelet_expansion_inner(f,f));
     return out;
 }
 
 /********************************************************//**
-*   Multiply Wavelets by -1
+*   Multiply WaveletExpansion by -1
 *************************************************************/
-void  wavelet_flip_sign(struct Wavelets * f)
+void  wavelet_expansion_flip_sign(struct WaveletExpansion * f)
 {   
-    NOT_IMPLEMENTED_MSG("wavelet_flip_sign");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_flip_sign");
 }
 
 /********************************************************//**
 *   Multiply by scalar and overwrite expansion
 *
 *   \param[in] a - scaling factor
-*   \param[in] f - Wavelets to scale
+*   \param[in] f - WaveletExpansion to scale
 *************************************************************/
-void wavelet_scale(double a, struct Wavelets * f)
+void wavelet_expansion_scale(double a, struct WaveletExpansion * f)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_scale");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_scale");
 }
 
 /********************************************************//**
@@ -718,9 +718,9 @@ void wavelet_scale(double a, struct Wavelets * f)
 *   \return 0 if successfull 1 if error with allocating more space for y
 *
 **************************************************************/
-int wavelet_axpy(double a, struct Wavelets * x, struct Wavelets * y)
+int wavelet_expansion_axpy(double a, struct WaveletExpansion * x, struct WaveletExpansion * y)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_axpy");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_axpy");
     return 0;
 }
 
@@ -729,38 +729,38 @@ int wavelet_axpy(double a, struct Wavelets * x, struct Wavelets * y)
 
 
 /********************************************************//**
-*   Obtain the maximum of Wavelets
+*   Obtain the maximum of WaveletExpansion
 *
-*   \param[in]     f - Wavelets
+*   \param[in]     f - WaveletExpansion
 *   \param[in,out] x - location of maximum value
 *
 *   \return maxval - maximum value
 *************************************************************/
-double wavelet_max(struct Wavelets * f, double * x)
+double wavelet_expansion_max(struct WaveletExpansion * f, double * x)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_max");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_max");
     return 0;
 }
 
 /********************************************************//**
-*   Obtain the minimum of Wavelets
+*   Obtain the minimum of WaveletExpansion
 *
-*   \param[in]     f - Wavelets
+*   \param[in]     f - WaveletExpansion
 *   \param[in,out] x - location of maximum value
 *
 *   \return val - min value
 *************************************************************/
-double wavelet_min(struct Wavelets * f, double * x)
+double wavelet_expansion_min(struct WaveletExpansion * f, double * x)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_min");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_min");
     return 0;
 }
 
 
 /********************************************************//**
-*   Obtain the maximum in absolute value of Wavelets
+*   Obtain the maximum in absolute value of WaveletExpansion
 *
-*   \param[in]     f     - Wavelets
+*   \param[in]     f     - WaveletExpansion
 *   \param[in,out] x     - location of maximum
 *   \param[in]     oargs - optimization arguments 
 *                          required for HERMITE otherwise can set NULL
@@ -768,16 +768,16 @@ double wavelet_min(struct Wavelets * f, double * x)
 *   \return maxval : maximum value (absolute value)
 *
 *************************************************************/
-double wavelet_absmax(struct Wavelets * f, double * x, void * oargs)
+double wavelet_expansion_absmax(struct WaveletExpansion * f, double * x, void * oargs)
 {
-    NOT_IMPLEMENTED_MSG("wavelet_absmax");
+    NOT_IMPLEMENTED_MSG("wavelet_expansion_absmax");
     return 0;
 }
 
 
 /////////////////////////////////////////////////////////
 // Utilities
-void print_wavelet(struct Wavelets * p, size_t prec, 
+void print_wavelet(struct WaveletExpansion * p, size_t prec, 
                   void * args, FILE *fp)
 {
    NOT_IMPLEMENTED_MSG("print_wavelet");
