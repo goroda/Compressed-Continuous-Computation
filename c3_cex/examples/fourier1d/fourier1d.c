@@ -23,7 +23,6 @@ void print_code_usage (FILE * stream, int exit_code)
             " -n --n         Discretization level (default 6)\n"
             " -l --lower     Lower bounds on x,y (default -1)\n"
             " -u --upper     Upper bounds on x,y (default 1)\n"
-            " -v --verbose   Output words (default 0)\n"
         );
     exit (exit_code);
 }
@@ -143,7 +142,8 @@ int f3dd(size_t N, const double * x, double * out, void * args)
 int main(int argc, char * argv[])
 {
     int next_option;
-    const char * const short_options = "hd:f:n:l:u:v:v:";
+    /* const char * const short_options = "hd:f:n:l:u:v:v:"; */
+	const char * const short_options = "hd:f:n:l:u:v:";
     const struct option long_options[] = {
         { "help"     , 0, NULL, 'h' },
         { "directory", 1, NULL, 'd' },
@@ -151,7 +151,7 @@ int main(int argc, char * argv[])
         { "n"        , 1, NULL, 'd' },
         { "lower"    , 1, NULL, 'd' },
         { "upper"    , 1, NULL, 'd' },
-        { "verbose"  , 1, NULL, 'v' },
+        /* { "verbose"  , 1, NULL, 'v' }, */
         { NULL       , 0, NULL, 0   }
     };
     program_name = argv[0];
@@ -161,7 +161,7 @@ int main(int argc, char * argv[])
     size_t N = 9;
     double lb = 0.0;
     double ub = 2.0*M_PI;
-    int verbose = 0;
+    /* int verbose = 0; */
 
     int  (*func)(size_t,const double*, double *, void *) = f0;
     int  (*funcd)(size_t,const double*, double *, void *) = f0d;
@@ -207,9 +207,9 @@ int main(int argc, char * argv[])
             case 'u':
                 ub = strtod(optarg,NULL);
                 break;
-            case 'v':
-                verbose = strtol(optarg,NULL,10);
-                break;
+            /* case 'v': */
+            /*     verbose = strtol(optarg,NULL,10); */
+            /*     break; */
             case '?': // The user specified an invalid option 
                 print_code_usage (stderr, 1);
             case -1: // Done with options. 

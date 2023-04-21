@@ -1,5 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
-
+cmake_minimum_required (VERSION 3.20)
 
 add_executable(gauss gauss.c)
 target_link_libraries(gauss -g
