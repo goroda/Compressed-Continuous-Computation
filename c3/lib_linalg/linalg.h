@@ -134,6 +134,7 @@ void dpotrf_(char *X, int*Y, double *Z, int * A, int * B );
 void dpotri_(char *X, int*Y, double *Z, int * A, int* B);
 void dtrtri_(char *X,char*Y, int *Z, double *A, int * B, int * C);
 void dgesv_(int *X, int *Y, double*Z, int * A, int * B,double*C, int * D, int * E);
+void dsysv_(char * U, int *X, int *Y, double*Z, int * A, int * B,double*C, int * D, double * E, int * F, int * G);
 void dgelsd_(int *X, int *Y, int *Z, double *A, int *B, double *C, 
              int *D, double * E, double *F, int *G, double *H, int *,int *, int *K);
 
