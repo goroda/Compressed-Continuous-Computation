@@ -165,6 +165,18 @@ void test_r_orthogonality(double lb, double ub, size_t N, size_t order, double *
 		printf("\n");
 	}
 
+	/* now check if beta conditions satisfied */
+	for (size_t ii = 0; ii <= order; ii++) {
+		for (size_t jj = 0; jj < ii; jj++) {
+			double val = - Q[ii * (order+1) + jj];
+			for (size_t kk = ii+1; kk <= order; kk++) {
+				val += coeffB[ii * (order+1) + kk] * coeffB[jj * (order+1) + kk] * pow(coeffB[order * (order+1) + kk], 2);
+			}
+			val /= pow(coeffB[order * (order+1) + ii], 2);
+			printf("error [%zu, %zu] = %3.2E\n", ii, jj, val - coeffB[ jj * (order + 1) + ii]);
+		}
+	}
+	
 	/* printf("Analytical Q\n");	 */
 	/* for (size_t ii = 0; ii <= order; ii++) { */
 	/* 	for (size_t jj = 0; jj <= order; jj++) { */
