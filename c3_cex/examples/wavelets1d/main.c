@@ -90,7 +90,7 @@ int eval_r(size_t N, size_t order,
 		}
 		/* /\* normalize *\/ */
 		for (int jj = order; jj >= 0; jj--) {
-			qvals[sample_ind * n + jj] /= beta[order * n + jj];
+			qvals[sample_ind * n + jj] /= sqrt(beta[order * n + jj]);
 		}
 	}
 
@@ -135,6 +135,7 @@ void test_q_orthogonality(double lb, double ub, size_t N, size_t order, double *
 	printf("\n\n\n");
 	free(x); x = NULL;
 	free(evals); evals = NULL;
+	free(orth_mat); orth_mat = NULL;
 }
 
 void test_r_orthogonality(double lb, double ub, size_t N, size_t order, double * coeffA, double * coeffB, double *Q)
@@ -166,105 +167,259 @@ void test_r_orthogonality(double lb, double ub, size_t N, size_t order, double *
 	}
 
 	/* now check if beta conditions satisfied */
+	printf("Coefficient errors\n");
 	for (size_t ii = 0; ii <= order; ii++) {
 		for (size_t jj = 0; jj < ii; jj++) {
 			double val = - Q[ii * (order+1) + jj];
 			for (size_t kk = ii+1; kk <= order; kk++) {
-				val += coeffB[ii * (order+1) + kk] * coeffB[jj * (order+1) + kk] * pow(coeffB[order * (order+1) + kk], 2);
+				val += coeffB[ii * (order+1) + kk] * coeffB[jj * (order+1) + kk] * coeffB[order * (order+1) + kk];
 			}
-			val /= pow(coeffB[order * (order+1) + ii], 2);
+			val /= coeffB[order * (order+1) + ii];
 			printf("error [%zu, %zu] = %3.2E\n", ii, jj, val - coeffB[ jj * (order + 1) + ii]);
 		}
 	}
-	
-	/* printf("Analytical Q\n");	 */
-	/* for (size_t ii = 0; ii <= order; ii++) { */
-	/* 	for (size_t jj = 0; jj <= order; jj++) { */
-	/* 		printf("%3.2E ", Q[jj * (order+1) + ii]); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* }	 */
 
 	printf("\n\n\n");
 	free(x); x = NULL;
 	free(evals); evals = NULL;
+	free(orth_mat); orth_mat = NULL;
+}
+
+/************************************************************//**************** 
+	Produce piecewise polynomials orthogonal to global polynomials up to given order .
+    
+    \param[in]  order - Polynomial order (order + 1 total basis functions)
+    \param[out] X     - (order+1 \times order+1) Coefficients for evaluation
+    \param[out] Q     - (order+1 \times order+1) inner product between all basis functions
+
+    \returns 0 on success
+
+    \note Comes from Alpert 1993, gram schmidt type
+          basis functions are of the form 
+
+          \[ 
+             q_j(x) = \tilde{q}_j(x) + \sum_{k=0}^{order} X_{kj} p_j(x) 
+          \]
+          where $p_j = x^j$ for $j = 0,\ldots,order$  and 
+          $\tilde{q}_j(x) = p_j(x)$ for $x \geq 0$ and $\tilde{q}_j(x) = - p_j(x)$ for $x < 0$
+ 
+*******************************************************************************/
+int orthogonalize_wrt_to_poly(size_t order,  double * X, double * Q)
+{
+	size_t n = order+1;
+	size_t n2 = n * n;
+	double *A = malloc(n2 * sizeof(double));
+	double *B = malloc(n2 * sizeof(double));
+	for (size_t ii = 0; ii <= order; ii++){
+		for (size_t jj = 0; jj <= order; jj++) {
+			A[ii * n + jj] = 1.0 / ((double) ii + jj + 1.0) - (pow(-1.0,ii+jj+1) / ((double) ii + jj + 1.0)) ;
+			B[ii * n + jj] = -(1.0 / ((double) ii + jj + 1.0) + (pow(-1.0,ii+jj+1) / ((double) ii + jj + 1.0)));
+		}
+	}
+
+	/* Verified */
+	memmove(Q, A, n2 * sizeof(double));
+	memmove(X, B, n2 * sizeof(double));
+
+	int *ipiv = malloc(n * sizeof(int));
+	double work_opt;
+	int lwork = -1;
+	int info = 0;
+	dsysv_("L", (int*)&n, (int*)&n, A, (int*)&n, ipiv, X, (int*)&n, &work_opt, &lwork, &info);
+	/* printf("optimal work = %zu\n", (size_t)work_opt); */
+	/* printf("info = %d\n", info); */
+	/* printf("Bshould = \n"); */
+	/* dprint2d(n, n, B); */
+	lwork = (int) work_opt;
+	double * work = malloc(lwork * sizeof(double));
+	dsysv_("L", (int*)&n, (int*)&n, A, (int*)&n, ipiv, X, (int*)&n, work, &lwork, &info);
+	/* printf("info = %d\n", info); */
+	assert( info == 0 );
+
+	/* Q = -1.0X^TB + A*/
+	cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, n, n, n, -1.0, X, n, B, n, 1.0, Q, n);
+
+	/* test_q_orthogonality(-1.0, 1.0, 1000, order, X, Q); */
+
+	free(A); A = NULL;
+	free(B); B = NULL;
+	free(ipiv); ipiv = NULL;
+	free(work); work = NULL;
+	return 0;
 }
 
 
-/* returns lower triangular beta */
-double * orthogonalize(size_t N, double *A, const double *X, const double *B)
+/************************************************************//**************** 
+	Orthogonalize the basis of a piecewise polynomial (two pieces)
+  
+    \param[in]  order - Polynomial order (order + 1 total basis functions)
+    \param[in]  Q     - Inner product between the basis
+    \param[out] beta  - (order+1 x order + 1) matrix of coefficients
+                        Lower-triangular part contains coefficients (excludes diagonal)
+                        Last column contains the squared norms of the basis functions
+
+    \returns 0 on success
+
+    \note Comes from Alpert 1993, gram schmidt
+*******************************************************************************/
+int orthogonalize(size_t order, const double *Q, double * beta)
 {
 
-	size_t NN = N+1;
-	
-	/* Q = -1.0X^TB + A*/
-	cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, NN, NN, NN,
-				-1.0, X, NN, B, NN, 1.0, A, NN);
+	size_t N = order + 1;
+	beta[order * N + order] = Q[order * N + order];
 
-	double *Q = A;
-	printf("Q = \n");
-	for (size_t ii = 0; ii < NN; ii++) {
-		for (size_t jj = 0; jj < NN; jj++) {
-			printf("%3.5f ", A[jj * NN + ii]);				
-		}
-		printf("\n");
-	}
-	
-	
-	double *a = malloc(NN * sizeof(double));
-	a[N] = Q[N * NN + N];
-
-	printf("a[N] = %3.4f\n", a[N]);
-	/* Transpose might be faster */
-	double *beta = calloc(NN * NN, sizeof(double));  /* lower triangular, last column has normalizing factors */
-	for (int jj = N-1; jj >= 0; jj-- ) {
-		printf("jj = %d\n", jj);
-		beta[jj * NN + N] = - Q[N * NN + jj] / a[N];		
+	for (int jj = order - 1; jj >= 0; jj-- ) {
+		beta[jj * N + order] = - Q[order * N + jj] / beta[order * N + order];
 	}
 
-	printf("ii = N done\n");
-	double * qk  = malloc(NN * sizeof(double));	
-	for (int ii = N-1; ii >= 0; ii--) {
-		printf("ii = %d\n", ii);
+	for (int ii = order - 1; ii >= 0; ii--) {
 		/* Compute Un-normalized \beta_{ij} */
 		for (int jj = ii-1; jj >= 0; jj--) {
-			beta[jj * NN + ii] = - Q[ii * NN + jj];
-			for (size_t kk = ii + 1; kk <= N; kk++) {
-				beta[jj * NN + ii] += (beta[ii * NN + kk] * beta[jj * NN + kk] * a[kk]);
+			beta[jj * N + ii] = - Q[ii * N + jj];
+			for (size_t kk = ii + 1; kk <= order; kk++) {
+				beta[jj * N + ii] += (beta[ii * N + kk] * beta[jj * N + kk] * beta[order * N + kk]);
 			}
-			printf("beta[%d, %d] = %3.5f\n", ii, jj, beta[jj * NN + ii]);
 		}
 
 		/* Compute <r_i, r_i> */
-		a[ii] = Q[ii * NN + ii];
-		for (int kk = N ; kk >= ii+1; kk--) {			
-			a[ii] -=  a[kk] * pow(beta[ii * NN + kk], 2);
+		beta[order * N + ii] = Q[ii * N + ii];
+		for (int kk = order ; kk >= ii+1; kk--) {			
+			beta[order * N + ii] -= beta[order * N + kk] * pow(beta[ii * N + kk], 2);
 		}
 
 		/* Update beta_{ij} */
 		for (int jj = ii-1; jj >= 0; jj--) {
-			beta[jj * N + ii] /= a[ii];
+			beta[jj * N + ii] /= beta[order * N + ii];
 		}
 	}
+	return 0;
+}
 
-	/* Store normalizing info */
-	for (int ii = N-1; ii >= 0; ii--) {
-		/* printf("ii = %d\n", ii); */
-		beta[N * NN + ii] = sqrt(a[ii]);
+
+struct MotherBasis
+{
+	size_t order;
+	double * acoeff;
+	double * bcoeff;
+};
+
+struct MotherBasis * mother_basis_alloc(size_t order)
+{
+	struct MotherBasis * mb = malloc(sizeof(struct MotherBasis));
+	mb->order = order;
+	mb->acoeff = calloc((order+1) * (order+1), sizeof(double));
+	mb->bcoeff = calloc((order+1) * (order+1), sizeof(double));
+
+	return mb;
+}
+
+void mother_basis_free(struct MotherBasis * mb)
+{
+	if (mb != NULL) {
+		free(mb->acoeff); mb->acoeff = NULL;
+		free(mb->bcoeff); mb->bcoeff = NULL;
+		free(mb); mb = NULL;
 	}
-	beta[N * NN + N] = sqrt(Q[N * NN + N]);
+}
 
-	printf("<r_i, r_i> = \n");
-	for (size_t ii = 0; ii < NN; ii++) {
-		printf("%3.5f ", a[ii]);				
-	}
+int mother_basis_compute_coeffs(struct MotherBasis * mb)
+{
+	size_t n2 = (mb->order+1) * (mb->order+1);
+	double * Q = calloc(n2, sizeof(double));
 
-	printf("\n");
+	int orth_res = orthogonalize_wrt_to_poly(mb->order, mb->acoeff, Q);
+	assert(orth_res == 0);
+	int beta_res = orthogonalize(mb->order, Q, mb->bcoeff);
+	assert(beta_res == 0);
+
+	free(Q); Q = NULL;
+	return 0;
+}
+
+struct MotherBasis * mother_basis_create(size_t order)
+{
+	struct MotherBasis * mb = mother_basis_alloc(order);
+	mother_basis_compute_coeffs(mb);
+	return mb;
+}
+
+int mother_basis_eval_non_orth(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
+	return res;
+}
+
+int mother_basis_eval(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
+	assert (res == 0);
+	res = eval_r(N, mb->order, mb->bcoeff, eval);
+	assert (res == 0);
+	return 0;
+}
+
+void run_pieces(size_t order)
+{
+	size_t n = order + 1;
+	size_t n2 = n * n;
+
+	double * coeff = calloc(n2, sizeof(double));
+	double * beta = calloc(n2, sizeof(double));
+	double * Q = calloc(n2, sizeof(double));
 	
-	free(a); a = NULL;
-	free(qk); qk = NULL;
-	/* free(AX); AX = NULL; */
-	return beta;
+	int orth_res = orthogonalize_wrt_to_poly(order,  coeff, Q);
+	assert(orth_res == 0);
+	int beta_res = orthogonalize(order, Q, beta);
+	assert(beta_res == 0);
+	test_r_orthogonality(-1.0, 1.0, 1000000, order, coeff, beta,  Q);
+	
+	printf("beta = \n");
+	for (size_t ii = 0; ii < n; ii++){
+		for (size_t jj = 0; jj < n; jj++){
+			printf("%3.2E ", beta[ii + jj * n]);
+		}
+		printf("\n");
+	}
+	
+	double lb = -1.0;	
+	double ub = 1.0;
+	size_t N = 100000;
+	/* size_t N = 1000; */
+	double * x = linspace(lb, ub, N);	
+	double * qvals = malloc(N * n * sizeof(double));
+	int res = eval_q(N, order, x, coeff, qvals);
+	assert (res == 0);
+
+	FILE * fp = fopen("psi_non_orth.dat", "w");
+	assert (fp != NULL);
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj < n; jj++){
+			fprintf(fp, "%3.15f ", qvals[ii * n + jj]);
+		}
+		fprintf(fp, "\n");
+	}
+	fclose(fp);
+
+	int res2 = eval_r(N, order, beta, qvals); /* qvals becomes rvals */
+	assert (res2 == 0);
+	fp = fopen("psi_orth.dat", "w");
+	assert (fp != NULL);
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj < n; jj++){
+			fprintf(fp, "%3.15f ", qvals[ii * n +jj]);
+		}
+		fprintf(fp, "\n");
+	}
+	fclose(fp);
+
+	
+	free(qvals); qvals = NULL;
+	free(x); x = NULL;
+	free(coeff); coeff = NULL;
+	free(Q); Q = NULL;
+	free(beta); beta = NULL;
 }
 
 int main(int argc, char * argv[])
@@ -295,160 +450,33 @@ int main(int argc, char * argv[])
 
 
 	size_t order = 5;
-	size_t n = order + 1;
-	size_t n2 = n * n;
-
-	double *A = malloc(n2 * sizeof(double));
-	double *B = malloc(n2 * sizeof(double));
-	for (size_t ii = 0; ii <= order; ii++){
-		for (size_t jj = 0; jj <= order; jj++) {
-			/* A[ii * n + jj] = 1.0 / ((double) ii + jj + 1.0); */
-			/* B[ii * n + jj] = -(1 - pow(0.5, ii + jj)) * A[ii * n + jj]; */
-			
-			A[ii * n + jj] = 1.0 / ((double) ii + jj + 1.0) - (pow(-1.0,ii+jj+1) / ((double) ii + jj + 1.0)) ;
-			B[ii * n + jj] = -(1.0 / ((double) ii + jj + 1.0) + (pow(-1.0,ii+jj+1) / ((double) ii + jj + 1.0)));
-		}
-	}
-
-	/* Verified */
-	printf("A = \n");
-	dprint2d_col(n, n, A);
+	/* run_pieces(order); */
 	
-	double *X = malloc(n2 * sizeof(double));
-	memmove(X, B, n2 * sizeof(double));
+	struct MotherBasis * mb = mother_basis_create(order);
 
-	double *Acopy = malloc(n2 * sizeof(double));
-	memmove(Acopy, A, n2 * sizeof(double));
-
-	int *ipiv = malloc(n * sizeof(int));
-	double work_opt;
-	int lwork = -1;
-	int info = 0;
-	printf("B = \n");
-	dprint2d_col(n, n, B);
-	dsysv_("L", (int*)&n, (int*)&n, A, (int*)&n, ipiv, X, (int*)&n, &work_opt, &lwork, &info);
-	printf("optimal work = %zu\n", (size_t)work_opt);
-	printf("info = %d\n", info);
-	printf("Bshould = \n");
-	dprint2d(n, n, B);
-	lwork = (int) work_opt;
-	double * work = malloc(lwork * sizeof(double));
-	dsysv_("L", (int*)&n, (int*)&n, A, (int*)&n, ipiv, X, (int*)&n, work, &lwork, &info);
-	printf("info = %d\n", info);
-	assert( info == 0 );
-	
-	printf("X = \n");
-	dprint2d_col(n, n, X);
-
-
-	double * Bcheck = malloc(n * n * sizeof(double));
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, n, n, n, 1.0, Acopy, n, X, n, 0.0, Bcheck, n);
-
-	printf("Bcheck = \n");
-	dprint2d_col(n, n, Bcheck);
-	/* exit(1); */
-
-	double * beta = orthogonalize(order, Acopy, X, B);
-
-	test_q_orthogonality(-1.0, 1.0, 1000, order, X, Acopy);
-	test_r_orthogonality(-1.0, 1.0, 1000000, order, X, beta,  Acopy);
-	
-	/* Acopy becomes Q */
-	/* check orthogonality */
-	/* for (size_t ii = 0; ii < n; ii++){ */
-	/* 	for (size_t jj = 0; jj < ii; jj++) { */
-	/* 		printf("Checking orthogonality between r_{%zu} and r_{%zu}\n", ii, jj); */
-	/* 		double inner = -beta[jj * n + ii] * pow(beta[(order)*n + ii], 2); */
-	/* 		for (size_t kk = ii+1; kk < n; kk++) { */
-	/* 			inner -= beta[ii * n + kk] * beta[jj * n + kk] * pow(beta[(order) * n + kk], 2); */
-	/* 		} */
-	/* 		inner /= beta[(order) * n + ii]; */
-	/* 		printf("\t inner = %3.5E\n", inner); */
-	/* 	} */
-	/* } */
-	
-	printf("Final Q = %3.5E \n", sqrt(Acopy[order * n + order]));
-	exit(1);
-
-	
-	printf("beta = \n");
-	for (size_t ii = 0; ii < n; ii++){
-		for (size_t jj = 0; jj < n; jj++){
-			printf("%3.2E ", beta[ii + jj * n]);
-		}
-		printf("\n");
-	}
-	
 	double lb = -1.0;	
-	double ub = -1e-15;
+	double ub = 1.0;
 	size_t N = 100000;
 	/* size_t N = 1000; */
 	double * x = linspace(lb, ub, N);	
-	double * qvals = malloc(N * n * sizeof(double));
-	int res = eval_q(N, order, x, X, qvals);
+	double * evals = malloc(N * (order+1) * sizeof(double));
+
+	int res = mother_basis_eval(mb, N, x, evals);
 	assert (res == 0);
-
-	FILE * fp = fopen("psi_non_orth.dat", "w");
-	assert (fp != NULL);
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj < n; jj++){
-			fprintf(fp, "%3.15f ", qvals[ii * n + jj]);
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);
-
-	int res2 = eval_r(N, order, beta, qvals); /* qvals becomes rvals */
-	assert (res2 == 0);
-	fp = fopen("psi_orth.dat", "w");
-	assert (fp != NULL);
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj < n; jj++){
-			fprintf(fp, "%3.15f ", qvals[ii * n +jj]);
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);
-	free(x);
-	free(qvals);
-
-	lb = 1e-15;	
-	ub = 1.0;
-	x = linspace(lb, ub, N);	
-	qvals = malloc(N * n * sizeof(double));
-	res = eval_q(N, order, x, X, qvals);
-	assert (res == 0);
-
-	fp = fopen("psi_non_orth2.dat", "w");
-	assert (fp != NULL);
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj < n; jj++){
-			fprintf(fp, "%3.15f ", qvals[ii * n + jj]);
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);
-
-	res2 = eval_r(N, order, beta, qvals); /* qvals becomes rvals */
-	assert (res2 == 0);
-	fp = fopen("psi_orth2.dat", "w");
-	assert (fp != NULL);
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj < n; jj++){
-			fprintf(fp, "%3.15f ", qvals[ii * n +jj]);
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);	
-
 	
-	free(qvals); qvals = NULL;
-	free(ipiv); ipiv = NULL;
+	FILE * fp = fopen("psi_orth.dat", "w");
+	assert (fp != NULL);
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj <= order; jj++){
+			fprintf(fp, "%3.15f ", evals[ii * (order+1) +jj]);
+		}
+		fprintf(fp, "\n");
+	}
+	fclose(fp);
+	
+
+	mother_basis_free(mb); mb = NULL;
 	free(x); x = NULL;
-	free(A); A = NULL;
-	free(Acopy); Acopy = NULL;
-	free(B); B = NULL;
-	free(X); X = NULL;
-	free(work); work = NULL;
-	free(beta); beta = NULL;
+	free(evals); evals = NULL;
+	
 }
