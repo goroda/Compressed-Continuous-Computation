@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(precision=4)
+
 def inner_mat(data, data2, x):
 
     # trapezoid rule
@@ -13,9 +14,7 @@ def inner_mat(data, data2, x):
     
     return out;
 
-    
-if __name__ == "__main__":
-
+def mother_wavelet():
     filename1 = "psi_non_orth.dat"
     loaded = False
     try: 
@@ -64,3 +63,9 @@ if __name__ == "__main__":
     
     plt.legend()
     plt.show()
+    
+if __name__ == "__main__":
+
+
+    mother_wavelet()
+    
