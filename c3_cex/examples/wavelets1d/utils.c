@@ -5,6 +5,47 @@
 #include <assert.h>
 #include "c3.h"
 
+int eval_qtilde_left(size_t N, size_t n, const double * xinput_array, double * out)
+{
+	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
+		double x = xinput_array[sample_ind];
+		double xin = 1.0;
+		for (size_t jj = 0; jj < n; jj++){
+			out[sample_ind * n + jj] = -xin;
+			xin *= x;
+		}
+	}
+	return 0;
+}
+
+int eval_qtilde_right(size_t N, size_t n, const double * xinput_array, double * out)
+{
+	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
+		double x = xinput_array[sample_ind];
+		double xin = 1.0;
+		for (size_t jj = 0; jj < n; jj++){
+			out[sample_ind * n + jj] = xin;
+			xin *= x;
+		}
+	}
+	return 0;
+}
+
+int eval_q_update(size_t N, size_t n, const double * xinput_array, const double * alpha, double * qtilde)
+{
+	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
+		double x = xinput_array[sample_ind];
+		for (size_t jj = 0; jj < n; jj++) {
+			double xout = 1.0;
+			for (size_t ii = 0; ii < n; ii++) {
+				qtilde[sample_ind * n + jj] += alpha[jj * n + ii]  * xout;
+				xout = xout * x;
+			}
+		}
+	}
+	return 0;
+}
+
 /************************************************************//**************** 
 	Evaluate piecewise-polynomial basis orthogonal to polynomials up to *order*
     
@@ -31,32 +72,14 @@ int eval_q(size_t N, size_t order, const double * xinput_array, const double * a
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
 		double x = xinput_array[sample_ind];
 		if (x >= 0.0) {
-			double xin = 1.0;
-			for (size_t jj = 0; jj < n; jj++){
-				out[sample_ind * n + jj] = xin;
-				xin *= x;
-			}
+			eval_qtilde_right(1, n, xinput_array + sample_ind, out + sample_ind * n);
 		}
 		else{
-			double xin = 1.0;
-			for (size_t jj = 0; jj < n; jj++){
-				out[sample_ind * n + jj] = -xin;
-				xin *= x;
-			}
+			eval_qtilde_left(1, n, xinput_array + sample_ind, out + sample_ind * n);
 		}
 	}
-
-	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
-		double x = xinput_array[sample_ind];
-		for (size_t jj = 0; jj < n; jj++) {
-			double xout = 1.0;
-			for (size_t ii = 0; ii < n; ii++) {
-				out[sample_ind * n + jj] += alpha[jj * n + ii]  * xout;
-				xout = xout * x;
-			}
-		}
-	}
-
+	
+	eval_q_update(N, n, xinput_array, alpha, out);
 	return 0;
 }
 
@@ -208,6 +231,183 @@ int orthogonalize(size_t order, const double *Q, double * beta)
 	return 0;
 }
 
+/** \struct MotherBasis 
+ * \brief Contains coefficients for evaluating the mother basis multiresolution function
+ * \var MotherBasis::order 
+ * polynomial order to which the basis is orthogonal to 
+ * \var MotherBasis::acoeff
+ * coefficients for the evaluation of an intermediate basis orthogonal to global polynomials up to stated order
+ * \var MotherBasis::bcoeff 
+ * coefficients for the orthogonalization of the basis defined by acoeff 
+ * \var MotherBasis::Q 
+ * inner product between intermediate (non-orthogonal) basis functions
+ */
+struct MotherBasis
+{
+	size_t order;
+	double * acoeff;
+	double * bcoeff;
+	double * Q;
+};
+
+/***********************************************************//**
+    Allocate space for a MotherBsais
+
+    \param[in] order - polynomial order
+
+    \return mb - MotherBasis
+***************************************************************/
+struct MotherBasis * mother_basis_alloc(size_t order)
+{
+	struct MotherBasis * mb = malloc(sizeof(struct MotherBasis));
+	mb->order = order;
+	mb->acoeff = calloc((order+1) * (order+1), sizeof(double));
+	mb->bcoeff = calloc((order+1) * (order+1), sizeof(double));
+	mb->Q = calloc((order+1) * (order+1), sizeof(double));
+	return mb;
+}
+
+/***********************************************************//**
+    Free Memory of a MotherBasis
+
+    \param[in,out] mb - struct to free
+***************************************************************/
+void mother_basis_free(struct MotherBasis * mb)
+{
+	if (mb != NULL) {
+		free(mb->acoeff); mb->acoeff = NULL;
+		free(mb->bcoeff); mb->bcoeff = NULL;
+		free(mb->Q); mb->Q = NULL;
+		free(mb); mb = NULL;
+	}
+}
+
+/***********************************************************//**
+    Compute coefficients defining the MotherBasis
+
+    \param[in,out] mb - MotherBasis
+
+	\returns 0 on success
+***************************************************************/
+int mother_basis_compute_coeffs(struct MotherBasis * mb)
+{
+
+	int orth_res = orthogonalize_wrt_to_poly(mb->order, mb->acoeff, mb->Q);
+	assert(orth_res == 0);
+	int beta_res = orthogonalize(mb->order, mb->Q, mb->bcoeff);
+	assert(beta_res == 0);
+
+	return 0;
+}
+
+/***********************************************************//**
+    Create (alloc and compute coefficients) for a mother basis
+
+    \param[in] order - polynomial order
+
+	\returns mb - MotherBasis
+***************************************************************/
+struct MotherBasis * mother_basis_create(size_t order)
+{
+	struct MotherBasis * mb = mother_basis_alloc(order);
+	mother_basis_compute_coeffs(mb);
+	return mb;
+}
+
+/***********************************************************//**
+    Evaluate the non-orthogonal portion of the basis 
+
+	\see @eval_q
+***************************************************************/
+int mother_basis_eval_non_orth(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
+	return res;
+}
+
+
+/***********************************************************//**
+    Evaluate the basis
+
+	\see @eval_q and @eval_r
+***************************************************************/
+int mother_basis_eval_basis(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
+	assert (res == 0);
+	res = eval_r(N, mb->order, mb->bcoeff, eval);
+	assert (res == 0);
+	return 0;
+}
+
+/***********************************************************//**
+    Evaluate the basis with all x < 0
+
+	\see @eval_q and @eval_r
+***************************************************************/
+int mother_basis_eval_basis_left(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	size_t n = mb->order + 1;
+	eval_qtilde_left(N, n, x, eval);
+	eval_q_update(N, n, x, mb->acoeff, eval);
+	eval_r(N, mb->order, mb->bcoeff, eval);
+	return 0;
+}
+
+/***********************************************************//**
+    Evaluate the basis with all x >=
+
+	\see @eval_q and @eval_r
+***************************************************************/
+int mother_basis_eval_basis_right(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
+{
+	assert (mb != NULL);
+	size_t n = mb->order + 1;
+	eval_qtilde_right(N, n, x, eval);
+	eval_q_update(N, n, x, mb->acoeff, eval);
+	eval_r(N, mb->order, mb->bcoeff, eval);
+	return 0;
+}
+
+void write_xy_to_file(size_t N, const double * x, const double * y, char *fname)
+{
+	FILE * fp = fopen(fname, "w");
+	assert (fp != NULL);
+	for (size_t ii = 0; ii < N; ii++){
+		fprintf(fp, "%3.15f %3.15f\n", x[ii], y[ii]);
+	}
+	fclose(fp);
+}
+
+void write_to_file(struct MotherBasis *mb, size_t N, char *fname)
+{
+	double lb = -1.0;	
+	double ub = 1.0;
+	/* size_t N = 100000; */
+	/* size_t N = 1000; */
+	double * x = linspace(lb, ub, N);	
+	double * evals = malloc(N * (mb->order+1) * sizeof(double));
+
+	int res = mother_basis_eval_basis(mb, N, x, evals);
+	assert (res == 0);
+	
+	FILE * fp = fopen(fname, "w");
+	assert (fp != NULL);
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj <= mb->order; jj++){
+			fprintf(fp, "%3.15f ", evals[ii * (mb->order+1) +jj]);
+		}
+		fprintf(fp, "\n");
+	}
+	fclose(fp);
+
+	free(x); x = NULL;
+	free(evals); evals = NULL;
+}
+
 
 void test_q_orthogonality(double lb, double ub, size_t N, size_t order, double * coeff, double *Q,
 						  int verbose)
@@ -311,139 +511,3 @@ void test_r_orthogonality(double lb, double ub, size_t N, size_t order, double *
 	free(orth_mat); orth_mat = NULL;
 }
 
-/** \struct MotherBasis 
- * \brief Contains coefficients for evaluating the mother basis multiresolution function
- * \var MotherBasis::order 
- * polynomial order to which the basis is orthogonal to 
- * \var MotherBasis::acoeff
- * coefficients for the evaluation of an intermediate basis orthogonal to global polynomials up to stated order
- * \var MotherBasis::bcoeff 
- * coefficients for the orthogonalization of the basis defined by acoeff 
- * \var MotherBasis::Q 
- * inner product between intermediate (non-orthogonal) basis functions
- */
-struct MotherBasis
-{
-	size_t order;
-	double * acoeff;
-	double * bcoeff;
-	double * Q;
-};
-
-/***********************************************************//**
-    Allocate space for a MotherBsais
-
-    \param[in] order - polynomial order
-
-    \return mb - MotherBasis
-***************************************************************/
-struct MotherBasis * mother_basis_alloc(size_t order)
-{
-	struct MotherBasis * mb = malloc(sizeof(struct MotherBasis));
-	mb->order = order;
-	mb->acoeff = calloc((order+1) * (order+1), sizeof(double));
-	mb->bcoeff = calloc((order+1) * (order+1), sizeof(double));
-	mb->Q = calloc((order+1) * (order+1), sizeof(double));
-	return mb;
-}
-
-/***********************************************************//**
-    Free Memory of a MotherBasis
-
-    \param[in,out] mb - struct to free
-***************************************************************/
-void mother_basis_free(struct MotherBasis * mb)
-{
-	if (mb != NULL) {
-		free(mb->acoeff); mb->acoeff = NULL;
-		free(mb->bcoeff); mb->bcoeff = NULL;
-		free(mb->Q); mb->Q = NULL;
-		free(mb); mb = NULL;
-	}
-}
-
-/***********************************************************//**
-    Compute coefficients defining the MotherBasis
-
-    \param[in,out] mb - MotherBasis
-
-	\returns 0 on success
-***************************************************************/
-int mother_basis_compute_coeffs(struct MotherBasis * mb)
-{
-
-	int orth_res = orthogonalize_wrt_to_poly(mb->order, mb->acoeff, mb->Q);
-	assert(orth_res == 0);
-	int beta_res = orthogonalize(mb->order, mb->Q, mb->bcoeff);
-	assert(beta_res == 0);
-
-	return 0;
-}
-
-/***********************************************************//**
-    Create (alloc and compute coefficients) for a mother basis
-
-    \param[in] order - polynomial order
-
-	\returns mb - MotherBasis
-***************************************************************/
-struct MotherBasis * mother_basis_create(size_t order)
-{
-	struct MotherBasis * mb = mother_basis_alloc(order);
-	mother_basis_compute_coeffs(mb);
-	return mb;
-}
-
-/***********************************************************//**
-    Evaluate the non-orthogonal portion of the basis 
-
-	\see @eval_q
-***************************************************************/
-int mother_basis_eval_non_orth(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
-{
-	assert (mb != NULL);
-	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
-	return res;
-}
-
-/***********************************************************//**
-    Evaluate the basis
-
-	\see @eval_q and @eval_r
-***************************************************************/
-int mother_basis_eval(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
-{
-	assert (mb != NULL);
-	int res = eval_q(N, mb->order, x, mb->acoeff, eval);
-	assert (res == 0);
-	res = eval_r(N, mb->order, mb->bcoeff, eval);
-	assert (res == 0);
-	return 0;
-}
-
-
-void write_to_file(struct MotherBasis *mb, size_t N, char *fname)
-{
-	double lb = -1.0;	
-	double ub = 1.0;
-	/* size_t N = 100000; */
-	/* size_t N = 1000; */
-	double * x = linspace(lb, ub, N);	
-	double * evals = malloc(N * (mb->order+1) * sizeof(double));
-
-	int res = mother_basis_eval(mb, N, x, evals);
-	assert (res == 0);
-	
-	FILE * fp = fopen(fname, "w");
-	assert (fp != NULL);
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj <= mb->order; jj++){
-			fprintf(fp, "%3.15f ", evals[ii * (mb->order+1) +jj]);
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);
-
-	free(x); x = NULL;
-	free(evals); evals = NULL;
-}
