@@ -66,12 +66,13 @@ def mother_wavelet():
     
 if __name__ == "__main__":
 
-    # mother_wavelet()
-
-    fit = np.loadtxt("mrb_evals.dat")
-    test_func = np.loadtxt("testfunc.dat")
-    plt.figure()
-    plt.plot(test_func[:, 0], test_func[:, 1], '--', label='Test Func')
-    plt.plot(fit[:, 0], fit[:, 1], '-x', label='Fit')
-    plt.legend()
-    plt.show()
+    mother_wavelet()
+    # a = True
+    # if a:
+    #     fit = np.loadtxt("mrb_evals.dat")
+    #     test_func = np.loadtxt("testfunc.dat")
+    #     plt.figure()
+    #     plt.plot(test_func[:, 0], test_func[:, 1], '--', label='Test Func')
+    #     plt.plot(fit[:, 0], fit[:, 1], '-x', label='Fit')
+    #     plt.legend()
+    #     plt.show()

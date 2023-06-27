@@ -78,8 +78,23 @@ int eval_q(size_t N, size_t order, const double * xinput_array, const double * a
 			eval_qtilde_left(1, n, xinput_array + sample_ind, out + sample_ind * n);
 		}
 	}
+	/* printf("basis after qtilde\n"); */
+	/* for (size_t ii = 0; ii < N; ii++){ */
+	/* 	for (size_t jj = 0; jj <= order; jj++) { */
+	/* 		printf("%3.2e ", out[ii * n + jj]); */
+	/* 	} */
+	/* 	printf("\n"); */
+	/* } */
 	
 	eval_q_update(N, n, xinput_array, alpha, out);
+	/* printf("\n\n\n\n\n"); */
+	/* printf("basis after q\n"); */
+	/* for (size_t ii = 0; ii < N; ii++){ */
+	/* 	for (size_t jj = 0; jj <= order; jj++) { */
+	/* 		printf("%3.2e ", out[ii * n + jj]); */
+	/* 	} */
+	/* 	printf("\n"); */
+	/* }	 */
 	return 0;
 }
 
@@ -105,19 +120,52 @@ int eval_q(size_t N, size_t order, const double * xinput_array, const double * a
 int eval_r(size_t N, size_t order, const double * beta, double * qvals)
 {
 	int n = (int)order+1;
-	/* is it faster to do two loops, one with an if statement and one without? */
+
+
+	/* printf("\n\n\n\n\n"); */
+	/* printf("basis in eval_r\n"); */
+	/* for (size_t ii = 0; ii < N; ii++){ */
+	/* 	for (size_t jj = 0; jj <= order; jj++) { */
+	/* 		printf("%3.2e ", qvals[ii * n + jj]); */
+	/* 	} */
+	/* 	printf("\n"); */
+	/* }	 */
+	
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
+		/* printf("On sample %zu\n", sample_ind); */
 		for (int jj = order; jj >= 0; jj--) {
 			for (size_t kk = jj+1; kk <= order; kk++) {
 				qvals[sample_ind * n + jj] += beta[jj * n + kk] * qvals[sample_ind * n + kk];
+				/* if (isnan(qvals[sample_ind * n + jj])) */
+				/* { */
+				/* 	printf("\tOn basis %d\n", jj); */
+				/* 	printf("\t\t value = %3.2E\n", qvals[sample_ind * n + jj]); */
+				/* 	exit(1); */
+				/* } */
 			}
-
 		}
+		/* printf("\n"); */
 		/* normalize */
-		for (int jj = order; jj >= 0; jj--) {
-			qvals[sample_ind * n + jj] /= sqrt(beta[order * n + jj]);
-		}
+		/* for (int jj = order; jj >= 0; jj--) { */
+		/* 	qvals[sample_ind * n + jj] /= (sqrt(beta[order * n + jj]) + 1e-15); */
+			/* if (isnan(qvals[sample_ind * n + jj])) */
+			/* { */
+			/* 	printf("\tOn basis %d\n", jj); */
+			/* 	printf("\t\t value = %3.2E\n", qvals[sample_ind * n + jj]); */
+			/* 	printf("\t\t beta = %3.2E\n", beta[order * n + jj]); */
+			/* 	exit(1); */
+			/* } */
+		/* } */
 	}
+
+	/* printf("\n\n\n\n\n"); */
+	/* printf("after eval_r\n"); */
+	/* for (size_t ii = 0; ii < N; ii++){ */
+	/* 	for (size_t jj = 0; jj <= order; jj++) { */
+	/* 		printf("%3.2e ", qvals[ii * n + jj]); */
+	/* 	} */
+	/* 	printf("\n"); */
+	/* }	 */
 
 	return 0;
 }
@@ -222,12 +270,20 @@ int orthogonalize(size_t order, const double *Q, double * beta)
 		for (int kk = order ; kk >= ii+1; kk--) {			
 			beta[order * N + ii] -= beta[order * N + kk] * pow(beta[ii * N + kk], 2);
 		}
+		/* assert (beta[order * N + ii] > 0); */
 
 		/* Update beta_{ij} */
 		for (int jj = ii-1; jj >= 0; jj--) {
 			beta[jj * N + ii] /= beta[order * N + ii];
 		}
 	}
+
+	printf("Norms: ");
+	for (size_t ii = 0; ii <= order; ii++){
+		printf("%3.2E ", beta[order * N + ii]);
+	}
+	printf("\n");
+	
 	return 0;
 }
 
@@ -352,8 +408,45 @@ int mother_basis_eval_basis_left(const struct MotherBasis * mb, size_t N, const 
 	assert (mb != NULL);
 	size_t n = mb->order + 1;
 	eval_qtilde_left(N, n, x, eval);
+	printf("basis after qtilde\n");
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj <= mb->order; jj++) {
+			printf("%3.2e ", eval[ii * n + jj]);
+		}
+		printf("\n");
+	}
 	eval_q_update(N, n, x, mb->acoeff, eval);
+	printf("basis after qupdate\n");
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj <= mb->order; jj++) {
+			printf("%3.2e ", eval[ii * n + jj]);
+		}
+		printf("\n");
+	}
+
+	printf("beta\n");
+	for (size_t ii = 0; ii <= mb->order; ii++){
+		for (size_t jj = ii+1; jj <= mb->order; jj++) {
+			printf("%3.2e ", mb->bcoeff[ii * n + jj]);
+		}
+		printf("\n");
+	}
+	printf("normalization = ");
+	for (size_t ii = 0; ii <= mb->order; ii++){
+		printf("%3.2e ", mb->bcoeff[mb->order * n + ii]);
+	}
+	printf("\n");
+	
 	eval_r(N, mb->order, mb->bcoeff, eval);
+
+	
+	printf("basis after evalr\n");
+	for (size_t ii = 0; ii < N; ii++){
+		for (size_t jj = 0; jj <= mb->order; jj++) {
+			printf("%3.2e ", eval[ii * n + jj]);
+		}
+		printf("\n");
+	}		
 	return 0;
 }
 

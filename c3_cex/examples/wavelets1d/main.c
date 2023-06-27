@@ -167,75 +167,107 @@ int fit_w0(const struct MultiResolutionBasis * mrb,
 {
 	/* enum quad_rule qrule = C3_GAUSS_QUAD; */
 
-	struct OpeOpts * opts = ope_opts_alloc(LEGENDRE);
+	/* struct OpeOpts * opts = ope_opts_alloc(LEGENDRE); */
+	/* ope_opts_free(opts); opts = NULL; */
 	/* ope_opts */
-	orth_poly_expansion_approx_vec(mrb->v0, f, opts);
-	ope_opts_free(opts); opts = NULL;
+	/* print_orth_poly_expansion(mrb->v0, 5, NULL, stdout); */
+	orth_poly_expansion_approx_vec(mrb->v0, f, NULL);
+
+    size_t nquad = mrb->order + 2;
 	
-    /* size_t nquad = mrb->order + 2; */
-	
-	/* double * quadpt = NULL; */
-    /* double * quadwt = NULL; */
-	/* int return_val = getLegPtsWts2(nquad,&quadpt,&quadwt); */
-	/* assert (return_val == 0); */
+	double * quadpt = NULL;
+    double * quadwt = NULL;
+	int return_val = getLegPtsWts2(nquad,&quadpt,&quadwt);
+	assert (return_val == 0);
 		
-	/* /\* two sets of points *\/ */
-	/* double pt_un1[200]; */
-	/* double fvals1[200]; */
-	/* double projv1[200]; */
+	/* two sets of points */
+	double pt_un1[200];
+	double fvals1[200];
+	double projv1[200];
 	
-	/* /\* [-1, -1] -> [-1, 0] *\/ */
-	/* for (size_t ii = 0; ii < nquad; ii++){ */
-	/* 	pt_un1[ii] = 0.5 * (quadpt[ii] - 1.0); */
-	/* } */
-	/* orth_poly_expansion_evalN(mrb->v0, nquad, pt_un1, 1, projv1, 1);	 */
-	/* return_val = fwrap_eval(nquad, pt_un1, fvals1, f); */
-	/* assert(return_val == 0); */
+	/* [-1, -1] -> [-1, 0] */
+	for (size_t ii = 0; ii < nquad; ii++){
+		pt_un1[ii] = 0.5 * (quadpt[ii] - 1.0);
+	}
+	orth_poly_expansion_evalN(mrb->v0, nquad, pt_un1, 1, projv1, 1);
+	return_val = fwrap_eval(nquad, pt_un1, fvals1, f);
+	assert(return_val == 0);
 
-	/* for (size_t ii = 0; ii < nquad; ii++){ */
-	/* 	fvals1[ii] = (fvals1[ii] - projv1[ii]) *  quadwt[ii]; */
-	/* } */
+	printf("pt_un1  = ");
+	for (size_t ii = 0; ii < nquad; ii++){
+		printf("%3.5f ", pt_un1[ii]);
+	}
+	printf("\n");
+	
+	for (size_t ii = 0; ii < nquad; ii++){
+		fvals1[ii] = (fvals1[ii] - projv1[ii]) *  quadwt[ii];
+	}
+	printf("fvals1  = ");
+	for (size_t ii = 0; ii <= nquad; ii++){
+		printf("%3.5f ", fvals1[ii]);
+	}
+	printf("\n");
 
-	/* double pt_un2[200]; */
-	/* double fvals2[200]; */
-	/* double projv2[200]; */
-
-	/* /\* [-1, -1] -> [0, 1] *\/ */
-	/* for (size_t ii = 0; ii < nquad; ii++){ */
-	/* 	pt_un2[ii] = 0.5 * (quadpt[ii] + 1.0); */
-	/* } */
-
-	/* orth_poly_expansion_evalN(mrb->v0, nquad, pt_un2, 1, projv2, 1);	 */
-	/* return_val = fwrap_eval(nquad, pt_un2, fvals2, f); */
-	/* assert(return_val == 0); */
-	/* for (size_t ii = 0; ii < nquad; ii++) { */
-	/* 	fvals2[ii] = (fvals2[ii] - projv2[ii]) *  quadwt[ii]; */
-	/* } */
+	size_t n = mrb->order+1;	
+	double * basis = calloc(n * nquad, sizeof(double));
+	return_val = mother_basis_eval_basis_left(mrb->mb, nquad, pt_un1, basis);
+	assert(return_val == 0);
 
 	/* assemble */
 	for (size_t ii = 0; ii <= mrb->order; ii++){
 		mrb->w0_coeff[ii] = 0.0;
 	}
-	/* double * basis = calloc((mrb->order+1) * nquad, sizeof(double)); */
-	/* return_val = mother_basis_eval_basis_left(mrb->mb, nquad, pt_un1, basis); */
-	/* assert(return_val == 0); */
-
-	/* size_t n = mrb->order+1; */
 	
 	/* for (size_t ii = 0; ii < nquad; ii++){ */
 	/* 	for (size_t jj = 0; jj <= mrb->order; jj++) { */
+	/* 		printf("basis %zu %zu %3.5f\n", ii, jj, basis[ii * n + jj]); */
 	/* 		mrb->w0_coeff[jj] += fvals1[ii] * basis[ii * n + jj]; */
 	/* 	} */
 	/* } */
+	/* exit(1); */
 
-	/* return_val = mother_basis_eval_basis_right(mrb->mb, nquad, pt_un2, basis); */
-	/* assert(return_val == 0); */
-	/* for (size_t ii = 0; ii < nquad; ii++){ */
-	/* 	for (size_t jj = 0; jj <= mrb->order; jj++) { */
-	/* 		mrb->w0_coeff[jj] += fvals2[ii] * basis[ii * n + jj]; */
-	/* 	} */
-	/* }	 */
+	
 
+	double pt_un2[200];
+	double fvals2[200];
+	double projv2[200];
+
+	/* [-1, -1] -> [0, 1] */
+	for (size_t ii = 0; ii < nquad; ii++){
+		pt_un2[ii] = 0.5 * (quadpt[ii] + 1.0);
+	}
+
+	orth_poly_expansion_evalN(mrb->v0, nquad, pt_un2, 1, projv2, 1);
+	return_val = fwrap_eval(nquad, pt_un2, fvals2, f);
+	assert(return_val == 0);
+	for (size_t ii = 0; ii < nquad; ii++) {
+		fvals2[ii] = (fvals2[ii] - projv2[ii]) *  quadwt[ii];
+	}
+	
+	printf("fvals2  = ");
+	for (size_t ii = 0; ii <= nquad; ii++){
+		printf("%3.5f ", fvals2[ii]);
+	}
+	printf("\n");
+	
+
+
+
+
+	return_val = mother_basis_eval_basis_right(mrb->mb, nquad, pt_un2, basis);
+	assert(return_val == 0);
+	for (size_t ii = 0; ii < nquad; ii++){
+		for (size_t jj = 0; jj <= mrb->order; jj++) {
+			mrb->w0_coeff[jj] += fvals2[ii] * basis[ii * n + jj];
+		}
+	}
+
+	printf("Coefficients = ");
+	for (size_t ii = 0; ii <= mrb->order; ii++){
+		printf("%3.5f ", mrb->w0_coeff[ii]);
+	}
+	printf("\n");
+	
 	return 0;
 }
 
@@ -244,8 +276,10 @@ double test_func (const double * x, void * args)
     assert (args == NULL);
     // 1 dimension
     
-    /* double f = sin(5.0 * 3.14 * x[0]) * exp(-0.5 * (x[0] - 0.5) * (x[0] - 0.5) / 0.1); */
-	double f = 2.0 * pow(x[0], 4) - 3.0 * pow(x[0], 3) + 0.5 * pow(x[0], 2) + 2.0;
+    double f = sin(5.0 * 3.14 * x[0]) * exp(-0.5 * (x[0] - 0.5) * (x[0] - 0.5) / 0.1);
+	/* double f = 2.0 * pow(x[0], 4) - 3.0 * pow(x[0], 3) + 0.5 * pow(x[0], 2) + 2.0; */
+	/* double f = 2.0; */
+	/* printf("x = %3.2f, f = %3.2f\n", x[0], f); */
 
     return f;
 }
@@ -254,7 +288,7 @@ double test_func (const double * x, void * args)
 int multi_resolution_basis_eval(const struct MultiResolutionBasis * mrb, size_t N, const double * x, double * out)
 {
 	orth_poly_expansion_evalN(mrb->v0, N, x, 1, out, 1);
-	/* mother_basis_eval_add(mrb->mb, N, x, mrb->w0_coeff, out); */
+	mother_basis_eval_add(mrb->mb, N, x, mrb->w0_coeff, out);
 	/* TODO */
 	/* recursively eval along tree */
 
@@ -295,54 +329,59 @@ int main(int argc, char * argv[])
 
 	printf("Using order: %zu\n", order);
 
-	int mother_wavelet_test = 0;
+	int mother_wavelet_test = 1;
 	if (mother_wavelet_test == 1) {
 		/* Basic functionality for Mother Basis */
 		struct MotherBasis * mb = mother_basis_create(order);
-		test_r_orthogonality(-1.0, 1.0, 1000000, order, mb->acoeff, mb->bcoeff,  mb->Q, 0);
-		test_q_orthogonality(-1.0, 1.0, 1000000, order, mb->acoeff, mb->Q, 0);
-		write_to_file(mb, 100000, "psi_orth.dat");
+		test_r_orthogonality(-1.0, 1.0, 1000000, order, mb->acoeff, mb->bcoeff,  mb->Q, 1);
+		/* test_q_orthogonality(-1.0, 1.0, 1000000, order, mb->acoeff, mb->Q, 0); */
+		/* write_to_file(mb, 100000, "psi_orth.dat"); */
+		write_to_file(mb, 100, "psi_orth.dat");
 		mother_basis_free(mb); mb = NULL;	
 	}
 
-	/* exit(1); */
+	else{ 
+		/* exit(1); */
 
-	/* int seed = 4; */
-	/* srand(seed); */
-	/* int seed = 4; */
-	srand(time(NULL));
+		/* int seed = 4; */
+		/* srand(seed); */
+		/* int seed = 4; */
+		srand(time(NULL));
 
-	struct FunctionMonitor * fm = function_monitor_initnd(test_func, NULL, 1, 200);
-    struct Fwrap * fw = fwrap_create(1, "general");
-    fwrap_set_f(fw,function_monitor_eval,fm);
+		struct FunctionMonitor * fm = function_monitor_initnd(test_func, NULL, 1, 200);
+		struct Fwrap * fw = fwrap_create(1, "general");
+		fwrap_set_f(fw,function_monitor_eval,fm);
 
 	
 	
-	struct MultiResolutionBasis * mrb = multi_resolution_basis_create(order);
-	double * vcoeff = drandu(order+1);
-	double * wcoeff = drandu(order+1);
-	fill_level0(mrb, vcoeff, wcoeff);
-	fit_w0(mrb, fw);
+		struct MultiResolutionBasis * mrb = multi_resolution_basis_create(order);
+		double * vcoeff = drandu(order+1);
+		/* double * wcoeff = drandu(order+1); */
+		double * wcoeff = dzeros(order+1);
+		fill_level0(mrb, vcoeff, wcoeff);
+		fit_w0(mrb, fw);
+	
+		/* exit(1); */
+		size_t N = 200;
+		double * x = linspace(-1, 1, N);
+		double * y = dzeros(N);
+		int res = multi_resolution_basis_eval(mrb, N, x, y);
+		assert (res == 0);
+		write_xy_to_file(N, x, y, "mrb_evals.dat");
 
-	size_t N = 200;
-	double * x = linspace(-1, 1, N);
-	double * y = dzeros(N);
-	int res = multi_resolution_basis_eval(mrb, N, x, y);
-	assert (res == 0);
-	write_xy_to_file(N, x, y, "mrb_evals.dat");
+		for (size_t ii = 0; ii < N; ii++){
+			fwrap_eval(1, x + ii, y + ii, fw);
+		}
+		write_xy_to_file(N, x, y, "testfunc.dat");
 
-	for (size_t ii = 0; ii < N; ii++){
-		fwrap_eval(1, x + ii, y + ii, fw);
+		free(x);
+		free(y);
+
+		multi_resolution_basis_free(mrb); mrb = NULL;
+		free(vcoeff); vcoeff = NULL;
+		free(wcoeff); wcoeff = NULL;
+		fwrap_destroy(fw); fw = NULL;
+		function_monitor_free(fm); fm = NULL;
 	}
-	write_xy_to_file(N, x, y, "testfunc.dat");
-
-	free(x);
-	free(y);
-
-	multi_resolution_basis_free(mrb); mrb = NULL;
-	free(vcoeff); vcoeff = NULL;
-	free(wcoeff); wcoeff = NULL;
-	fwrap_destroy(fw); fw = NULL;
-	function_monitor_free(fm); fm = NULL;
 
 }

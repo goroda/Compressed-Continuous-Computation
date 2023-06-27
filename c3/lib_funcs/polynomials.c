@@ -3771,7 +3771,19 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
     double pnew;
     size_t ii,jj;
     if (poly->num_poly > 1){
-        for (ii = 0; ii < num_nodes; ii++){ // loop over all points
+		ii = 0;
+		p[0] = poly->p->const_term;
+		poly->coeff[0] = fvals[ii] * poly->p->const_term;
+		p[1] = poly->p->lin_const + poly->p->lin_coeff * nodes[ii];
+		poly->coeff[1] = fvals[ii] * p[1] ;
+		for (jj = 2; jj < poly->num_poly; jj++){
+			pnew = eval_orth_poly_wp(poly->p, p[0], p[1], jj, nodes[ii]);
+			poly->coeff[jj] = fvals[ii] * pnew;
+			p[0] = p[1];
+			p[1] = pnew;
+		}
+		
+        for (ii = 1; ii < num_nodes; ii++){ // loop over all points
             p[0] = poly->p->const_term;
             poly->coeff[0] += fvals[ii] * poly->p->const_term;
             p[1] = poly->p->lin_const + poly->p->lin_coeff * nodes[ii];
@@ -3792,7 +3804,7 @@ orth_poly_expansion_construct(struct OrthPolyExpansion * poly,
     }
     else{
         for (ii = 0; ii < num_nodes; ii++){
-            poly->coeff[0] += fvals[ii] * poly->p->const_term;
+            poly->coeff[0] = fvals[ii] * poly->p->const_term;
         }
         poly->coeff[0] /= poly->p->norm(0);
     }
@@ -5749,6 +5761,7 @@ void print_orth_poly_expansion(struct OrthPolyExpansion * p, size_t prec,
         fprintf(fp, "Orthogonal Polynomial Expansion:\n");
         fprintf(fp, "--------------------------------\n");
         fprintf(fp, "Polynomial basis is %s\n",convert_ptype_to_char(p->p->ptype));
+		fprintf(fp, "Number of basis functions %zu\n", p->num_poly);
         fprintf(fp, "Coefficients = ");
         size_t ii;
         if (p->p->ptype == FOURIER){
