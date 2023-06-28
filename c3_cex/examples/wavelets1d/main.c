@@ -90,6 +90,38 @@ void tree_node_free_recursive(struct TreeNode * tree)
 	}
 }
 
+struct MRBOpts
+{
+	size_t order;
+	size_t nquad;
+};
+
+struct MRBOpts * mrb_opts_alloc()
+{
+	struct MRBOpts * opts = malloc(sizeof(struct MRBOpts));
+	opts->nquad = 0;
+
+	return opts;
+}
+
+void mrb_opts_set_nquad(struct MRBOpts * opts, size_t nquad)
+{
+	opts->nquad = nquad;
+}
+
+void mrb_opts_set_order(struct MRBOpts * opts, size_t order)
+{
+	opts->order = order;
+}
+
+
+void mrb_opts_free(struct MRBOpts * opts)
+{
+	if (opts != NULL) {
+		free(opts); opts = NULL;
+	}
+}
+	
 struct MultiResolutionBasis
 {
 	size_t order;
@@ -100,13 +132,14 @@ struct MultiResolutionBasis
 	struct TreeNode * right;
 };
 
-struct MultiResolutionBasis * multi_resolution_basis_create(size_t order)
+struct MultiResolutionBasis * multi_resolution_basis_create(struct MRBOpts * opts)
 {
+	assert (opts != NULL);
 	struct MultiResolutionBasis * mrb = malloc(sizeof(struct MultiResolutionBasis));
-	mrb->order= order;
-	mrb->v0 = orth_poly_expansion_init(LEGENDRE, order+1, -1, 1);
-	mrb->w0_coeff = calloc(order+1, sizeof(double));
-	mrb->mb = mother_basis_create(order);
+	mrb->order= opts->order;
+	mrb->v0 = orth_poly_expansion_init(LEGENDRE, opts->order+1, -1, 1);
+	mrb->w0_coeff = calloc(opts->order+1, sizeof(double));
+	mrb->mb = mother_basis_create(opts->order);
 	mrb->left = NULL;
 	mrb->right = NULL;
 
@@ -162,8 +195,47 @@ int mother_basis_eval_add(const struct MotherBasis * mb, size_t N, const double 
 	return 0;
 }
 
+void fit_level(double lb, double ub, size_t nquad, const double * quadpt,
+			   struct Fwrap * f) {
+
+	/* [-1, -1] -> [lb, ub] */
+	/* pow(2, level) * (x - 1) */
+	double b = 0.5 * (lb + ub);
+	double m = 0.5 * (ub - lb);
+	for (size_t ii = 0; ii < nquad; ii++) {
+		pt_un1[ii] = m * quadpt[ii] + b;
+	}
+
+	/* NEED TO EVALUTE HIERARCHY */ 
+	orth_poly_expansion_evalN(mrb->v0, nquad, pt_un1, 1, projv1, 1);
+
+	/* Now the true function */
+	int return_val = fwrap_eval(nquad, pt_un1, fvals1, f);
+	assert(return_val == 0);
+
+	for (size_t ii = 0; ii < nquad; ii++){
+		fvals1[ii] = (fvals1[ii] - projv1[ii]) *  quadwt[ii];
+	}
+	/* printf("fvals1  = "); */
+	/* for (size_t ii = 0; ii <= nquad; ii++){ */
+	/* 	printf("%3.5f ", fvals1[ii]); */
+	/* } */
+	/* printf("\n"); */
+
+	/* Evaluate the basis */
+	size_t n = mrb->order+1;	
+	double * basis = calloc(n * nquad, sizeof(double));
+	return_val = mother_basis_eval_basis_left(mrb->mb, nquad, pt_un1, basis);
+	assert(return_val == 0);
+
+	/* Now project onto the basis */
+
+
+}
+
 int fit_w0(const struct MultiResolutionBasis * mrb,
-			struct Fwrap * f)
+		   struct Fwrap * f,
+		   struct MRBOpts * opts)
 {
 	/* enum quad_rule qrule = C3_GAUSS_QUAD; */
 
@@ -173,7 +245,12 @@ int fit_w0(const struct MultiResolutionBasis * mrb,
 	/* print_orth_poly_expansion(mrb->v0, 5, NULL, stdout); */
 	orth_poly_expansion_approx_vec(mrb->v0, f, NULL);
 
-    size_t nquad = mrb->order + 2;
+	/* Zero it out */
+	for (size_t ii = 0; ii <= mrb->order; ii++){
+		mrb->w0_coeff[ii] = 0.0;
+	}	
+	
+    size_t nquad = opts->nquad;
 	
 	double * quadpt = NULL;
     double * quadwt = NULL;
@@ -184,49 +261,7 @@ int fit_w0(const struct MultiResolutionBasis * mrb,
 	double pt_un1[200];
 	double fvals1[200];
 	double projv1[200];
-	
-	/* [-1, -1] -> [-1, 0] */
-	for (size_t ii = 0; ii < nquad; ii++){
-		pt_un1[ii] = 0.5 * (quadpt[ii] - 1.0);
-	}
-	orth_poly_expansion_evalN(mrb->v0, nquad, pt_un1, 1, projv1, 1);
-	return_val = fwrap_eval(nquad, pt_un1, fvals1, f);
-	assert(return_val == 0);
 
-	printf("pt_un1  = ");
-	for (size_t ii = 0; ii < nquad; ii++){
-		printf("%3.5f ", pt_un1[ii]);
-	}
-	printf("\n");
-	
-	for (size_t ii = 0; ii < nquad; ii++){
-		fvals1[ii] = (fvals1[ii] - projv1[ii]) *  quadwt[ii];
-	}
-	printf("fvals1  = ");
-	for (size_t ii = 0; ii <= nquad; ii++){
-		printf("%3.5f ", fvals1[ii]);
-	}
-	printf("\n");
-
-	size_t n = mrb->order+1;	
-	double * basis = calloc(n * nquad, sizeof(double));
-	return_val = mother_basis_eval_basis_left(mrb->mb, nquad, pt_un1, basis);
-	assert(return_val == 0);
-
-	/* assemble */
-	for (size_t ii = 0; ii <= mrb->order; ii++){
-		mrb->w0_coeff[ii] = 0.0;
-	}
-	
-	/* for (size_t ii = 0; ii < nquad; ii++){ */
-	/* 	for (size_t jj = 0; jj <= mrb->order; jj++) { */
-	/* 		printf("basis %zu %zu %3.5f\n", ii, jj, basis[ii * n + jj]); */
-	/* 		mrb->w0_coeff[jj] += fvals1[ii] * basis[ii * n + jj]; */
-	/* 	} */
-	/* } */
-	/* exit(1); */
-
-	
 
 	double pt_un2[200];
 	double fvals2[200];
@@ -250,10 +285,6 @@ int fit_w0(const struct MultiResolutionBasis * mrb,
 	}
 	printf("\n");
 	
-
-
-
-
 	return_val = mother_basis_eval_basis_right(mrb->mb, nquad, pt_un2, basis);
 	assert(return_val == 0);
 	for (size_t ii = 0; ii < nquad; ii++){
@@ -329,7 +360,7 @@ int main(int argc, char * argv[])
 
 	printf("Using order: %zu\n", order);
 
-	int mother_wavelet_test = 1;
+	int mother_wavelet_test = 0;
 	if (mother_wavelet_test == 1) {
 		/* Basic functionality for Mother Basis */
 		struct MotherBasis * mb = mother_basis_create(order);
@@ -352,14 +383,15 @@ int main(int argc, char * argv[])
 		struct Fwrap * fw = fwrap_create(1, "general");
 		fwrap_set_f(fw,function_monitor_eval,fm);
 
-	
-	
-		struct MultiResolutionBasis * mrb = multi_resolution_basis_create(order);
+		struct MRBOpts * opts = mrb_opts_alloc();
+		mrb_opts_set_order(opts, order);
+		mrb_opts_set_nquad(opts, 2 * order);
+		struct MultiResolutionBasis * mrb = multi_resolution_basis_create(opts);
 		double * vcoeff = drandu(order+1);
 		/* double * wcoeff = drandu(order+1); */
 		double * wcoeff = dzeros(order+1);
 		fill_level0(mrb, vcoeff, wcoeff);
-		fit_w0(mrb, fw);
+		fit_w0(mrb, fw, opts);
 	
 		/* exit(1); */
 		size_t N = 200;

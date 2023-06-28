@@ -5,6 +5,17 @@
 #include <assert.h>
 #include "c3.h"
 
+
+/************************************************************//**************** 
+	Returns \[-x^i for i = 0,\ldots, n-1\]
+    
+    \param[in] N            - Number of data points
+    \param[in] n            - number of basis functions
+    \param[in] xinput_array - (N, ) locations at which to evaluate
+    \param[out] out         - (n * N) (N columns), evaluations of the basis
+
+    \returns 0 on success
+*******************************************************************************/
 int eval_qtilde_left(size_t N, size_t n, const double * xinput_array, double * out)
 {
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
@@ -18,6 +29,16 @@ int eval_qtilde_left(size_t N, size_t n, const double * xinput_array, double * o
 	return 0;
 }
 
+/************************************************************//**************** 
+	Returns \[ x^i for i = 0,\ldots, n-1\]
+    
+    \param[in] N            - Number of data points
+    \param[in] n            - number of basis functions
+    \param[in] xinput_array - (N, ) locations at which to evaluate
+    \param[out] out         - (n * N) (N columns), evaluations of the basis
+
+    \returns 0 on success
+*******************************************************************************/
 int eval_qtilde_right(size_t N, size_t n, const double * xinput_array, double * out)
 {
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
@@ -31,6 +52,23 @@ int eval_qtilde_right(size_t N, size_t n, const double * xinput_array, double * 
 	return 0;
 }
 
+/************************************************************//**************** 
+	Returns \[ x^i + \tilde{q}_i(x) for i = 0,\ldots, n-1\]
+    
+    \param[in] N            - Number of data points
+    \param[in] n            - number of basis functions
+    \param[in] xinput_array - (N, ) locations at which to evaluate
+    \param[in,out] qtilde   - (n * N) (N columns) evaluations of the basis
+
+    \returns 0 on success
+
+    \note Basis functions of the form
+          \[ 
+             q_j(x) = \tilde{q}_j(x) + \sum_{k=0}^{order} alpha_{kj} p_j(x) 
+          \]
+          where $p_j = x^j$ for $j = 0,\ldots,order$  and 
+          $\tilde{q}_j(x) = p_j(x)$ for $x \geq 0$ and $\tilde{q}_j(x) = - p_j(x)$ for $x < 0$
+*******************************************************************************/
 int eval_q_update(size_t N, size_t n, const double * xinput_array, const double * alpha, double * qtilde)
 {
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
@@ -53,17 +91,11 @@ int eval_q_update(size_t N, size_t n, const double * xinput_array, const double 
     \param[in] order        - Polynomial order (order + 1 total basis functions)
     \param[in] xinput_array - (N, ) locations at which to evaluate
     \param[in] alpha        - (order+1 \times order+1) coefficients
-    \param[in] out          - (order * N) (N columns), evaluations of the basis
+    \param[in] out          - (order+1 * N) (N columns), evaluations of the basis
 
     \returns 0 on success
 
-    \note Basis functions of the form
-          \[ 
-             q_j(x) = \tilde{q}_j(x) + \sum_{k=0}^{order} alpha_{kj} p_j(x) 
-          \]
-          where $p_j = x^j$ for $j = 0,\ldots,order$  and 
-          $\tilde{q}_j(x) = p_j(x)$ for $x \geq 0$ and $\tilde{q}_j(x) = - p_j(x)$ for $x < 0$
- 
+    \note \see @eval_q_update along with
 *******************************************************************************/
 int eval_q(size_t N, size_t order, const double * xinput_array, const double * alpha, double * out)
 {
@@ -78,23 +110,9 @@ int eval_q(size_t N, size_t order, const double * xinput_array, const double * a
 			eval_qtilde_left(1, n, xinput_array + sample_ind, out + sample_ind * n);
 		}
 	}
-	/* printf("basis after qtilde\n"); */
-	/* for (size_t ii = 0; ii < N; ii++){ */
-	/* 	for (size_t jj = 0; jj <= order; jj++) { */
-	/* 		printf("%3.2e ", out[ii * n + jj]); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* } */
 	
 	eval_q_update(N, n, xinput_array, alpha, out);
-	/* printf("\n\n\n\n\n"); */
-	/* printf("basis after q\n"); */
-	/* for (size_t ii = 0; ii < N; ii++){ */
-	/* 	for (size_t jj = 0; jj <= order; jj++) { */
-	/* 		printf("%3.2e ", out[ii * n + jj]); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* }	 */
+
 	return 0;
 }
 
@@ -121,51 +139,19 @@ int eval_r(size_t N, size_t order, const double * beta, double * qvals)
 {
 	int n = (int)order+1;
 
-
-	/* printf("\n\n\n\n\n"); */
-	/* printf("basis in eval_r\n"); */
-	/* for (size_t ii = 0; ii < N; ii++){ */
-	/* 	for (size_t jj = 0; jj <= order; jj++) { */
-	/* 		printf("%3.2e ", qvals[ii * n + jj]); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* }	 */
-	
 	for (size_t sample_ind = 0; sample_ind < N; sample_ind++){
 		/* printf("On sample %zu\n", sample_ind); */
 		for (int jj = order; jj >= 0; jj--) {
 			for (size_t kk = jj+1; kk <= order; kk++) {
 				qvals[sample_ind * n + jj] += beta[jj * n + kk] * qvals[sample_ind * n + kk];
-				/* if (isnan(qvals[sample_ind * n + jj])) */
-				/* { */
-				/* 	printf("\tOn basis %d\n", jj); */
-				/* 	printf("\t\t value = %3.2E\n", qvals[sample_ind * n + jj]); */
-				/* 	exit(1); */
-				/* } */
 			}
 		}
-		/* printf("\n"); */
-		/* normalize */
-		/* for (int jj = order; jj >= 0; jj--) { */
-		/* 	qvals[sample_ind * n + jj] /= (sqrt(beta[order * n + jj]) + 1e-15); */
-			/* if (isnan(qvals[sample_ind * n + jj])) */
-			/* { */
-			/* 	printf("\tOn basis %d\n", jj); */
-			/* 	printf("\t\t value = %3.2E\n", qvals[sample_ind * n + jj]); */
-			/* 	printf("\t\t beta = %3.2E\n", beta[order * n + jj]); */
-			/* 	exit(1); */
-			/* } */
-		/* } */
-	}
 
-	/* printf("\n\n\n\n\n"); */
-	/* printf("after eval_r\n"); */
-	/* for (size_t ii = 0; ii < N; ii++){ */
-	/* 	for (size_t jj = 0; jj <= order; jj++) { */
-	/* 		printf("%3.2e ", qvals[ii * n + jj]); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* }	 */
+		/* normalize */
+		for (int jj = order; jj >= 0; jj--) {
+			qvals[sample_ind * n + jj] /= (sqrt(beta[order * n + jj]) + 1e-15);
+		}
+	}
 
 	return 0;
 }
@@ -401,59 +387,22 @@ int mother_basis_eval_basis(const struct MotherBasis * mb, size_t N, const doubl
 /***********************************************************//**
     Evaluate the basis with all x < 0
 
-	\see @eval_q and @eval_r
+	\see @eval_qtilde_left  @eval_q_update and @eval_r
 ***************************************************************/
 int mother_basis_eval_basis_left(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
 {
 	assert (mb != NULL);
 	size_t n = mb->order + 1;
 	eval_qtilde_left(N, n, x, eval);
-	printf("basis after qtilde\n");
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj <= mb->order; jj++) {
-			printf("%3.2e ", eval[ii * n + jj]);
-		}
-		printf("\n");
-	}
 	eval_q_update(N, n, x, mb->acoeff, eval);
-	printf("basis after qupdate\n");
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj <= mb->order; jj++) {
-			printf("%3.2e ", eval[ii * n + jj]);
-		}
-		printf("\n");
-	}
-
-	printf("beta\n");
-	for (size_t ii = 0; ii <= mb->order; ii++){
-		for (size_t jj = ii+1; jj <= mb->order; jj++) {
-			printf("%3.2e ", mb->bcoeff[ii * n + jj]);
-		}
-		printf("\n");
-	}
-	printf("normalization = ");
-	for (size_t ii = 0; ii <= mb->order; ii++){
-		printf("%3.2e ", mb->bcoeff[mb->order * n + ii]);
-	}
-	printf("\n");
-	
 	eval_r(N, mb->order, mb->bcoeff, eval);
-
-	
-	printf("basis after evalr\n");
-	for (size_t ii = 0; ii < N; ii++){
-		for (size_t jj = 0; jj <= mb->order; jj++) {
-			printf("%3.2e ", eval[ii * n + jj]);
-		}
-		printf("\n");
-	}		
 	return 0;
 }
 
 /***********************************************************//**
-    Evaluate the basis with all x >=
+    Evaluate the basis with all x >= 0
 
-	\see @eval_q and @eval_r
+	\see @eval_qtilde_right  @eval_q_update and @eval_r
 ***************************************************************/
 int mother_basis_eval_basis_right(const struct MotherBasis * mb, size_t N, const double * x, double * eval)
 {
