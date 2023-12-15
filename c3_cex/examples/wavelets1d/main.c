@@ -230,7 +230,6 @@ void fit_level(double lb, double ub, size_t nquad, const double * quadpt,
 
 	/* Now project onto the basis */
 
-
 }
 
 int fit_w0(const struct MultiResolutionBasis * mrb,
